@@ -27,6 +27,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/configure-pages@v5
+        # Turns Pages on for the repository on the first run, so the site
+        # needs no setting changed by hand before it can deploy.
+        with:
+          enablement: true
       - uses: actions/upload-pages-artifact@v3
         with:
           path: .
