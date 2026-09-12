@@ -4759,7 +4759,7 @@ const SCHEMA = {
     SEL("numerals.set","Which numerals",["all","even","quarters","1212"]),
     N("numerals.size","Size",1,7,.05),
     N("numerals.weight","Thickness",-0.10,0.45,.01),
-    N("numerals.gap","Spacing",-8,20,.5,""),
+    N("numerals.gap","Spacing",-24,20,.5,""),
     N("numerals.radius","Position from centre",3,22),
     SEL("numerals.orient","Orientation",["upright","radial"]),
     /* A stamped applied numeral is one flat piece, so a real dial does carry it
@@ -5084,7 +5084,7 @@ const PRIMARY = {
   dial:     ["dial.color","dial.finish","dial.diameter","dial.pattern","dial.dome","dial.satin"],
   sector:   ["sector.on","sector.outerD","sector.innerD","sector.color","sector.finish","sector.pattern"],
   borders:  ["borders.on","borders.inner.on","borders.inner.dia","borders.outer.on","borders.outer.dia"],
-  numerals: ["numerals.on","numerals.system","numerals.style","numerals.tech","numerals.size","numerals.radius","numerals.color"],
+  numerals: ["numerals.on","numerals.system","numerals.style","numerals.tech","numerals.size","numerals.gap","numerals.radius","numerals.color"],
   indices:  ["indices.on","indices.style","indices.count","indices.radius","indices.color"],
   minute:   ["minute.on","minute.style","minute.diameter","minute.color"],
   hour:     ["hour.on","hour.style","hour.diameter","hour.color"],
