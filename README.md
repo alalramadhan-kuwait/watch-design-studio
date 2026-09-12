@@ -32,7 +32,7 @@ copy. On GitHub Pages `_headers` is ignored — a hard refresh clears a stale co
 ## Before sharing the link
 
 **Anyone with the link can download everything** — the case photograph, the
-traced numerals, the wordmark and the whole parametric engine are inside
+numeral faces, the wordmark and the whole parametric engine are inside
 `index.html`. `robots.txt` and the page's own `noindex` keep it out of search,
 but that is obscurity, not access control.
 
