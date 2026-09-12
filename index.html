@@ -3876,7 +3876,8 @@ function buildSVG(st, o={}){
            one edge into the light, the other away — so it does not read as a
            flat silhouette. The gradient is built in the hand's own frame and
            flipped by where the light falls, so it stays right as it sweeps. */
-        const sc = (h.length || vec.tip) / vec.tip;
+        const want = h.length || vec.tip;
+        const dOut = vec.zone ? stretchHand(vec.d, vec.zone, vec.tip, want) : vec.d;
         const F = h.finish === "blued" ? "#2B3F73" : h.color;
         let fill = F;
         if(h.finish !== "matte"){
@@ -3892,8 +3893,8 @@ function buildSVG(st, o={}){
             <stop offset="1" stop-color="${tint(F,0.45*amt)}"/></linearGradient>`);
           fill = `url(#${gid})`;
         }
-        return `<g transform="rotate(${f(a,3)}) scale(${f(sc,6)})" filter="url(#${shid})">`
-             + `<path d="${vec.d}" fill="${fill}" fill-rule="evenodd"/></g>`;
+        return `<g transform="rotate(${f(a,3)})" filter="url(#${shid})">`
+             + `<path d="${dOut}" fill="${fill}" fill-rule="evenodd"/></g>`;
       }
       return `<g transform="rotate(${f(a,3)})" filter="url(#${shid})">${handPath(h, Object.assign({angle:a}, hctx))}</g>`;
     };
@@ -4202,24 +4203,85 @@ const STYLE_W = {
 
    Natural lengths: hour 8.50 mm, minute 11.47 mm, the ratio of the source
    artwork. */
+/* Where one hand stops being a length and starts being a fitting.
+
+   bossTop is the y at which the body meets the boss; pommeBot and pommeTop
+   bracket the open pomme. Measured off the shipped outlines rather than
+   declared: all four widths share them exactly, because the package changes
+   only the spindle, so they belong to the hand and not to the variant. */
+const HAND_ZONES = {
+  hour:   {bossTop:-0.92, pommeBot:-4.62, pommeTop:-6.34},
+  minute: {bossTop:-0.96, pommeBot:-6.63, pommeTop:-8.22}
+};
+/* The shortest this hand can be drawn: its boss and its pomme, which do not
+   scale, plus enough spindle to join them. */
+const handFloor = z => (Math.abs(z.bossTop) + (Math.abs(z.pommeTop) - Math.abs(z.pommeBot))) * 1.18;
 const BUILTIN_HAND_VEC = {
   "Vernoy spindle 100%": {
-    hour:   {tip:8.50, halfW:0.630, d:"M 0 -8.5 C 0.056 -7.95 0.2016 -6.79 0.28 -6.34 A 0.86 0.86 0 0 1 0.86 -5.48 A 0.86 0.86 0 0 1 0.2 -4.62 C 0.4725 -4.07 0.63 -3 0.63 -2.65 C 0.63 -1.9 0.25 -1.47 0.2 -0.92 A 1 1 0 0 1 1 0 A 1 1 0 0 1 0 1 A 1 1 0 0 1 -1 0 A 1 1 0 0 1 -0.2 -0.92 C -0.25 -1.47 -0.63 -1.9 -0.63 -2.65 C -0.63 -3 -0.4725 -4.07 -0.2 -4.62 A 0.86 0.86 0 0 1 -0.86 -5.48 A 0.86 0.86 0 0 1 -0.28 -6.34 C -0.2016 -6.79 -0.056 -7.95 0 -8.5 Z M 0.5 -5.48 A 0.5 0.5 0 1 0 -0.5 -5.48 A 0.5 0.5 0 1 0 0.5 -5.48 Z M 0.12 0 A 0.12 0.12 0 1 0 -0.12 0 A 0.12 0.12 0 1 0 0.12 0 Z"},
-    minute: {tip:11.47, halfW:0.660, d:"M 0 -11.47 C 0.054 -10.92 0.1944 -8.67 0.27 -8.22 A 0.86 0.86 0 0 1 0.86 -7.36 A 0.86 0.86 0 0 1 0.2 -6.63 C 0.495 -6.08 0.66 -4.1 0.66 -3.75 C 0.66 -3 0.25 -1.51 0.2 -0.96 A 1.05 1.05 0 0 1 1.05 0 A 1.05 1.05 0 0 1 0 1.05 A 1.05 1.05 0 0 1 -1.05 0 A 1.05 1.05 0 0 1 -0.2 -0.96 C -0.25 -1.51 -0.66 -3 -0.66 -3.75 C -0.66 -4.1 -0.495 -6.08 -0.2 -6.63 A 0.86 0.86 0 0 1 -0.86 -7.36 A 0.86 0.86 0 0 1 -0.27 -8.22 C -0.1944 -8.67 -0.054 -10.92 0 -11.47 Z M 0.5 -7.36 A 0.5 0.5 0 1 0 -0.5 -7.36 A 0.5 0.5 0 1 0 0.5 -7.36 Z M 0.12 0 A 0.12 0.12 0 1 0 -0.12 0 A 0.12 0.12 0 1 0 0.12 0 Z"}
+    hour:   {tip:8.50, halfW:0.630, zone:HAND_ZONES.hour, d:"M 0 -8.5 C 0.056 -7.95 0.2016 -6.79 0.28 -6.34 A 0.86 0.86 0 0 1 0.86 -5.48 A 0.86 0.86 0 0 1 0.2 -4.62 C 0.4725 -4.07 0.63 -3 0.63 -2.65 C 0.63 -1.9 0.25 -1.47 0.2 -0.92 A 1 1 0 0 1 1 0 A 1 1 0 0 1 0 1 A 1 1 0 0 1 -1 0 A 1 1 0 0 1 -0.2 -0.92 C -0.25 -1.47 -0.63 -1.9 -0.63 -2.65 C -0.63 -3 -0.4725 -4.07 -0.2 -4.62 A 0.86 0.86 0 0 1 -0.86 -5.48 A 0.86 0.86 0 0 1 -0.28 -6.34 C -0.2016 -6.79 -0.056 -7.95 0 -8.5 Z M 0.5 -5.48 A 0.5 0.5 0 1 0 -0.5 -5.48 A 0.5 0.5 0 1 0 0.5 -5.48 Z M 0.12 0 A 0.12 0.12 0 1 0 -0.12 0 A 0.12 0.12 0 1 0 0.12 0 Z"},
+    minute: {tip:11.47, halfW:0.660, zone:HAND_ZONES.minute, d:"M 0 -11.47 C 0.054 -10.92 0.1944 -8.67 0.27 -8.22 A 0.86 0.86 0 0 1 0.86 -7.36 A 0.86 0.86 0 0 1 0.2 -6.63 C 0.495 -6.08 0.66 -4.1 0.66 -3.75 C 0.66 -3 0.25 -1.51 0.2 -0.96 A 1.05 1.05 0 0 1 1.05 0 A 1.05 1.05 0 0 1 0 1.05 A 1.05 1.05 0 0 1 -1.05 0 A 1.05 1.05 0 0 1 -0.2 -0.96 C -0.25 -1.51 -0.66 -3 -0.66 -3.75 C -0.66 -4.1 -0.495 -6.08 -0.2 -6.63 A 0.86 0.86 0 0 1 -0.86 -7.36 A 0.86 0.86 0 0 1 -0.27 -8.22 C -0.1944 -8.67 -0.054 -10.92 0 -11.47 Z M 0.5 -7.36 A 0.5 0.5 0 1 0 -0.5 -7.36 A 0.5 0.5 0 1 0 0.5 -7.36 Z M 0.12 0 A 0.12 0.12 0 1 0 -0.12 0 A 0.12 0.12 0 1 0 0.12 0 Z"}
   },
   "Vernoy spindle 90%": {
-    hour:   {tip:8.50, halfW:0.567, d:"M 0 -8.5 C 0.056 -7.95 0.2016 -6.79 0.28 -6.34 A 0.86 0.86 0 0 1 0.86 -5.48 A 0.86 0.86 0 0 1 0.2 -4.62 C 0.4253 -4.07 0.567 -3 0.567 -2.65 C 0.567 -1.9 0.25 -1.47 0.2 -0.92 A 1 1 0 0 1 1 0 A 1 1 0 0 1 0 1 A 1 1 0 0 1 -1 0 A 1 1 0 0 1 -0.2 -0.92 C -0.25 -1.47 -0.567 -1.9 -0.567 -2.65 C -0.567 -3 -0.4253 -4.07 -0.2 -4.62 A 0.86 0.86 0 0 1 -0.86 -5.48 A 0.86 0.86 0 0 1 -0.28 -6.34 C -0.2016 -6.79 -0.056 -7.95 0 -8.5 Z M 0.5 -5.48 A 0.5 0.5 0 1 0 -0.5 -5.48 A 0.5 0.5 0 1 0 0.5 -5.48 Z M 0.12 0 A 0.12 0.12 0 1 0 -0.12 0 A 0.12 0.12 0 1 0 0.12 0 Z"},
-    minute: {tip:11.47, halfW:0.594, d:"M 0 -11.47 C 0.054 -10.92 0.1944 -8.67 0.27 -8.22 A 0.86 0.86 0 0 1 0.86 -7.36 A 0.86 0.86 0 0 1 0.2 -6.63 C 0.4455 -6.08 0.594 -4.1 0.594 -3.75 C 0.594 -3 0.25 -1.51 0.2 -0.96 A 1.05 1.05 0 0 1 1.05 0 A 1.05 1.05 0 0 1 0 1.05 A 1.05 1.05 0 0 1 -1.05 0 A 1.05 1.05 0 0 1 -0.2 -0.96 C -0.25 -1.51 -0.594 -3 -0.594 -3.75 C -0.594 -4.1 -0.4455 -6.08 -0.2 -6.63 A 0.86 0.86 0 0 1 -0.86 -7.36 A 0.86 0.86 0 0 1 -0.27 -8.22 C -0.1944 -8.67 -0.054 -10.92 0 -11.47 Z M 0.5 -7.36 A 0.5 0.5 0 1 0 -0.5 -7.36 A 0.5 0.5 0 1 0 0.5 -7.36 Z M 0.12 0 A 0.12 0.12 0 1 0 -0.12 0 A 0.12 0.12 0 1 0 0.12 0 Z"}
+    hour:   {tip:8.50, halfW:0.567, zone:HAND_ZONES.hour, d:"M 0 -8.5 C 0.056 -7.95 0.2016 -6.79 0.28 -6.34 A 0.86 0.86 0 0 1 0.86 -5.48 A 0.86 0.86 0 0 1 0.2 -4.62 C 0.4253 -4.07 0.567 -3 0.567 -2.65 C 0.567 -1.9 0.25 -1.47 0.2 -0.92 A 1 1 0 0 1 1 0 A 1 1 0 0 1 0 1 A 1 1 0 0 1 -1 0 A 1 1 0 0 1 -0.2 -0.92 C -0.25 -1.47 -0.567 -1.9 -0.567 -2.65 C -0.567 -3 -0.4253 -4.07 -0.2 -4.62 A 0.86 0.86 0 0 1 -0.86 -5.48 A 0.86 0.86 0 0 1 -0.28 -6.34 C -0.2016 -6.79 -0.056 -7.95 0 -8.5 Z M 0.5 -5.48 A 0.5 0.5 0 1 0 -0.5 -5.48 A 0.5 0.5 0 1 0 0.5 -5.48 Z M 0.12 0 A 0.12 0.12 0 1 0 -0.12 0 A 0.12 0.12 0 1 0 0.12 0 Z"},
+    minute: {tip:11.47, halfW:0.594, zone:HAND_ZONES.minute, d:"M 0 -11.47 C 0.054 -10.92 0.1944 -8.67 0.27 -8.22 A 0.86 0.86 0 0 1 0.86 -7.36 A 0.86 0.86 0 0 1 0.2 -6.63 C 0.4455 -6.08 0.594 -4.1 0.594 -3.75 C 0.594 -3 0.25 -1.51 0.2 -0.96 A 1.05 1.05 0 0 1 1.05 0 A 1.05 1.05 0 0 1 0 1.05 A 1.05 1.05 0 0 1 -1.05 0 A 1.05 1.05 0 0 1 -0.2 -0.96 C -0.25 -1.51 -0.594 -3 -0.594 -3.75 C -0.594 -4.1 -0.4455 -6.08 -0.2 -6.63 A 0.86 0.86 0 0 1 -0.86 -7.36 A 0.86 0.86 0 0 1 -0.27 -8.22 C -0.1944 -8.67 -0.054 -10.92 0 -11.47 Z M 0.5 -7.36 A 0.5 0.5 0 1 0 -0.5 -7.36 A 0.5 0.5 0 1 0 0.5 -7.36 Z M 0.12 0 A 0.12 0.12 0 1 0 -0.12 0 A 0.12 0.12 0 1 0 0.12 0 Z"}
   },
   "Vernoy spindle 80%": {
-    hour:   {tip:8.50, halfW:0.504, d:"M 0 -8.5 C 0.056 -7.95 0.2016 -6.79 0.28 -6.34 A 0.86 0.86 0 0 1 0.86 -5.48 A 0.86 0.86 0 0 1 0.2 -4.62 C 0.378 -4.07 0.504 -3 0.504 -2.65 C 0.504 -1.9 0.25 -1.47 0.2 -0.92 A 1 1 0 0 1 1 0 A 1 1 0 0 1 0 1 A 1 1 0 0 1 -1 0 A 1 1 0 0 1 -0.2 -0.92 C -0.25 -1.47 -0.504 -1.9 -0.504 -2.65 C -0.504 -3 -0.378 -4.07 -0.2 -4.62 A 0.86 0.86 0 0 1 -0.86 -5.48 A 0.86 0.86 0 0 1 -0.28 -6.34 C -0.2016 -6.79 -0.056 -7.95 0 -8.5 Z M 0.5 -5.48 A 0.5 0.5 0 1 0 -0.5 -5.48 A 0.5 0.5 0 1 0 0.5 -5.48 Z M 0.12 0 A 0.12 0.12 0 1 0 -0.12 0 A 0.12 0.12 0 1 0 0.12 0 Z"},
-    minute: {tip:11.47, halfW:0.528, d:"M 0 -11.47 C 0.054 -10.92 0.1944 -8.67 0.27 -8.22 A 0.86 0.86 0 0 1 0.86 -7.36 A 0.86 0.86 0 0 1 0.2 -6.63 C 0.396 -6.08 0.528 -4.1 0.528 -3.75 C 0.528 -3 0.25 -1.51 0.2 -0.96 A 1.05 1.05 0 0 1 1.05 0 A 1.05 1.05 0 0 1 0 1.05 A 1.05 1.05 0 0 1 -1.05 0 A 1.05 1.05 0 0 1 -0.2 -0.96 C -0.25 -1.51 -0.528 -3 -0.528 -3.75 C -0.528 -4.1 -0.396 -6.08 -0.2 -6.63 A 0.86 0.86 0 0 1 -0.86 -7.36 A 0.86 0.86 0 0 1 -0.27 -8.22 C -0.1944 -8.67 -0.054 -10.92 0 -11.47 Z M 0.5 -7.36 A 0.5 0.5 0 1 0 -0.5 -7.36 A 0.5 0.5 0 1 0 0.5 -7.36 Z M 0.12 0 A 0.12 0.12 0 1 0 -0.12 0 A 0.12 0.12 0 1 0 0.12 0 Z"}
+    hour:   {tip:8.50, halfW:0.504, zone:HAND_ZONES.hour, d:"M 0 -8.5 C 0.056 -7.95 0.2016 -6.79 0.28 -6.34 A 0.86 0.86 0 0 1 0.86 -5.48 A 0.86 0.86 0 0 1 0.2 -4.62 C 0.378 -4.07 0.504 -3 0.504 -2.65 C 0.504 -1.9 0.25 -1.47 0.2 -0.92 A 1 1 0 0 1 1 0 A 1 1 0 0 1 0 1 A 1 1 0 0 1 -1 0 A 1 1 0 0 1 -0.2 -0.92 C -0.25 -1.47 -0.504 -1.9 -0.504 -2.65 C -0.504 -3 -0.378 -4.07 -0.2 -4.62 A 0.86 0.86 0 0 1 -0.86 -5.48 A 0.86 0.86 0 0 1 -0.28 -6.34 C -0.2016 -6.79 -0.056 -7.95 0 -8.5 Z M 0.5 -5.48 A 0.5 0.5 0 1 0 -0.5 -5.48 A 0.5 0.5 0 1 0 0.5 -5.48 Z M 0.12 0 A 0.12 0.12 0 1 0 -0.12 0 A 0.12 0.12 0 1 0 0.12 0 Z"},
+    minute: {tip:11.47, halfW:0.528, zone:HAND_ZONES.minute, d:"M 0 -11.47 C 0.054 -10.92 0.1944 -8.67 0.27 -8.22 A 0.86 0.86 0 0 1 0.86 -7.36 A 0.86 0.86 0 0 1 0.2 -6.63 C 0.396 -6.08 0.528 -4.1 0.528 -3.75 C 0.528 -3 0.25 -1.51 0.2 -0.96 A 1.05 1.05 0 0 1 1.05 0 A 1.05 1.05 0 0 1 0 1.05 A 1.05 1.05 0 0 1 -1.05 0 A 1.05 1.05 0 0 1 -0.2 -0.96 C -0.25 -1.51 -0.528 -3 -0.528 -3.75 C -0.528 -4.1 -0.396 -6.08 -0.2 -6.63 A 0.86 0.86 0 0 1 -0.86 -7.36 A 0.86 0.86 0 0 1 -0.27 -8.22 C -0.1944 -8.67 -0.054 -10.92 0 -11.47 Z M 0.5 -7.36 A 0.5 0.5 0 1 0 -0.5 -7.36 A 0.5 0.5 0 1 0 0.5 -7.36 Z M 0.12 0 A 0.12 0.12 0 1 0 -0.12 0 A 0.12 0.12 0 1 0 0.12 0 Z"}
   },
   "Vernoy spindle 70%": {
-    hour:   {tip:8.50, halfW:0.441, d:"M 0 -8.5 C 0.056 -7.95 0.2016 -6.79 0.28 -6.34 A 0.86 0.86 0 0 1 0.86 -5.48 A 0.86 0.86 0 0 1 0.2 -4.62 C 0.3307 -4.07 0.441 -3 0.441 -2.65 C 0.441 -1.9 0.25 -1.47 0.2 -0.92 A 1 1 0 0 1 1 0 A 1 1 0 0 1 0 1 A 1 1 0 0 1 -1 0 A 1 1 0 0 1 -0.2 -0.92 C -0.25 -1.47 -0.441 -1.9 -0.441 -2.65 C -0.441 -3 -0.3307 -4.07 -0.2 -4.62 A 0.86 0.86 0 0 1 -0.86 -5.48 A 0.86 0.86 0 0 1 -0.28 -6.34 C -0.2016 -6.79 -0.056 -7.95 0 -8.5 Z M 0.5 -5.48 A 0.5 0.5 0 1 0 -0.5 -5.48 A 0.5 0.5 0 1 0 0.5 -5.48 Z M 0.12 0 A 0.12 0.12 0 1 0 -0.12 0 A 0.12 0.12 0 1 0 0.12 0 Z"},
-    minute: {tip:11.47, halfW:0.462, d:"M 0 -11.47 C 0.054 -10.92 0.1944 -8.67 0.27 -8.22 A 0.86 0.86 0 0 1 0.86 -7.36 A 0.86 0.86 0 0 1 0.2 -6.63 C 0.3465 -6.08 0.462 -4.1 0.462 -3.75 C 0.462 -3 0.25 -1.51 0.2 -0.96 A 1.05 1.05 0 0 1 1.05 0 A 1.05 1.05 0 0 1 0 1.05 A 1.05 1.05 0 0 1 -1.05 0 A 1.05 1.05 0 0 1 -0.2 -0.96 C -0.25 -1.51 -0.462 -3 -0.462 -3.75 C -0.462 -4.1 -0.3465 -6.08 -0.2 -6.63 A 0.86 0.86 0 0 1 -0.86 -7.36 A 0.86 0.86 0 0 1 -0.27 -8.22 C -0.1944 -8.67 -0.054 -10.92 0 -11.47 Z M 0.5 -7.36 A 0.5 0.5 0 1 0 -0.5 -7.36 A 0.5 0.5 0 1 0 0.5 -7.36 Z M 0.12 0 A 0.12 0.12 0 1 0 -0.12 0 A 0.12 0.12 0 1 0 0.12 0 Z"}
+    hour:   {tip:8.50, halfW:0.441, zone:HAND_ZONES.hour, d:"M 0 -8.5 C 0.056 -7.95 0.2016 -6.79 0.28 -6.34 A 0.86 0.86 0 0 1 0.86 -5.48 A 0.86 0.86 0 0 1 0.2 -4.62 C 0.3307 -4.07 0.441 -3 0.441 -2.65 C 0.441 -1.9 0.25 -1.47 0.2 -0.92 A 1 1 0 0 1 1 0 A 1 1 0 0 1 0 1 A 1 1 0 0 1 -1 0 A 1 1 0 0 1 -0.2 -0.92 C -0.25 -1.47 -0.441 -1.9 -0.441 -2.65 C -0.441 -3 -0.3307 -4.07 -0.2 -4.62 A 0.86 0.86 0 0 1 -0.86 -5.48 A 0.86 0.86 0 0 1 -0.28 -6.34 C -0.2016 -6.79 -0.056 -7.95 0 -8.5 Z M 0.5 -5.48 A 0.5 0.5 0 1 0 -0.5 -5.48 A 0.5 0.5 0 1 0 0.5 -5.48 Z M 0.12 0 A 0.12 0.12 0 1 0 -0.12 0 A 0.12 0.12 0 1 0 0.12 0 Z"},
+    minute: {tip:11.47, halfW:0.462, zone:HAND_ZONES.minute, d:"M 0 -11.47 C 0.054 -10.92 0.1944 -8.67 0.27 -8.22 A 0.86 0.86 0 0 1 0.86 -7.36 A 0.86 0.86 0 0 1 0.2 -6.63 C 0.3465 -6.08 0.462 -4.1 0.462 -3.75 C 0.462 -3 0.25 -1.51 0.2 -0.96 A 1.05 1.05 0 0 1 1.05 0 A 1.05 1.05 0 0 1 0 1.05 A 1.05 1.05 0 0 1 -1.05 0 A 1.05 1.05 0 0 1 -0.2 -0.96 C -0.25 -1.51 -0.462 -3 -0.462 -3.75 C -0.462 -4.1 -0.3465 -6.08 -0.2 -6.63 A 0.86 0.86 0 0 1 -0.86 -7.36 A 0.86 0.86 0 0 1 -0.27 -8.22 C -0.1944 -8.67 -0.054 -10.92 0 -11.47 Z M 0.5 -7.36 A 0.5 0.5 0 1 0 -0.5 -7.36 A 0.5 0.5 0 1 0 0.5 -7.36 Z M 0.12 0 A 0.12 0.12 0 1 0 -0.12 0 A 0.12 0.12 0 1 0 0.12 0 Z"}
   }
 };
+
+/* Length used to scale the whole drawing, which made a longer hand a wider
+   one and stretched the pomme and the boss into ovals along with it. Length is
+   a length: it may only move things along Y, and the round parts are round
+   because they are holes and collets of a fixed size.
+
+   So the hand is treated as four runs stacked from the pivot — boss, spindle,
+   pomme, needle — and the change is absorbed by the two that are allowed to
+   take it. The boss keeps its size and its place; the pomme keeps its size and
+   slides out to wherever the lengthened spindle leaves it; the spindle and the
+   needle stretch to make up the difference, sharing it in proportion to what
+   they already were.
+
+   It is done on the coordinates rather than with a transform because there is
+   no single transform that stretches part of a path. Only the y of each point
+   is touched, so x — and therefore the width — cannot move. Arc radii are left
+   alone, which is exactly right: every arc in these outlines lies inside the
+   boss or inside the pomme, and those runs are rigid, so an arc is only ever
+   translated, never reshaped. The runs meet at the values below, so the map is
+   continuous at each boundary. */
+function stretchHand(d, z, tip, target){
+  const fixed = Math.abs(z.bossTop) + (Math.abs(z.pommeTop) - Math.abs(z.pommeBot));
+  const flex  = tip - fixed;
+  if(!(flex > 0)) return d;
+  const s = Math.max(0.12, (target - fixed) / flex);
+  if(Math.abs(s - 1) < 1e-6) return d;
+  const bt = z.bossTop, pb = z.pommeBot, pt = z.pommeTop;
+  const shift = (bt + (pb - bt)*s) - pb;          // how far the pomme travels
+  const mapY = y =>
+      y >= bt ? y                                  // boss and counterweight: fixed
+    : y >= pb ? bt + (y - bt)*s                    // spindle: stretched
+    : y >= pt ? y + shift                          // pomme: rigid, repositioned
+    : (pt + shift) + (y - pt)*s;                   // needle: stretched
+  /* every command is "letter" then numbers; only the y of each coordinate PAIR
+     moves, and an arc's first five numbers are radii and flags, not a point */
+  return d.replace(/([MLCQSTAmlcqsta])([^MLCQZAmlcqsta]*)/g, (m, cmd, rest) => {
+    const nums = rest.trim().split(/[\s,]+/).filter(x => x !== "");
+    if(!nums.length) return cmd + rest;
+    const up = cmd.toUpperCase();
+    const out = nums.slice();
+    const stride = up === "A" ? 7 : 2;
+    for(let i = 0; i + stride <= out.length; i += stride){
+      const yi = i + stride - 1;
+      out[yi] = f(mapY(parseFloat(out[yi])), 4);
+    }
+    return cmd + " " + out.join(" ") + " ";
+  });
+}
 const HAND_VEC_NAMES = Object.keys(BUILTIN_HAND_VEC);
 const POMME = {
   "pomme-ouverte": {pomme:"open",  ring:0.30},   // hollow ring
@@ -5137,8 +5199,13 @@ function handSchema(k,title){
     SEL(k+".style","Style",HAND_STYLES),
     ...(POMME[S[k].style] && S[k].style !== "pomme-facetee"
         ? [SEL(k+".stem","Stem",["solid","skeleton","line"])] : []),
-    handVec(S[k], k) ? N(k+".length","Length from centre",2,24,.01)
-                     : N(k+".length","Length from centre",2,24),
+    /* A supplied hand cannot be shorter than the parts of it that do not
+       scale, so the slider stops where the boss and the pomme meet rather
+       than pretending to go lower and drawing the same hand three times. */
+    handVec(S[k], k)
+      ? N(k+".length","Length from centre",
+          Math.round(handFloor(handVec(S[k], k).zone || HAND_ZONES.hour)*100)/100, 24, .01)
+      : N(k+".length","Length from centre",2,24),
     N(k+".width","Body width",.1,3.5,.05),
     N(k+".tail","Counterweight tail",0,8,.1), N(k+".boss","Central boss diameter",.3,3,.05),
     ...(POMME[S[k].style] ? [
