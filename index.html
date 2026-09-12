@@ -491,6 +491,34 @@ input[type=range]:active::-webkit-slider-thumb{ transform:scale(1.18) }
 .mark{ color:var(--ds-text) }
 .mark em, .mark .accent{ color:var(--ds-brand) }
 
+/* Numeral faces are chosen from drawn samples rather than a dropdown of
+   names: a list of twenty-nine serif names tells a watch designer nothing
+   about which one is the Breguet and which the slab. Scrolls once it is
+   taller than a phone sheet can give it. */
+.faces{ display:grid; grid-template-columns:repeat(auto-fill,minmax(84px,1fr));
+  gap:6px; max-height:264px; overflow-y:auto; -webkit-overflow-scrolling:touch;
+  margin-top:5px; padding:6px; background:var(--ds-panel-2);
+  border:1px solid var(--ds-border); border-radius:var(--ds-r-sm) }
+.face{ display:flex; flex-direction:column; align-items:center; gap:4px;
+  padding:8px 4px 6px; background:var(--ds-panel); color:var(--ds-text);
+  border:2px solid transparent; border-radius:var(--ds-r-xs);
+  cursor:pointer; font:inherit; text-align:center }
+.face:hover{ border-color:var(--ds-border) }
+.face.on{ border-color:var(--brass) }
+.face:active{ transform:scale(.97) }
+.faceArt{ display:flex; align-items:center; justify-content:center;
+  height:30px; width:100%; overflow:hidden; pointer-events:none }
+.faceName{ font-size:9.5px; line-height:1.2; color:var(--ds-text-2);
+  pointer-events:none; overflow:hidden; display:-webkit-box;
+  -webkit-line-clamp:2; -webkit-box-orient:vertical }
+.face.on .faceName{ color:var(--ds-text) }
+@media (max-width:900px){
+  .faces{ grid-template-columns:repeat(auto-fill,minmax(92px,1fr)); max-height:300px }
+  .faceArt{ height:34px }
+  .faceName{ font-size:10.5px }
+}
+@media (prefers-reduced-motion: reduce){ .face:active{ transform:none } }
+
 /* The readouts kept the panel colour from the dark theme while the text
    tokens moved to the light one, so every value was near-black ink on a
    near-black ground — invisible, in the geometry box, the PANTONE match, the
@@ -1531,6 +1559,24 @@ function arcPath(r, aMid, span){
   const a0 = aMid - span/2, a1 = aMid + span/2;
   const q0 = pt(r, a0), q1 = pt(r, a1);
   return `M${f(q0[0],3)} ${f(q0[1],3)} A${f(r,3)} ${f(r,3)} 0 0 1 ${f(q1[0],3)} ${f(q1[1],3)}`;
+}
+/* One numeral drawn in the face itself, so the list can be read instead of
+   guessed at from a name. Twelve carries the most letterforms in every
+   system — XII, 12, ١٢ — and is what tells two Romans apart at a glance.
+   Set at the font's own fit, with no tracking, so the faces compare like for
+   like rather than through whatever the Spacing slider happens to be on. */
+function faceSample(style, sys){
+  const label = numeralLabel(12, sys);
+  if(style === "vernoy" || style === "breguet"){
+    const g = style === "vernoy"
+      ? vernoyNumeral(label, 0, 0, 10, "currentColor", 0, false, "", 1)
+      : breguetNumeral(label, 0, 0, 10, "currentColor", 0, false, "", 1, 1);
+    return `<svg viewBox="-13 -7 26 14" height="28" style="overflow:visible">${g}</svg>`;
+  }
+  const fam = fontFamilyOf(style);
+  if(!fam) return `<span style="font-size:22px">${esc(label)}</span>`;
+  const liga = noLigatures(style) ? "font-variant-ligatures:none;font-feature-settings:'liga' 0;" : "";
+  return `<span style="${liga}font-family:${fam};font-size:24px;line-height:1">${esc(label)}</span>`;
 }
 /* render a number in the chosen system */
 function numeralLabel(n, sys){
@@ -4541,7 +4587,7 @@ const SCHEMA = {
   numerals:{title:"Numerals", hint:"The vernoy and breguet sets are drawn outlines. The others are fonts.", fields:()=>[
     {t:"head", l:"Style"},
     SEL("numerals.system","Numeral system",NUM_SYSTEMS),
-    SEL("numerals.style","Font / style",stylesFor(S.numerals.system || "western 0–9")),
+    {t:"facepick", p:"numerals.style", l:"Font / style"},
     {t:"font"},
     SEL("numerals.set","Which numerals",["all","even","quarters","1212"]),
     N("numerals.size","Size",1,7,.05),
@@ -4958,6 +5004,17 @@ function field(fd){
     </div>
     <div class="swatches">${pool.map(x=>`<button class="sw" style="background:${x[1]}" data-sw="${fd.p}" data-v="${x[1]}" title="PANTONE ${x[0]} · ${x[1]}"></button>`).join("")}</div></div>`;
   }
+  if(fd.t==="facepick"){
+    const sys = S.numerals.system || "western 0–9";
+    const list = stylesFor(sys), cur = S.numerals.style;
+    /* addressed by position, not by name: an imported face is named from its
+       filename and esc() does not escape quotes */
+    const tiles = list.map((st,i) => `<button class="face${st===cur?" on":""}" data-face="${i}" title="${esc(st)}">
+        <span class="faceArt">${faceSample(st, sys)}</span>
+        <span class="faceName">${esc(st)}</span></button>`).join("");
+    return `<div class="f"><label>${fd.l}<span class="val">${list.length} for ${esc(sys)}</span></label>
+      <div class="faces" data-p="${fd.p}">${tiles}</div></div>`;
+  }
   if(fd.t==="sel") return `<div class="f"><label>${fd.l}</label>
     <select data-p="${fd.p}">${fd.opts.map(o=>`<option ${o===v?"selected":""}>${o}</option>`).join("")}</select></div>`;
   if(fd.t==="act") return `<div class="f"><button class="btn" data-act="${fd.a}" style="width:100%">${fd.l}</button></div>`;
@@ -5012,6 +5069,12 @@ document.addEventListener("click", e=>{
   if(t.dataset.on){ set(S,t.dataset.on,!get(S,t.dataset.on)); commit(); paintAll(); }
   if(t.dataset.sw){ set(S,t.dataset.sw,t.dataset.v); commit(); paintProps(); paintView(); }
   if(t.dataset.slab){ S.dial.slab = t.dataset.slab; commit(); paintProps(); paintView(); return; }
+  if(t.closest && t.closest("[data-face]")){
+    const i = +t.closest("[data-face]").dataset.face;
+    const list = stylesFor(S.numerals.system || "western 0–9");
+    if(list[i]){ S.numerals.style = list[i]; commit(); paintProps(); paintView(); }
+    return;
+  }
   if(t.dataset.delslab){ deleteSlab(t.dataset.delslab); return; }
   if(t.dataset.delfont){ deleteFont(t.dataset.delfont); return; }
   if(t.dataset.liga){
