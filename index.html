@@ -491,6 +491,16 @@ input[type=range]:active::-webkit-slider-thumb{ transform:scale(1.18) }
 .mark{ color:var(--ds-text) }
 .mark em, .mark .accent{ color:var(--ds-brand) }
 
+/* The readouts kept the panel colour from the dark theme while the text
+   tokens moved to the light one, so every value was near-black ink on a
+   near-black ground — invisible, in the geometry box, the PANTONE match, the
+   numeral circle and the font details alike. Same inset surface as the other
+   controls. */
+.readout{ background:var(--ds-panel-2); border:1px solid var(--ds-border);
+  border-radius:var(--ds-r-sm); color:var(--ds-text) }
+.readout div{ color:var(--ds-text-2) }
+.readout b{ color:var(--ds-text) }
+
 /* tooltip */
 .ds-tip{ position:relative }
 .ds-tip[data-tip]:hover::after{
@@ -1315,6 +1325,38 @@ async function registerFont(f){
     return true;
   }catch(e){ return false; }
 }
+/* A face can draw the compound numerals as ligatures over I, V and X rather
+   than carrying a glyph each. Done well that is a proper dial face; done
+   badly — as in the first prototype that arrived here — the components are
+   stacked at the origin and merged into one contour, and II and III come out
+   as solid blocks with no hint as to why.
+
+   Roman numerals are repeated stems, so a ligature has almost nothing to
+   tighten: losing more than a fifth of the combined advance means the parts
+   are overlapping, not fitting. On that prototype the eight collapsed glyphs
+   measured 0.52 to 0.76 of their parts while its one correctly built
+   ligature sat at 0.82, and all 27 other embedded faces sit at exactly 1.00
+   because they carry no such ligatures at all. Hence four fifths, with room
+   either side. A face wrongly caught still draws correctly from its own I, V
+   and X, and the panel offers the ligatures back. */
+const LIGA_COLLAPSE = 0.80;
+async function ligatureTrouble(family){
+  try{
+    await document.fonts.load(`200px '${family}'`);
+    const g = document.createElement("canvas").getContext("2d");
+    g.font = `200px '${family}'`;
+    const one = {};
+    for(const c of "IVX") one[c] = g.measureText(c).width;
+    if(!one.I || !one.V || !one.X) return [];      // not a Roman face; nothing to judge
+    const bad = [];
+    for(const n of ROMAN){
+      if(n.length < 2) continue;
+      const parts = [...n].reduce((a,c) => a + (one[c] || 0), 0);
+      if(parts && g.measureText(n).width < parts * LIGA_COLLAPSE) bad.push(n);
+    }
+    return bad;
+  }catch(e){ return []; }
+}
 async function importFont(file){
   const src = await new Promise(r=>{ const fr=new FileReader(); fr.onload=()=>r(fr.result); fr.readAsDataURL(file); });
   const name = file.name.replace(/\.[a-z0-9]+$/i, "");
@@ -1322,12 +1364,16 @@ async function importFont(file){
   const ok = await registerFont(f);
   if(!ok){ toast("That file could not be read as a font"); return; }
   f.sys = NUM_SYSTEMS.filter(sy => fontHasGlyph(`'${f.family}'`, SYS_PROBE[sy]));
+  f.badLiga = await ligatureTrouble(f.family);
+  f.noLiga = f.badLiga.length > 0;
   userFonts.push(f);
   try{ await KV.set("wds:font:"+f.id, JSON.stringify(f));
        await KV.set("wds:fontIndex", JSON.stringify(userFonts.map(x=>x.id))); }catch(e){}
   S.numerals.style = name;
   commit(); paintProps(); paintView();
-  toast(name + " added — it will be embedded in exports");
+  toast(f.noLiga
+    ? `${name} added — its ligatures collide, so they are switched off`
+    : name + " added — it will be embedded in exports");
 }
 async function loadFonts(){
   try{
@@ -1335,7 +1381,13 @@ async function loadFonts(){
     if(!idx) return;
     for(const id of JSON.parse(idx.value)){
       try{ const r = await KV.get("wds:font:"+id);
-        if(r){ const f = JSON.parse(r.value); userFonts.push(f); await registerFont(f); } }catch(e){}
+        if(r){ const f = JSON.parse(r.value); userFonts.push(f); await registerFont(f);
+          /* imported before there was a test for this — judge it once and keep the answer */
+          if(f.noLiga === undefined){
+            f.badLiga = await ligatureTrouble(f.family);
+            f.noLiga = f.badLiga.length > 0;
+            try{ await KV.set("wds:font:"+f.id, JSON.stringify(f)); }catch(e){}
+          } } }catch(e){}
     }
     if(userFonts.length){ paintProps(); paintView(); }
   }catch(e){}
@@ -1444,6 +1496,8 @@ function stylesFor(sys){
    SVG, where it has to hold up in whatever opens the file. */
 function noLigatures(style){
   const st = STYLE_ALIAS[style] || style;
+  const uf = userFonts.find(x => x.name === st);
+  if(uf) return !!uf.noLiga;
   return !!(BUILTIN_FONTS[st] && BUILTIN_FONTS[st].noLiga);
 }
 const LIGA_OFF = ' style="font-variant-ligatures:none;font-feature-settings:&apos;liga&apos; 0"';
@@ -4844,10 +4898,17 @@ function field(fd){
     const uf = userFonts.find(f => f.name === S.numerals.style);
     const outline = S.numerals.style === "vernoy" || S.numerals.style === "breguet";
     return `<div class="f"><div class="readout" style="margin-bottom:7px">
-        <div><span>Source</span><b>${outline ? "drawn outlines" : uf ? "imported font" : "Google Fonts"}</b></div>
+        <div><span>Source</span><b>${outline ? "drawn outlines" : uf ? "imported font" : "built in"}</b></div>
         <div><span>Travels with exports</span><b>yes</b></div>
         <div><span>Faces for ${esc(sysN)}</span><b>${stylesFor(sysN).length} of ${NUM_STYLES_BASE.length + userFonts.length}</b></div>
-        ${uf && uf.sys ? `<div><span>This font covers</span><b>${uf.sys.length ? esc(uf.sys.join(", ")) : "nothing recognised"}</b></div>` : ""}</div>
+        ${uf && uf.sys ? `<div><span>This font covers</span><b>${uf.sys.length ? esc(uf.sys.join(", ")) : "nothing recognised"}</b></div>` : ""}
+        ${uf && uf.badLiga && uf.badLiga.length ? `<div><span>Ligatures</span><b>${uf.noLiga ? "off — " : "on — "}${uf.badLiga.length} collide</b></div>` : ""}</div>
+      ${uf && uf.badLiga && uf.badLiga.length ? `<div style="font-size:11px;color:var(--muted);margin:2px 0 6px;line-height:1.4">
+        This font builds ${esc(uf.badLiga.join(", "))} by joining letters, and those
+        come out overlapping rather than side by side.${uf.noLiga
+          ? " Each numeral is drawn from its own letters instead, which reads correctly."
+          : " They are being drawn as the font asks."}</div>
+      <button class="mini" data-liga="${uf.id}">${uf.noLiga ? "Use this font's ligatures anyway" : "Ignore this font's ligatures"}</button>` : ""}
       <input type="file" accept=".ttf,.otf,.woff,.woff2,font/*" id="fontFile" style="font-size:12px">
       ${uf ? `<button class="mini" data-delfont="${uf.id}" style="margin-top:4px">Remove ${esc(uf.name)}</button>` : ""}
       <div style="font-size:11px;color:var(--muted);margin-top:4px;line-height:1.4">
@@ -4968,6 +5029,13 @@ document.addEventListener("click", e=>{
   if(t.dataset.slab){ S.dial.slab = t.dataset.slab; commit(); paintProps(); paintView(); return; }
   if(t.dataset.delslab){ deleteSlab(t.dataset.delslab); return; }
   if(t.dataset.delfont){ deleteFont(t.dataset.delfont); return; }
+  if(t.dataset.liga){
+    const uf = userFonts.find(x => x.id === t.dataset.liga);
+    if(uf){ uf.noLiga = !uf.noLiga;
+      try{ KV.set("wds:font:"+uf.id, JSON.stringify(uf)); }catch(e){}
+      paintProps(); paintView(); }
+    return;
+  }
   if(t.dataset.act === "stReset"){ applyFamilyDefaults(S.dial.stone); commit(); paintProps(); paintView();
     toast("Optical response reset to the family defaults"); return; }
   if(t.dataset.act === "slabCut"){
