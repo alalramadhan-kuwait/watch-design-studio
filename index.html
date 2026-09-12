@@ -3145,7 +3145,7 @@ function buildSVG(st, o={}){
          on a pale dial, brighter on a dark one — so it is taken from the
          dial's own lightness rather than assumed to be darker. */
       if(MK.dense) paint = (labOf(face)[0] > 55 ? shade : tint)(paint, MK.dense);
-      if(MK.bare)     paint = shade(face, 0.44);
+      if(MK.bare)     paint = shade(face, 0.52);
       if(MK.dialFace) paint = face;
       if(MA.slab && !MK.bare && !MK.dialFace){
         const sl = slabById(st.dial.slab);
@@ -3189,11 +3189,42 @@ function buildSVG(st, o={}){
            flood-opacity="${op}" result="base"/>`;
 
       if(MK.cut){
-        /* A cut is lit from the far wall: the lip that catches the light is the
-           dial's own edge standing above the fill, not a pale ghost of the ink.
-           The same reading the struck lettering on the cartouche uses. */
-        defs.push(edgeLight(tint(face, MK.bare ? 0.55 : 0.80),
-                            shade(MK.bare ? face : paint, MA.lo), -1, flatBase));
+        /* A cut is not an outlined letter. The first attempt at this drew the
+           two rims hard and unblurred, which is exactly what an outline looks
+           like — a flat glyph with a white keyline down one side — and the
+           brighter the lip, the more it read as a sticker laid on the dial
+           rather than a groove taken out of it.
+
+           A groove has walls. Light coming across the dial falls on the far
+           wall and is blocked from the near one by the lip above it, so the
+           lit edge is narrow and the shaded edge is wider and softer. Both are
+           blurred, because a wall is a slope rather than a line, and both are
+           composited back inside the glyph afterwards — a cut has nothing
+           outside its own outline, so blur that escapes the silhouette is the
+           one thing that would give it away.
+
+           The floor stays flat: engraving cuts through the guilloche, which is
+           why a real one is smooth in the bottom while the surface around it
+           keeps its pattern. */
+        const wall = (dx, dy, spread, col, out) =>
+          `<feOffset in="SourceAlpha" dx="${f(dx,4)}" dy="${f(dy,4)}" result="${out}o"/>
+           <feComposite in="SourceAlpha" in2="${out}o" operator="out" result="${out}a"/>
+           <feGaussianBlur in="${out}a" stdDeviation="${f(spread,4)}" result="${out}b"/>
+           <feComposite in="${out}b" in2="SourceAlpha" operator="in" result="${out}c"/>
+           <feFlood flood-color="${col}" result="${out}f"/>
+           <feComposite in="${out}f" in2="${out}c" operator="in" result="${out}"/>`;
+        /* Softening them was right; softening them that far was not — the walls
+           went so gentle the letter stopped reading as anything at all. What
+           makes a shallow cut legible is the contrast across it, not the width
+           of the blur, so the tones are pushed apart again and the blur pulled
+           back to about a third of the offset. */
+        const lit  = MK.bare ? tint(face, 0.62) : tint(face, 0.58);
+        const dark = shade(MK.bare ? face : paint, MK.bare ? 0.78 : MA.lo + 0.22);
+        defs.push(`<filter id="${shid}" x="-60%" y="-60%" width="220%" height="220%">
+          ${wall(-nlx*k*0.80, -nly*k*0.80, k*0.26, lit,  "hi")}
+          ${wall( nlx*k*1.30,  nly*k*1.30, k*0.46, dark, "sh")}
+          <feMerge><feMergeNode in="SourceGraphic"/><feMergeNode in="sh"/><feMergeNode in="hi"/></feMerge>
+        </filter>`);
       }else if(MK.dialFace){
         /* Pressed up out of the dial, so it is the same piece of brass: its
            shadow is a shade of the dial rather than black, and there is no gap
