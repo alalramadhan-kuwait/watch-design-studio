@@ -2619,6 +2619,16 @@ function buildSVG(st, o={}){
   if(scope!=="full") box = dialD + 3;
   const H = box, W = box;
   const defs = [], body = [], over = [];
+  /* Tag a run of the drawing as one component, so a tap on it can resolve
+     to the thing that draws it. Spliced in after the fact rather than
+     pushed around the block: an opening tag pushed by hand is one stray
+     brace away from an unclosed group, which does not show on screen — the
+     HTML parser repairs it — but truncates every SVG and PNG export. That
+     bug has already been paid for once. This way the pair is added
+     together or not at all. */
+  const tagLayer = (name, from) => {
+    if(body.length > from){ body.splice(from, 0, `<g data-layer="${name}">`); body.push("</g>"); }
+  };
 
   /* ---- helpers bound to this render ---- */
   let uid = 0; const id = p => `${p}${++uid}${o.tag||""}`;
@@ -2951,6 +2961,7 @@ function buildSVG(st, o={}){
     }
     // indices
     const ix = st.indices, nm = st.numerals;
+    const ixFrom = body.length;
     if(ix.on){
       const numeralPositions = nm.on ? numeralSet(nm.set) : [];
       for(let i=0;i<ix.count;i++){
@@ -2959,7 +2970,9 @@ function buildSVG(st, o={}){
         body.push(indexShape(ix, a, id, defs));
       }
     }
+    tagLayer("indices", ixFrom);
     // numerals
+    const nmFrom = body.length;
     if(nm.on){
       const fam = fontFamilyOf(nm.style) ||
         {modern:"'IBM Plex Sans',Helvetica,sans-serif", deco:"'Josefin Sans','IBM Plex Sans',sans-serif",
@@ -3139,6 +3152,7 @@ function buildSVG(st, o={}){
         body.push(rot && !onArc ? `<g${rot}>${wrapped}</g>` : wrapped);
       }
     }
+    tagLayer("numerals", nmFrom);
 
     // sub-dial
     const sd = st.sub;
@@ -4467,7 +4481,7 @@ function buildTemplate(st, o){
     <image href="${tplImage}" x="0" y="0" width="${tplW}" height="${tplH}"/>
     <g clip-path="url(#${clip})" transform="rotate(${f(T.rot,2)} ${f(cx,2)} ${f(cy,2)})">
       ${inner}
-      <circle cx="${f(cx,2)}" cy="${f(cy,2)}" r="${f(dPx/2,2)}" fill="url(#${sh})"/>
+      <circle cx="${f(cx,2)}" cy="${f(cy,2)}" r="${f(dPx/2,2)}" fill="url(#${sh})" pointer-events="none"/>
     </g>
     ${o.guide ? `<circle cx="${f(cx,2)}" cy="${f(cy,2)}" r="${f(dPx/2,2)}" fill="none" stroke="#C9A227" stroke-width="${f(tplW*0.003,2)}" stroke-dasharray="${f(tplW*0.012,2)} ${f(tplW*0.008,2)}"/>
        <line x1="${f(cx-dPx*0.6,2)}" y1="${f(cy,2)}" x2="${f(cx+dPx*0.6,2)}" y2="${f(cy,2)}" stroke="#C9A227" stroke-width="${f(tplW*0.002,2)}" stroke-opacity="0.6"/>
@@ -5413,8 +5427,117 @@ q("#undo").onclick=undo; q("#redo").onclick=redo;
 q("#measure").onclick=e=>{ measureOn=!measureOn; e.target.classList.toggle("on",measureOn); paintView(); };
 q("#zoomIn").onclick=()=>{ zoom=Math.min(4,zoom*1.2); applyTF(); };
 q("#zoomOut").onclick=()=>{ zoom=Math.max(.5,zoom/1.2); applyTF(); };
-q("#zoomFit").onclick=()=>{ zoom=1; panX=panY=0; applyTF(); };
+q("#zoomFit").onclick=()=>{ fitTo(fitMode === "case" ? "watch" : "case"); };
 function applyTF(){ const v=q("#view"); if(v) v.style.transform=tf(); }
+
+/* Tapping a component on the watch selects it. The handler for this has
+   been in the mobile shell all along, calling a selectLayer that was never
+   written, while the stylesheet set cursor:pointer on every tagged group —
+   so the drawing advertised the most obvious touch gesture there is and
+   quietly ignored it. The data-layer names are the component keys, but
+   only where a key exists; anything else is left alone rather than
+   selecting something arbitrary. */
+function selectLayer(k){
+  if(!k || !LAYERS.some(l => l[0] === k)) return false;
+  sel = k;
+  paintLayers(); paintProps(); paintView();
+  return true;
+}
+
+/* Tapping the watch selects what you tapped. Anything drawn on the dial that
+   is not itself a component — the guilloché, the plain brass between the
+   markers — belongs to the dial base, so a tap inside the aperture that lands
+   on nothing in particular selects that rather than doing nothing. Outside
+   the aperture is the photograph of the case, which is not editable, so a tap
+   there is left alone.
+
+   Bound at every width, not only on a phone: the stylesheet puts a pointer
+   cursor on every tagged group whatever the viewport, so the behaviour has to
+   be there whatever the viewport. Bound to the stage rather than to the
+   drawing, because paintView replaces the drawing wholesale on every repaint
+   and would take the listener with it. */
+(function(){
+  const st = q("#stage"); if(!st) return;
+  const onDial = e => {
+    const v = q("#view"); if(!v) return false;
+    const mm = v.querySelector("svg[viewBox]") || v;
+    const ctm = mm.getScreenCTM && mm.getScreenCTM();
+    if(!ctm || !ctm.a) return false;
+    return Math.hypot(e.clientX - ctm.e, e.clientY - ctm.f) / ctm.a <= visR(S);
+  };
+  st.addEventListener("click", e=>{
+    if(e.target.closest && (e.target.closest(".zoomer") || e.target.closest(".hnd")
+       || e.target.closest("#mModes") || e.target.closest("#mMeasure"))) return;
+    const t = e.target.closest && e.target.closest("[data-layer]");
+    const k = t ? t.getAttribute("data-layer") : (onDial(e) ? "dial" : null);
+    if(!k || !selectLayer(k)) return;
+    if(stacked()) tab("props");
+  });
+})();
+
+/* ---------------------------------------------------------------
+   FIT — framing the preview on what is being designed.
+
+   "Fit" used to be zoom=1, pan=0, which is a reset and not a fit. On a
+   phone that mattered: the render is a photograph of the whole watch, so
+   more than half its height is strap and lug, and the dial — the thing
+   every control on this page edits — came out 193px on a 393x852 screen,
+   22.6% of the display. Dragging the sheet up made it 64px, and Fit could
+   not get it back.
+
+   So there are two framings. "case" crops the strap away and fills the
+   stage with the case, which is what you want while editing; "watch" is
+   the whole photograph, which is what you want to judge the finished
+   thing. The Fit button swaps between them, so neither is a trap.
+
+   The measurement is taken from the drawing rather than assumed. Both the
+   photographic composite and the bare render draw the dial in millimetres
+   about the origin, so one screen CTM gives both the centre of the case
+   and how many pixels a millimetre is worth; the case is then CASE_SPEC
+   .flat across, as built. Everything is measured with the transform off,
+   because the transform is what we are solving for.
+
+   This drives the same zoom/panX/panY the pinch gesture uses, so a pinch
+   afterwards carries on from here. It is a CSS transform on the live
+   element only — exportPlan rebuilds from buildSVG — so nothing here can
+   reach a saved SVG, a PNG or the share image. --------------------- */
+let fitMode = "watch";
+function fitTo(mode){
+  const v = q("#view"), st = q("#stage");
+  if(!v || !st) return;
+  fitMode = mode;
+  const keep = v.style.transform;
+  v.style.transform = "none";                 // measure the drawing, not the framing
+  let box = null;
+  try{
+    const vb = v.getBoundingClientRect();
+    const sr = st.getBoundingClientRect();
+    /* the millimetre space: the nested svg when the case photograph is
+       composited underneath, the view itself when it is not */
+    const mm = v.querySelector("svg[viewBox]") || v;
+    const ctm = mm.getScreenCTM && mm.getScreenCTM();
+    let ox, oy, w, h;
+    if(mode === "case" && ctm && ctm.a){
+      ox = ctm.e; oy = ctm.f;                 // the origin is the dial centre
+      w = h = CASE_SPEC.flat * ctm.a;         // 36.00 across, as the case is made
+    }else{
+      ox = vb.x + vb.width/2; oy = vb.y + vb.height/2;
+      w = vb.width; h = vb.height;
+    }
+    if(w > 0 && h > 0) box = {vb, sr, ox, oy, w, h};
+  }catch(e){ box = null; }
+  v.style.transform = keep;
+  if(!box) return;
+  const {vb, sr, ox, oy, w, h} = box;
+  const z = Math.max(0.5, Math.min(4, 0.94 * Math.min(sr.width/w, sr.height/h)));
+  /* the transform scales about the centre of the view, so solve for the
+     pan that lands the target centre on the centre of the stage */
+  const vcx = vb.x + vb.width/2, vcy = vb.y + vb.height/2;
+  zoom = z;
+  panX = (sr.x + sr.width/2) - vcx - z*(ox - vcx);
+  panY = (sr.y + sr.height/2) - vcy - z*(oy - vcy);
+  applyTF();
+}
 
 /* pinch to zoom, one finger to pan — handles keep priority */
 (function(){
@@ -5426,7 +5549,7 @@ function applyTF(){ const v=q("#view"); if(v) v.style.transform=tf(); }
       const [a,b]=[...pts.values()];
       pinch={d:Math.hypot(a.x-b.x,a.y-b.y), z:zoom}; pan=null;
     } else if(pts.size===1 && (isTouch || e.button===0)){
-      pan={x:e.clientX-panX, y:e.clientY-panY};
+      pan={x:e.clientX-panX, y:e.clientY-panY, x0:e.clientX, y0:e.clientY, live:false};
     }
   });
   stage.addEventListener("pointermove", e=>{
@@ -5437,6 +5560,14 @@ function applyTF(){ const v=q("#view"); if(v) v.style.transform=tf(); }
       zoom=Math.max(.5,Math.min(4, pinch.z * Math.hypot(a.x-b.x,a.y-b.y)/pinch.d));
       applyTF(); e.preventDefault();
     } else if(pan && pts.size===1 && zoom>1.01){
+      /* A finger never lands perfectly still, and the preview is now framed
+         on the case, so zoom is above 1 from the moment the studio opens —
+         which means every tap qualified as a pan, and the preventDefault
+         below swallowed the click that selects a component. Pan only once
+         the finger has actually travelled. Same threshold idea as the sheet
+         drag, which distinguishes a drag from a tap the same way. */
+      if(!pan.live && Math.hypot(e.clientX-pan.x0, e.clientY-pan.y0) < 8) return;
+      pan.live = true;
       panX=e.clientX-pan.x; panY=e.clientY-pan.y; applyTF(); e.preventDefault();
     }
   });
@@ -6164,7 +6295,14 @@ refineBootRender();
     nowBar.innerHTML = `<span class="dot"></span><span class="w">${row ? row.textContent : "Nothing selected"}</span>`;
   };
   sheet.append(grab, nowBar, tabs || document.createElement("div"), body);
-  document.addEventListener("click", e=>{ if(e.target.closest(".layer")) setTimeout(refreshNow, 0); });
+  /* The strip follows the selection wherever it is made — a row, a tap on the
+     watch, an undo, a version load. It used to listen for clicks on a list
+     row, which is only one of those, so selecting on the watch left it naming
+     the component you had left behind. paintLayers runs for all of them. */
+  const origPaintLayers = typeof paintLayers === "function" ? paintLayers : null;
+  if(origPaintLayers) window.paintLayers = function(){
+    origPaintLayers.apply(this, arguments); refreshNow();
+  };
   refreshNow();
   if(rail) body.appendChild(rail);
   if(props) body.appendChild(props);
@@ -6174,6 +6312,17 @@ refineBootRender();
     if(props) props.classList.toggle("live", which === "props");
   };
   show("layers");
+  /* Two state machines drove the same two buttons: tab() painted the
+     highlight, show() swapped the pane, and nothing connected them. So
+     selecting a component called tab("props"), lit the pill, and left the
+     component list on screen — which only looked right because a separate
+     listener further down synthesised a click on the button to do the half
+     tab() had not done. One of them has to own it, so tab() now does both
+     and the synthetic click is gone. */
+  if(typeof tab === "function"){
+    const origTab = tab;
+    window.tab = function(name){ origTab(name); show(name); };
+  }
   if(tabs) tabs.addEventListener("click", e=>{
     const b = e.target.closest("button[data-tab]"); if(!b) return;
     [...tabs.querySelectorAll("button")].forEach(x=>x.classList.toggle("on", x===b));
@@ -6199,33 +6348,26 @@ refineBootRender();
     const frac = sheet.getBoundingClientRect().height / vh();
     let best = 0; STOPS.forEach((v,i)=>{ if(Math.abs(v-frac) < Math.abs(STOPS[best]-frac)) best = i; });
     stop = best; setH(vh()*STOPS[stop]);
-    /* the visible area changed, so refit the watch into it */
-    setTimeout(()=>{ const f=document.getElementById("zoomFit"); f && f.click(); }, 260); };
+    /* the visible area changed, so frame it again — the same framing the
+       user is in, not the other one, which is what clicking Fit would do */
+    setTimeout(()=>{ refit(); }, 260); };
   grab.addEventListener("pointerdown", down); addEventListener("pointermove", move, {passive:false});
   addEventListener("pointerup", up); addEventListener("pointercancel", up);
   /* A tap cycles the height; a drag must not also count as a tap, or the
      sheet jumps to the next stop the moment the finger lifts. */
   grab.addEventListener("click", ()=>{ if(moved > 6){ moved = 0; return; }
-    stop = (stop+1) % STOPS.length; setH(vh()*STOPS[stop]); });
+    stop = (stop+1) % STOPS.length; setH(vh()*STOPS[stop]); setTimeout(refit, 260); });
 
-  /* selecting a component shows its properties, as the brief asks */
-  document.addEventListener("click", e=>{
-    if(e.target.closest("[data-lock]") || e.target.closest("[data-on]")) return;
-    if(e.target.closest(".layer")){
-      const b = tabs && tabs.querySelector('button[data-tab="props"]');
-      if(b) b.click();
-      /* The sheet stays where the user put it. Moving it on every selection
-         made the whole interface jump for no reason. */
-    }
-  });
-  /* tapping the watch selects that component too */
-  stage.addEventListener("click", e=>{
-    const t = e.target.closest && e.target.closest("[data-layer]");
-    if(!t) return;
-    const k = t.getAttribute("data-layer");
-    if(typeof selectLayer === "function"){ selectLayer(k);
-      const b = tabs && tabs.querySelector('button[data-tab="props"]'); if(b) b.click(); }
-  });
+
+  /* On a phone the strap is more than half the picture, so the studio opens
+     framed on the case; Fit swaps to the whole watch and back. Re-framed
+     whenever the stage changes shape — rotation, or the sheet moving. */
+  const refit = () => { if(typeof fitTo === "function") fitTo(fitMode); };
+  const openOnCase = () => { if(typeof fitTo === "function") fitTo("case"); };
+  requestAnimationFrame(()=> setTimeout(openOnCase, 60));
+  let rt = null;
+  addEventListener("resize", ()=>{ clearTimeout(rt); rt = setTimeout(refit, 180); });
+  addEventListener("orientationchange", ()=>{ clearTimeout(rt); rt = setTimeout(refit, 300); });
 
   const origPaint = typeof paintAll === "function" ? paintAll : null;
   if(origPaint) window.paintAll = function(){ origPaint.apply(this, arguments); setTitle(); };
