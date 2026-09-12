@@ -1168,12 +1168,17 @@ function migrateLogo(st){
    glyph widths ignored their own sidebearings, so the numerals ran into each
    other at any spacing. A design saved on them opens on Vernoy Radial Roman,
    the properly built successor to the same lettering. */
-/* The two traced hand photographs are gone, replaced by the same two hands as
-   geometry. A design saved on either opens on its vector twin, which is the
-   same drawing with its colour and finish given back. */
+/* The two traced hand photographs are gone, replaced by the same hands as
+   geometry. Their first vector form named the hand; the spindle set names the
+   body width instead and picks the hour or minute drawing from the hand being
+   drawn, so both of those older names land on the full-width spindle. A design
+   saved on any of the four opens on the same shape, with its colour and finish
+   given back. */
 const HAND_ART_TO_VEC = {
-  "artwork · Vernoy hour":   "vector · Vernoy open pomme hour",
-  "artwork · Vernoy minute": "vector · Vernoy open pomme minute"
+  "artwork · Vernoy hour":               "vector · Vernoy spindle 100%",
+  "artwork · Vernoy minute":             "vector · Vernoy spindle 100%",
+  "vector · Vernoy open pomme hour":     "vector · Vernoy spindle 100%",
+  "vector · Vernoy open pomme minute":   "vector · Vernoy spindle 100%"
 };
 function migrateHandArt(st){
   if(!st) return st;
@@ -3588,9 +3593,9 @@ function buildSVG(st, o={}){
     const shid = id("hsh");
     defs.push(`<filter id="${shid}" x="-70%" y="-70%" width="240%" height="240%"><feDropShadow dx="${f(-lxH*0.20,3)}" dy="${f(-lyH*0.20,3)}" stdDeviation="0.09" flood-opacity="0.42"/></filter>`);
     const hctx = {defs, id, lx:lxH, ly:lyH};
-    const draw = (h,a)=>{
+    const draw = (h,a,k)=>{
       if(!h.on) return "";
-      const vec = handVec(h);
+      const vec = handVec(h, k);
       if(vec){
         /* Supplied geometry: scale so the tip lands at the set length, pivot
            on the pinion. Being a path rather than an image, it carries the
@@ -3598,7 +3603,7 @@ function buildSVG(st, o={}){
            one edge into the light, the other away — so it does not read as a
            flat silhouette. The gradient is built in the hand's own frame and
            flipped by where the light falls, so it stays right as it sweeps. */
-        const k = (h.length || vec.tip) / vec.tip;
+        const sc = (h.length || vec.tip) / vec.tip;
         const F = h.finish === "blued" ? "#2B3F73" : h.color;
         let fill = F;
         if(h.finish !== "matte"){
@@ -3614,15 +3619,14 @@ function buildSVG(st, o={}){
             <stop offset="1" stop-color="${tint(F,0.45*amt)}"/></linearGradient>`);
           fill = `url(#${gid})`;
         }
-        return `<g transform="rotate(${f(a,3)}) scale(${f(k,6)})" filter="url(#${shid})">`
-             + (vec.boss ? `<circle cx="0" cy="0" r="${vec.boss}" fill="${fill}"/>` : "")
+        return `<g transform="rotate(${f(a,3)}) scale(${f(sc,6)})" filter="url(#${shid})">`
              + `<path d="${vec.d}" fill="${fill}" fill-rule="evenodd"/></g>`;
       }
       return `<g transform="rotate(${f(a,3)})" filter="url(#${shid})">${handPath(h, Object.assign({angle:a}, hctx))}</g>`;
     };
     /* Stable identifiers for direct selection. They change nothing about how
        the watch looks — they only give a tap something to resolve to. */
-    body.push(`<g data-layer="hands">${draw(st.hHand,aH)}${draw(st.mHand,aM)}${draw(st.sHand,aS)}</g>`);
+    body.push(`<g data-layer="hands">${draw(st.hHand,aH,"hHand")}${draw(st.mHand,aM,"mHand")}${draw(st.sHand,aS,"sHand")}</g>`);
 
     /* centre stack: flat collet, raised dome, pivot — lit by the scene light */
     const bossR = Math.max(st.hHand.boss, st.mHand.boss)/2;
@@ -3900,20 +3904,48 @@ const STYLE_W = {
 };
 /* Supplied hand artwork carried as geometry rather than as a photograph: one
    compound path per hand, drawn pointing to 12 with the pivot at the origin,
-   in its own units. The studio scales it so the tip lands at the set length —
-   which is the only calibration needed, so no certified millimetre dimension
-   has to travel with the artwork. Because it is a filled path and not an
-   image it takes the hand colour, the blued finish and the same flank chamfer
-   the drawn hands get; a PNG could take none of those.
+   in true millimetres at 1:1. The studio scales it so the tip lands at the
+   set length; at the artwork's own length that scale is exactly 1. Because it
+   is a filled path and not an image it takes the hand colour, the blued
+   finish and the same flank chamfer the drawn hands get; a PNG could take
+   none of those.
 
-   The hour's boss came off the source trace with a bite out of its rim, so a
-   disc concentric with the pivot is laid under the path to make it whole.
-   Measured rather than assumed: the eight contour points around that boss all
-   sit 72.2 to 74.2 from the origin, and the four that bite inward sit 15 to 55
-   units inside them. The supplier's own note asks for exactly this repair. */
+   A style here names a body width, not a hand. The hour and minute are two
+   different drawings — the minute is the longer and more slender of the pair
+   — so the artwork is chosen by which hand is being drawn, not by what the
+   style is called. That is what makes the style safe to share across a linked
+   set: the hour gets the hour drawing and the minute gets the minute one. The
+   seconds hand borrows the minute drawing, being the slenderer of the two.
+
+   Only the spindle body changes between widths. Length, tip, pomme diameter
+   and hole, boss diameter and hole, and the connections either side of the
+   body are identical across all four, so the hands stay one family rather
+   than four unrelated shapes. Each drawing carries its own pivot hole, so
+   unlike the earlier trace none of them needs a disc laid under the boss.
+
+   halfW is the half-width of the spindle body, which is what the flank
+   gradient is spread across. It narrows with the body, so a 70% hand shows a
+   correspondingly narrower chamfer.
+
+   Natural lengths: hour 8.50 mm, minute 11.47 mm, the ratio of the source
+   artwork. */
 const BUILTIN_HAND_VEC = {
-  "Vernoy open pomme hour":   {tip:594.80, halfW:72, boss:72.1, d:"M -2.000 -594.800 L -7.000 -589.800 L -25.000 -440.800 L -42.000 -427.800 L -16.000 -435.800 L -15.000 -424.800 L -27.000 -417.800 L -43.000 -396.800 L -56.000 -397.800 L -59.000 -403.800 L -62.000 -375.800 L -54.000 -354.800 L -40.000 -338.800 L -22.000 -328.800 L -42.000 -247.800 L -45.000 -197.800 L -17.000 -77.800 L -18.000 -66.800 L -37.000 -59.800 L -56.000 -41.800 L -40.000 -54.800 L -30.000 -55.800 L -29.000 -47.800 L -20.000 -46.800 L -12.000 -11.800 L -24.000 -8.800 L -47.000 -12.800 L -49.000 -27.800 L -59.000 -28.800 L -59.000 -39.800 L -70.000 -17.800 L -72.000 11.200 L -62.000 39.200 L -46.000 57.200 L -17.000 72.200 L 7.000 73.200 L 37.000 63.200 L 57.000 45.200 L 69.000 21.200 L 71.000 -6.800 L 65.000 -27.800 L 54.000 -44.800 L 34.000 -60.800 L 16.000 -67.800 L 44.000 -203.800 L 41.000 -244.800 L 21.000 -327.800 L 46.000 -344.800 L 58.000 -368.800 L 60.000 -389.800 L 47.000 -420.800 L 23.000 -438.800 L 5.000 -589.800 Z M -12.000 -417.800 L 10.000 -417.800 L 12.000 -415.800 L 12.000 -414.800 L 17.000 -414.800 L 19.000 -412.800 L 20.000 -412.800 L 29.000 -403.800 L 29.000 -402.800 L 31.000 -400.800 L 31.000 -399.800 L 33.000 -396.800 L 33.000 -394.800 L 34.000 -393.800 L 34.000 -388.800 L 35.000 -387.800 L 35.000 -376.800 L 34.000 -375.800 L 34.000 -373.800 L 32.000 -370.800 L 32.000 -368.800 L 30.000 -366.800 L 30.000 -365.800 L 28.000 -363.800 L 28.000 -362.800 L 22.000 -356.800 L 21.000 -356.800 L 19.000 -354.800 L 18.000 -354.800 L 17.000 -353.800 L 16.000 -353.800 L 11.000 -350.800 L 9.000 -350.800 L 8.000 -349.800 L -10.000 -349.800 L -11.000 -350.800 L -13.000 -350.800 L -14.000 -351.800 L -16.000 -351.800 L -17.000 -352.800 L -20.000 -353.800 L -23.000 -356.800 L -24.000 -356.800 L -31.000 -363.800 L -31.000 -364.800 L -33.000 -366.800 L -33.000 -367.800 L -36.000 -372.800 L -36.000 -374.800 L -37.000 -375.800 L -37.000 -391.800 L -36.000 -392.800 L -36.000 -394.800 L -35.000 -395.800 L -35.000 -397.800 L -33.000 -399.800 L -32.000 -402.800 L -30.000 -404.800 L -30.000 -405.800 L -29.000 -406.800 L -25.000 -406.800 L -25.000 -409.800 L -22.000 -412.800 L -21.000 -412.800 L -19.000 -414.800 L -13.000 -414.800 L -13.000 -416.800 Z"},
-  "Vernoy open pomme minute": {tip:802.48, halfW:73, d:"M 2.000 -802.480 L -2.000 -795.480 L -22.000 -568.480 L -47.000 -547.480 L -57.000 -516.480 L -45.000 -480.480 L -14.000 -459.480 L -43.000 -287.480 L -40.000 -220.480 L -15.000 -43.480 L -40.000 -31.480 L -57.000 -16.480 L -69.000 4.520 L -73.000 31.520 L -65.000 61.520 L -46.000 84.520 L -25.000 97.520 L 9.000 101.520 L 38.000 89.520 L 57.000 72.520 L 69.000 50.520 L 72.000 21.520 L 66.000 -0.480 L 55.000 -17.480 L 16.000 -43.480 L 46.000 -251.480 L 44.000 -309.480 L 18.000 -456.480 L 53.000 -486.480 L 61.000 -521.480 L 50.000 -548.480 L 26.000 -570.480 L 10.000 -798.480 Z M -7.000 -547.480 L -3.000 -547.480 L -2.000 -548.480 L 6.000 -548.480 L 7.000 -547.480 L 11.000 -547.480 L 12.000 -546.480 L 14.000 -546.480 L 15.000 -545.480 L 16.000 -545.480 L 17.000 -544.480 L 17.000 -542.480 L 20.000 -542.480 L 21.000 -541.480 L 21.000 -540.480 L 24.000 -540.480 L 32.000 -532.480 L 32.000 -531.480 L 33.000 -530.480 L 33.000 -529.480 L 34.000 -528.480 L 34.000 -527.480 L 36.000 -524.480 L 36.000 -506.480 L 35.000 -505.480 L 35.000 -503.480 L 34.000 -502.480 L 33.000 -499.480 L 31.000 -497.480 L 31.000 -496.480 L 23.000 -488.480 L 22.000 -488.480 L 20.000 -486.480 L 19.000 -486.480 L 16.000 -484.480 L 14.000 -484.480 L 13.000 -483.480 L 10.000 -483.480 L 9.000 -482.480 L -6.000 -482.480 L -7.000 -483.480 L -10.000 -483.480 L -11.000 -484.480 L -12.000 -484.480 L -13.000 -485.480 L -16.000 -486.480 L -18.000 -488.480 L -19.000 -488.480 L -27.000 -496.480 L -27.000 -497.480 L -28.000 -498.480 L -28.000 -499.480 L -29.000 -500.480 L -29.000 -501.480 L -31.000 -504.480 L -31.000 -506.480 L -32.000 -507.480 L -32.000 -522.480 L -31.000 -523.480 L -31.000 -525.480 L -30.000 -526.480 L -30.000 -527.480 L -29.000 -528.480 L -29.000 -529.480 L -28.000 -530.480 L -27.000 -533.480 L -18.000 -542.480 L -14.000 -542.480 L -14.000 -543.480 L -12.000 -545.480 L -11.000 -545.480 L -10.000 -546.480 L -8.000 -546.480 Z"}
+  "Vernoy spindle 100%": {
+    hour:   {tip:8.50, halfW:0.630, d:"M 0 -8.5 C 0.056 -7.95 0.2016 -6.79 0.28 -6.34 A 0.86 0.86 0 0 1 0.86 -5.48 A 0.86 0.86 0 0 1 0.2 -4.62 C 0.4725 -4.07 0.63 -3 0.63 -2.65 C 0.63 -1.9 0.25 -1.47 0.2 -0.92 A 1 1 0 0 1 1 0 A 1 1 0 0 1 0 1 A 1 1 0 0 1 -1 0 A 1 1 0 0 1 -0.2 -0.92 C -0.25 -1.47 -0.63 -1.9 -0.63 -2.65 C -0.63 -3 -0.4725 -4.07 -0.2 -4.62 A 0.86 0.86 0 0 1 -0.86 -5.48 A 0.86 0.86 0 0 1 -0.28 -6.34 C -0.2016 -6.79 -0.056 -7.95 0 -8.5 Z M 0.5 -5.48 A 0.5 0.5 0 1 0 -0.5 -5.48 A 0.5 0.5 0 1 0 0.5 -5.48 Z M 0.12 0 A 0.12 0.12 0 1 0 -0.12 0 A 0.12 0.12 0 1 0 0.12 0 Z"},
+    minute: {tip:11.47, halfW:0.660, d:"M 0 -11.47 C 0.054 -10.92 0.1944 -8.67 0.27 -8.22 A 0.86 0.86 0 0 1 0.86 -7.36 A 0.86 0.86 0 0 1 0.2 -6.63 C 0.495 -6.08 0.66 -4.1 0.66 -3.75 C 0.66 -3 0.25 -1.51 0.2 -0.96 A 1.05 1.05 0 0 1 1.05 0 A 1.05 1.05 0 0 1 0 1.05 A 1.05 1.05 0 0 1 -1.05 0 A 1.05 1.05 0 0 1 -0.2 -0.96 C -0.25 -1.51 -0.66 -3 -0.66 -3.75 C -0.66 -4.1 -0.495 -6.08 -0.2 -6.63 A 0.86 0.86 0 0 1 -0.86 -7.36 A 0.86 0.86 0 0 1 -0.27 -8.22 C -0.1944 -8.67 -0.054 -10.92 0 -11.47 Z M 0.5 -7.36 A 0.5 0.5 0 1 0 -0.5 -7.36 A 0.5 0.5 0 1 0 0.5 -7.36 Z M 0.12 0 A 0.12 0.12 0 1 0 -0.12 0 A 0.12 0.12 0 1 0 0.12 0 Z"}
+  },
+  "Vernoy spindle 90%": {
+    hour:   {tip:8.50, halfW:0.567, d:"M 0 -8.5 C 0.056 -7.95 0.2016 -6.79 0.28 -6.34 A 0.86 0.86 0 0 1 0.86 -5.48 A 0.86 0.86 0 0 1 0.2 -4.62 C 0.4253 -4.07 0.567 -3 0.567 -2.65 C 0.567 -1.9 0.25 -1.47 0.2 -0.92 A 1 1 0 0 1 1 0 A 1 1 0 0 1 0 1 A 1 1 0 0 1 -1 0 A 1 1 0 0 1 -0.2 -0.92 C -0.25 -1.47 -0.567 -1.9 -0.567 -2.65 C -0.567 -3 -0.4253 -4.07 -0.2 -4.62 A 0.86 0.86 0 0 1 -0.86 -5.48 A 0.86 0.86 0 0 1 -0.28 -6.34 C -0.2016 -6.79 -0.056 -7.95 0 -8.5 Z M 0.5 -5.48 A 0.5 0.5 0 1 0 -0.5 -5.48 A 0.5 0.5 0 1 0 0.5 -5.48 Z M 0.12 0 A 0.12 0.12 0 1 0 -0.12 0 A 0.12 0.12 0 1 0 0.12 0 Z"},
+    minute: {tip:11.47, halfW:0.594, d:"M 0 -11.47 C 0.054 -10.92 0.1944 -8.67 0.27 -8.22 A 0.86 0.86 0 0 1 0.86 -7.36 A 0.86 0.86 0 0 1 0.2 -6.63 C 0.4455 -6.08 0.594 -4.1 0.594 -3.75 C 0.594 -3 0.25 -1.51 0.2 -0.96 A 1.05 1.05 0 0 1 1.05 0 A 1.05 1.05 0 0 1 0 1.05 A 1.05 1.05 0 0 1 -1.05 0 A 1.05 1.05 0 0 1 -0.2 -0.96 C -0.25 -1.51 -0.594 -3 -0.594 -3.75 C -0.594 -4.1 -0.4455 -6.08 -0.2 -6.63 A 0.86 0.86 0 0 1 -0.86 -7.36 A 0.86 0.86 0 0 1 -0.27 -8.22 C -0.1944 -8.67 -0.054 -10.92 0 -11.47 Z M 0.5 -7.36 A 0.5 0.5 0 1 0 -0.5 -7.36 A 0.5 0.5 0 1 0 0.5 -7.36 Z M 0.12 0 A 0.12 0.12 0 1 0 -0.12 0 A 0.12 0.12 0 1 0 0.12 0 Z"}
+  },
+  "Vernoy spindle 80%": {
+    hour:   {tip:8.50, halfW:0.504, d:"M 0 -8.5 C 0.056 -7.95 0.2016 -6.79 0.28 -6.34 A 0.86 0.86 0 0 1 0.86 -5.48 A 0.86 0.86 0 0 1 0.2 -4.62 C 0.378 -4.07 0.504 -3 0.504 -2.65 C 0.504 -1.9 0.25 -1.47 0.2 -0.92 A 1 1 0 0 1 1 0 A 1 1 0 0 1 0 1 A 1 1 0 0 1 -1 0 A 1 1 0 0 1 -0.2 -0.92 C -0.25 -1.47 -0.504 -1.9 -0.504 -2.65 C -0.504 -3 -0.378 -4.07 -0.2 -4.62 A 0.86 0.86 0 0 1 -0.86 -5.48 A 0.86 0.86 0 0 1 -0.28 -6.34 C -0.2016 -6.79 -0.056 -7.95 0 -8.5 Z M 0.5 -5.48 A 0.5 0.5 0 1 0 -0.5 -5.48 A 0.5 0.5 0 1 0 0.5 -5.48 Z M 0.12 0 A 0.12 0.12 0 1 0 -0.12 0 A 0.12 0.12 0 1 0 0.12 0 Z"},
+    minute: {tip:11.47, halfW:0.528, d:"M 0 -11.47 C 0.054 -10.92 0.1944 -8.67 0.27 -8.22 A 0.86 0.86 0 0 1 0.86 -7.36 A 0.86 0.86 0 0 1 0.2 -6.63 C 0.396 -6.08 0.528 -4.1 0.528 -3.75 C 0.528 -3 0.25 -1.51 0.2 -0.96 A 1.05 1.05 0 0 1 1.05 0 A 1.05 1.05 0 0 1 0 1.05 A 1.05 1.05 0 0 1 -1.05 0 A 1.05 1.05 0 0 1 -0.2 -0.96 C -0.25 -1.51 -0.528 -3 -0.528 -3.75 C -0.528 -4.1 -0.396 -6.08 -0.2 -6.63 A 0.86 0.86 0 0 1 -0.86 -7.36 A 0.86 0.86 0 0 1 -0.27 -8.22 C -0.1944 -8.67 -0.054 -10.92 0 -11.47 Z M 0.5 -7.36 A 0.5 0.5 0 1 0 -0.5 -7.36 A 0.5 0.5 0 1 0 0.5 -7.36 Z M 0.12 0 A 0.12 0.12 0 1 0 -0.12 0 A 0.12 0.12 0 1 0 0.12 0 Z"}
+  },
+  "Vernoy spindle 70%": {
+    hour:   {tip:8.50, halfW:0.441, d:"M 0 -8.5 C 0.056 -7.95 0.2016 -6.79 0.28 -6.34 A 0.86 0.86 0 0 1 0.86 -5.48 A 0.86 0.86 0 0 1 0.2 -4.62 C 0.3307 -4.07 0.441 -3 0.441 -2.65 C 0.441 -1.9 0.25 -1.47 0.2 -0.92 A 1 1 0 0 1 1 0 A 1 1 0 0 1 0 1 A 1 1 0 0 1 -1 0 A 1 1 0 0 1 -0.2 -0.92 C -0.25 -1.47 -0.441 -1.9 -0.441 -2.65 C -0.441 -3 -0.3307 -4.07 -0.2 -4.62 A 0.86 0.86 0 0 1 -0.86 -5.48 A 0.86 0.86 0 0 1 -0.28 -6.34 C -0.2016 -6.79 -0.056 -7.95 0 -8.5 Z M 0.5 -5.48 A 0.5 0.5 0 1 0 -0.5 -5.48 A 0.5 0.5 0 1 0 0.5 -5.48 Z M 0.12 0 A 0.12 0.12 0 1 0 -0.12 0 A 0.12 0.12 0 1 0 0.12 0 Z"},
+    minute: {tip:11.47, halfW:0.462, d:"M 0 -11.47 C 0.054 -10.92 0.1944 -8.67 0.27 -8.22 A 0.86 0.86 0 0 1 0.86 -7.36 A 0.86 0.86 0 0 1 0.2 -6.63 C 0.3465 -6.08 0.462 -4.1 0.462 -3.75 C 0.462 -3 0.25 -1.51 0.2 -0.96 A 1.05 1.05 0 0 1 1.05 0 A 1.05 1.05 0 0 1 0 1.05 A 1.05 1.05 0 0 1 -1.05 0 A 1.05 1.05 0 0 1 -0.2 -0.96 C -0.25 -1.51 -0.462 -3 -0.462 -3.75 C -0.462 -4.1 -0.3465 -6.08 -0.2 -6.63 A 0.86 0.86 0 0 1 -0.86 -7.36 A 0.86 0.86 0 0 1 -0.27 -8.22 C -0.1944 -8.67 -0.054 -10.92 0 -11.47 Z M 0.5 -7.36 A 0.5 0.5 0 1 0 -0.5 -7.36 A 0.5 0.5 0 1 0 0.5 -7.36 Z M 0.12 0 A 0.12 0.12 0 1 0 -0.12 0 A 0.12 0.12 0 1 0 0.12 0 Z"}
+  }
 };
 const HAND_VEC_NAMES = Object.keys(BUILTIN_HAND_VEC);
 const POMME = {
@@ -3934,9 +3966,10 @@ const handGeom = h => {
           tipW:h.tipW ?? Math.max(.12,h.width*0.26), taper:h.taper ?? 0.66,
           tipLen:Math.max(0, L - (Math.abs(pc)+pr))};
 };
-function handVec(h){                 // the geometry behind a "vector · " style
-  if(!h.style || h.style.indexOf("vector · ") !== 0) return null;
-  return BUILTIN_HAND_VEC[h.style.slice(9)] || null;
+function handVec(h, k){              // the geometry behind a "vector · " style
+  if(!h || !h.style || h.style.indexOf("vector · ") !== 0) return null;
+  const v = BUILTIN_HAND_VEC[h.style.slice(9)];
+  return v ? (k === "hHand" ? v.hour : v.minute) : null;
 }
 function handPath(h, ctx){
   const L=h.length, T=h.tail||0;
@@ -4808,7 +4841,7 @@ function handSchema(k,title){
       N(k+".taper","Stem taper at pomme",.3,1,.02,"")] : []),
     SEL(k+".finish","Finish",["polished","brushed","blued","matte"]),
     C(k+".color","Colour"), CK(k+".lume","Lume fill")
-  ].filter(fd => !handVec(S[k]) || !fd.p ||
+  ].filter(fd => !handVec(S[k], k) || !fd.p ||
       ["style","length","on","color","finish"].includes(fd.p.split(".")[1]))};
 }
 let swGroup = "Blue";   // which Pantone family the swatch grid shows
