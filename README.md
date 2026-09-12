@@ -2,7 +2,7 @@
 
 A parametric watch dial and case design studio. Engine, UI, artwork and the case
 photograph all live inside a single `index.html`. No build step, no server, no
-database, nothing sent anywhere — it runs entirely on the visitor's device.
+database — your designs stay on the visitor's own device and are never uploaded.
 
 | file | what it does | required |
 |---|---|---|
@@ -64,5 +64,10 @@ Designs that sync by themselves would need accounts and a backend.
 ## Worth knowing
 
 - First load is about 1.8 MB. Fine on wifi, noticeable on mobile data.
+- The interface lettering is fetched from Google Fonts — the one request the
+  page makes to anywhere. It no longer holds up the first paint, so the studio
+  draws and is usable before it arrives, and falls back to system lettering if
+  it never does. Every dial face is embedded, so artwork and exports are
+  unaffected either way and work with no network at all.
 - The renderer is CPU-heavy. Smooth on a current phone or laptop; an older
   Android will feel slower, especially while dragging a slider.

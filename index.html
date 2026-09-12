@@ -9,7 +9,15 @@
 <link rel="icon" href='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="7" fill="%23111418"/><circle cx="16" cy="16" r="9" fill="none" stroke="%23D4AF37" stroke-width="1.6"/><path d="M16 10.5V16l3.6 2.4" fill="none" stroke="%23D4AF37" stroke-width="1.6" stroke-linecap="round"/></svg>'>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Cormorant+Garamond:wght@500;600;700&family=Josefin+Sans:wght@300;400&display=swap" rel="stylesheet">
+<!-- Interface lettering only — every dial face is embedded further down, so
+     artwork and exports never wait on this. Loaded as a print stylesheet and
+     promoted on load: a plain rel=stylesheet here blocks the first paint on a
+     third-party server, which measured 15s of white screen when that server
+     was unreachable and 144ms once it was out of the way. The page now draws
+     in the fallback stacks and the webfonts swap in when they arrive. No
+     <noscript> copy: the studio needs scripting regardless. -->
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Cormorant+Garamond:wght@500;600;700&family=Josefin+Sans:wght@300;400&display=swap"
+      rel="stylesheet" media="print" onload="this.media='all';this.onload=null">
 <style>
 :root{
   /* material stack: each layer sits above the last (apple-design §12) */
