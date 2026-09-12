@@ -131,6 +131,22 @@ button.ghead.has{color:var(--brass)}
 .layer:hover{background:rgba(255,255,255,.05)}
 .layer.sel{background:rgba(212,175,55,.13);box-shadow:inset 0 0 0 1px rgba(212,175,55,.28)}
 .layer .nm{flex:1;text-align:left;background:none;border:0;padding:0;text-align:left}
+.stepr{flex:0 0 30px;width:30px;height:30px;padding:0;border-radius:8px;
+  border:1px solid var(--ds-border-2,#D4D8DC);background:var(--ds-fill,#F1F3F5);
+  color:var(--ds-text,#222);font-size:16px;line-height:1;display:grid;place-items:center;
+  -webkit-user-select:none;user-select:none}
+.stepr:active{background:var(--ds-border,#DCE0E4)}
+  /* The same plain eye the list rows use, not the boxed one the old dark
+     panel needed. */
+  #mNow .eye{ flex:0 0 auto; margin-left:auto; width:auto; height:auto;
+    padding:4px 2px; background:none; border:0; line-height:0;
+    color:var(--ds-text-3) }
+  #mNow .eye.on{ color:var(--ds-brand) }
+#mNow .w{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#mNow .lico{flex:0 0 20px;width:20px;height:20px}
+.lico{flex:0 0 22px;width:22px;height:22px;display:grid;place-items:center;
+  border-radius:50%;overflow:hidden;color:var(--text)}
+.lico svg{display:block;overflow:visible}
 .eye{
   width:22px;height:18px;border-radius:4px;border:1px solid var(--rule);
   background:#20252C;font-size:10px;color:var(--muted);line-height:1;
@@ -618,6 +634,13 @@ input[type=range]:active::-webkit-slider-thumb{ transform:scale(1.18) }
     backdrop-filter:blur(18px); -webkit-backdrop-filter:blur(18px);
     color:var(--ds-text); box-shadow:var(--ds-sh-1) }
   #mMeasure[aria-pressed="true"]{ background:var(--ds-brand); color:#15181C; border-color:transparent }
+  /* The dimensions live behind this rather than across the watch. */
+  #mInfoBtn{ position:absolute; left:var(--ds-3); bottom:calc(var(--ds-3) + 46px); z-index:9;
+    width:38px; height:38px; border-radius:var(--ds-r-pill);
+    display:grid; place-items:center; padding:0;
+    background:var(--ds-chrome); border:1px solid var(--ds-border-2);
+    backdrop-filter:blur(18px) saturate(180%); box-shadow:var(--ds-sh-1);
+    color:var(--ds-text) }
 
   /* The stamp reads over the case photograph, where plain grey text on a
      brown strap is not text at all, and at bottom-left it sat under the
@@ -4930,9 +4953,96 @@ const revealedLayers = new Set();          // for this session, not part of the 
 const compactLayers = () => NARROW();
 const layerShown = ([k,,onPath]) =>
   CORE_LAYERS.has(k) || revealedLayers.has(k) || k === sel || !!(onPath && get(S,onPath));
+/* A small picture of each component, drawn from the design rather than from
+   a fixed icon set, so the row shows the dial's actual colour, the numeral
+   face actually chosen and the logo actually typed. It is what makes a list
+   of seventeen similar words scannable at a glance on a phone. Cheap on
+   purpose — a handful of shapes each, not a render, because this is redrawn
+   on every repaint. */
+const ICON_BOX = 'viewBox="-12 -12 24 24" width="22" height="22" aria-hidden="true"';
+/* A hairline that stays visible whatever the dial is painted. Without it a
+   chapter ring the same blue as the dial under it drew an invisible icon,
+   and three rows in a row showed the same plain disc. */
+function icoInk(bg){
+  try{ return labOf(bg)[0] > 58 ? "rgba(0,0,0,.55)" : "rgba(255,255,255,.80)"; }
+  catch(e){ return "rgba(0,0,0,.55)"; }
+}
+function layerIcon(k){
+  const d = S.dial || {}, mid = "#9AA3AC";
+  const ink = icoInk(d.color || "#D6D2C4");
+  const edge = f => `<circle r="${f}" fill="none" stroke="${ink}" stroke-width=".7" opacity=".75"/>`;
+  const disc = (fill, r) => `<circle r="${r||10}" fill="${fill}"/>`;
+  const wrap = inner => `<svg ${ICON_BOX}>${inner}</svg>`;
+  const ring = (r, w, c) => `<circle r="${r}" fill="none" stroke="${c}" stroke-width="${w}"/>`;
+  switch(k){
+    case "case": return wrap(`<rect x="-9.5" y="-9.5" width="19" height="19" rx="6.5"
+      fill="none" stroke="${mid}" stroke-width="2"/>`);
+    case "tpl":  return wrap(`<rect x="-10" y="-8" width="20" height="16" rx="2.5"
+      fill="none" stroke="${mid}" stroke-width="1.6"/><circle cx="-4" cy="-3" r="1.8" fill="${mid}"/>
+      <path d="M-9 6 L-2 -1 L3 4 L6 1.5 L9 5" fill="none" stroke="${mid}" stroke-width="1.6"/>`);
+    case "dial": return wrap(disc(d.color || "#D6D2C4")
+      + ring(6.4, .7, ink) + ring(3.1, .7, ink) + edge(10));
+    case "sector": return wrap(disc(d.color || "#D6D2C4")
+      + ring(6.6, 1.5, (S.sector && S.sector.ringColor) || "#A89968") + edge(6.6) + edge(10));
+    case "borders": return wrap(disc(d.color || "#D6D2C4")
+      + `<circle r="7.6" fill="none" stroke="${ink}" stroke-width="1.2" stroke-dasharray="1.6 1.4"/>` + edge(10));
+    case "chapter": return wrap(disc(d.color || "#D6D2C4")
+      + ring(8.2, 3, (S.chapter && S.chapter.color) || "#003087") + edge(6.7) + edge(9.7));
+    case "cross": return wrap(disc(d.color || "#D6D2C4") + edge(10)
+      + `<path d="M0 -9V9M-9 0H9" stroke="${(S.cross && S.cross.color) || "#8BB8E8"}" stroke-width="1.3"/>`);
+    case "minute": {
+      const c = (S.minute && S.minute.color) || "#FFF", dots = [];
+      for(let i=0;i<12;i++){ const a=i*30*Math.PI/180;
+        dots.push(`<circle cx="${(Math.sin(a)*8.4).toFixed(2)}" cy="${(-Math.cos(a)*8.4).toFixed(2)}" r="1" fill="${c}"/>`); }
+      return wrap(disc(d.color || "#D6D2C4") + dots.join("") + edge(10));
+    }
+    case "hour": {
+      const c = (S.hour && S.hour.color) || "#FFF", t = [];
+      for(let i=0;i<4;i++){ const a=i*90*Math.PI/180;
+        t.push(`<line x1="${(Math.sin(a)*6).toFixed(2)}" y1="${(-Math.cos(a)*6).toFixed(2)}"
+          x2="${(Math.sin(a)*9).toFixed(2)}" y2="${(-Math.cos(a)*9).toFixed(2)}" stroke="${c}" stroke-width="1.7"/>`); }
+      return wrap(disc(d.color || "#D6D2C4") + t.join("") + edge(10));
+    }
+    case "indices": return wrap(disc(d.color || "#D6D2C4") + edge(10)
+      + `<rect x="-1.3" y="-9" width="2.6" height="6.4" rx="1.3" fill="${(S.indices && S.indices.color) || "#FFF"}"/>
+         <rect x="-1.3" y="2.6" width="2.6" height="6.4" rx="1.3" fill="${(S.indices && S.indices.color) || "#FFF"}"/>`);
+    case "numerals": {
+      const nm = S.numerals || {}, lab = numeralLabel(12, nm.system || "roman I–XII");
+      const fam = fontFamilyOf(nm.style) || "'Cormorant Garamond',Georgia,serif";
+      const liga = noLigatures(nm.style) ? "font-variant-ligatures:none;font-feature-settings:'liga' 0;" : "";
+      return `<svg ${ICON_BOX}><text x="0" y="0" text-anchor="middle" dominant-baseline="central"
+        style="${liga}font-family:${fam};font-size:13px" fill="currentColor">${esc(lab)}</text></svg>`;
+    }
+    case "hands": {
+      const c = (S.hHand && S.hHand.color) || "#FFF";
+      return wrap(`<path d="M0 1 L-0.9 -6 L0 -7.4 L0.9 -6 Z" fill="${c}" stroke="rgba(0,0,0,.4)" stroke-width=".4"/>
+        <path d="M0 1 L4.6 5.6 L5.8 6.8 L4 6.4 Z" fill="${c}" stroke="rgba(0,0,0,.4)" stroke-width=".4"
+          transform="rotate(-52)"/><circle r="1.5" fill="${c}" stroke="rgba(0,0,0,.4)" stroke-width=".4"/>`);
+    }
+    case "text": {
+      const t = ((S.text && S.text.logo) || "VERNOY").slice(0, 7);
+      return `<svg ${ICON_BOX}><text x="0" y="0" text-anchor="middle" dominant-baseline="central"
+        style="font-family:'Cormorant Garamond',Georgia,serif;font-size:6.4px;letter-spacing:.5px"
+        fill="currentColor">${esc(t)}</text></svg>`;
+    }
+    case "sub": return wrap(disc(d.color || "#D6D2C4")
+      + `<circle cy="3.4" r="4.6" fill="${(S.sub && S.sub.color) || "#D6D2C4"}"
+         stroke="${(S.sub && S.sub.ring) || "#84754E"}" stroke-width="1"/>`);
+    case "date": return wrap(disc(d.color || "#D6D2C4")
+      + `<rect x="1.4" y="-2.6" width="8" height="5.6" rx="1" fill="${(S.date && S.date.bg) || "#F1E6B2"}"
+         stroke="${(S.date && S.date.frame) || "#C8C9C7"}" stroke-width="1"/>`);
+    case "render": return wrap(`<defs><radialGradient id="licon" cx="35%" cy="30%">
+      <stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#7C868F"/></radialGradient></defs>
+      <circle r="9.5" fill="url(#licon)"/>`);
+    case "time": return wrap(ring(9, 1.6, mid)
+      + `<path d="M0 -5V0L3.4 2.6" fill="none" stroke="${mid}" stroke-width="1.6" stroke-linecap="round"/>`);
+    default: return wrap(ring(8, 1.6, mid));
+  }
+}
 const layerRow = ([k,label,onPath])=>{
   const on = onPath ? get(S,onPath) : true;
   return `<div class="layer ${sel===k?"sel":""}" data-k="${k}">
+    <span class="lico" data-k="${k}">${layerIcon(k)}</span>
     <button class="nm" data-k="${k}">${label}</button>
     ${onPath?`<button class="eye ${on?"on":""}" data-on="${onPath}" aria-pressed="${on}"
         title="${on?"Hide":"Show"}">${on?EYE_ON:EYE_OFF}</button>`:""}
@@ -5011,6 +5121,28 @@ function splitAdvanced(host){
     g.appendChild(d);
   });
 }
+/* The case table, wanted in two places: the Case component's own panel,
+   and the info button on a phone, where the dimensions used to sit in a
+   pill taking up canvas the whole time. */
+function caseSpecRows(){
+  const K = CASE_SPEC;
+  return `<div><span>Reference</span><b>${K.ref}</b></div>
+      <div><span>Case / bezel</span><b>${f(K.flat)} × ${f(K.flat)} mm</b></div>
+      <div><span>Across corners</span><b>${f(K.diagonal)} mm</b></div>
+      <div><span>Case middle</span><b>${f(K.midFlat)} · ${f(K.midDiagonal)} corners</b></div>
+      <div><span>Side / corner radius</span><b>R${f(K.rSide)} · R${f(K.rCorner)}</b></div>
+      <div><span>Lug-to-lug</span><b>${f(K.lugToLug)} mm</b></div>
+      <div><span>Strap width</span><b>${f(K.lugWidth)} mm · bar Ø${f(K.springBar)}</b></div>
+      <div><span>Total height</span><b>${f(K.height)} mm</b></div>
+      <div><span>Visible opening</span><b>Ø${f(K.opening)} mm</b></div>
+      <div><span>Glass</span><b>Ø${f(K.glassD)} × ${f(K.glassT)} sapphire</b></div>
+      <div><span>Glass seat</span><b>Ø${f(K.glassSeat)} mm</b></div>
+      <div><span>Dial blank</span><b>Ø${f(K.dialD)} × ${f(K.dialT)} ${K.dialMat}</b></div>
+      <div><span>Movement holder</span><b>Ø${f(K.movHolder)} · cal. ${K.movement}</b></div>
+      <div><span>Crown</span><b>Ø${f(K.crownD)} · cabochon Ø${f(K.cabochon)}</b></div>
+      <div><span>Material / WR</span><b>${K.steel} · ${K.wr}</b></div>
+      <div><span>Tolerance</span><b>${K.tol}</b></div>`;
+}
 function paintProps(){
   const sc = SCHEMA[sel], K = CASE_SPEC;
   const dims = radialDims(S);
@@ -5044,24 +5176,7 @@ function paintProps(){
       ${reachMt!==null?`<div><span>Gap to minute track</span><b>${f(reachMt-h.length)} mm</b></div>`:""}
       ${h.length>vis/2?`<div class="warn"><span>Warning</span><b>tip runs under the bezel</b></div>`:""}`;
   }
-  if(sel==="case"){
-    read = `<div><span>Reference</span><b>${K.ref}</b></div>
-      <div><span>Case / bezel</span><b>${f(K.flat)} × ${f(K.flat)} mm</b></div>
-      <div><span>Across corners</span><b>${f(K.diagonal)} mm</b></div>
-      <div><span>Case middle</span><b>${f(K.midFlat)} · ${f(K.midDiagonal)} corners</b></div>
-      <div><span>Side / corner radius</span><b>R${f(K.rSide)} · R${f(K.rCorner)}</b></div>
-      <div><span>Lug-to-lug</span><b>${f(K.lugToLug)} mm</b></div>
-      <div><span>Strap width</span><b>${f(K.lugWidth)} mm · bar Ø${f(K.springBar)}</b></div>
-      <div><span>Total height</span><b>${f(K.height)} mm</b></div>
-      <div><span>Visible opening</span><b>Ø${f(K.opening)} mm</b></div>
-      <div><span>Glass</span><b>Ø${f(K.glassD)} × ${f(K.glassT)} sapphire</b></div>
-      <div><span>Glass seat</span><b>Ø${f(K.glassSeat)} mm</b></div>
-      <div><span>Dial blank</span><b>Ø${f(K.dialD)} × ${f(K.dialT)} ${K.dialMat}</b></div>
-      <div><span>Movement holder</span><b>Ø${f(K.movHolder)} · cal. ${K.movement}</b></div>
-      <div><span>Crown</span><b>Ø${f(K.crownD)} · cabochon Ø${f(K.cabochon)}</b></div>
-      <div><span>Material / WR</span><b>${K.steel} · ${K.wr}</b></div>
-      <div><span>Tolerance</span><b>${K.tol}</b></div>`;
-  }
+  if(sel==="case") read = caseSpecRows();
   // dial elements that would be swallowed by the bezel
   const off = [];
   if(S.chapter.on && S.chapter.outerD>vis) off.push("chapter ring");
@@ -5162,8 +5277,13 @@ function field(fd){
   if(fd.t==="file") return `<div class="f"><label>${fd.l}<span class="val">${esc(S.tpl.name||"none")}</span></label>
     <input type="file" accept="image/*" id="tplFile" style="font-size:12px"></div>`;
   const v = get(S,fd.p);
+  /* A slider is the wrong instrument for the last tenth of a millimetre with
+     a thumb on it, so each one is flanked by a step. The number box stays for
+     anyone who knows the figure they want. */
   if(fd.t==="num") return `<div class="f"><label>${fd.l}<span class="val">${f(v, fd.step>=1?0:2)}${fd.u?" "+fd.u:""}</span></label>
-    <div class="row"><input type="range" data-p="${fd.p}" min="${fd.min}" max="${fd.max}" step="${fd.step}" value="${v}">
+    <div class="row"><button type="button" class="stepr" data-step="-1" data-sp="${fd.p}" aria-label="Less ${esc(fd.l)}">−</button>
+    <input type="range" data-p="${fd.p}" min="${fd.min}" max="${fd.max}" step="${fd.step}" value="${v}">
+    <button type="button" class="stepr" data-step="1" data-sp="${fd.p}" aria-label="More ${esc(fd.l)}">+</button>
     <input type="number" data-p="${fd.p}" min="${fd.min}" max="${fd.max}" step="${fd.step}" value="${f(v,fd.step>=1?0:2)}"></div></div>`;
   if(fd.t==="col"){
     const pool = PANTONE.filter(x=>x[2]===swGroup);
@@ -5217,9 +5337,16 @@ function paintView(){
   const sb0 = slabById(S.dial.slab);
   const synth = S.dial.finish === "stone" && (!sb0 || sb0.synthetic);
   schedulePrerender();
-  q("#stamp").textContent = synth ? "SYNTHETIC PREVIEW — placeholder, not a real stone" : NARROW()
-    ? `L2L ${f(CASE_SPEC.lugToLug,2)} · opening Ø${f(visR(S)*2,2)}`
+  /* On a phone the stamp earns its place only when it has something to warn
+     about. The dimensions moved behind the info button — they were sitting
+     across the watch at all times to say two numbers that do not change
+     while you draw. A synthetic stone still has to announce itself, so that
+     message keeps the canvas. */
+  const narrow = NARROW();
+  q("#stamp").textContent = synth ? "SYNTHETIC PREVIEW — placeholder, not a real stone" : narrow
+    ? ""
     : `${S.meta.name} — case ${CASE_SPEC.ref} · ${f(CASE_SPEC.flat,2)}×${f(CASE_SPEC.flat,2)} · L2L ${f(CASE_SPEC.lugToLug,2)} · ${f(CASE_SPEC.height,2)} high · opening Ø${f(visR(S)*2,2)}`;
+  q("#stamp").style.visibility = (narrow && !synth) ? "hidden" : "";
   wireHandles();
 }
 function paintVersions(){
@@ -5367,6 +5494,20 @@ document.addEventListener("change", e=>{
   if(["dial.lock","dial.finish","dial.stone","dial.stFibre","dial.stAdv","numerals.system","numerals.style","numerals.tech","text.logoTech","text.nameMode","text.plateShape","text.logoMark","text.plateAuto","sector.band","sector.arms","sector.pattern","hHand.style","mHand.style","sHand.style","indices.style"].includes(e.target.dataset.p)) paintProps();
   paintLayers();
   paintView();          // the preview has to follow the choice, not the keystroke
+});
+/* Stepping drives the same path as dragging the slider, so undo, the linked
+   hand set and the live repaint all behave identically whichever you use. */
+document.addEventListener("click", e=>{
+  const b = e.target.closest && e.target.closest(".stepr"); if(!b) return;
+  const p = b.dataset.sp, ctl = q(`input[type=range][data-p="${p}"]`); if(!ctl) return;
+  const step = parseFloat(ctl.step) || 0.1, dir = +b.dataset.step;
+  const min = parseFloat(ctl.min), max = parseFloat(ctl.max);
+  const dp = Math.max(0, (String(step).split(".")[1] || "").length);
+  const next = Math.min(max, Math.max(min, +( (parseFloat(ctl.value) + dir*step).toFixed(dp) )));
+  if(next === parseFloat(ctl.value)) return;
+  commit();
+  ctl.value = next;
+  ctl.dispatchEvent(new Event("input", {bubbles:true}));
 });
 document.addEventListener("keydown", e=>{
   if((e.metaKey||e.ctrlKey) && e.key.toLowerCase()==="z"){ e.preventDefault(); e.shiftKey?redo():undo(); }
@@ -6221,6 +6362,28 @@ refineBootRender();
              redoB || document.createElement("span"), moreB);
   bar.prepend(top); setTitle();
 
+  /* ---- Case dimensions, on request rather than always ---- */
+  const infoSheet = document.createElement("div");
+  infoSheet.className = "sheet"; infoSheet.id = "mInfo";
+  infoSheet.innerHTML = `<button class="sheetX" data-close="1" aria-label="Close">✕</button>
+    <div class="card"><h2>Case dimensions</h2>
+      <p class="sub">The RD26-0172 drawing set, and what this design leaves visible.</p>
+      <div class="readout" id="mInfoRows"></div></div>`;
+  document.body.appendChild(infoSheet);
+  const infoBtn = document.createElement("button");
+  infoBtn.id = "mInfoBtn"; infoBtn.type = "button";
+  infoBtn.setAttribute("aria-label", "Case dimensions");
+  infoBtn.innerHTML = `<svg viewBox="0 0 16 16" width="17" height="17" aria-hidden="true">
+    <circle cx="8" cy="8" r="6.6" fill="none" stroke="currentColor" stroke-width="1.4"/>
+    <circle cx="8" cy="4.9" r="1" fill="currentColor"/>
+    <path d="M8 7.2v4.4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>`;
+  infoBtn.onclick = ()=>{
+    infoSheet.querySelector("#mInfoRows").innerHTML = caseSpecRows()
+      + `<div><span>Visible opening now</span><b>Ø${f(visR(S)*2,2)} mm</b></div>`;
+    infoSheet.classList.add("open");
+  };
+  byId("stage").appendChild(infoBtn);
+
   /* ---- Add component: the parts this design is not using yet ---- */
   const addSheet = document.createElement("div");
   addSheet.className = "sheet"; addSheet.id = "mAdd";
@@ -6373,9 +6536,21 @@ refineBootRender();
      selected component and keeps the two tabs, so a property is one tap away
      without growing the sheet back over the watch. */
   const nowBar = document.createElement("div"); nowBar.id = "mNow";
+  /* The strip carries the same picture the list row does, so the selection
+     is recognisable rather than only readable, and the eye is here as well as
+     in the list — you are usually looking at the component when you decide to
+     switch it off, not at the list. */
   const refreshNow = () => {
-    const row = document.querySelector(".layer.sel .nm");
-    nowBar.innerHTML = `<span class="dot"></span><span class="w">${row ? row.textContent : "Nothing selected"}</span>`;
+    const row = document.querySelector(".layer.sel");
+    const nm = row && row.querySelector(".nm");
+    const entry = LAYERS.find(l => l[0] === sel);
+    const onPath = entry && entry[2];
+    const on = onPath ? get(S, onPath) : true;
+    nowBar.innerHTML =
+      `<span class="lico">${typeof layerIcon === "function" ? layerIcon(sel) : ""}</span>`
+      + `<span class="w">${nm ? nm.textContent : "Nothing selected"}</span>`
+      + (onPath ? `<button class="eye ${on?"on":""}" data-on="${onPath}" aria-pressed="${on}"
+           title="${on?"Hide":"Show"}">${on?EYE_ON:EYE_OFF}</button>` : "");
   };
   grab.append(nowBar, tabs || document.createElement("div"));
   sheet.append(grab, body);
