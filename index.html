@@ -4899,10 +4899,25 @@ function field(fd){
   if(fd.t==="chk") return `<label class="chk"><input type="checkbox" data-p="${fd.p}" ${v?"checked":""}>${fd.l}</label>`;
   return `<div class="f"><label>${fd.l}</label><input type="text" data-p="${fd.p}" value="${v??""}"></div>`;
 }
+/* The first frame. Shading the dial surface is quadratic in preview
+   resolution — about 300ms at 160px against 1.1s at the default 340 — and a
+   cold load has no cached raster to fall back on, so the surface is what
+   holds up the first usable frame, not the size of this file. Draw it coarse
+   and refine when the browser next goes idle. Only the on-screen raster is
+   affected: geometry, the millimetre values, the handles and every export
+   path carry their own resolution. */
+const BOOT_QUALITY = 160;
+let bootCoarse = true;
+function refineBootRender(){
+  const go = () => { if(!bootCoarse) return; bootCoarse = false; paintView(); };
+  if(typeof requestIdleCallback === "function") requestIdleCallback(go, {timeout:1200});
+  else setTimeout(go, 250);
+}
 function paintView(){
+  const coarse = bootCoarse ? Math.min(BOOT_QUALITY, S.render.quality) : undefined;
   const svg = S.render.view !== "front" ? buildElevation(S, S.render.view, {})
-    : (S.tpl.on && tplImage) ? buildTemplate(S,{guide: tplGuide || sel === "tpl"})
-    : buildSVG(S,{measure:measureOn, handles:handlesOn, touch:isTouch});
+    : (S.tpl.on && tplImage) ? buildTemplate(S,{guide: tplGuide || sel === "tpl", matPx: coarse})
+    : buildSVG(S,{measure:measureOn, handles:handlesOn, touch:isTouch, matPx: coarse});
   q("#view").outerHTML = svg.replace("<svg ",`<svg id="view" style="transform:${tf()}" `);
   q("#stage").classList.toggle("grid", measureOn);
   q("#stamp").style.display = (measureOn && !isTouch) ? "none" : "";
@@ -5259,7 +5274,7 @@ q("#cmpClose").onclick=()=>q("#cmpSheet").classList.remove("open");
 
 /* export */
 q("#share").onclick = async ()=>{
-  const plan = exportPlan();
+  const plan = exportPlan({share:true});
   if(shareBlob && shareKey === stateKey() && canShareFile(shareBlob, plan.name, "image/png")){
     try{
       await navigator.share({files:[new File([shareBlob], plan.name, {type:"image/png"})],
@@ -5495,14 +5510,23 @@ async function diagnoseExport(){
   const out = [];
   for(const [nm, inner] of tests) out.push([nm, await rasterProbe(inner, 32)]);
   let realOk = false, realWhy = "";
-  try{ const plan = exportPlan(); await svgToPng(plan.svg, 400, Math.round(400*plan.H/plan.W), 30000); realOk = true; }
+  /* only proving the browser can rasterise the real page, and the result is
+     thrown away at 400px wide — no reason to shade a full export surface */
+  try{ const plan = exportPlan({share:true}); await svgToPng(plan.svg, 400, Math.round(400*plan.H/plan.W), 30000); realOk = true; }
   catch(err){ realWhy = err.message; }
   return {probes:out, realOk, realWhy};
 }
-function exportPlan(){
+/* The surface raster is a texture sitting under vector geometry, and the
+   shader is quadratic in its resolution: at 1200px it costs about twelve
+   times the 340px preview — thirteen seconds measured here. Share carries a
+   lighter surface so it can be produced without locking the page; geometry,
+   numerals and lettering stay vector and are unaffected. An explicit Export
+   still renders the full raster. */
+const SHARE_MAT_PX = 420;
+function exportPlan(o){
   const v = currentView(), big = v.kind === "template";
   const side = S.exportPx || (isTouch ? 1600 : 3000);
-  const matPx = Math.min(1200, Math.round(side*0.55));
+  const matPx = Math.min((o && o.share) ? SHARE_MAT_PX : 1200, Math.round(side*0.55));
   const svg = currentSVG(big ? {matPx} : {px:side, matPx, measure:measureOn});
   const W = big ? Math.min(tplW*2, side) : side;
   const H = big ? Math.round(W*tplH/tplW) : side;
@@ -5517,14 +5541,25 @@ function stateKey(){
   let h = 0; for(let i=0;i<t.length;i++){ h = (h*31 + t.charCodeAt(i)) | 0; }
   return t.length + ":" + h;
 }
+/* Only a browser that can hand a file to a share sheet has any use for this
+   being ready in advance. Everywhere else Share renders on the click behind
+   its own toast, so preparing one unasked bought nothing and cost a long
+   task after every single edit. */
+function canShareFiles(){
+  try{
+    if(!navigator.share || !navigator.canShare || typeof File === "undefined") return false;
+    return navigator.canShare({files:[new File([new Blob([], {type:"image/png"})], "probe.png", {type:"image/png"})]});
+  }catch(e){ return false; }
+}
 function schedulePrerender(){
   clearTimeout(preTimer);
+  if(!canShareFiles()) return;
   preTimer = setTimeout(async ()=>{
     const key = stateKey();
     if(sharePending || key === shareKey) return;
     sharePending = true;
     try{
-      const plan = exportPlan();
+      const plan = exportPlan({share:true});
       shareBlob = await svgToPng(plan.svg, plan.W, plan.H, 60000);
       shareKey = key;
     }catch(e){ shareBlob = null; shareKey = ""; }
@@ -5709,6 +5744,7 @@ addEventListener("resize", ()=>{ paintView(); });
   await loadSlabLibrary();            // seeds the built-ins if nothing is stored
 })();
 paintAll();
+refineBootRender();
 
 /* The app is fixed to the light theme. The dark tokens remain defined
    under [data-theme="dark"] should it ever be wanted again. */
