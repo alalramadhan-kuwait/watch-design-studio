@@ -3147,14 +3147,26 @@ function buildSVG(st, o={}){
       const line = (txt, y, size, curved, famUse, tracking) => {
         if(!txt) return "";
         const ls = f(size*tracking, 2);
-        if(!curved)
-          return `<text x="0" y="${y}" font-family="${famUse}" font-size="${size}" letter-spacing="${ls}"
+        const flat = () => `<text x="0" y="${y}" font-family="${famUse}" font-size="${size}" letter-spacing="${ls}"
                     fill="${tx.color}" text-anchor="middle" dominant-baseline="central">${esc(txt)}</text>`;
-        const r = Math.abs(y) || 0.01, top = y < 0;
+        if(!curved) return flat();
+        /* The path used to be a semicircle, which gave the lettering only
+           pi*r to run along — and a wordmark longer than that did not wrap or
+           shrink, it lost the glyphs that fell past the end of the path.
+           CHRONOMETRE DE MARINE came out as NOMETRE DE MA, with four
+           characters gone from each end and nothing said. It is now the whole
+           circle, so the run is twice as long, and the text still centres at
+           the top or the bottom because that is the halfway point either way. */
+        const r = Math.abs(y);
+        /* Below this the text is taller than the circle it would bend around,
+           so there is no curve to speak of — set it straight instead of
+           collapsing it onto the centre, which is what r=0 did. */
+        if(r < size) return flat();
+        const top = y < 0, R = f(r,3), sweep = top ? 1 : 0;
+        const a0 = top ? `0 ${R}` : `0 -${R}`, a1 = top ? `0 -${R}` : `0 ${R}`;
         const pid = id("tp");
-        defs.push(`<path id="${pid}" fill="none" d="${top
-          ? `M${f(-r,3)} 0 A${f(r,3)} ${f(r,3)} 0 0 1 ${f(r,3)} 0`
-          : `M${f(-r,3)} 0 A${f(r,3)} ${f(r,3)} 0 0 0 ${f(r,3)} 0`}"/>`);
+        defs.push(`<path id="${pid}" fill="none" d="M${a0}`
+          + ` A${R} ${R} 0 0 ${sweep} ${a1} A${R} ${R} 0 0 ${sweep} ${a0}"/>`);
         return `<text font-family="${famUse}" font-size="${size}" letter-spacing="${ls}" fill="${tx.color}" dominant-baseline="central">
           <textPath href="#${pid}" startOffset="50%" text-anchor="middle">${esc(txt)}</textPath></text>`;
       };
