@@ -745,6 +745,67 @@ input[type=range]:active::-webkit-slider-thumb{ transform:scale(1.18) }
 .adv > summary::before{ content:"▸ "; color:var(--ds-text-3) }
 .adv[open] > summary::before{ content:"▾ " }
 
+/* ---- grouped, collapsible property sections ------------------------
+   Forty controls in one column is a form, not a tool. A schema can now
+   name its own sections and each one folds, so the part being worked on
+   is the part on screen. Groups remember their state per component. */
+.pg{ border-top:1px solid var(--ds-border-2) }
+.pgroup > .pg:first-of-type{ border-top:0 }
+.pg > summary{ list-style:none; cursor:pointer; display:flex; align-items:center; gap:7px;
+  font-size:10.5px; letter-spacing:.13em; text-transform:uppercase; color:var(--ds-text-3);
+  padding:11px 0 7px; user-select:none; -webkit-user-select:none }
+.pg > summary::-webkit-details-marker{ display:none }
+.pg > summary::after{ content:"\25be"; margin-left:auto; font-size:9px; color:var(--ds-text-3) }
+.pg:not([open]) > summary::after{ content:"\25b8" }
+.pg[data-adv] > summary{ text-transform:none; letter-spacing:.01em; font-size:12.5px; color:var(--ds-text-2) }
+.pgb{ padding-bottom:4px }
+
+/* one line, state on the right: the shape most of these controls want */
+.trow{ display:flex; align-items:center; justify-content:space-between; gap:10px; width:100%;
+  background:none; border:0; padding:10px 0; min-height:44px; cursor:pointer; text-align:left;
+  font-family:inherit; font-size:13px; color:var(--ds-text) }
+.trow .state{ font-family:var(--mono); font-size:12px; color:var(--ds-text-3); flex:0 0 auto }
+.trow[aria-pressed="true"] .state{ color:var(--ds-brand) }
+
+/* a sub-section reads as a row that opens, not as another heading */
+.psub > summary{ list-style:none; cursor:pointer; display:flex; align-items:center; gap:10px;
+  padding:10px 0; min-height:44px; font-size:13px; color:var(--ds-text) }
+.psub > summary::-webkit-details-marker{ display:none }
+.psub > summary .state{ margin-left:auto; font-family:var(--mono); font-size:12px; color:var(--ds-text-3) }
+.psub > summary::after{ content:"\203a"; font-size:16px; line-height:1; color:var(--ds-text-3) }
+.psub[open] > summary::after{ content:"\2304"; font-size:13px }
+.psub > .pgb{ padding:2px 0 8px 10px; border-left:2px solid var(--ds-border-2) }
+
+/* two or three exclusive choices read better as one control than as a
+   dropdown you have to open before you can see the options */
+.seg{ display:flex; gap:2px; background:var(--ds-fill); border-radius:var(--ds-r-sm); padding:2px }
+.seg button{ flex:1 1 0; min-width:0; background:none; border:0; cursor:pointer;
+  border-radius:calc(var(--ds-r-sm) - 2px); padding:8px 6px; min-height:36px;
+  font-family:inherit; font-size:12.5px; color:var(--ds-text-2);
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
+.seg button.on{ background:var(--ds-elevated); color:var(--ds-text); box-shadow:var(--ds-sh-1) }
+
+/* named colours as chips. The full Pantone picker is still there, in Advanced */
+.chips{ display:flex; gap:6px; flex-wrap:wrap; align-items:center }
+.chip{ display:inline-flex; align-items:center; gap:6px; background:none; cursor:pointer;
+  border:1px solid var(--ds-border); border-radius:var(--ds-r-pill); padding:5px 11px 5px 6px;
+  font-family:inherit; font-size:12px; color:var(--ds-text-2); min-height:32px }
+.chip.on{ border-color:var(--ds-brand); color:var(--ds-text) }
+.chip i{ width:13px; height:13px; border-radius:50%; border:1px solid var(--ds-border-2); flex:0 0 auto }
+
+/* the value is the input: tap the figure and type the one you want */
+button.val{ background:none; border:0; padding:0 0 1px; cursor:pointer;
+  font-family:var(--mono); font-size:12px; color:var(--ds-text);
+  border-bottom:1px dotted var(--ds-text-3) }
+.f .numbox{ display:none; gap:6px; margin-top:6px }
+.f.typing .numbox{ display:flex }
+.f .numbox input[type=number]{ flex:1 1 auto; width:auto }
+.ends{ display:flex; justify-content:space-between; font-size:11px; color:var(--ds-text-3); margin-top:1px }
+/* On a phone the sheet header already names the component it is showing, so
+   repeating it as the first line of the panel is a heading that says nothing
+   the line above it did not. */
+@media (max-width:900px){ .ptitle.main{ display:none } .phint{ margin-top:2px } }
+
 </style>
 </head>
 <body>
@@ -966,7 +1027,16 @@ const BASE = {
         resShape:"arc", resW:8.4, resH:2.4, resCurve:1.0, resBorder:0.09,
         resDepth:0.07, resPad:0.34, resTextScale:1.0, resAutoFit:true,
         nameMode:"engraved", nameColor:"#25282A", nameHeight:0.10,
-        nameShiftX:0.41, nameShiftY:0},
+        nameShiftX:0.41, nameShiftY:0,
+        /* how the logo is made, kept apart from what the supporting lines
+           are coloured: one slot doing both jobs meant changing the ink
+           moved the footer with it. */
+        logoTrack:0.10,
+        printThick:0, printFinish:"matte", dblBase:"", dblOff:0.04, dblThick:0.05,
+        logoLift:0.10, logoFinish:"polished", logoEdge:"medium",
+        engDepth:0.12, engWidth:0.0, engFill:"none", engColor:"#1B1B1B",
+        stampH:0.15, stampEdge:0.5, stampSurface:"same as dial", stampFinish:"matte",
+        debDepth:0.12, debEdge:0.5, debFill:"none", debColor:"#1B1B1B"},
   hHand:{on:true, style:"pomme-ouverte", length:8.5, width:0.62, tail:0.5, boss:2.30, color:"#FFFFFF", finish:"polished", lume:false,
          pommeD:1.50, pommePos:86, ringW:.30, tipW:.20, taper:.62, stem:"solid"},
   mHand:{on:true, style:"pomme-ouverte", length:13.5, width:0.46, tail:0.5, boss:1.60, color:"#FFFFFF", finish:"polished", lume:false,
@@ -1194,7 +1264,22 @@ const clone = o => JSON.parse(JSON.stringify(o));
 /* Older designs named the stem treatment as if it were a separate hand.
    Map those onto the head plus its stem so nothing opens broken. */
 function migrateLogo(st){
-  if(st && st.text && LOGO_MARK_OLD[st.text.logoMark]) st.text.logoMark = LOGO_MARK_OLD[st.text.logoMark];
+  if(!st || !st.text) return st;
+  const t = st.text;
+  if(LOGO_MARK_OLD[t.logoMark]) t.logoMark = LOGO_MARK_OLD[t.logoMark];
+  /* The supporting lines used to be painted with the logo's own colour, so
+     the two are seeded equal and only then go their separate ways: a design
+     saved before the split opens looking exactly as it was saved. */
+  if(t.lineColor === undefined) t.lineColor = t.color;
+  /* The second line and the footer are shown or hidden rather than cleared,
+     so turning one off and on again does not cost you what you typed. */
+  if(t.line2On === undefined) t.line2On = !!t.line2;
+  if(t.footOn  === undefined) t.footOn  = !!t.foot;
+  /* The name inside a reserved cartouche is made the same six ways the logo
+     itself is. Its old three-value list maps onto the first three. */
+  if(t.resTech === undefined)
+    t.resTech = {printed:"printed", engraved:"engraved", raised:"applied metal"}[t.nameMode] || "printed";
+  if(LOGO_TECH.indexOf(t.logoTech) < 0) t.logoTech = "printed";
   return st;
 }
 /* The traced Vernoy Roman markers are gone — reconstructed letterforms whose
@@ -3394,11 +3479,11 @@ function buildSVG(st, o={}){
       /* Dial text is normally struck on an arc so it sits parallel to the
          chapter ring. The path runs over the top for anything above centre
          and under the bottom for anything below, so letters stay upright. */
-      const line = (txt, y, size, curved, famUse, tracking) => {
+      const line = (txt, y, size, curved, famUse, tracking, col) => {
         if(!txt) return "";
-        const ls = f(size*tracking, 2);
+        const ls = f(size*tracking, 2), ink = col || tx.lineColor || tx.color;
         const flat = () => `<text x="0" y="${y}" font-family="${famUse}" font-size="${size}" letter-spacing="${ls}"
-                    fill="${tx.color}" text-anchor="middle" dominant-baseline="central">${esc(txt)}</text>`;
+                    fill="${ink}" text-anchor="middle" dominant-baseline="central">${esc(txt)}</text>`;
         if(!curved) return flat();
         /* The path used to be a semicircle, which gave the lettering only
            pi*r to run along — and a wordmark longer than that did not wrap or
@@ -3417,33 +3502,188 @@ function buildSVG(st, o={}){
         const pid = id("tp");
         defs.push(`<path id="${pid}" fill="none" d="M${a0}`
           + ` A${R} ${R} 0 0 ${sweep} ${a1} A${R} ${R} 0 0 ${sweep} ${a0}"/>`);
-        return `<text font-family="${famUse}" font-size="${size}" letter-spacing="${ls}" fill="${tx.color}" dominant-baseline="central">
+        return `<text font-family="${famUse}" font-size="${size}" letter-spacing="${ls}" fill="${ink}" dominant-baseline="central">
           <textPath href="#${pid}" startOffset="50%" text-anchor="middle">${esc(txt)}</textPath></text>`;
       };
       /* ---- the logo: printed, an applied piece, or on a nameplate ---- */
       const useMark = tx.logoMark && tx.logoMark !== "none" && LOGO_MARKS[tx.logoMark];
       const ltech = tx.logoTech || "printed";
-      if(ltech === "printed"){
-        if(useMark){
-          /* Twelve of the thirteen marks are a single path; the supplied
-             wordmark is nested artwork with no d at all, so printing it asked
-             for d="undefined" and the logo simply vanished. Each is drawn as
-             what it is, the same way every other technique does it. And since
-             printed type curves when Curve on an arc is ticked, printed
-             artwork now curves with it rather than ignoring the setting. */
-          const M = LOGO_MARKS[tx.logoMark], sc = tx.logoSize/100;
-          const A = M.art ? VERNOY_ART[M.art] : null;
-          let mk = A ? artGroup(A, tx.logoSize, tx.color)
-                     : `<g transform="scale(${f(sc,5)})"><path d="${M.d}" fill="${tx.color}" fill-rule="evenodd"/></g>`;
-          if(tx.logoCurve && Math.abs(tx.logoY) > 0.01)
-            mk = bendArt(mk, A ? A.bw*tx.logoSize/A.bh : M.w*sc,
-                         Math.abs(tx.logoY), tx.logoY < 0, defs, id);
-          body.push(`<g transform="translate(0,${f(tx.logoY,3)})">${mk}</g>`);
-        } else body.push(line(tx.logo, tx.logoY, tx.logoSize, tx.logoCurve, fam, 0.10));
+      /* One vocabulary for relief, shared by every technique that has any.
+         A wall is the edge of the silhouette on one side, softened and then
+         composited back inside the shape — blur that escapes the outline is
+         the one thing that would give a cut away, because a cut has nothing
+         outside its own letter: no halo, no shadow on the dial. */
+      const laG = ((st.render && st.render.az) || 135)*Math.PI/180;
+      const lgx = Math.cos(laG), lgy = Math.sin(laG);
+      const dialFace = st.dial.color;
+      const edgeWall = (dx, dy, spread, col, out) =>
+        `<feOffset in="SourceAlpha" dx="${f(dx,4)}" dy="${f(dy,4)}" result="${out}o"/>
+         <feComposite in="SourceAlpha" in2="${out}o" operator="out" result="${out}a"/>
+         <feGaussianBlur in="${out}a" stdDeviation="${f(Math.max(0.004,spread),4)}" result="${out}b"/>
+         <feComposite in="${out}b" in2="SourceAlpha" operator="in" result="${out}c"/>
+         <feFlood flood-color="${col}" result="${out}f"/>
+         <feComposite in="${out}f" in2="${out}c" operator="in" result="${out}"/>`;
+      const reliefFilter = walls => {
+        const fid = id("lrf");
+        defs.push(`<filter id="${fid}" x="-70%" y="-70%" width="240%" height="240%">${walls}
+          <feMerge><feMergeNode in="SourceGraphic"/><feMergeNode in="sh"/><feMergeNode in="hi"/></feMerge></filter>`);
+        return fid;
+      };
+      /* Sunk into the dial. The lip standing above the near wall keeps the
+         light off it, so the shaded side is the wider and softer of the two
+         and the lit side is narrow and tight. Symmetrical walls read as a
+         bevel on a raised piece, which is the opposite of what this is. */
+      /* Rounding the walls over spreads the same fall across more of the
+         letter; it must not spend it. So the offsets widen as the blur does,
+         or a soft press washes out into nothing — which is exactly what a
+         first attempt at the engraved numerals did. */
+      const cutFilter = (depth, soft, lit, dark) => reliefFilter(
+          edgeWall(-lgx*depth*0.80*(1+soft*0.35), -lgy*depth*0.80*(1+soft*0.35),
+                   depth*(0.26 + soft*0.40), lit,  "hi")
+        + edgeWall( lgx*depth*1.30*(1+soft*0.35),  lgy*depth*1.30*(1+soft*0.35),
+                   depth*(0.46 + soft*0.70), dark, "sh"));
+      /* Pressed up out of the dial. The light falls the other way round, and
+         there is no gap underneath, so there is no cast shadow — which is
+         what separates this from a part laid on top. */
+      const bumpFilter = (h, sharp, lit, dark) => reliefFilter(
+          edgeWall( lgx*h,       lgy*h,       h*(0.12 + (1-sharp)*0.55), lit,  "hi")
+        + edgeWall(-lgx*h*1.05, -lgy*h*1.05,  h*(0.16 + (1-sharp)*0.80), dark, "sh"));
+      /* A wet film catches the light along one edge; a matte one does not. */
+      const sheen = (col, w) => {
+        const fid = id("lsh");
+        defs.push(`<filter id="${fid}" x="-60%" y="-60%" width="220%" height="220%">
+          <feOffset in="SourceAlpha" dx="${f(-lgx*w,4)}" dy="${f(-lgy*w,4)}" result="o"/>
+          <feComposite in="SourceAlpha" in2="o" operator="out" result="a"/>
+          <feGaussianBlur in="a" stdDeviation="${f(w*0.6,4)}" result="b"/>
+          <feComposite in="b" in2="SourceAlpha" operator="in" result="c"/>
+          <feFlood flood-color="${col}" result="fl"/>
+          <feComposite in="fl" in2="c" operator="in"/></filter>`);
+        return fid;
+      };
+      if(FLAT_TECH.has(ltech)){
+        /* Ink and shallow relief share one drawing. The logo is defined once,
+           placed where it belongs and curved if it was asked to curve, with no
+           colour of its own; each technique then lays that same drawing down
+           in its own material and its own light. Five separate constructions
+           of the same lettering would be five chances to draw it differently,
+           which is how printed artwork ended up asking for d="undefined" and
+           vanishing while every other technique drew it correctly. */
+        const trk = tx.logoTrack === undefined ? 0.10 : tx.logoTrack;
+        const lgp = id("lgp");
+        (()=>{
+          const sc = tx.logoSize/100;
+          const curve = tx.logoCurve && Math.abs(tx.logoY) > 0.01;
+          if(useMark){
+            const M = LOGO_MARKS[tx.logoMark];
+            const A = M.art ? VERNOY_ART[M.art] : null;
+            let mk = A ? artGroup(A, tx.logoSize, "inherit")
+                       : `<g transform="scale(${f(sc,5)})"><path d="${M.d}" fill="inherit" fill-rule="evenodd"/></g>`;
+            if(curve) mk = bendArt(mk, A ? A.bw*tx.logoSize/A.bh : M.w*sc,
+                                   Math.abs(tx.logoY), tx.logoY < 0, defs, id);
+            defs.push(`<g id="${lgp}"><g transform="translate(0,${f(tx.logoY,3)})">${mk}</g></g>`);
+            return;
+          }
+          const ls = f(tx.logoSize*trk, 2), r = Math.abs(tx.logoY);
+          if(curve && r >= tx.logoSize){
+            const top = tx.logoY < 0, R = f(r,3), sweep = top ? 1 : 0;
+            const a0 = top ? `0 ${R}` : `0 -${R}`, a1 = top ? `0 -${R}` : `0 ${R}`;
+            const pid = id("ltp");
+            defs.push(`<path id="${pid}" fill="none" d="M${a0}`
+              + ` A${R} ${R} 0 0 ${sweep} ${a1} A${R} ${R} 0 0 ${sweep} ${a0}"/>`);
+            defs.push(`<g id="${lgp}"><text font-family="${fam}" font-size="${tx.logoSize}"`
+              + ` letter-spacing="${ls}" fill="inherit" dominant-baseline="central">`
+              + `<textPath href="#${pid}" startOffset="50%" text-anchor="middle">${esc(tx.logo)}</textPath>`
+              + `</text></g>`);
+            return;
+          }
+          defs.push(`<g id="${lgp}"><text x="0" y="${f(tx.logoY,3)}" font-family="${fam}"`
+            + ` font-size="${tx.logoSize}" letter-spacing="${ls}" fill="inherit" text-anchor="middle"`
+            + ` dominant-baseline="central">${esc(tx.logo)}</text></g>`);
+        })();
+        const put = (fill, dx, dy, attr) =>
+          `<use href="#${lgp}" x="${f(dx||0,4)}" y="${f(dy||0,4)}" fill="${fill}"${attr||""}/>`;
+        /* Ink laid on a dial stands a hair proud of it. The lip is a shade of
+           the ink itself and sits tight to the letter: a soft black halo is
+           what a part resting above the dial looks like, not what ink does. */
+        const inkLip = (col, th) => {
+          if(!(th > 0.002)) return;
+          const bid = id("pbl");
+          defs.push(`<filter id="${bid}" x="-40%" y="-40%" width="180%" height="180%">`
+                  + `<feGaussianBlur stdDeviation="${f(th*0.45,4)}"/></filter>`);
+          body.push(put(shade(col,0.45), -lgx*th*0.8, -lgy*th*0.8,
+                        ` fill-opacity="0.45" filter="url(#${bid})"`));
+        };
+        if(ltech === "printed"){
+          const th = tx.printThick === undefined ? 0 : tx.printThick;
+          inkLip(tx.color, th);
+          body.push(put(tx.color));
+          const fin = tx.printFinish || "matte";
+          const gl = fin === "gloss" ? 0.55 : fin === "satin" ? 0.24 : 0;
+          if(gl > 0)
+            body.push(put(tx.color, 0, 0,
+              ` filter="url(#${sheen(tint(tx.color,0.72), Math.max(0.012, th*0.7))})" opacity="${f(gl,2)}"`));
+        }
+        else if(ltech === "double printed"){
+          /* Two passes are richer as well as thicker, and which way richer
+             points depends on what it is printed on: on a pale dial better
+             coverage reads darker, on a dark one it reads brighter. So the
+             base pass is derived from the dial rather than assumed, until
+             somebody sets it themselves. */
+          const off = tx.dblOff === undefined ? 0.04 : tx.dblOff;
+          const th  = tx.dblThick === undefined ? 0.05 : tx.dblThick;
+          const base = tx.dblBase
+            || (labOf(dialFace)[0] > 55 ? shade(tx.color,0.22) : tint(tx.color,0.22));
+          inkLip(tx.color, th);
+          body.push(put(base, lgx*off, lgy*off));
+          body.push(put(tx.color));
+        }
+        else if(ltech === "engraved" || ltech === "debossed"){
+          /* Both are below the surface. A cut one has the walls the tool
+             left; a pressed one has walls that are rounded over, which is
+             the same number read from the other end. */
+          const isEng = ltech === "engraved";
+          const dep  = isEng ? (tx.engDepth === undefined ? 0.12 : tx.engDepth)
+                             : (tx.debDepth === undefined ? 0.12 : tx.debDepth);
+          const soft = isEng ? 0.15 : 1 - (tx.debEdge === undefined ? 0.5 : tx.debEdge);
+          const kind = (isEng ? tx.engFill : tx.debFill) || "none";
+          const fcol = (isEng ? tx.engColor : tx.debColor) || "#1B1B1B";
+          /* Nothing was put into an unfilled cut, so what shows in it is the
+             dial itself, shaded. A fill sits below the surface rather than on
+             it, which is the whole difference between a filled cut and a
+             printed letter. */
+          const floor = kind === "none"    ? shade(dialFace, 0.52)
+                      : kind === "lacquer" ? fcol
+                      : shade(fcol, 0.10);
+          const lit  = tint(dialFace, 0.58);
+          const dark = shade(kind === "none" ? dialFace : floor, kind === "none" ? 0.78 : 0.62);
+          const wide = isEng ? (tx.engWidth === undefined ? 0 : tx.engWidth) : 0;
+          const dilate = wide > 0.002
+            ? ` stroke="${floor}" stroke-width="${f(wide,4)}" stroke-linejoin="round"` : "";
+          body.push(put(floor, 0, 0, dilate + ` filter="url(#${cutFilter(dep, soft, lit, dark)})"`));
+          /* Lacquer is poured and sets glossy; paint does not. */
+          if(kind === "lacquer")
+            body.push(put(floor, 0, 0, dilate
+              + ` filter="url(#${sheen(tint(fcol,0.62), Math.max(0.012, dep*0.35))})" opacity="0.6"`));
+        }
+        else if(ltech === "embossed"){
+          /* Pressed up out of the dial rather than laid on it: no separate
+             part, so no gap under it and no cast shadow — only a lit edge on
+             the side facing the light and a shaded one opposite. */
+          const hgt   = tx.stampH === undefined ? 0.15 : tx.stampH;
+          const sharp = tx.stampEdge === undefined ? 0.5 : tx.stampEdge;
+          const surf  = tx.stampSurface || "same as dial";
+          const MTs   = METALS[tx.logoMetal] || METALS["polished steel"];
+          const top   = surf === "metal" ? MTs.base
+                      : surf === "own colour" ? tx.color : dialFace;
+          const fin   = tx.stampFinish || "matte";
+          const k     = fin === "polished" ? 1 : fin === "satin" ? 0.72 : 0.5;
+          body.push(put(top, 0, 0, ` filter="url(#${bumpFilter(hgt, sharp,
+            tint(top, Math.min(0.9, 0.30 + 0.45*k)), shade(top, Math.min(0.9, 0.24 + 0.42*k)))})"`));
+        }
       } else {
         const MT = METALS[tx.logoMetal] || METALS["polished steel"];
         const H = tx.logoHeight === undefined ? 0.20 : tx.logoHeight;
-        const BV = tx.logoBevel === undefined ? 0.05 : tx.logoBevel;
+        const BV0 = tx.logoBevel === undefined ? 0.05 : tx.logoBevel;
         const laL = ((st.render && st.render.az) || 135)*Math.PI/180;
         const llx = Math.cos(laL), lly = Math.sin(laL);
         const sc = tx.logoSize/100;
@@ -3453,7 +3693,7 @@ function buildSVG(st, o={}){
 
         const blurL = id("lbl");
         defs.push(`<filter id="${blurL}" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="${f(H*0.55,3)}"/></filter>`);
-        const mkBevel = (mt, dir) => { const bid = id("lbv");
+        const mkBevel = (mt, dir, w) => { const bid = id("lbv"), BV = w === undefined ? BV0 : w;
           defs.push(`<filter id="${bid}" x="-45%" y="-45%" width="190%" height="190%">
             <feOffset in="SourceAlpha" dx="${f(llx*BV*dir,3)}" dy="${f(lly*BV*dir,3)}" result="lo"/>
             <feComposite in="SourceAlpha" in2="lo" operator="out" result="hiA"/>
@@ -3472,17 +3712,28 @@ function buildSVG(st, o={}){
           return `url(#${gid})`; };
         /* one applied piece: shadow, extruded walls leaning away from the
            dial centre, then a bevelled top face */
-        const piece = (gid, cy, mt, hgt, bevDir, ty) => {
+        const piece = (gid, cy, mt, hgt, bevDir, ty, lift, bevW) => {
           const oy = ty === undefined ? cy : ty;
           const ey = cy < 0 ? -1 : 1, reach = hgt*0.9;
           const steps = hgt < 0.10 ? 3 : 6;
-          let out = `<use href="#${gid}" x="${f(-llx*hgt*0.9,3)}" y="${f(oy-lly*hgt*0.9,3)}"
-                        fill="#000" fill-opacity="${f(Math.min(0.42, 0.16 + hgt),3)}" filter="url(#${blurL})"/>`;
+          /* How far a part stands off the dial decides its shadow, not how
+             thick the part is: a slim marker on tall feet throws a long soft
+             one. Left unsaid the two are the same number, which is what they
+             were before there was a way to tell them apart. */
+          const lf = lift === undefined ? hgt : Math.max(0.005, lift);
+          const bl = lift === undefined ? blurL : (()=>{
+            const b = id("lbs");
+            defs.push(`<filter id="${b}" x="-70%" y="-70%" width="240%" height="240%">`
+                    + `<feGaussianBlur stdDeviation="${f(lf*0.75+0.02,3)}"/></filter>`);
+            return b; })();
+          const op = lift === undefined ? Math.min(0.42, 0.16 + hgt) : Math.min(0.50, 0.12 + lf*1.3);
+          let out = `<use href="#${gid}" x="${f(-llx*lf*0.9,3)}" y="${f(oy-lly*lf*0.9,3)}"
+                        fill="#000" fill-opacity="${f(op,3)}" filter="url(#${bl})"/>`;
           for(let i=steps; i>=1; i--){
             const t2 = i/steps;
             out += `<use href="#${gid}" x="0" y="${f(oy+ey*reach*t2,3)}" fill="${mix(shade(mt.lo,0.30), mt.base, 1-t2*0.75)}"/>`;
           }
-          out += `<use href="#${gid}" x="0" y="${f(oy,3)}" fill="${mkTop(mt)}" filter="url(#${mkBevel(mt, bevDir)})"/>`;
+          out += `<use href="#${gid}" x="0" y="${f(oy,3)}" fill="${mkTop(mt)}" filter="url(#${mkBevel(mt, bevDir, bevW)})"/>`;
           return out;
         };
 
@@ -3574,7 +3825,11 @@ function buildSVG(st, o={}){
           /* the name, auto-fitted and clipped so it can never cross the edge */
           const rclip = id("rcl");
           defs.push(`<clipPath id="${rclip}"><use href="#${rid}"/></clipPath>`);
-          const nm2 = tx.nameMode || "printed";
+          /* The logo inside a reserved area is made some way of its own, and
+             it used to be offered three that were only ever a tint of the
+             dial laid behind it. It is now built the same four ways the dial
+             itself prints, cuts and applies a logo, off the same drawing. */
+          const rtech = tx.resTech || "printed";
           const col2 = tx.nameColor || "#1B1B1B";
           const scaleUser = tx.resTextScale === undefined ? 1 : tx.resTextScale;
           let size2 = tx.logoSize * scaleUser;
@@ -3593,7 +3848,7 @@ function buildSVG(st, o={}){
                 ? `M${f(-rr,3)} ${f(cy,3)} A${f(rr,3)} ${f(rr,3)} 0 0 1 ${f(rr,3)} ${f(cy,3)}`
                 : `M${f(-rr,3)} ${f(cy,3)} A${f(rr,3)} ${f(rr,3)} 0 0 0 ${f(rr,3)} ${f(cy,3)}`}"/>`);
               return `<text font-family="${fam}" font-size="${f(size2,3)}"`
-                   + ` letter-spacing="${f(size2*0.10,3)}" fill="${col2}"`
+                   + ` letter-spacing="${f(size2*0.10,3)}" fill="inherit"`
                    + ` dominant-baseline="central" dy="${f(size2*0.34,3)}">`
                    + `<textPath href="#${pid2}" startOffset="50%" text-anchor="middle">${esc(tx.logo)}</textPath></text>`;
             }
@@ -3610,8 +3865,8 @@ function buildSVG(st, o={}){
               const M2 = LOGO_MARKS[tx.logoMark];
               const A = M2.art ? VERNOY_ART[M2.art] : null;
               const sc2 = size2/100;
-              let mk = A ? artGroup(A, size2, col2)
-                         : `<g transform="scale(${f(sc2,5)})"><path d="${M2.d}" fill="${col2}" fill-rule="evenodd"/></g>`;
+              let mk = A ? artGroup(A, size2, "inherit")
+                         : `<g transform="scale(${f(sc2,5)})"><path d="${M2.d}" fill="inherit" fill-rule="evenodd"/></g>`;
               const mw2 = A ? A.bw*size2/A.bh : M2.w*sc2;
               if(shp2 === "arc" && rcv > 0.02){
                 const rr = (Math.abs(y0)||0.01) / Math.max(0.08, rcv);
@@ -3620,17 +3875,32 @@ function buildSVG(st, o={}){
               return `<g transform="translate(0,${f(y0,3)})">${mk}</g>`;
             }
             return `<text x="0" y="${f(y0,3)}" font-family="${fam}" font-size="${f(size2,3)}"`
-                 + ` letter-spacing="${f(size2*0.10,3)}" fill="${col2}" text-anchor="middle"`
+                 + ` letter-spacing="${f(size2*0.10,3)}" fill="inherit" text-anchor="middle"`
                  + ` dominant-baseline="central">${esc(tx.logo)}</text>`;
           })();
-          let painted = "";
-          if(nm2 === "engraved")
-            painted += inner.replace(`fill="${col2}"`, `fill="${tint(face,0.85)}"`)
-                            .replace("<text", `<text transform="translate(${f(-llx*0.03,3)},${f(-lly*0.03,3)})"`);
-          if(nm2 === "raised")
-            painted += inner.replace(`fill="${col2}"`, `fill="${shade(face,0.5)}"`)
-                            .replace("<text", `<text transform="translate(${f(-llx*0.03,3)},${f(-lly*0.03,3)})"`);
-          painted += inner;
+          /* The drawing carries no colour of its own, so each construction
+             puts the same lettering down in its own material — exactly as the
+             five that go straight onto the dial do. */
+          const rin = id("rin");
+          defs.push(`<g id="${rin}">${inner}</g>`);
+          const put2 = (fill, dx, dy, attr) =>
+            `<use href="#${rin}" x="${f(dx||0,4)}" y="${f(dy||0,4)}" fill="${fill}"${attr||""}/>`;
+          let painted;
+          if(rtech === "applied metal"){
+            painted = piece(rin, y0, METALS[tx.logoMetal] || MT,
+                            tx.nameHeight === undefined ? 0.10 : tx.nameHeight, 1, 0);
+          } else if(rtech === "double printed"){
+            const of = tx.dblOff === undefined ? 0.04 : tx.dblOff;
+            const bs = tx.dblBase
+              || (labOf(face)[0] > 55 ? shade(col2,0.22) : tint(col2,0.22));
+            painted = put2(bs, lgx*of, lgy*of) + put2(col2);
+          } else if(rtech === "engraved"){
+            const dep = tx.engDepth === undefined ? 0.12 : tx.engDepth;
+            painted = put2(col2, 0, 0,
+              ` filter="url(#${cutFilter(dep, 0.15, tint(face,0.58), shade(col2,0.55))})"`);
+          } else {
+            painted = put2(col2);
+          }
           body.push(`<g clip-path="url(#${rclip})">${painted}</g>`);
         }
         if(ltech === "embossed cartouche"){
@@ -3843,11 +4113,28 @@ function buildSVG(st, o={}){
             body.push(`<use href="#${lg}" x="0" y="${f(tx.logoY+markDrop,3)}" fill="${mkTop(inMT)}" filter="url(#${mkBevel(inMT,-1)})"/>`);
           }
         } else if(ltech === "applied metal"){
-          body.push(piece(lg, tx.logoY, MT, H, 1));
+          /* Thickness is the part; height from the dial is how far it stands
+             off it. They used to be one number, so a slim marker could not
+             float and a thick one could not sit flush. Finish decides how
+             hard the metal turns the light, and the chamfer how wide the
+             edge that does the turning is. */
+          const fin = tx.logoFinish || "polished";
+          const MTf = fin === "polished" ? MT
+            : {base:MT.base,
+               hi:mix(MT.hi, MT.base, fin === "brushed" ? 0.62 : 0.40),
+               lo:mix(MT.lo, MT.base, fin === "brushed" ? 0.52 : 0.32)};
+          const edge = tx.logoEdge || "medium";
+          const bevW = BV0 * (edge === "sharp" ? 1.55 : edge === "soft" ? 0.45 : 1);
+          body.push(piece(lg, tx.logoY, MTf, H, 1, undefined,
+                          tx.logoLift === undefined ? 0.10 : tx.logoLift, bevW));
         }
       }
-      body.push(line(tx.line2, tx.line2Y, tx.line2Size, tx.line2Curve, "'IBM Plex Sans',sans-serif", 0.14));
-      body.push(line(tx.foot,  tx.footY,  tx.footSize,  tx.footCurve,  "'IBM Plex Sans',sans-serif", 0.22));
+      /* Off hides the line; it does not clear it. Turning the footer off and
+         on again should not cost you what you typed into it. */
+      if(tx.line2On !== false)
+        body.push(line(tx.line2, tx.line2Y, tx.line2Size, tx.line2Curve, "'IBM Plex Sans',sans-serif", 0.14));
+      if(tx.footOn !== false)
+        body.push(line(tx.foot,  tx.footY,  tx.footSize,  tx.footCurve,  "'IBM Plex Sans',sans-serif", 0.22));
     }
     /* Closes the layer group opened above. It used to sit inside the on/off
        test and before these two lines, which did two things: hiding Logo &
@@ -4901,13 +5188,191 @@ const LAYERS = LAYER_GROUPS.flatMap(g => g[1]);
 let groupOpen = {};
 LAYER_GROUPS.forEach(g => groupOpen[g[0]] = true);
 let activeHand = "hHand";
-const N=(p,l,min,max,step=0.1,u="mm")=>({t:"num",p,l,min,max,step,u});
+const N=(p,l,min,max,step=0.1,u="mm",ends=null)=>({t:"num",p,l,min,max,step,u,ends});
 const C=(p,l)=>({t:"col",p,l});
 const SEL=(p,l,opts)=>({t:"sel",p,l,opts});
 const CK=(p,l)=>({t:"chk",p,l});
 const TX=(p,l)=>({t:"txt",p,l});
 const ACT=(a,l)=>({t:"act",a,l});
+/* A section that folds. Everything a schema declares can be nested, so a
+   panel is a handful of named sections rather than one long column. */
+const GRP=(l,fields,o={})=>({t:"group",l,fields,...o});
+/* A row that is only a label and a state, for the things that are on or
+   off and for the ones that open onto their own few controls. */
+const TG=(p,l)=>({t:"toggle",p,l});
+const SUB=(l,fields,state="")=>({t:"sub",l,fields,state});
+/* Two or three exclusive choices, shown rather than hidden in a dropdown.
+   Options are either plain values or [value, label] pairs. */
+const SEG=(p,l,opts)=>({t:"seg",p,l,opts});
+/* The colours anyone actually reaches for, by name. The Pantone picker is
+   still there for the rest. An empty value is the automatic choice. */
+const INK_CHIPS=[["Black","#1B1B1B"],["White","#FFFFFF"],["Gold","#C8A951"],["Silver","#C8CCD0"]];
+const CHIP=(p,l,presets=INK_CHIPS)=>({t:"chips",p,l,presets});
+/* Folded state belongs to the person, not to the schema, so it survives
+   every repaint and is remembered per component. */
+const shutGroups=new Set(), openGroups=new Set();
+const fieldCount = fs => fs.reduce((n,fd)=>
+  n + (fd.t==="group"||fd.t==="sub" ? fieldCount(fd.fields) : (fd.t==="head"?0:1)), 0);
 
+/* =====================================================================
+   HOW THE LOGO IS MADE
+   A technique is not a flag read here and there while the dial is drawn;
+   it is a construction, and each one owns its own handful of controls.
+   The panel builds that technique's controls and no others, and the
+   renderer reads that technique's parameters and no others — so a
+   printed logo has no bevel on screen or in the drawing, and an engraved
+   one has no metal.
+   ===================================================================== */
+const LOGO_TECH = ["printed","double printed","engraved","embossed","debossed",
+                   "applied metal","applied nameplate","embossed cartouche","reserved cartouche"];
+/* The three that put the logo inside a shape of its own. They share the
+   Cartouche section; the rest of the techniques have none. */
+const LOGO_CART = {"applied nameplate":"plate","embossed cartouche":"emb","reserved cartouche":"res"};
+/* The five that put the logo straight onto the dial — ink or shallow relief,
+   no separate part and no shape around it. They share one drawing. */
+const FLAT_TECH = new Set(["printed","double printed","engraved","embossed","debossed"]);
+const PRINT_TYPE = [["printed","Single"],["double printed","Double"]];
+const FILL_OPTS  = [["none","None"],["paint","Paint"],["lacquer","Lacquer"]];
+const AUTO_CHIPS = [["Auto",""]].concat(INK_CHIPS);
+const LOGO_TECH_FIELDS = {
+  "printed": T => [
+    SEG("text.logoTech","Print type",PRINT_TYPE),
+    CHIP("text.color","Ink colour"),
+    N("text.printThick","Print thickness",0,0.12,.005),
+    SEL("text.printFinish","Finish",["matte","satin","gloss"])
+  ],
+  "double printed": T => [
+    SEG("text.logoTech","Print type",PRINT_TYPE),
+    CHIP("text.dblBase","Base print colour",AUTO_CHIPS),
+    CHIP("text.color","Top print colour"),
+    N("text.dblOff","Print offset",0,0.20,.005),
+    N("text.dblThick","Thickness",0,0.12,.005)
+  ],
+  "engraved": T => [
+    N("text.engDepth","Depth",0.02,0.40,.005),
+    N("text.engWidth","Line width",0,0.30,.005),
+    SEG("text.engFill","Fill",FILL_OPTS),
+    ...(T.engFill && T.engFill !== "none" ? [CHIP("text.engColor","Fill colour")] : [])
+  ],
+  "embossed": T => [
+    N("text.stampH","Raised height",0.02,0.40,.005),
+    N("text.stampEdge","Edge sharpness",0,1,.02,"",["Soft","Sharp"]),
+    SEL("text.stampSurface","Surface",["same as dial","metal","own colour"]),
+    ...(T.stampSurface === "metal"      ? [SEL("text.logoMetal","Metal",METAL_NAMES)] : []),
+    ...(T.stampSurface === "own colour" ? [CHIP("text.color","Colour")] : []),
+    SEL("text.stampFinish","Finish",["matte","satin","polished"])
+  ],
+  "debossed": T => [
+    N("text.debDepth","Recess depth",0.02,0.40,.005),
+    N("text.debEdge","Edge softness",0,1,.02,"",["Soft","Sharp"]),
+    SEG("text.debFill","Fill",FILL_OPTS),
+    ...(T.debFill && T.debFill !== "none" ? [CHIP("text.debColor","Fill colour")] : [])
+  ],
+  "applied metal": T => [
+    SEL("text.logoMetal","Metal",METAL_NAMES),
+    N("text.logoHeight","Thickness",0.04,0.60,.01),
+    N("text.logoLift","Height from dial",0,0.60,.01),
+    SEL("text.logoFinish","Finish",["polished","satin","brushed"]),
+    SEL("text.logoEdge","Edge / chamfer",["soft","medium","sharp"])
+  ],
+  "applied nameplate": T => [
+    SEL("text.plateMetal","Metal",["match the dial","match the sector",...METAL_NAMES]),
+    N("text.logoHeight","Plate thickness",0.03,0.60,.01),
+    SEL("text.nameMode","Name is",["engraved","painted","raised"]),
+    ...(T.nameMode === "raised" ? [SEL("text.logoMetal","Name metal",METAL_NAMES)]
+                                : [CHIP("text.nameColor","Name colour")])
+  ],
+  "embossed cartouche": T => [
+    N("text.embDepth","Emboss depth",0.02,0.50,.01),
+    SEL("text.nameMode","Name is",["engraved","painted","raised"]),
+    ...(T.nameMode === "raised" ? [SEL("text.plateMetal","Name metal",METAL_NAMES)]
+                                : [CHIP("text.nameColor","Name colour")])
+  ],
+  /* The logo inside a reserved area is made some way of its own, and it was
+     only ever offered three. It gets the same four constructions the dial
+     itself can print, cut or apply. */
+  "reserved cartouche": T => [
+    N("text.resDepth","Step depth",0.01,0.30,.005),
+    SEL("text.resTech","Logo inside",["printed","double printed","engraved","applied metal"]),
+    ...(T.resTech === "applied metal"
+        ? [SEL("text.logoMetal","Metal",METAL_NAMES), N("text.nameHeight","Thickness",0.02,0.40,.01)]
+        : T.resTech === "double printed"
+        ? [CHIP("text.nameColor","Top print colour"), CHIP("text.dblBase","Base print colour",AUTO_CHIPS)]
+        : T.resTech === "engraved"
+        ? [N("text.engDepth","Depth",0.02,0.40,.005), CHIP("text.nameColor","Fill colour")]
+        : [CHIP("text.nameColor","Ink colour")])
+  ]
+};
+const logoTechFields = T => (LOGO_TECH_FIELDS[T.logoTech] || LOGO_TECH_FIELDS["printed"])(T);
+/* Shape, border and interior read the same whichever shape holds the logo,
+   so the three cartouche techniques answer the same three questions. */
+const LOGO_CART_FIELDS = {
+  res: T => [
+    TG("text.resAutoFit","Auto-fit logo"),
+    SUB("Shape",[
+      SEL("text.resShape","Cartouche shape",["arc","rounded","oval","rectangle"]),
+      N("text.resW","Width",3,20,.05),
+      N("text.resH","Height across",0.8,6,.05),
+      ...((T.resShape||"arc") === "arc" ? [N("text.resCurve","Curvature",0,1.6,.02)] : [])
+    ], T.resShape || "arc"),
+    SUB("Border",[N("text.resBorder","Border thickness",0,0.30,.005)],
+        (T.resBorder === undefined ? 0.09 : T.resBorder) > 0.02 ? "hairline" : "none"),
+    SUB("Interior",[
+      N("text.resPad","Inner padding",0,1.5,.02),
+      ...(T.resAutoFit === false ? [N("text.resTextScale","Logo scale",0.3,1.6,.02)] : [])
+    ], "same as dial")
+  ],
+  emb: T => [
+    SUB("Shape",[
+      SEL("text.embShape","Cartouche shape",["arc","rounded","oval","rectangle"]),
+      N("text.embW","Width",3,20,.05),
+      N("text.embH","Height across",0.8,6,.05)
+    ], T.embShape || "arc"),
+    SUB("Border",[N("text.embBorder","Border thickness",0.05,0.80,.01)], "raised"),
+    SUB("Interior",[N("text.embInset","Inner field inset",0,1.2,.02)], "same as dial")
+  ],
+  plate: T => [
+    TG("text.plateAuto","Auto-fit logo"),
+    SUB("Shape",[
+      SEL("text.plateShape","Plate shape",["rounded","arc","oval","rectangle","traced cartouche"]),
+      ...(T.plateAuto !== false
+          ? [N("text.platePad","Padding around the logo",0.15,3.0,.05)]
+          : [N("text.plateW","Plate width",2,26,.1), N("text.plateH","Plate height across",0.6,8,.05)]),
+      ...(T.plateShape === "arc" ? [N("text.plateTaper","Tip taper",0,0.95,.05,"")] : [])
+    ], T.plateShape || "rounded"),
+    SUB("Border",[N("text.logoBevel","Plate bevel",0,0.20,.005)], "bevelled"),
+    SUB("Interior",[
+      CK("text.plateTintOn","Set the plate colour myself"),
+      ...(T.plateTintOn ? [C("text.plateTint","Plate colour")] : [])
+    ], T.plateTintOn ? "custom" : (T.plateMetal || "metal"))
+  ]
+};
+/* What is left over: the figures set once and then forgotten, and the full
+   colour range behind the four named inks. */
+const textAdvanced = T => [
+  ...(T.logoMark === "none" ? [SEL("text.logoFont","Logo font",["serif","sans"])] : []),
+  N("text.logoTrack","Letter spacing",0,0.40,.005),
+  CK("text.logoCurve","Curve the logo on an arc"),
+  /* The full range, but only for the slot this technique actually reads.
+     A colour control on a technique that never looks at it is a control
+     that does nothing, which is worse than no control at all. */
+  ...(T.logoTech === "printed" || T.logoTech === "double printed"
+      || (T.logoTech === "embossed" && T.stampSurface === "own colour")
+      ? [C("text.color","Logo colour, full range")] : []),
+  ...(T.logoTech === "engraved" && (T.engFill||"none") !== "none"
+      ? [C("text.engColor","Fill colour, full range")] : []),
+  ...(T.logoTech === "debossed" && (T.debFill||"none") !== "none"
+      ? [C("text.debColor","Fill colour, full range")] : []),
+  ...(LOGO_CART[T.logoTech] ? [C("text.nameColor","Logo colour, full range")] : []),
+  ...(LOGO_CART[T.logoTech] === "plate" && T.plateShape === "arc" && T.logoMark === "none"
+      ? [N("text.nameShiftX","Logo across the plate",-3,3,.01),
+         N("text.nameShiftY","Logo up / down",-1.5,1.5,.01)] : []),
+  ...(LOGO_CART[T.logoTech] === "plate"
+      ? [N("text.nameHeight","Raised name height",0.02,0.40,.01)] : []),
+  ...(T.logoTech === "applied metal" ? [N("text.logoBevel","Bevel",0,0.20,.005)] : []),
+  ...(LOGO_CART[T.logoTech] === "res" && T.resAutoFit !== false
+      ? [N("text.resTextScale","Logo scale",0.3,1.6,.02)] : [])
+];
 const SCHEMA = {
   case:{title:"Case — locked", hint:"Fixed to the RD26-0172 drawing set. Colour and strap are render settings only; the geometry below is the factory's.", fields:[
     C("case.material","Case colour (render)"),
@@ -5077,83 +5542,36 @@ const SCHEMA = {
     N("date.at","Position (hour)",1,12,1,"h"), N("date.dist","Distance from centre",2,18),
     N("date.w","Width",1.5,8,.1), N("date.h","Height",1.2,6,.1),
     C("date.bg","Disc colour"), C("date.text","Text colour"), C("date.frame","Frame colour")]},
-  text:{title:"Logo & text", hint:"The logo, the lines beneath it, and how each is made.", fields:()=>[
-    {t:"head", l:"Logo"},
-    SEL("text.logoMark","Logo artwork",["none"].concat(LOGO_MARK_IDS)),
-    ...(S.text.logoMark === "none"
-        ? [TX("text.logo","Logo text"), SEL("text.logoFont","Logo font",["serif","sans"])] : []),
-    N("text.logoSize","Logo size",.6,5,.05),
-    N("text.logoY","Distance from centre (− is up)",-18,18),
-    ...(S.text.logoTech === "printed" ? [CK("text.logoCurve","Curve on an arc")] : []),
-
-    {t:"head", l:"How it is made"},
-    SEL("text.logoTech","Technique",["printed","applied metal","applied nameplate","embossed cartouche","reserved cartouche"]),
-    ...(S.text.logoTech === "printed" ? [C("text.color","Colour")] : []),
-    ...(S.text.logoTech === "applied metal" ? [
-      SEL("text.logoMetal","Metal",METAL_NAMES),
-      N("text.logoHeight","Piece height",0.04,0.60,.01),
-      N("text.logoBevel","Bevel",0,0.20,.005)] : []),
-
-    ...(S.text.logoTech === "reserved cartouche" ? [
-      {t:"head", l:"Reserved area"},
-      SEL("text.resShape","Shape",["arc","rounded","oval","rectangle"]),
-      N("text.resW","Width",3,20,.05),
-      N("text.resH","Height across",0.8,6,.05),
-      ...(S.text.resShape === "arc" ? [N("text.resCurve","Curvature",0,1.6,.02)] : []),
-      N("text.resBorder","Border thickness",0,0.30,.005),
-      N("text.resDepth","Step depth",0.01,0.30,.005),
-      N("text.resPad","Inner padding",0,1.5,.02),
-      {t:"head", l:"Name inside it"},
-      SEL("text.nameMode","Made by",["printed","engraved","raised"]),
-      C("text.nameColor","Name colour"),
-      CK("text.resAutoFit","Fit the name to the area"),
-      N("text.resTextScale","Text scale",0.3,1.6,.02)
-    ] : []),
-    ...(S.text.logoTech === "embossed cartouche" ? [
-      {t:"head", l:"Cartouche"},
-      SEL("text.embShape","Shape",["arc","rounded","oval","rectangle"]),
-      N("text.embW","Width",3,20,.05),
-      N("text.embH","Height across",0.8,6,.05),
-      N("text.embBorder","Border thickness",0.05,0.80,.01),
-      N("text.embDepth","Emboss depth",0.02,0.50,.01),
-      N("text.embInset","Inner field inset",0,1.2,.02),
-      {t:"head", l:"Name inside it"},
-      SEL("text.nameMode","Made by",["engraved","painted","raised"]),
-      ...(S.text.nameMode === "raised" ? [SEL("text.plateMetal","Name metal",METAL_NAMES)]
-                                       : [C("text.nameColor","Name colour")])
-    ] : []),
-    ...(S.text.logoTech === "applied nameplate" ? [
-      {t:"head", l:"Nameplate"},
-      SEL("text.plateMetal","Metal",["match the dial","match the sector",...METAL_NAMES]),
-      CK("text.plateTintOn","Set the plate colour myself"),
-      ...(S.text.plateTintOn ? [C("text.plateTint","Plate colour")] : []),
-      SEL("text.plateShape","Shape",["rounded","arc","oval","rectangle","traced cartouche"]),
-      N("text.logoHeight","Plate height",0.03,0.60,.01),
-      N("text.logoBevel","Plate bevel",0,0.20,.005),
-      CK("text.plateAuto","Size the plate to the name"),
-      ...(S.text.plateAuto !== false
-          ? [N("text.platePad","Padding around the name",0.15,3.0,.05)]
-          : [N("text.plateW","Plate width",2,26,.1), N("text.plateH","Plate height across",0.6,8,.05)]),
-      ...(S.text.plateShape === "arc" ? [N("text.plateTaper","Tip taper",0,0.95,.05,"")] : []),
-      {t:"head", l:"Name on the plate"},
-      SEL("text.nameMode","Made by",["engraved","painted","raised"]),
-      ...(S.text.plateShape === "arc" && S.text.logoMark === "none"
-          ? [N("text.nameShiftX","Name across the plate",-3,3,.01),
-             N("text.nameShiftY","Name up / down",-1.5,1.5,.01)] : []),
-      ...(S.text.nameMode === "raised"
-          ? [SEL("text.logoMetal","Name metal",METAL_NAMES),
-             N("text.nameHeight","Name height",0.02,0.40,.01)]
-          : [C("text.nameColor","Name colour")])] : []),
-
-    {t:"head", l:"Second line"},
-    TX("text.line2","Text"), N("text.line2Size","Size",.4,3,.05),
-    N("text.line2Y","Distance",-18,18), CK("text.line2Curve","Curve on an arc"),
-
-    {t:"head", l:"Footer"},
-    TX("text.foot","Text"), N("text.footSize","Size",.4,3,.05),
-    N("text.footY","Distance",-18,18), CK("text.footCurve","Curve on an arc"),
-
-    ...(S.text.logoTech !== "printed" ? [{t:"head", l:"Lines"}, C("text.color","Text colour")] : [])]},
+  text:{title:"Logo & text", fields:()=>{
+    const T = S.text, cart = LOGO_CART[T.logoTech];
+    return [
+      GRP("Logo",[
+        SEL("text.logoMark","Artwork",["none"].concat(LOGO_MARK_IDS)),
+        ...(T.logoMark === "none" ? [TX("text.logo","Logo text")] : []),
+        N("text.logoSize","Logo size",.6,5,.05),
+        N("text.logoY","Vertical position",-18,18)
+      ]),
+      GRP("Technique",[
+        SEL("text.logoTech","Technique",LOGO_TECH),
+        ...logoTechFields(T)
+      ]),
+      ...(cart ? [GRP("Cartouche", LOGO_CART_FIELDS[cart](T))] : []),
+      GRP("Supporting text",[
+        TG("text.line2On","Second line"),
+        ...(T.line2On ? [TX("text.line2","Text"), N("text.line2Size","Size",.4,3,.05),
+                         N("text.line2Y","Vertical position",-18,18)] : []),
+        TG("text.footOn","Footer"),
+        ...(T.footOn ? [TX("text.foot","Text"), N("text.footSize","Size",.4,3,.05),
+                        N("text.footY","Vertical position",-18,18)] : []),
+        SUB("Decorative lines",[
+          C("text.lineColor","Line colour"),
+          CK("text.line2Curve","Curve the second line"),
+          CK("text.footCurve","Curve the footer")
+        ])
+      ]),
+      GRP("Advanced", textAdvanced(T), {adv:true})
+    ];
+  }},
   hHand:handSchema("hHand","Hour hand"), mHand:handSchema("mHand","Minute hand"), sHand:handSchema("sHand","Seconds hand"),
   hands:{title:"Hands", hint:"Pick a hand, then set it. Link the set to keep them in proportion.", fields:()=>[
     {t:"hands"},
@@ -5379,6 +5797,17 @@ function wireFile(){
    every session; everything else is real but secondary and folds away. A flat
    "first six" rule put colour below groove-wall-angle on some panels, which is
    the wrong way round. */
+/* Choosing one of these changes what the rest of the panel should be, so the
+   panel is built again rather than merely repainted. */
+const REBUILD_PROPS = new Set([
+  "dial.lock","dial.finish","dial.stone","dial.stFibre","dial.stAdv",
+  "numerals.system","numerals.style","numerals.tech","numerals.material",
+  "text.logoTech","text.nameMode","text.plateShape","text.logoMark","text.plateAuto",
+  "text.resTech","text.resShape","text.embShape","text.stampSurface",
+  "text.engFill","text.debFill","text.resAutoFit","text.plateTintOn",
+  "sector.band","sector.arms","sector.pattern",
+  "hHand.style","mHand.style","sHand.style","indices.style"
+]);
 const PRIMARY = {
   dial:     ["dial.color","dial.finish","dial.diameter","dial.pattern","dial.dome","dial.satin"],
   sector:   ["sector.on","sector.outerD","sector.innerD","sector.color","sector.finish","sector.pattern"],
@@ -5388,7 +5817,7 @@ const PRIMARY = {
   minute:   ["minute.on","minute.style","minute.diameter","minute.color"],
   hour:     ["hour.on","hour.style","hour.diameter","hour.color"],
   chapter:  ["chapter.on","chapter.outerD","chapter.innerD","chapter.color","chapter.finish"],
-  text:     ["text.on","text.logo","text.logoTech","text.logoMark","text.logoSize","text.logoY"],
+  text:     ["text.on","text.logo","text.logoTech","text.logoMark","text.logoSize","text.logoY"],   /* unused: the schema names its own sections */
   hands:    ["handSet.link","hHand.style","hHand.length","hHand.color","hHand.finish",
              "mHand.style","mHand.length","sHand.on"],
   case:     ["case.metal","case.finish","case.strapColor","case.cab"],
@@ -5485,7 +5914,7 @@ function paintProps(){
   if(S.text.on && S.text.foot && Math.abs(S.text.footY)+S.text.footSize/2 > vis/2) off.push("footer text");
   q("#props").innerHTML = `
     <div class="pgroup">
-      <h3 class="ptitle">${sc.title}</h3>
+      <h3 class="ptitle main">${sc.title}</h3>
       ${sc.hint?`<p class="phint">${sc.hint}</p>`:""}
       ${(typeof sc.fields === "function" ? sc.fields() : sc.fields).map(field).join("")}
     </div>
@@ -5543,6 +5972,38 @@ function field(fd){
       <button class="btn lb-go" data-linktoggle="1">${on?"Unlink":"Link"}</button>
     </div>`;
   }
+  if(fd.t==="group"){
+    const key = sel+"|"+fd.l;
+    const open = fd.adv ? openGroups.has(key) : !shutGroups.has(key);
+    return `<details class="pg"${fd.adv?' data-adv="1"':""}${open?" open":""} data-gk="${esc(key)}">`
+      + `<summary>${fd.l}${fd.adv?` <span class="cnt">(${fieldCount(fd.fields)})</span>`:""}</summary>`
+      + `<div class="pgb">${fd.fields.map(field).join("")}</div></details>`;
+  }
+  if(fd.t==="sub"){
+    const key = sel+"|"+fd.l;
+    return `<details class="psub"${openGroups.has(key)?" open":""} data-gk="${esc(key)}">`
+      + `<summary>${fd.l}<span class="state">${esc(fd.state||"")}</span></summary>`
+      + `<div class="pgb">${fd.fields.map(field).join("")}</div></details>`;
+  }
+  if(fd.t==="toggle"){
+    const on = !!get(S,fd.p);
+    return `<button type="button" class="trow" data-tg="${fd.p}" aria-pressed="${on}">`
+      + `${fd.l}<span class="state">${on?"ON":"OFF"}</span></button>`;
+  }
+  if(fd.t==="seg"){
+    const cur = get(S,fd.p);
+    return `<div class="f"><label>${fd.l}</label><div class="seg">${fd.opts.map(o=>{
+      const val = Array.isArray(o)?o[0]:o, lab = Array.isArray(o)?o[1]:o;
+      return `<button type="button" class="${cur===val?"on":""}" data-segp="${fd.p}" data-segv="${esc(val)}">${lab}</button>`;
+    }).join("")}</div></div>`;
+  }
+  if(fd.t==="chips"){
+    const cur = get(S,fd.p);
+    return `<div class="f"><label>${fd.l}<span class="val">${cur||"automatic"}</span></label>
+      <div class="chips">${fd.presets.map(pr=>`<button type="button" class="chip ${cur===pr[1]?"on":""}"`
+        + ` data-chipp="${fd.p}" data-chipv="${pr[1]}">${pr[1]?`<i style="background:${pr[1]}"></i>`:""}${pr[0]}</button>`).join("")}
+      <input type="color" data-p="${fd.p}" value="${cur||"#000000"}" title="Any colour"></div></div>`;
+  }
   if(fd.t==="head") return `<div class="sect" style="font-size:11px;letter-spacing:.07em;color:var(--muted);margin:14px 0 6px;padding-top:8px;border-top:1px solid var(--rule-2)">${fd.l.toUpperCase()}</div>`;
   if(fd.t==="slabs"){
     const fam = S.dial.stone, list = slabsOf(fam), sel2 = slabById(S.dial.slab);
@@ -5579,11 +6040,18 @@ function field(fd){
   /* A slider is the wrong instrument for the last tenth of a millimetre with
      a thumb on it, so each one is flanked by a step. The number box stays for
      anyone who knows the figure they want. */
-  if(fd.t==="num") return `<div class="f"><label>${fd.l}<span class="val">${f(v, fd.step>=1?0:2)}${fd.u?" "+fd.u:""}</span></label>
+  if(fd.t==="num"){
+    /* Minus, slider, plus — one row, nothing else in it. The exact figure is
+       still typable: the value at the right of the label is the way in, so
+       the number box only takes room when it is wanted. */
+    const dp = fd.step>=1?0:2;
+    return `<div class="f"><label>${fd.l}<button type="button" class="val" data-edit="${fd.p}" title="Type an exact figure">${f(v,dp)}${fd.u?" "+fd.u:""}</button></label>
     <div class="row"><button type="button" class="stepr" data-step="-1" data-sp="${fd.p}" aria-label="Less ${esc(fd.l)}">−</button>
     <input type="range" data-p="${fd.p}" min="${fd.min}" max="${fd.max}" step="${fd.step}" value="${v}">
-    <button type="button" class="stepr" data-step="1" data-sp="${fd.p}" aria-label="More ${esc(fd.l)}">+</button>
-    <input type="number" data-p="${fd.p}" min="${fd.min}" max="${fd.max}" step="${fd.step}" value="${f(v,fd.step>=1?0:2)}"></div></div>`;
+    <button type="button" class="stepr" data-step="1" data-sp="${fd.p}" aria-label="More ${esc(fd.l)}">+</button></div>
+    ${fd.ends?`<div class="ends"><span>${fd.ends[0]}</span><span>${fd.ends[1]}</span></div>`:""}
+    <div class="numbox"><input type="number" data-p="${fd.p}" min="${fd.min}" max="${fd.max}" step="${fd.step}" value="${f(v,dp)}"><button type="button" class="mini" data-done="1">Done</button></div></div>`;
+  }
   if(fd.t==="col"){
     const pool = PANTONE.filter(x=>x[2]===swGroup);
     return `<div class="f"><label>${fd.l}<span class="val">${pantoneLabel(v)}</span></label>
@@ -5790,7 +6258,9 @@ document.addEventListener("change", e=>{
     const first = slabsOf(S.dial.stone)[0];
     S.dial.slab = first ? first.id : "";
   }
-  if(["dial.lock","dial.finish","dial.stone","dial.stFibre","dial.stAdv","numerals.system","numerals.style","numerals.tech","numerals.material","text.logoTech","text.nameMode","text.plateShape","text.logoMark","text.plateAuto","sector.band","sector.arms","sector.pattern","hHand.style","mHand.style","sHand.style","indices.style"].includes(e.target.dataset.p)) paintProps();
+  /* A choice that decides which other controls exist has to rebuild the
+     panel, or the controls on screen stop belonging to the design. */
+  if(REBUILD_PROPS.has(e.target.dataset.p)) paintProps();
   paintLayers();
   paintView();          // the preview has to follow the choice, not the keystroke
 });
@@ -5807,6 +6277,56 @@ document.addEventListener("click", e=>{
   commit();
   ctl.value = next;
   ctl.dispatchEvent(new Event("input", {bubbles:true}));
+});
+/* The controls that are not an input — a state row, a segment, a colour chip,
+   and the value that turns into a number box. Each sets exactly one path, so
+   all of them take the same commit-and-repaint road as the sliders. */
+document.addEventListener("click", e=>{
+  const t = e.target;
+  if(!t.closest) return;
+  const ed = t.closest("[data-edit]");
+  if(ed){
+    const fld = ed.closest(".f"); if(!fld) return;
+    fld.classList.add("typing");
+    const box = fld.querySelector(".numbox input");
+    if(box){ box.focus(); box.select(); }
+    return;
+  }
+  if(t.closest("[data-done]")){
+    const fld = t.closest(".f"); if(fld) fld.classList.remove("typing");
+    return;
+  }
+  const one = (el, attr, val) => {
+    const pth = el.dataset[attr];
+    if(lockedLayers.has(pth.split(".")[0])) return false;
+    if(get(S,pth) === val) return false;
+    commit(); set(S, pth, val);
+    return true;
+  };
+  const tg = t.closest("[data-tg]");
+  if(tg){ if(one(tg,"tg",!get(S,tg.dataset.tg))){ paintProps(); paintLayers(); paintView(); } return; }
+  const sg = t.closest("[data-segp]");
+  if(sg){ if(one(sg,"segp",sg.dataset.segv)){ paintProps(); paintLayers(); paintView(); } return; }
+  const ch = t.closest("[data-chipp]");
+  if(ch){ if(one(ch,"chipp",ch.dataset.chipv)){ paintProps(); paintView(); } }
+});
+/* A section the user folded away stays folded, and one they opened stays
+   open, across every repaint. `toggle` does not bubble, so this listens on
+   the way down rather than on the way up. */
+document.addEventListener("toggle", e=>{
+  const d = e.target;
+  if(!d.dataset || !d.dataset.gk) return;
+  const key = d.dataset.gk;
+  const optIn = d.classList.contains("psub") || d.hasAttribute("data-adv");
+  if(optIn) d.open ? openGroups.add(key) : openGroups.delete(key);
+  else      d.open ? shutGroups.delete(key) : shutGroups.add(key);
+}, true);
+/* Enter accepts a typed figure and puts the box away again. */
+document.addEventListener("keydown", e=>{
+  if(e.key !== "Enter" || !e.target.closest) return;
+  const fld = e.target.closest(".f.typing");
+  if(!fld) return;
+  e.preventDefault(); fld.classList.remove("typing"); e.target.blur();
 });
 document.addEventListener("keydown", e=>{
   if((e.metaKey||e.ctrlKey) && e.key.toLowerCase()==="z"){ e.preventDefault(); e.shiftKey?redo():undo(); }
@@ -6607,6 +7127,13 @@ addEventListener("resize", ()=>{ paintView(); paintLayers(); });
   await loadFonts();
   await loadSlabLibrary();            // seeds the built-ins if nothing is stored
 })();
+/* The design the app opens on takes the same door every loaded one does.
+   It cannot be migrated where it is declared — the tables it reads are
+   defined further down this file — so it happens here, once everything
+   exists and before the first paint, with the history seeded from the
+   migrated state rather than from what came before it. */
+migrateHands(S);
+hist = [clone(S)]; hi = 0;
 paintAll();
 refineBootRender();
 
