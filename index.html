@@ -1769,7 +1769,7 @@ const NUM_MAKE_DEF = {
   /* flat ink, no edge at all */
   "printed":           {relief: 0,     depth:0},
   /* two passes: a little ink stands up, so a soft edge and a hint of a shadow */
-  "double printed":    {relief: 0.22,  depth:0.22, soft:true},
+  "double printed":    {relief: 0.26,  depth:0.26, soft:true, dense:0.17},
   /* cut and left open: the dial shows through the letter */
   "engraved":          {relief:-1,     depth:0.7,  cut:true, bare:true},
   /* cut and flooded: the fill sits below the surface, lip of dial above it */
@@ -3139,6 +3139,12 @@ function buildSVG(st, o={}){
          embossed numeral is the dial pushed up, so it carries the dial's
          colour too. */
       let paint = MA.paint || nm.color, extraAttr = "";
+      /* A second pass is not just thicker, it is denser: more of the dial is
+         covered, so the ink reads further from the dial than one pass does.
+         Which way "further" points depends on what it is printed on — deeper
+         on a pale dial, brighter on a dark one — so it is taken from the
+         dial's own lightness rather than assumed to be darker. */
+      if(MK.dense) paint = (labOf(face)[0] > 55 ? shade : tint)(paint, MK.dense);
       if(MK.bare)     paint = shade(face, 0.44);
       if(MK.dialFace) paint = face;
       if(MA.slab && !MK.bare && !MK.dialFace){
@@ -3177,9 +3183,10 @@ function buildSVG(st, o={}){
             <feMergeNode in="sh"/><feMergeNode in="hi"/></feMerge>
         </filter>`;
       const flatBase = `<feOffset in="SourceGraphic" dx="0" dy="0" result="base"/>`;
-      const castShadow = (col, op, spread) =>
+      const castShadow = (col, op, spread, soften) =>
         `<feDropShadow in="SourceGraphic" dx="${f(-nlx*k*spread,3)}" dy="${f(-nly*k*spread,3)}"
-           stdDeviation="${f(k*0.8,3)}" flood-color="${col}" flood-opacity="${op}" result="base"/>`;
+           stdDeviation="${f(k*(soften===undefined?0.8:soften),3)}" flood-color="${col}"
+           flood-opacity="${op}" result="base"/>`;
 
       if(MK.cut){
         /* A cut is lit from the far wall: the lip that catches the light is the
@@ -3195,7 +3202,7 @@ function buildSVG(st, o={}){
       }else if(k > 0){
         /* Ink standing a little proud of the surface after a second pass. */
         defs.push(edgeLight(tint(paint, MA.hi*0.5), shade(paint, MA.lo), 1,
-                            MK.soft ? castShadow("#000", 0.26, 0.9) : flatBase));
+                            MK.soft ? castShadow(shade(paint,0.35), 0.34, 0.55, 0.30) : flatBase));
       }else{
         defs.push(`<filter id="${shid}" x="-70%" y="-70%" width="240%" height="240%">
           ${MA.glow ? `<feGaussianBlur in="SourceGraphic" stdDeviation="${f(nm.size*0.10,3)}" result="gb"/>
