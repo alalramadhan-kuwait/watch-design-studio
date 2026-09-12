@@ -3568,10 +3568,15 @@ function buildSVG(st, o={}){
           body.push(piece(lg, tx.logoY, MT, H, 1));
         }
       }
-    body.push("</g>");
       body.push(line(tx.line2, tx.line2Y, tx.line2Size, tx.line2Curve, "'IBM Plex Sans',sans-serif", 0.14));
       body.push(line(tx.foot,  tx.footY,  tx.footSize,  tx.footCurve,  "'IBM Plex Sans',sans-serif", 0.22));
     }
+    /* Closes the layer group opened above. It used to sit inside the on/off
+       test and before these two lines, which did two things: hiding Logo &
+       text left the group open and every SVG and PNG export malformed from
+       that point on, and with it shown the second line and the foot fell
+       outside the layer they belong to. */
+    body.push("</g>");
   }
 
   /* ---------------- HANDS ---------------- */
