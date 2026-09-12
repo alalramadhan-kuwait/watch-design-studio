@@ -243,19 +243,20 @@ input:focus-visible,select:focus-visible,button:focus-visible{outline:2px solid 
   .btn{padding:9px 12px;min-height:38px}
   #preset{max-width:44vw}
 
-  .shell{grid-template-columns:1fr;grid-template-rows:minmax(0,1fr) auto minmax(0,42dvh)}
-  .stage{grid-row:1}
-  .tabs{display:flex;grid-row:2}
+  /* The sheet layout owns the narrow case; what is left here is the part
+     that still applies to the panels inside it. */
   .rail,.props{
-    grid-row:3;grid-column:1;border:0;border-top:1px solid var(--rule);
+    border:0;border-top:1px solid var(--rule);
     padding-bottom:calc(14px + env(safe-area-inset-bottom,0px));
     -webkit-overflow-scrolling:touch;overscroll-behavior:contain
   }
-  body:not(.tab-props) .props{display:none}
-  body.tab-props .rail{display:none}
 
   /* comfortable touch targets */
   .layer{padding:11px 12px;min-height:46px}
+  .layer.addcmp{width:calc(100% - 16px);display:flex;align-items:center;
+    background:transparent;border:1px dashed var(--ds-border);color:var(--ds-text-2);
+    border-radius:var(--ds-r-sm);margin:6px 8px 2px;text-align:left}
+  .layer.addcmp .nm{flex:1;text-align:left}
   .eye{width:34px;height:30px;font-size:12px}
   .vrow{padding:9px 12px;min-height:44px}
   .mini{padding:6px 8px;font-size:12px}
@@ -279,7 +280,6 @@ input:focus-visible,select:focus-visible,button:focus-visible{outline:2px solid 
   #swParam{width:100%}
 }
 @media (max-width:560px) and (min-height:520px){
-  .shell{grid-template-rows:minmax(0,1fr) auto minmax(0,44dvh)}
   .mark{display:none}
   .bar{padding:7px 9px}
   .btn{padding:8px 10px;font-size:12.5px}
@@ -287,16 +287,15 @@ input:focus-visible,select:focus-visible,button:focus-visible{outline:2px solid 
 }
 
 @media (max-width:900px) and (min-height:520px) and (max-height:700px){
-  .shell{grid-template-rows:minmax(0,1fr) auto minmax(0,37dvh)}
   .tabs button{padding:9px 6px;min-height:40px}
   .bar{padding:6px 9px;gap:6px}
 }
 
-/* short viewports (phone in landscape): keep the three columns, shrink everything */
+/* short viewports (phone in landscape): the sheet layout still applies, so
+   this only shrinks what is in it. The three columns it used to restore are
+   gone — they have not been reachable since the sheet arrived. */
 @media (max-height:519px){
-  .shell{grid-template-columns:148px 1fr 244px}
-  .tabs{display:none}
-  .rail,.props{display:block}
+  .rail{border-right:0}
   .bar{flex-wrap:nowrap;overflow-x:auto;padding:5px 8px;gap:6px}
   .mark{display:none}
   .btn{padding:7px 9px;font-size:12px;min-height:34px;white-space:nowrap}
@@ -653,24 +652,35 @@ input[type=range]:active::-webkit-slider-thumb{ transform:scale(1.18) }
     border-top:1px solid var(--ds-border-2);
     display:flex; flex-direction:column;
     transition:height var(--ds-base) var(--ds-ease);
-    touch-action:none;
   }
   #mSheet.dragging{ transition:none }
-  #mGrab{ padding:var(--ds-2) 0 var(--ds-1); display:grid; place-items:center; cursor:grab }
-  #mGrab::before{ content:""; width:38px; height:5px; border-radius:3px;
-                  background:var(--ds-border) }
+  /* The sheet header used to be three stacked rows — a grab pill, the name
+     of the selected component, then the two tabs — which cost 88px before a
+     single control, on a panel that is 272px tall at rest. They are one row
+     now, with the pill as a hairline above it, and the whole row is the drag
+     handle rather than just the pill. */
+  #mHead{ position:relative; display:flex; align-items:center; gap:var(--ds-2);
+          padding:calc(var(--ds-2) + 3px) var(--ds-3) var(--ds-2);
+          cursor:grab; touch-action:none }
+  #mHead::before{ content:""; position:absolute; top:5px; left:50%;
+                  transform:translateX(-50%); width:38px; height:4px;
+                  border-radius:3px; background:var(--ds-border) }
   #mNow{ display:flex; align-items:center; gap:var(--ds-2);
-    padding:0 var(--ds-4) var(--ds-2); font-size:var(--ds-t-md);
+    flex:1 1 auto; min-width:0; padding:0; font-size:var(--ds-t-md);
     font-weight:600; color:var(--ds-text); white-space:nowrap;
     overflow:hidden; text-overflow:ellipsis }
   #mNow .dot{ width:8px; height:8px; border-radius:50%; background:var(--ds-brand); flex:0 0 auto }
   #mSheet .tabs{ position:static; display:flex; gap:var(--ds-1);
-    padding:0 var(--ds-3) var(--ds-2); border:0; background:transparent }
+    flex:0 0 auto; width:168px; padding:0; border:0; background:transparent }
   #mSheet .tabs button{ flex:1; border:0; border-radius:var(--ds-r-pill);
     background:var(--ds-fill); color:var(--ds-text-2); padding:7px 0;
     font-size:var(--ds-t-sm); transition:background var(--ds-fast) ease-out }
   #mSheet .tabs button.on{ background:var(--ds-brand); color:#15181C; font-weight:600 }
-  #mBody{ flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch }
+  /* Gestures are suppressed on the header, which is the drag handle, and
+     nowhere else. It used to be the whole sheet, which includes this, the
+     one part that has to be free to scroll. */
+  #mBody{ flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch;
+          touch-action:pan-y; overscroll-behavior:contain }
   #mBody > *{ display:none } #mBody > .live{ display:block }
 
   /* gold is for selection only, so the primary action goes quiet */
@@ -689,7 +699,7 @@ input[type=range]:active::-webkit-slider-thumb{ transform:scale(1.18) }
 /* The padlock earns its space only where it matters: the selected row, or
    any row that is actually locked. Elsewhere it stays out of the list. */
 .layer .lock.idle{ opacity:0; pointer-events:none; width:0; padding:0; margin:0 }
-.layer:hover .lock.idle{ opacity:.5; pointer-events:auto; width:auto; padding:3px; margin-left:2px }
+.layer:hover .lock.idle, .layer:focus-within .lock.idle{ opacity:.5; pointer-events:auto; width:auto; padding:3px; margin-left:2px }
 /* progressive disclosure */
 @media (max-width:900px){ #mBody .sec{ display:none } }
 .linkbar{ display:flex; align-items:center; gap:var(--ds-3);
@@ -1213,6 +1223,10 @@ const set = (o,p,v)=>{const k=p.split(".");k.slice(0,-1).reduce((x,i)=>x[i],o)[k
 let S = deep(BASE, PRESETS["Vernoy — Vintage Roman"]);   // the app opens on the Vintage Roman
 let sel = "dial", measureOn = false, zoom = 1, panX = 0, panY = 0;
 const isTouch = matchMedia("(pointer:coarse)").matches;
+/* The one place the narrow layout is defined. It has to agree with the
+   900px media query in the stylesheet, which innerWidth does not: they
+   part company at exactly 900 and whenever a scrollbar is taking width. */
+const NARROW = () => matchMedia("(max-width:900px)").matches;
 const tf = () => `translate(${panX}px,${panY}px) scale(${zoom})`;
 let hist = [clone(S)], hi = 0, versions = [];
 
@@ -4897,20 +4911,45 @@ const LOCK_OFF= '<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="tr
 const lockedLayers = new Set();
 const LINK_ON  = '<svg viewBox="0 0 18 18" width="17" height="17" aria-hidden="true"><path d="M7.2 10.8 10.8 7.2M6.4 11.6a2.6 2.6 0 0 1 0-3.7l1.3-1.3a2.6 2.6 0 0 1 3.7 3.7M11.6 6.4a2.6 2.6 0 0 1 0 3.7l-1.3 1.3a2.6 2.6 0 0 1-3.7-3.7" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>';
 const LINK_OFF = '<svg viewBox="0 0 18 18" width="17" height="17" aria-hidden="true"><path d="M6.6 11.4a2.6 2.6 0 0 1 0-3.7l.9-.9M11.4 6.6a2.6 2.6 0 0 1 0 3.7l-.9.9" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity=".75"/><path d="M3.5 3.5 14.5 14.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>';
+/* On a phone the component list ran to about 1050px inside a scroller a
+   third that tall: seventeen rows and six headings, with headings like
+   HANDS sitting above a single row called Hands. So the narrow layout drops
+   the headings — which is what made those one-row groups redundant — and
+   shows only the components the design is actually using, with the rest
+   behind Add component.
+
+   What counts as "using" is read from the design itself rather than stored
+   anywhere: the handful a watch always has, whatever is currently switched
+   on, and whatever is selected. Nothing is hidden that is drawn on the
+   watch, so a saved design cannot open with a component it uses missing
+   from the list, and there is no new state to migrate. Sector dial 1938
+   turns on the crosshair, the hour track and a sub-dial, and all three are
+   listed when it opens, though none of them is listed by default. */
+const CORE_LAYERS = new Set(["case","dial","indices","numerals","hands","text"]);
+const revealedLayers = new Set();          // for this session, not part of the design
+const compactLayers = () => NARROW();
+const layerShown = ([k,,onPath]) =>
+  CORE_LAYERS.has(k) || revealedLayers.has(k) || k === sel || !!(onPath && get(S,onPath));
+const layerRow = ([k,label,onPath])=>{
+  const on = onPath ? get(S,onPath) : true;
+  return `<div class="layer ${sel===k?"sel":""}" data-k="${k}">
+    <button class="nm" data-k="${k}">${label}</button>
+    ${onPath?`<button class="eye ${on?"on":""}" data-on="${onPath}" aria-pressed="${on}"
+        title="${on?"Hide":"Show"}">${on?EYE_ON:EYE_OFF}</button>`:""}
+    <button class="lock ${lockedLayers.has(k)?"on":""} ${sel===k||lockedLayers.has(k)?"":"idle"}" data-lock="${k}"
+        aria-pressed="${lockedLayers.has(k)}"
+        title="${lockedLayers.has(k)?"Unlock":"Lock"}">${lockedLayers.has(k)?LOCK_ON:LOCK_OFF}</button>
+  </div>`;
+};
 function paintLayers(){
+  if(compactLayers()){
+    q("#layers").innerHTML = LAYERS.filter(layerShown).map(layerRow).join("")
+      + `<button class="layer addcmp" data-addcmp="1"><span class="nm">+&nbsp; Add component</span></button>`;
+    return;
+  }
   q("#layers").innerHTML = LAYER_GROUPS.map(([name, items])=>{
     const open = groupOpen[name] !== false;
-    const rows = open ? items.map(([k,label,onPath])=>{
-      const on = onPath ? get(S,onPath) : true;
-      return `<div class="layer ${sel===k?"sel":""}" data-k="${k}">
-        <button class="nm" data-k="${k}">${label}</button>
-        ${onPath?`<button class="eye ${on?"on":""}" data-on="${onPath}" aria-pressed="${on}"
-            title="${on?"Hide":"Show"}">${on?EYE_ON:EYE_OFF}</button>`:""}
-        <button class="lock ${lockedLayers.has(k)?"on":""} ${sel===k||lockedLayers.has(k)?"":"idle"}" data-lock="${k}"
-            aria-pressed="${lockedLayers.has(k)}"
-            title="${lockedLayers.has(k)?"Unlock":"Lock"}">${lockedLayers.has(k)?LOCK_ON:LOCK_OFF}</button>
-      </div>`;
-    }).join("") : "";
+    const rows = open ? items.map(layerRow).join("") : "";
     const anySel = items.some(it => it[0] === sel);
     return `<div class="lgrp">
       <button class="ghead ${anySel?"has":""}" data-grp="${esc(name)}">
@@ -5178,7 +5217,7 @@ function paintView(){
   const sb0 = slabById(S.dial.slab);
   const synth = S.dial.finish === "stone" && (!sb0 || sb0.synthetic);
   schedulePrerender();
-  q("#stamp").textContent = synth ? "SYNTHETIC PREVIEW — placeholder, not a real stone" : innerWidth<900
+  q("#stamp").textContent = synth ? "SYNTHETIC PREVIEW — placeholder, not a real stone" : NARROW()
     ? `L2L ${f(CASE_SPEC.lugToLug,2)} · opening Ø${f(visR(S)*2,2)}`
     : `${S.meta.name} — case ${CASE_SPEC.ref} · ${f(CASE_SPEC.flat,2)}×${f(CASE_SPEC.flat,2)} · L2L ${f(CASE_SPEC.lugToLug,2)} · ${f(CASE_SPEC.height,2)} high · opening Ø${f(visR(S)*2,2)}`;
   wireHandles();
@@ -6094,7 +6133,7 @@ td:first-child{color:#666;width:38%}
 }
 function toast(msg){ const t=q("#toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove("show"),1700); }
 
-addEventListener("resize", ()=>{ paintView(); });
+addEventListener("resize", ()=>{ paintView(); paintLayers(); });
 
 /* boot */
 (async()=>{
@@ -6142,7 +6181,7 @@ refineBootRender();
    what left the toolbar is in More, Reference, or on the canvas.
    =============================================================== */
 (function(){
-  const MOBILE = () => matchMedia("(max-width:900px)").matches;
+  const MOBILE = NARROW;
   if(!MOBILE()) return;
   const byId = id => document.getElementById(id);
 
@@ -6181,6 +6220,50 @@ refineBootRender();
   top.append(back, title, undoB || document.createElement("span"),
              redoB || document.createElement("span"), moreB);
   bar.prepend(top); setTitle();
+
+  /* ---- Add component: the parts this design is not using yet ---- */
+  const addSheet = document.createElement("div");
+  addSheet.className = "sheet"; addSheet.id = "mAdd";
+  addSheet.innerHTML = `<button class="sheetX" data-close="1" aria-label="Close">✕</button>
+    <div class="card"><h2>Add component</h2>
+      <p class="sub">Everything a dial can carry. Ticked ones are on the watch
+        and listed; unticking takes a component off the watch and out of the
+        list.</p>
+      <div id="mAddList" style="display:flex;flex-direction:column;gap:2px"></div></div>`;
+  document.body.appendChild(addSheet);
+  const paintAdd = () => {
+    const host = addSheet.querySelector("#mAddList");
+    host.innerHTML = LAYERS.filter(l => !CORE_LAYERS.has(l[0])).map(([k,label,onPath])=>{
+      const on = layerShown([k,label,onPath]);
+      return `<label class="chk vrow" style="justify-content:flex-start;gap:10px">
+        <input type="checkbox" data-add="${k}" ${on?"checked":""}>
+        <span class="nm">${label}</span></label>`;
+    }).join("");
+  };
+  addSheet.addEventListener("change", e=>{
+    const cb = e.target.closest("input[data-add]"); if(!cb) return;
+    const k = cb.dataset.add, row = LAYERS.find(l => l[0] === k); if(!row) return;
+    const onPath = row[2];
+    if(cb.checked){
+      revealedLayers.add(k);
+      if(onPath) set(S, onPath, true);
+      commit(); paintAll();
+      selectLayer(k);
+      addSheet.classList.remove("open");
+    }else{
+      /* Off the watch and out of the list in one gesture. The eye in the
+         list still hides without removing, which is the other thing you
+         might mean. */
+      revealedLayers.delete(k);
+      if(onPath) set(S, onPath, false);
+      if(sel === k) sel = "dial";
+      commit(); paintAll(); paintAdd();
+    }
+  });
+  document.addEventListener("click", e=>{
+    if(!e.target.closest("[data-addcmp]")) return;
+    paintAdd(); addSheet.classList.add("open");
+  });
 
   /* ---- More: everything that is not needed constantly ---- */
   const more = document.createElement("div");
@@ -6281,7 +6364,7 @@ refineBootRender();
   /* ---- the editor as a draggable bottom sheet ---- */
   const shell = document.querySelector(".shell");
   const sheet = document.createElement("section"); sheet.id = "mSheet";
-  const grab = document.createElement("div"); grab.id = "mGrab";
+  const grab = document.createElement("div"); grab.id = "mHead";
   grab.setAttribute("role","separator"); grab.setAttribute("aria-label","Resize the panel");
   const tabs = byId("tabs");
   const body = document.createElement("div"); body.id = "mBody";
@@ -6294,7 +6377,8 @@ refineBootRender();
     const row = document.querySelector(".layer.sel .nm");
     nowBar.innerHTML = `<span class="dot"></span><span class="w">${row ? row.textContent : "Nothing selected"}</span>`;
   };
-  sheet.append(grab, nowBar, tabs || document.createElement("div"), body);
+  grab.append(nowBar, tabs || document.createElement("div"));
+  sheet.append(grab, body);
   /* The strip follows the selection wherever it is made — a row, a tap on the
      watch, an undo, a version load. It used to listen for clicks on a list
      row, which is only one of those, so selecting on the watch left it naming
@@ -6335,7 +6419,8 @@ refineBootRender();
   const setH = px => shell.style.setProperty("--sheet-h", px + "px");
   const vh = () => shell.clientHeight || innerHeight;
   setH(vh()*STOPS[stop]);
-  const down = e => { dragging = true; sheet.classList.add("dragging"); shell.classList.add("dragging");
+  const down = e => { if(e.target.closest && e.target.closest("button")) return;
+    dragging = true; sheet.classList.add("dragging"); shell.classList.add("dragging");
     startY = (e.touches? e.touches[0].clientY : e.clientY); startH = sheet.getBoundingClientRect().height; moved = 0;
     grab.setPointerCapture && e.pointerId!=null && grab.setPointerCapture(e.pointerId); };
   const move = e => { if(!dragging) return;
@@ -6355,7 +6440,8 @@ refineBootRender();
   addEventListener("pointerup", up); addEventListener("pointercancel", up);
   /* A tap cycles the height; a drag must not also count as a tap, or the
      sheet jumps to the next stop the moment the finger lifts. */
-  grab.addEventListener("click", ()=>{ if(moved > 6){ moved = 0; return; }
+  grab.addEventListener("click", e=>{ if(e.target.closest && e.target.closest("button")) return;
+    if(moved > 6){ moved = 0; return; }
     stop = (stop+1) % STOPS.length; setH(vh()*STOPS[stop]); setTimeout(refit, 260); });
 
 
