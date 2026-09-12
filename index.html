@@ -3280,9 +3280,20 @@ function buildSVG(st, o={}){
       const ltech = tx.logoTech || "printed";
       if(ltech === "printed"){
         if(useMark){
+          /* Twelve of the thirteen marks are a single path; the supplied
+             wordmark is nested artwork with no d at all, so printing it asked
+             for d="undefined" and the logo simply vanished. Each is drawn as
+             what it is, the same way every other technique does it. And since
+             printed type curves when Curve on an arc is ticked, printed
+             artwork now curves with it rather than ignoring the setting. */
           const M = LOGO_MARKS[tx.logoMark], sc = tx.logoSize/100;
-          body.push(`<g transform="translate(0,${f(tx.logoY,3)}) scale(${f(sc,5)})">
-            <path d="${M.d}" fill="${tx.color}" fill-rule="evenodd"/></g>`);
+          const A = M.art ? VERNOY_ART[M.art] : null;
+          let mk = A ? artGroup(A, tx.logoSize, tx.color)
+                     : `<g transform="scale(${f(sc,5)})"><path d="${M.d}" fill="${tx.color}" fill-rule="evenodd"/></g>`;
+          if(tx.logoCurve && Math.abs(tx.logoY) > 0.01)
+            mk = bendArt(mk, A ? A.bw*tx.logoSize/A.bh : M.w*sc,
+                         Math.abs(tx.logoY), tx.logoY < 0, defs, id);
+          body.push(`<g transform="translate(0,${f(tx.logoY,3)})">${mk}</g>`);
         } else body.push(line(tx.logo, tx.logoY, tx.logoSize, tx.logoCurve, fam, 0.10));
       } else {
         const MT = METALS[tx.logoMetal] || METALS["polished steel"];
@@ -3335,8 +3346,12 @@ function buildSVG(st, o={}){
            where the logo is defined, rather than in each technique: the plate
            places the same #lg whether it is painted, struck or raised, and a
            bend expressed about the mark's own origin travels with it. */
-        const bendLogo = useMark && ltech === "applied nameplate"
-                      && (tx.plateShape || "arc") === "arc" && Math.abs(tx.logoY) > 0.01;
+        /* Every technique that curves its typed lettering on an arc bends its
+           artwork to the same arc. The embossed cartouche was the odd one out:
+           its type followed the curve and its artwork lay flat across it. */
+        const bendLogo = useMark && Math.abs(tx.logoY) > 0.01 && (
+             (ltech === "applied nameplate"  && (tx.plateShape || "arc") === "arc")
+          || (ltech === "embossed cartouche" && (tx.embShape   || "arc") === "arc"));
         const lg = id("lgo");
         defs.push(`<g id="${lg}">${useMark
           ? (mk => bendLogo ? bendArt(mk, logoW, Math.abs(tx.logoY), tx.logoY < 0, defs, id) : mk)(
