@@ -1076,10 +1076,11 @@ const BASE = {
   chapter:{on:true, outerD:30.5, innerD:27.0, color:"#003087", finish:"flat", separator:true, sepColor:"#8BB8E8"},
   sector:{on:false, waveGrowth:0, wavePhase:0, radialPhase:0, stamp:0, outerD:26.0, innerD:20.0, color:"#D6D2C4", ringColor:"#A89968", finish:"matte", band:true, arms:true, lineW:0.16,
           pattern:"same as dial", cell:0.85, pitch:0.42, rays:200, waveAmp:0.35, waveN:12, wall:32},
-  minute:{on:true, diameter:29.6, thickness:.30, style:"dots", color:"#FFFFFF", fives:true, fiveLen:.9},
+  minute:{on:true, diameter:29.6, thickness:.30, style:"dots", color:"#FFFFFF", fives:true, fiveLen:.9,
+          textBreak:true, textGap:0.5, tech:"printed", edgeLight:0.5},
   hour:{on:false, diameter:26.6, thickness:.5, color:"#FFFFFF", style:"ticks"},
   indices:{on:false, style:"baton", radius:12.8, length:2.4, width:.55, color:"#FFFFFF", applied:true, count:12, skipNumerals:true},
-  numerals:{on:true, style:"vernoy", size:3.4, radius:11.7, color:"#FFFFFF", set:"all",
+  numerals:{on:true, style:"vernoy", size:3.4, radius:11.7, color:"#FFFFFF", set:"all", edgeLight:0.5,
             orient:"upright", arc:true, slant:9, tech:"applied", material:"metal", weight:0, gap:1, system:"western 0–9",
             metal:"polished steel", height:0.20, bevel:0.055, metalTex:false,
             /* a cut, in millimetres: how far the two lit edges reach in, how
@@ -1095,7 +1096,7 @@ const BASE = {
         logoCurve:false, line2Curve:false, footCurve:true, logoMark:"none",
         logoTech:"printed", logoMetal:"polished steel", logoHeight:0.20, logoBevel:0.05,
         plateShape:"rounded", platePad:0.55, plateTaper:0.0, plateAuto:true, plateW:7.0, plateH:2.2, plateMetal:"polished steel", plateTint:"", plateTintOn:false,
-        embShape:"arc", embW:8.0, embH:2.6, embBorder:0.22, embDepth:0.14, embInset:0.30,
+        embShape:"arc", embAuto:true, embPad:0.55, embW:8.0, embH:2.6, embBorder:0.22, embDepth:0.14, embInset:0.30,
         resShape:"arc", resW:8.4, resH:2.4, resCurve:1.0, resBorder:0.09,
         resDepth:0.07, resPad:0.34, resTextScale:1.0, resAutoFit:true,
         nameMode:"engraved", nameColor:"#25282A", nameHeight:0.10,
@@ -1538,6 +1539,30 @@ addEventListener("pagehide", ()=>{ if(autoTimer) saveNow(); });
 const q = s => document.querySelector(s);
 const qa = s => [...document.querySelectorAll(s)];
 const f = (n,d=2)=>Number(n).toFixed(d);
+
+/* How wide a line of dial text actually runs, in millimetres.
+   The minute track has to know this to stop either side of the lettering, and
+   it used to be estimated from the character count at 0.60 em a letter. Every
+   estimate is wrong for some string — a long footer came out narrower than it
+   prints, so the marks at each end of the reserved arc were laid down on top
+   of the last letters. The browser already knows the answer, so ask it.
+   Measured at a large size and scaled down, because a 0.8 mm font quantises
+   to almost nothing. Not cached: the first build can run before the webfont
+   has loaded, and a cached fallback width would never be corrected. */
+const runWidth = (() => {
+  let ctx = null;
+  return (txt, size, fam, tracking) => {
+    if(!txt) return 0;
+    const S = 100;
+    let per;
+    try{
+      if(!ctx) ctx = document.createElement("canvas").getContext("2d");
+      ctx.font = `${S}px ${fam}`;
+      per = ctx.measureText(txt).width / S;
+    }catch(_){ per = txt.length * 0.62; }      // no canvas: fall back to the old guess
+    return (per + (tracking || 0) * txt.length) * size;   // letter-spacing follows every glyph
+  };
+})();
 
 const pt = (r,deg)=>{const a=(deg-90)*Math.PI/180;return [r*Math.cos(a), r*Math.sin(a)];};
 const P = (r,deg)=>{const p=pt(r,deg);return f(p[0],3)+" "+f(p[1],3);};
@@ -3220,16 +3245,155 @@ function buildSVG(st, o={}){
         body.push(`<circle r="${ch.outerD/2}" fill="none" stroke="${ch.sepColor}" stroke-width="0.13" stroke-opacity="0.5"/>`);
       }
     }
+    /* Where the printed lines cross a track.
+       On a real dial the minute track stops either side of SWISS MADE rather
+       than running through it — the dots and the lettering are the same ink at
+       the same radius, so a track that carried on would print into the text.
+       Each line that sits at the track's own radius reserves the arc it
+       occupies, and the marks inside that arc are simply not laid down. */
+    const textKeepOut = (() => {
+      const tx = st.text;
+      if(!tx || tx.on === false) return [];
+      const serif = "'Cormorant Garamond',Georgia,serif", sans = "'IBM Plex Sans',sans-serif";
+      const lines = [
+        { t: tx.logo,  y: tx.logoY,  size: tx.logoSize,  track: 0.10, on: true,
+          fam: tx.logoFont === "serif" ? serif : sans },
+        { t: tx.line2, y: tx.line2Y, size: tx.line2Size, track: 0.14, on: tx.line2On !== false, fam: sans },
+        { t: tx.foot,  y: tx.footY,  size: tx.footSize,  track: 0.22, on: tx.footOn  !== false, fam: sans },
+      ];
+      const out = [];
+      for(const L of lines){
+        if(!L.on || !L.t || !L.y || !L.size) continue;
+        const r = Math.abs(L.y);
+        if(r < 0.5) continue;
+        out.push({
+          deg: L.y < 0 ? 0 : 180,                       // which end of the dial
+          w: runWidth(String(L.t), L.size, L.fam, L.track),
+          r, h: L.size,
+        });
+      }
+      return out;
+    })();
+    /* True when a mark at this angle would land on one of those lines. The
+       radius test keeps a track well clear of the text from being broken for
+       no reason — only a track running through the lettering gives way. */
+    const textGapMm = () => (st.minute && st.minute.textGap !== undefined) ? st.minute.textGap : 0.5;
+    /* The arc a line of text reserves.
+       The letters run along their own circle, so the span they occupy is the
+       run divided by the TEXT's radius; the clear gap either side belongs to
+       the MARK's circle. Taking the smaller of the two radii for the run is
+       the conservative reading, and it is what keeps a track running inside
+       the lettering clear: the same arc length subtends a wider angle on a
+       smaller circle, so the last mark at each end would otherwise still
+       land on the final letter. */
+    const textHalfAngle = (g, markR, markW) => {
+      const rRun = Math.max(0.5, Math.min(g.r, markR));
+      const a = ((g.w/2)/rRun + (textGapMm() + (markW || 0)/2)/Math.max(0.5, markR))*180/Math.PI;
+      /* A line long enough to wrap past the far side would otherwise reserve
+         an arc that overlaps itself, and the gaps between spans come out
+         inside out — the track would break everywhere except over the text. */
+      return Math.min(170, a);
+    };
+    /* A glyph is taller than its nominal size: accents sit above the cap line,
+       and on an arc each letter is rotated, so the box it really occupies
+       grows at the ends of the run. Measuring the reach as half the em left a
+       dot just outside it printing on the tail of an É. */
+    const textSpans = (markR, markH, markW) => textKeepOut
+      .filter(g => Math.abs(markR - g.r) <= (g.h*0.75 + markH/2 + 0.35))
+      .map(g => [g.deg - textHalfAngle(g, markR, markW), g.deg + textHalfAngle(g, markR, markW)]);
+    const clearsText = (deg, markR, markH, markW) => !textSpans(markR, markH, markW).some(([a, b]) => {
+      const d = Math.abs(((deg - (a + b)/2 + 540) % 360) - 180);
+      return d <= (b - a)/2;
+    });
+    /* A railroad's two rails are continuous rings, so they cannot simply be
+       skipped a mark at a time — they are drawn as arcs that stop at the
+       lettering and pick up again after it. */
+    const ringMaybeBroken = (rad, strokeW, col) => {
+      const spans = (st.minute && st.minute.textBreak !== false) ? textSpans(rad, strokeW, strokeW) : [];
+      if(!spans.length)
+        return `<circle r="${f(rad,3)}" fill="none" stroke="${col}" stroke-width="${f(strokeW,3)}"/>`;
+      const norm = spans.map(([a,b]) => [((a%360)+360)%360, ((b%360)+360)%360])
+                        .sort((x,y) => x[0]-y[0]);
+      const keep = [];
+      let cursor = norm[0][1];
+      for(let i=1;i<=norm.length;i++){
+        const next = i < norm.length ? norm[i] : [norm[0][0]+360, norm[0][1]+360];
+        if(next[0] > cursor) keep.push([cursor, next[0]]);
+        cursor = Math.max(cursor, next[1]);
+      }
+      const d = keep.map(([a,b]) => {
+        const p0 = pt(rad, a), p1 = pt(rad, b);
+        const large = (b - a) > 180 ? 1 : 0;
+        return `M${f(p0[0],3)} ${f(p0[1],3)}A${f(rad,3)} ${f(rad,3)} 0 ${large} 1 ${f(p1[0],3)} ${f(p1[1],3)}`;
+      }).join("");
+      return `<path d="${d}" fill="none" stroke="${col}" stroke-width="${f(strokeW,3)}"/>`;
+    };
+
     // minute track
     const mt = st.minute;
     if(mt.on){
       const r = mt.diameter/2, t = mt.thickness;
+      /* A printed track is made the same way the numerals are, and on this
+         dial it is the same second pass: the dots stand a little proud and
+         catch the light on the shoulder facing it. Drawn flat, a dot next to a
+         double-printed numeral reads as a different process on the same dial. */
+      let trackFx = "";
+      if((mt.tech || "printed") === "double printed"){
+        const laT = ((st.render && st.render.az) || 135)*Math.PI/180;
+        const tlx = Math.cos(laT), tly = Math.sin(laT);
+        /* A dot is small: its shoulder is a rim around the edge, not a third of
+           the mark. Scaling the catch to the whole dot turned black ink into a
+           grey bead — the opposite of the raised-ink look next to it. */
+        const kt = t*0.11;
+        const edgeT = mt.edgeLight === undefined ? 0.5 : mt.edgeLight;
+        const hiT = tint(mt.color, Math.min(0.88, 0.34 + edgeT*0.50));
+        const loT = shade(mt.color, 0.45);
+        const softT = kt*0.70;
+        const tf = id("mtk");
+        /* The same language as a double-printed numeral: solid ink, a blurred
+           catch along the lit shoulder at part opacity, and a soft shadow on
+           the dial. Built once for the whole track. */
+        defs.push(`<filter id="${tf}" x="-90%" y="-90%" width="280%" height="280%">
+          <feDropShadow in="SourceGraphic" dx="${f(-tlx*kt*0.9,3)}" dy="${f(-tly*kt*0.9,3)}"
+            stdDeviation="${f(kt*0.7,3)}" flood-color="${shade(mt.color,0.35)}"
+            flood-opacity="0.30" result="base"/>
+          <feOffset in="SourceAlpha" dx="${f(tlx*kt,3)}" dy="${f(tly*kt,3)}" result="lo"/>
+          <feComposite in="SourceAlpha" in2="lo" operator="out" result="hiA"/>
+          <feGaussianBlur in="hiA" stdDeviation="${f(softT,3)}" result="hiB"/>
+          <feComposite in="hiB" in2="SourceAlpha" operator="in" result="hiC"/>
+          <feFlood flood-color="${hiT}" result="hiF"/>
+          <feComposite in="hiF" in2="hiC" operator="in" result="hiD"/>
+          <feComponentTransfer in="hiD" result="hi">
+            <feFuncA type="linear" slope="${f(0.40 + edgeT*0.52,2)}"/>
+          </feComponentTransfer>
+          <feOffset in="SourceAlpha" dx="${f(-tlx*kt,3)}" dy="${f(-tly*kt,3)}" result="so"/>
+          <feComposite in="SourceAlpha" in2="so" operator="out" result="shA"/>
+          <feGaussianBlur in="shA" stdDeviation="${f(softT,3)}" result="shB"/>
+          <feComposite in="shB" in2="SourceAlpha" operator="in" result="shC"/>
+          <feFlood flood-color="${loT}" result="shF"/>
+          <feComposite in="shF" in2="shC" operator="in" result="shD"/>
+          <feComponentTransfer in="shD" result="sh"><feFuncA type="linear" slope="0.45"/></feComponentTransfer>
+          <feMerge><feMergeNode in="base"/><feMergeNode in="sh"/><feMergeNode in="hi"/></feMerge>
+        </filter>`);
+        trackFx = tf;
+      }
+      /* One group so the relief is built once for the whole track rather than
+         sixty times, which also keeps each mark's shoulder consistent. */
+      if(trackFx) body.push(`<g filter="url(#${trackFx})">`);
       if(mt.style==="railroad"){
-        body.push(`<circle r="${f(r+t,3)}" fill="none" stroke="${mt.color}" stroke-width="0.11"/>`);
-        body.push(`<circle r="${f(r-t,3)}" fill="none" stroke="${mt.color}" stroke-width="0.11"/>`);
+        body.push(ringMaybeBroken(r + t, 0.11, mt.color));
+        body.push(ringMaybeBroken(r - t, 0.11, mt.color));
       }
       for(let i=0;i<60;i++){
         const a=i*6, five=i%5===0, len = five&&mt.fives ? mt.fiveLen : t*1.6;
+        /* How wide the mark is ACROSS the track, which is the direction the
+           text runs: a dot is as wide as it is tall, a tick only as wide as
+           its stroke. Without it the clearance was measured to the mark's
+           centre and half a dot still overlapped the last letter. */
+        const wide = mt.style === "dots" ? (five&&mt.fives ? t*1.7 : t*1.1)
+                   : mt.style === "railroad" ? (five||!mt.fives ? (five?0.22:0.11) : 0.09)
+                   : (five ? mt.thickness*1.5 : mt.thickness);
+        if(mt.textBreak !== false && !clearsText(a, r, len, wide)) continue;
         if(mt.style==="dots"){
           const p=pt(r,a);
           body.push(`<circle cx="${f(p[0],3)}" cy="${f(p[1],3)}" r="${f(five&&mt.fives?t*0.85:t*0.55,3)}" fill="${mt.color}"/>`);
@@ -3242,6 +3406,7 @@ function buildSVG(st, o={}){
           body.push(`<line x1="${f(p0[0],3)}" y1="${f(p0[1],3)}" x2="${f(p1[0],3)}" y2="${f(p1[1],3)}" stroke="${mt.color}" stroke-width="${f(five?mt.thickness*1.5:mt.thickness,3)}" stroke-linecap="${mt.style==="dashes"?"round":"butt"}"/>`);
         }
       }
+      if(trackFx) body.push(`</g>`);
     }
     // hour track
     const ht = st.hour;
@@ -3353,10 +3518,47 @@ function buildSVG(st, o={}){
            shadow is a shade of the dial rather than black, and there is no gap
            beneath it to throw a hard one. */
         defs.push(edgeLight(tint(face, 0.78), shade(face, 0.58), 1, castShadow(shade(face,0.55), 0.42, 1.1)));
+      }else if(k > 0 && MK.soft){
+        /* A second pass of ink, not a metal marker and not a cut.
+           The letter stays solid ink. The only thing that says it stands proud
+           is a thin catch along the shoulder facing the light, and a soft
+           shadow it drops on the dial. Two things keep it ink:
+           the catch is blurred, so it fades into the stroke instead of
+           outlining it, and it is drawn at part opacity, so it lifts the
+           shoulder rather than repainting it. A flat flood at full strength
+           is what made this read as an applied metal marker. */
+        const edge = nm.edgeLight === undefined ? 0.5 : nm.edgeLight;
+        const hiCol = tint(paint, Math.min(0.88, 0.34 + edge*0.50));
+        const loCol = shade(paint, 0.45);
+        const soft  = k*0.85;                       // the shoulder is rounded, not a step
+        defs.push(`<filter id="${shid}" x="-70%" y="-70%" width="240%" height="240%">
+          <feDropShadow in="SourceGraphic" dx="${f(-nlx*k*0.9,3)}" dy="${f(-nly*k*0.9,3)}"
+            stdDeviation="${f(k*0.7,3)}" flood-color="${shade(paint,0.35)}"
+            flood-opacity="0.30" result="base"/>
+          <feOffset in="SourceAlpha" dx="${f(nlx*k,3)}" dy="${f(nly*k,3)}" result="lo"/>
+          <feComposite in="SourceAlpha" in2="lo" operator="out" result="hiA"/>
+          <feGaussianBlur in="hiA" stdDeviation="${f(soft,3)}" result="hiB"/>
+          <feComposite in="hiB" in2="SourceAlpha" operator="in" result="hiC"/>
+          <feFlood flood-color="${hiCol}" result="hiF"/>
+          <feComposite in="hiF" in2="hiC" operator="in" result="hiD"/>
+          <feComponentTransfer in="hiD" result="hi">
+            <feFuncA type="linear" slope="${f(0.40 + edge*0.52,2)}"/>
+          </feComponentTransfer>
+          <feOffset in="SourceAlpha" dx="${f(-nlx*k,3)}" dy="${f(-nly*k,3)}" result="so"/>
+          <feComposite in="SourceAlpha" in2="so" operator="out" result="shA"/>
+          <feGaussianBlur in="shA" stdDeviation="${f(soft,3)}" result="shB"/>
+          <feComposite in="shB" in2="SourceAlpha" operator="in" result="shC"/>
+          <feFlood flood-color="${loCol}" result="shF"/>
+          <feComposite in="shF" in2="shC" operator="in" result="shD"/>
+          <feComponentTransfer in="shD" result="sh">
+            <feFuncA type="linear" slope="0.45"/>
+          </feComponentTransfer>
+          <feMerge>${MA.glow ? `<feMergeNode in="glow"/>` : ""}<feMergeNode in="base"/>
+            <feMergeNode in="sh"/><feMergeNode in="hi"/></feMerge>
+        </filter>`);
       }else if(k > 0){
-        /* Ink standing a little proud of the surface after a second pass. */
-        defs.push(edgeLight(tint(paint, MA.hi*0.5), shade(paint, MA.lo), 1,
-                            MK.soft ? castShadow(shade(paint,0.35), 0.34, 0.55, 0.30) : flatBase));
+        /* Any other relief that stands proud without being a second pass. */
+        defs.push(edgeLight(tint(paint, MA.hi*0.5), shade(paint, MA.lo), 1, flatBase));
       }else{
         defs.push(`<filter id="${shid}" x="-70%" y="-70%" width="240%" height="240%">
           ${MA.glow ? `<feGaussianBlur in="SourceGraphic" stdDeviation="${f(nm.size*0.10,3)}" result="gb"/>
@@ -3870,6 +4072,21 @@ function buildSVG(st, o={}){
         const bendLogo = useMark && Math.abs(tx.logoY) > 0.01 && (
              (ltech === "applied nameplate"  && (tx.plateShape || "arc") === "arc")
           || (ltech === "embossed cartouche" && (tx.embShape   || "arc") === "arc"));
+        /* How big a shape behind the logo has to be to actually hold it.
+           Only the applied nameplate could follow its logo; both cartouches
+           were fixed boxes, so changing the logo size left the name rattling
+           around inside one or spilling out of it, and no control tied them
+           together. The same measurement now drives all three.
+           A flat mark on a curved band also needs the band grown by the arc's
+           drop across the mark's width, or its ends poke out of the shape. */
+        const cartBox = (pad, shape) => {
+          let sag = 0;
+          if(shape === "arc" && useMark && !bendLogo){
+            const rr = Math.abs(tx.logoY) || 0.01, half = Math.min(logoW/2, rr*0.98);
+            sag = rr - Math.sqrt(Math.max(0, rr*rr - half*half));
+          }
+          return { w: logoW + pad*2, h: logoH + sag + pad*0.68 };
+        };
         const lg = id("lgo");
         defs.push(`<g id="${lg}">${useMark
           ? (mk => bendLogo ? bendArt(mk, logoW, Math.abs(tx.logoY), tx.logoY < 0, defs, id) : mk)(
@@ -3885,12 +4102,17 @@ function buildSVG(st, o={}){
              which is what makes it read as smoother than its surroundings.
              The only depth cue is a shallow step — a thin shadow on the lit
              side and a thin catch of light opposite, both deliberately faint. */
-          const rw = tx.resW === undefined ? 8.4 : tx.resW;
-          const rh = tx.resH === undefined ? 2.4 : tx.resH;
           const rcv = tx.resCurve === undefined ? 1.0 : tx.resCurve;
           const rbw = tx.resBorder === undefined ? 0.09 : tx.resBorder;
           const rdp = tx.resDepth === undefined ? 0.07 : tx.resDepth;
           const rpd = tx.resPad === undefined ? 0.34 : tx.resPad;
+          /* Auto-match grows the reserved area to the logo. It used to work the
+             other way round — the logo was shrunk into a fixed patch — which
+             did nothing at all for imported artwork, only for typed text. */
+          const resAuto = tx.resAutoFit !== false;
+          const resBox = cartBox(rpd + rbw, tx.resShape || "arc");
+          const rw = resAuto ? resBox.w : (tx.resW === undefined ? 8.4 : tx.resW);
+          const rh = resAuto ? resBox.h : (tx.resH === undefined ? 2.4 : tx.resH);
           const face = st.dial.color;
           const shp2 = tx.resShape || "arc";
           const y0 = tx.logoY;
@@ -3955,7 +4177,9 @@ function buildSVG(st, o={}){
           const col2 = tx.nameColor || "#1B1B1B";
           const scaleUser = tx.resTextScale === undefined ? 1 : tx.resTextScale;
           let size2 = tx.logoSize * scaleUser;
-          if(tx.resAutoFit !== false && tx.logo){
+          if(!resAuto && tx.logo && !useMark){
+            /* a hand-set patch keeps its size, so the lettering is the thing
+               that has to give way rather than spill over the border */
             const perChar = (tx.logoFont === "serif" ? 0.74 : 0.66) + 0.10;
             const availW = Math.max(0.2, rw - rpd*2);
             const availH = Math.max(0.2, rh - rpd*2);
@@ -4030,10 +4254,16 @@ function buildSVG(st, o={}){
              carries the dial's own colour and finish. Only the light tells you
              it is raised — a lit border on the side facing the light, a shadow
              on the far side, and a soft cast shadow beneath the whole area. */
-          const ew = tx.embW === undefined ? 8.0 : tx.embW;
-          const eh = tx.embH === undefined ? 2.6 : tx.embH;
           const bw = tx.embBorder === undefined ? 0.22 : tx.embBorder;
           const dep = tx.embDepth === undefined ? 0.14 : tx.embDepth;
+          const ins = tx.embInset === undefined ? 0.30 : tx.embInset;
+          /* Auto-match sizes the pressed shape from the logo it has to hold,
+             counting the raised rim and the inner inset — the name sits in the
+             flat field inside those, not in the outline. */
+          const embPad = tx.embPad === undefined ? 0.55 : tx.embPad;
+          const embBox = cartBox(embPad + bw + ins, tx.embShape || "arc");
+          const ew = tx.embAuto === false ? (tx.embW === undefined ? 8.0 : tx.embW) : embBox.w;
+          const eh = tx.embAuto === false ? (tx.embH === undefined ? 2.6 : tx.embH) : embBox.h;
           const face = st.dial.color;
           const shp = tx.embShape || "arc";
           const eid = id("emb");
@@ -4087,7 +4317,6 @@ function buildSVG(st, o={}){
           </filter>`);
           body.push(`<use href="#${eid}" fill="${face}" filter="url(#${ebev})"/>`);
           /* the flat inner field, inset so the rim reads as a raised border */
-          const ins = tx.embInset === undefined ? 0.30 : tx.embInset;
           const kx = Math.max(0.05, 1 - (ins*2)/Math.max(ew,0.1));
           const ky = Math.max(0.05, 1 - (ins*2)/Math.max(eh,0.1));
           body.push(`<g transform="translate(0,${f(y0,3)}) scale(${f(kx,5)},${f(ky,5)}) translate(0,${f(-y0,3)})">`
@@ -5430,28 +5659,35 @@ const logoTechFields = T => (LOGO_TECH_FIELDS[T.logoTech] || LOGO_TECH_FIELDS["p
    so the three cartouche techniques answer the same three questions. */
 const LOGO_CART_FIELDS = {
   res: T => [
-    TG("text.resAutoFit","Auto-fit logo"),
+    TG("text.resAutoFit","Match the logo size"),
     SUB("Shape",[
       SEL("text.resShape","Cartouche shape",["arc","rounded","oval","rectangle"]),
-      N("text.resW","Width",3,20,.05),
-      N("text.resH","Height across",0.8,6,.05),
+      /* Width and height are the shape's own once it has stopped following
+         the logo; while it follows, showing them would offer a number that
+         the next logo change overwrites. */
+      ...(T.resAutoFit === false
+          ? [N("text.resW","Width",3,20,.05), N("text.resH","Height across",0.8,6,.05)]
+          : []),
       ...((T.resShape||"arc") === "arc" ? [N("text.resCurve","Curvature",0,1.6,.02)] : [])
     ], T.resShape || "arc"),
     SUB("Border",[N("text.resBorder","Border thickness",0,0.30,.005)],
         (T.resBorder === undefined ? 0.09 : T.resBorder) > 0.02 ? "hairline" : "none"),
     SUB("Interior",[
-      N("text.resPad","Inner padding",0,1.5,.02),
+      N("text.resPad", T.resAutoFit === false ? "Inner padding" : "Space around the logo",0,1.5,.02),
       ...(T.resAutoFit === false ? [N("text.resTextScale","Logo scale",0.3,1.6,.02)] : [])
-    ], "same as dial")
+    ], T.resAutoFit === false ? "set by hand" : "follows the logo")
   ],
   emb: T => [
+    TG("text.embAuto","Match the logo size"),
     SUB("Shape",[
       SEL("text.embShape","Cartouche shape",["arc","rounded","oval","rectangle"]),
-      N("text.embW","Width",3,20,.05),
-      N("text.embH","Height across",0.8,6,.05)
+      ...(T.embAuto === false
+          ? [N("text.embW","Width",3,20,.05), N("text.embH","Height across",0.8,6,.05)]
+          : [N("text.embPad","Space around the logo",0.05,3,.05)])
     ], T.embShape || "arc"),
     SUB("Border",[N("text.embBorder","Border thickness",0.05,0.80,.01)], "raised"),
-    SUB("Interior",[N("text.embInset","Inner field inset",0,1.2,.02)], "same as dial")
+    SUB("Interior",[N("text.embInset","Inner field inset",0,1.2,.02)],
+        T.embAuto === false ? "set by hand" : "follows the logo")
   ],
   plate: T => [
     TG("text.plateAuto","Auto-fit logo"),
@@ -5492,8 +5728,8 @@ const textAdvanced = T => [
   ...(LOGO_CART[T.logoTech] === "plate"
       ? [N("text.nameHeight","Raised name height",0.02,0.40,.01)] : []),
   ...(T.logoTech === "applied metal" ? [N("text.logoBevel","Bevel",0,0.20,.005)] : []),
-  ...(LOGO_CART[T.logoTech] === "res" && T.resAutoFit !== false
-      ? [N("text.resTextScale","Logo scale",0.3,1.6,.02)] : [])
+  /* Logo scale lives in the cartouche's own Interior group; listing it here
+     as well put two of the same slider in the panel. */
 ];
 const SCHEMA = {
   case:{title:"Case — locked", hint:"Fixed to the RD26-0172 drawing set. Colour and strap are render settings only; the geometry below is the factory's.", fields:[
@@ -5613,7 +5849,11 @@ const SCHEMA = {
   minute:{title:"Minute track", hint:"60 divisions. Diameter is the centre line of the track.", fields:[
     N("minute.diameter","Track diameter",6,44), N("minute.thickness","Thickness",.08,1.2,.02),
     SEL("minute.style","Style",["dots","ticks","railroad","dashes"]),
-    C("minute.color","Colour"), CK("minute.fives","Emphasise 5-minute marks"), N("minute.fiveLen","5-min length",.2,3,.05)]},
+    C("minute.color","Colour"), CK("minute.fives","Emphasise 5-minute marks"), N("minute.fiveLen","5-min length",.2,3,.05),
+    SEL("minute.tech","Made by",["printed","double printed"]),
+    ...(S.minute.tech === "double printed" ? [N("minute.edgeLight","Edge light",0,1,.05,"")] : []),
+    CK("minute.textBreak","Break the track around the text"),
+    ...(S.minute.textBreak !== false ? [N("minute.textGap","Gap either side",0,2,.05)] : [])]},
   hour:{title:"Hour track", hint:"12 divisions, often inside the sector.", fields:[
     N("hour.diameter","Track diameter",6,44), N("hour.thickness","Thickness",.1,1.5,.02),
     SEL("hour.style","Style",["ticks","ring"]), C("hour.color","Colour")]},
@@ -5648,6 +5888,8 @@ const SCHEMA = {
       SEL("numerals.metal","Metal",METAL_NAMES),
       CK("numerals.metalTex","Use the loaded texture as the metal surface")
     ] : []),
+    ...(NUM_MAKE_DEF[S.numerals.tech]?.soft
+        ? [N("numerals.edgeLight","Edge light",0,1,.05,"")] : []),
     ...(NUM_MAKE_DEF[S.numerals.tech]?.piece
         ? [N("numerals.height","Piece height",0.04,0.60,.01),
            N("numerals.bevel","Bevel",0,0.20,.005)] : []),
@@ -5932,11 +6174,11 @@ function wireFile(){
 /* Choosing one of these changes what the rest of the panel should be, so the
    panel is built again rather than merely repainted. */
 const REBUILD_PROPS = new Set([
-  "dial.lock","dial.finish","dial.stone","dial.stFibre","dial.stAdv",
+  "dial.lock","dial.finish","dial.stone","dial.stFibre","dial.stAdv","minute.textBreak","minute.tech",
   "numerals.system","numerals.style","numerals.tech","numerals.material",
   "text.logoTech","text.nameMode","text.plateShape","text.logoMark","text.plateAuto",
   "text.resTech","text.resShape","text.embShape","text.stampSurface",
-  "text.engFill","text.debFill","text.resAutoFit","text.plateTintOn",
+  "text.engFill","text.debFill","text.resAutoFit","text.embAuto","text.plateTintOn",
   "sector.band","sector.arms","sector.pattern",
   "hHand.style","mHand.style","sHand.style","indices.style"
 ]);
