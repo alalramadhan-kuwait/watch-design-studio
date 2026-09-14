@@ -8,6 +8,9 @@ are never uploaded.
 | file | what it does | required |
 |---|---|---|
 | `index.html` | the whole app | yes |
+| `manifest.webmanifest` | makes it installable: name, icon, its own window | to install it |
+| `sw.js` | holds the app offline and announces new versions | to install it |
+| `app/` | the icon and the iOS launch screens | to install it |
 | `robots.txt` | keeps the site out of search results | no |
 | `_headers` | security headers, and stops a stale copy being served after an update | no |
 | `.nojekyll` | stops GitHub Pages stripping `_headers` | only on GitHub Pages |
@@ -23,11 +26,28 @@ Nothing here needs building. Upload the folder and it works.
 
 All four are free at this size.
 
+## Installing it on a phone
+
+Open the site and add it to the Home Screen — **Share → Add to Home Screen** on
+iOS, **⋮ → Install app** on Android. It then runs in its own window with no
+browser chrome, its own icon and launch screen, and it opens in well under a
+second because the whole app is already on the device.
+
+Installed or not, the studio never zooms the interface: a pinch is for looking
+closer at the watch, and the canvas has its own − / + / Fit for that.
+
 ## Updating it
 
-Replace `index.html` and upload again. `_headers` tells browsers not to cache
-the page, so people get the new version on their next visit rather than an old
-copy. On GitHub Pages `_headers` is ignored — a hard refresh clears a stale copy.
+Replace `index.html` and deploy. The service worker fetches the new copy in the
+background, and the app says *A new version is ready* with an Update button
+rather than swapping itself out mid-edit. Taking it writes the design in
+progress to disk first, so the reload comes back to exactly the watch that was
+on screen.
+
+Deploying from this repository stamps the commit into `sw.js` automatically,
+which is what tells a browser the version changed. Uploading the folder by hand
+to another host means editing the `BUILD` line in `sw.js` yourself — if it never
+changes, browsers will keep serving the copy they already have.
 
 ## Before sharing the link
 
@@ -53,7 +73,9 @@ That storage is per-device:
 
 - It does **not** follow you between devices or browsers.
 - Clearing browsing data deletes it. So does Private/Incognito browsing.
-- iOS Safari clears it after about seven days of not visiting the site.
+- In **iOS Safari as a tab**, it is cleared after about seven days of not
+  visiting the site. Adding the app to the Home Screen is exempt from that,
+  which is the better reason to install it than the icon.
 
 If the browser refuses to store anything, the app says so in red and warns you
 once — take that seriously, because then edits really are lost on close.
@@ -64,13 +86,25 @@ Designs that sync by themselves would need accounts and a backend.
 
 ## Worth knowing
 
-- **The page requests nothing.** Loading it makes exactly one request — the
-  page itself. The interface lettering and every dial face are carried inside
-  the file, so it works with no network at all, and opening it tells no one
+- **The page requests nothing of anyone else.** The interface lettering, every
+  dial face and the case photograph are carried inside the file; the only
+  things fetched are the page, its manifest and its icons, all from the same
+  place. It works with no network at all, and opening it tells no one
   anything. Nothing to block, nothing to leak, nothing to go down.
-- First load is about 1.9 MB. Fine on wifi, noticeable on mobile data. It
-  draws in about 150 ms and is usable in about half a second; the dial surface
-  starts coarse and sharpens a second or two later.
+- First visit is about 1.9 MB — fine on wifi, slow on mobile data. After that
+  the service worker holds it, and opening takes about a second whatever the
+  connection is doing:
+
+  | | first visit | once installed |
+  |---|---|---|
+  | wifi | 1.6 s | 1.0 s |
+  | 4G | 4.8 s | 1.0 s |
+  | slow 3G | 40 s | 0.9 s |
+  | no network at all | — | 1.0 s |
+
+  Measured to the first drawn watch, on a throttled headless browser; a real
+  phone is quicker. The dial surface starts coarse and sharpens a second or
+  two later.
 - The renderer is CPU-heavy — shading the dial surface is most of it, and the
   cost rises with the square of the preview resolution under Scene. Smooth on
   a current phone or laptop; an older Android will feel slower, especially

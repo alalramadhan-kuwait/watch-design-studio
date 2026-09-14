@@ -5,3 +5,13 @@
 
 /index.html
   Cache-Control: public, max-age=0, must-revalidate
+
+# The worker is the only thing that tells a browser a new version exists, so
+# it must never be answered from a cache. Everything under /app/ is content-
+# addressed by name and changes only when it is redrawn.
+/sw.js
+  Cache-Control: no-cache
+/manifest.webmanifest
+  Cache-Control: public, max-age=0, must-revalidate
+/app/*
+  Cache-Control: public, max-age=604800

@@ -31,6 +31,18 @@ jobs:
         # needs no setting changed by hand before it can deploy.
         with:
           enablement: true
+      # The service worker is replaced only when its bytes change, which is
+      # the browser's one signal that a new version exists. Stamping the
+      # commit into it means every deploy is one, without anyone having to
+      # remember to bump a number.
+      - name: Stamp the build into the service worker
+        run: |
+          sed -i "s/__BUILD__/${GITHUB_SHA::12}/" sw.js
+          if grep -q "__BUILD__" sw.js; then
+            echo "the build placeholder is still there — the worker would never change"
+            exit 1
+          fi
+          echo "stamped ${GITHUB_SHA::12}"
       - uses: actions/upload-pages-artifact@v3
         with:
           path: .

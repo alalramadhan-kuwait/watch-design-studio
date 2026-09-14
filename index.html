@@ -2,7 +2,56 @@
 <html lang="en" data-theme="light">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<!-- Installed-app behaviour. The studio is a tool you keep open while you
+     work, not a page you read, so it is set up to be added to the Home Screen
+     and run without browser chrome: its own window, its own icon, its own
+     launch screen, and the safe areas handled in the stylesheet rather than
+     left to Safari's margins.
+
+     maximum-scale/user-scalable above turn off the browser's own zoom, which
+     was never the right gesture here — a pinch means "look closer at the
+     watch", and the canvas has its own zoom for that. Safari ignores these
+     two on its own, so the gesture events are also refused in script. -->
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#F5F5F7">
+<meta name="color-scheme" content="light">
+<meta name="application-name" content="Watch Studio">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<!-- "default", not "black-translucent": the studio is a light interface, and
+     translucent forces white status-bar text that would vanish against it.
+     iOS then keeps the status bar out of the web view, and the insets below
+     take care of the home indicator and, in landscape, the notch. -->
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<!-- The name under the Home Screen icon. Kept to twelve characters so iOS
+     shows it whole rather than clipping it to an ellipsis. -->
+<meta name="apple-mobile-web-app-title" content="Watch Studio">
+<link rel="apple-touch-icon" href="app/apple-touch-icon.png">
+<link rel="apple-touch-startup-image" href="app/splash-se1-portrait.png" media="(device-width:320px) and (device-height:568px) and (-webkit-device-pixel-ratio:2) and (orientation:portrait)">
+<link rel="apple-touch-startup-image" href="app/splash-8-portrait.png" media="(device-width:375px) and (device-height:667px) and (-webkit-device-pixel-ratio:2) and (orientation:portrait)">
+<link rel="apple-touch-startup-image" href="app/splash-8plus-portrait.png" media="(device-width:414px) and (device-height:736px) and (-webkit-device-pixel-ratio:3) and (orientation:portrait)">
+<link rel="apple-touch-startup-image" href="app/splash-x-portrait.png" media="(device-width:375px) and (device-height:812px) and (-webkit-device-pixel-ratio:3) and (orientation:portrait)">
+<link rel="apple-touch-startup-image" href="app/splash-xr-portrait.png" media="(device-width:414px) and (device-height:896px) and (-webkit-device-pixel-ratio:2) and (orientation:portrait)">
+<link rel="apple-touch-startup-image" href="app/splash-xsmax-portrait.png" media="(device-width:414px) and (device-height:896px) and (-webkit-device-pixel-ratio:3) and (orientation:portrait)">
+<link rel="apple-touch-startup-image" href="app/splash-13-portrait.png" media="(device-width:390px) and (device-height:844px) and (-webkit-device-pixel-ratio:3) and (orientation:portrait)">
+<link rel="apple-touch-startup-image" href="app/splash-13promax-portrait.png" media="(device-width:428px) and (device-height:926px) and (-webkit-device-pixel-ratio:3) and (orientation:portrait)">
+<link rel="apple-touch-startup-image" href="app/splash-15-portrait.png" media="(device-width:393px) and (device-height:852px) and (-webkit-device-pixel-ratio:3) and (orientation:portrait)">
+<link rel="apple-touch-startup-image" href="app/splash-15promax-portrait.png" media="(device-width:430px) and (device-height:932px) and (-webkit-device-pixel-ratio:3) and (orientation:portrait)">
+<link rel="apple-touch-startup-image" href="app/splash-16pro-portrait.png" media="(device-width:402px) and (device-height:874px) and (-webkit-device-pixel-ratio:3) and (orientation:portrait)">
+<link rel="apple-touch-startup-image" href="app/splash-16promax-portrait.png" media="(device-width:440px) and (device-height:956px) and (-webkit-device-pixel-ratio:3) and (orientation:portrait)">
+<link rel="apple-touch-startup-image" href="app/splash-ipad-portrait.png" media="(device-width:768px) and (device-height:1024px) and (-webkit-device-pixel-ratio:2) and (orientation:portrait)">
+<link rel="apple-touch-startup-image" href="app/splash-ipad-landscape.png" media="(device-width:768px) and (device-height:1024px) and (-webkit-device-pixel-ratio:2) and (orientation:landscape)">
+<link rel="apple-touch-startup-image" href="app/splash-ipad10-portrait.png" media="(device-width:810px) and (device-height:1080px) and (-webkit-device-pixel-ratio:2) and (orientation:portrait)">
+<link rel="apple-touch-startup-image" href="app/splash-ipad10-landscape.png" media="(device-width:810px) and (device-height:1080px) and (-webkit-device-pixel-ratio:2) and (orientation:landscape)">
+<link rel="apple-touch-startup-image" href="app/splash-ipadair-portrait.png" media="(device-width:820px) and (device-height:1180px) and (-webkit-device-pixel-ratio:2) and (orientation:portrait)">
+<link rel="apple-touch-startup-image" href="app/splash-ipadair-landscape.png" media="(device-width:820px) and (device-height:1180px) and (-webkit-device-pixel-ratio:2) and (orientation:landscape)">
+<link rel="apple-touch-startup-image" href="app/splash-ipadpro105-portrait.png" media="(device-width:834px) and (device-height:1112px) and (-webkit-device-pixel-ratio:2) and (orientation:portrait)">
+<link rel="apple-touch-startup-image" href="app/splash-ipadpro105-landscape.png" media="(device-width:834px) and (device-height:1112px) and (-webkit-device-pixel-ratio:2) and (orientation:landscape)">
+<link rel="apple-touch-startup-image" href="app/splash-ipadpro11-portrait.png" media="(device-width:834px) and (device-height:1194px) and (-webkit-device-pixel-ratio:2) and (orientation:portrait)">
+<link rel="apple-touch-startup-image" href="app/splash-ipadpro11-landscape.png" media="(device-width:834px) and (device-height:1194px) and (-webkit-device-pixel-ratio:2) and (orientation:landscape)">
+<link rel="apple-touch-startup-image" href="app/splash-ipadpro129-portrait.png" media="(device-width:1024px) and (device-height:1366px) and (-webkit-device-pixel-ratio:2) and (orientation:portrait)">
+<link rel="apple-touch-startup-image" href="app/splash-ipadpro129-landscape.png" media="(device-width:1024px) and (device-height:1366px) and (-webkit-device-pixel-ratio:2) and (orientation:landscape)">
 <title>Watch Design Studio — v1</title>
 <meta name="robots" content="noindex, nofollow">
 <meta name="description" content="Parametric watch dial and case design studio. Runs entirely in the browser.">
@@ -874,6 +923,138 @@ body.picking #mModes, body.picking .hnd{ opacity:.25; pointer-events:none }
    the line above it did not. */
 @media (max-width:900px){ .ptitle.main{ display:none } .phint{ margin-top:2px } }
 
+/* ============================================================
+   INSTALLED-APP BEHAVIOUR
+   The studio runs from the Home Screen in its own window, so it
+   has to behave like something that belongs there rather than
+   like a page in a browser: no zooming the interface, no rubber
+   band under a list that has ended, no blue flash on a button,
+   no text selected by a finger that meant to drag.
+
+   None of this is conditional on actually being installed.
+   env() is zero in a browser tab and the rules are simply inert
+   there, which also means the behaviour is the same either way.
+   ============================================================ */
+:root{
+  /* The four insets, named once. Everything below asks for these
+     rather than for env() directly: it keeps the arithmetic in one
+     vocabulary, and it means the layout can be put on a notched
+     phone in a test by setting them, which env() alone does not
+     allow. */
+  --sa-t:env(safe-area-inset-top,0px);
+  --sa-r:env(safe-area-inset-right,0px);
+  --sa-b:env(safe-area-inset-bottom,0px);
+  --sa-l:env(safe-area-inset-left,0px);
+}
+html{
+  /* iOS paints a grey rectangle behind every tap on anything it
+     takes for a link. Nothing here is a link. */
+  -webkit-tap-highlight-color:transparent;
+  /* The page itself never scrolls — the panels inside it do — so
+     refusing the overscroll chain stops the whole app bouncing
+     when a finger runs past the end of one of them. */
+  overscroll-behavior:none;
+  /* Rotating the phone must not resize the type. */
+  -webkit-text-size-adjust:100%; text-size-adjust:100%;
+}
+body{
+  overscroll-behavior:none;
+  /* No double-tap zoom, and no 300ms wait to find out whether a
+     tap was going to be one. Pinch is refused by the viewport
+     tag and, on Safari, by the gesture handlers in script. */
+  touch-action:manipulation;
+  /* A drag that starts on a label should move the sheet, not
+     select the label. Everything a person might actually want to
+     copy opts back in below. */
+  -webkit-user-select:none; user-select:none;
+}
+input, textarea, select, [contenteditable="true"],
+.card, .readout, .stamp, .phint{
+  -webkit-user-select:text; user-select:text;
+}
+/* Every scrolling panel keeps its overscroll to itself. */
+.bar, .cmp, .rail, .props, #mBody, .card{ overscroll-behavior:contain }
+
+/* The safe areas. Left and right matter in landscape on a notched
+   phone; the bottom is the home indicator, which the sheet has to
+   stay clear of because the sheet is the thing against the edge. */
+@media (max-width:900px){
+  .bar{
+    padding-top:calc(var(--ds-2) + var(--sa-t));
+    padding-left:calc(var(--ds-3) + var(--sa-l));
+    padding-right:calc(var(--ds-3) + var(--sa-r));
+  }
+  /* The strip the home indicator sits over is added below the sheet
+     rather than taken out of it, so the three heights still mean what
+     they say and the panel does not quietly lose 34px of controls on
+     the phones that have one. */
+  #mSheet{
+    height:calc(var(--sheet-h, 46vh) + var(--sa-b));
+    padding-bottom:var(--sa-b);
+    padding-left:var(--sa-l);
+    padding-right:var(--sa-r);
+  }
+  /* And the canvas ends where the taller sheet begins. Without this the
+     stage still stopped at --sheet-h, so the bottom 34px of the watch sat
+     behind the top of the panel and the framing centred on a rectangle
+     partly out of sight. */
+  .stage{ bottom:calc(var(--sheet-h, 46vh) + var(--sa-b)) }
+  /* The floating canvas controls are positioned against the
+     stage's padding box, so they need their own offsets — a
+     padded stage would not move them. */
+  .zoomer{ right:calc(var(--ds-3) + var(--sa-r)) }
+  #mMeasure, #mInfoBtn{ left:calc(var(--ds-3) + var(--sa-l)) }
+  .toast{ bottom:calc(22px + var(--sa-b)) }
+}
+/* Full-screen panels are the one place content can reach the very
+   bottom of the screen, so they carry the inset themselves. */
+.sheet .card{ padding-bottom:calc(14px + var(--sa-b)) }
+
+/* A tap on a control must never be read as the start of a text
+   selection or a callout menu, and the drag handle is a handle. */
+button, .layer, .vrow, .chip, .sw, .tabs, #mHead, .ghead, summary, label{
+  -webkit-touch-callout:none;
+}
+
+/* Text entry never zooms the page on iOS below sixteen pixels, and
+   the narrow layout already sets that — but its query also asks for
+   a tall screen, so a phone on its side fell through it. Anything
+   with a keyboard behind it is sixteen pixels on every touch
+   device, in every orientation. */
+@media (pointer:coarse){
+  input[type=text], input[type=number], input[type=search],
+  input[type=email], input[type=tel], input[type=url],
+  select, textarea{ font-size:16px }
+}
+
+/* The new-version notice. It comes down from the top, where it is
+   out of the way of the sheet and of the canvas controls, and it
+   waits: an update that interrupted an edit would be worse than no
+   update at all. */
+#updBar{
+  position:fixed; z-index:40; left:50%;
+  /* Under the toolbar, not over it: a notice that hides Undo and the design
+     name is worse than no notice. --bar-h is the toolbar's measured height,
+     safe-area padding and all, kept current in script. */
+  top:calc(var(--bar-h, 56px) + 8px);
+  transform:translateX(-50%) translateY(-160%);
+  display:flex; align-items:center; gap:8px;
+  max-width:calc(100vw - 20px);
+  padding:7px 7px 7px 15px;
+  background:var(--ds-elevated); color:var(--ds-text);
+  border:1px solid var(--ds-border-2); border-radius:var(--ds-r-pill);
+  box-shadow:var(--ds-sh-2);
+  font-size:var(--ds-t-sm); white-space:nowrap;
+  transition:transform var(--ds-base) var(--ds-ease);
+}
+#updBar.show{ transform:translateX(-50%) translateY(0) }
+#updBar .btn{ padding:5px 12px; font-size:var(--ds-t-sm) }
+#updBar .btn[data-upd="go"]{ background:var(--ds-brand); color:#15181C; font-weight:600 }
+#updBar .btn.ghost{ background:transparent; color:var(--ds-text-2) }
+@media (max-width:420px){
+  #updBar{ font-size:12px; padding-left:12px }
+  #updBar .btn{ padding:5px 10px }
+}
 </style>
 </head>
 <body>
@@ -8194,10 +8375,18 @@ refineBootRender();
   let stop = 1, startY = 0, startH = 0, dragging = false, moved = 0;
   const setH = px => shell.style.setProperty("--sheet-h", px + "px");
   const vh = () => shell.clientHeight || innerHeight;
+  /* On a phone with a home indicator the sheet is taller than the panel
+     inside it by exactly that strip, so every measurement of "how tall is
+     the sheet" has to take it off again — otherwise a drag reads as 34px
+     further than the finger went and the stops snap to the wrong one. Read
+     from the used padding rather than the custom property, which is the
+     only form guaranteed to be resolved to pixels. */
+  const satB = () => parseFloat(getComputedStyle(sheet).paddingBottom) || 0;
+  const panelH = () => sheet.getBoundingClientRect().height - satB();
   setH(vh()*STOPS[stop]);
   const down = e => { if(e.target.closest && e.target.closest("button")) return;
     dragging = true; sheet.classList.add("dragging"); shell.classList.add("dragging");
-    startY = (e.touches? e.touches[0].clientY : e.clientY); startH = sheet.getBoundingClientRect().height; moved = 0;
+    startY = (e.touches? e.touches[0].clientY : e.clientY); startH = panelH(); moved = 0;
     grab.setPointerCapture && e.pointerId!=null && grab.setPointerCapture(e.pointerId); };
   const move = e => { if(!dragging) return;
     const y = (e.touches? e.touches[0].clientY : e.clientY);
@@ -8206,7 +8395,7 @@ refineBootRender();
     e.preventDefault(); };
   const up = () => { if(!dragging) return; dragging = false;
     sheet.classList.remove("dragging"); shell.classList.remove("dragging");
-    const frac = sheet.getBoundingClientRect().height / vh();
+    const frac = panelH() / vh();
     let best = 0; STOPS.forEach((v,i)=>{ if(Math.abs(v-frac) < Math.abs(STOPS[best]-frac)) best = i; });
     stop = best; setH(vh()*STOPS[stop]);
     /* the visible area changed, so frame it again — the same framing the
@@ -8264,6 +8453,147 @@ refineBootRender();
 
   const origPaint = typeof paintAll === "function" ? paintAll : null;
   if(origPaint) window.paintAll = function(){ origPaint.apply(this, arguments); setTitle(); };
+})();
+
+/* ===============================================================
+   PLATFORM
+   What the studio needs to behave like an installed application
+   rather than a page: the browser's own zoom refused, the app
+   shell held offline, and a new version offered rather than
+   imposed.
+   =============================================================== */
+(function(){
+
+  /* --- the interface does not zoom -----------------------------
+     The viewport tag says so, and Chrome obeys it. Safari decided
+     some years ago to ignore user-scalable on the grounds that a
+     page might be unreadable without it — reasonable for a page,
+     wrong for a tool whose subject has its own zoom. A pinch here
+     means "look closer at the watch", and the canvas already
+     answers that; a pinch anywhere else did nothing but leave the
+     interface at some arbitrary scale you then had to undo.
+
+     Double tap is handled in the stylesheet by touch-action:
+     manipulation, which is the right way round: refusing it here
+     would mean swallowing the second tap of two quick taps on the
+     same button, which is how the steppers are used. */
+  ["gesturestart","gesturechange","gestureend"].forEach(t =>
+    document.addEventListener(t, e => e.preventDefault(), {passive:false}));
+
+  /* Ctrl/⌘ with the wheel is the trackpad pinch. Over the canvas it
+     is the watch's own zoom, which the stage handles; anywhere else
+     it is the browser scaling the interface, which it must not. */
+  addEventListener("wheel", e => {
+    if(!(e.ctrlKey || e.metaKey)) return;
+    if(e.target.closest && e.target.closest("#stage")) return;
+    e.preventDefault();
+  }, {passive:false});
+
+  /* The toolbar's height, for anything that has to sit below it. Measured
+     rather than assumed: it wraps to two rows on a narrow screen and grows
+     by the status-bar inset on a notched one. */
+  const barEl = document.querySelector(".bar");
+  if(barEl){
+    const setBarH = () => document.documentElement.style
+      .setProperty("--bar-h", barEl.getBoundingClientRect().height + "px");
+    setBarH();
+    /* border-box, because what changes with a safe-area inset is the
+       padding: the content box stays exactly the size it was and a default
+       observer would never fire. */
+    if(window.ResizeObserver) new ResizeObserver(setBarH).observe(barEl, {box:"border-box"});
+    addEventListener("resize", setBarH);
+    addEventListener("orientationchange", ()=> setTimeout(setBarH, 260));
+  }
+
+  /* How the app is running, for anything that wants to know. */
+  const standalone = () => matchMedia("(display-mode: standalone)").matches
+    || matchMedia("(display-mode: fullscreen)").matches
+    || navigator.standalone === true;
+  const markMode = () => document.documentElement.classList.toggle("installed", standalone());
+  markMode();
+  matchMedia("(display-mode: standalone)").addEventListener?.("change", markMode);
+
+  /* --- offline, and instant after the first visit ---------------
+     Registered after the first paint: the worker's install fetches
+     the whole 1.9 MB file again, and doing that while the app is
+     still starting would slow down the one thing it is meant to
+     make fast. */
+  if(!("serviceWorker" in navigator) || !isSecureContext) return;
+
+  let reg = null, offered = false, lastCheck = 0, reloading = false;
+
+  const bar = () => {
+    let el = document.getElementById("updBar");
+    if(el) return el;
+    el = document.createElement("div");
+    el.id = "updBar";
+    el.innerHTML = '<span>A new version is ready.</span>'
+      + '<button type="button" class="btn" data-upd="go">Update</button>'
+      + '<button type="button" class="btn ghost" data-upd="later" aria-label="Not now">Later</button>';
+    document.body.appendChild(el);
+    el.addEventListener("click", ev => {
+      const b = ev.target.closest("[data-upd]"); if(!b) return;
+      if(b.dataset.upd === "later"){ el.classList.remove("show"); return; }
+      takeUpdate();
+    });
+    return el;
+  };
+  const offer = () => {
+    if(offered) return; offered = true;
+    const el = bar(); void el.offsetHeight; el.classList.add("show");
+  };
+
+  /* The design in progress is written out before anything reloads.
+     saveNow is synchronous down to localStorage, so by the time the
+     worker is told to take over, what is on screen is already on
+     disk — and the boot path reopens the autosave, which is why the
+     update comes back to the same watch rather than to the preset. */
+  function takeUpdate(){
+    try{ if(typeof saveNow === "function") saveNow(); }catch(e){}
+    const w = reg && reg.waiting;
+    if(!w){ location.reload(); return; }
+    reloading = true;
+    w.postMessage({type:"SKIP_WAITING"});
+    /* controllerchange is the proper signal; this is in case a
+       browser never sends it. */
+    setTimeout(()=>{ if(reloading) location.reload(); }, 2500);
+  }
+
+  navigator.serviceWorker.addEventListener("controllerchange", ()=>{
+    if(reloading){ reloading = false; location.reload(); }
+  });
+
+  const watch = r => {
+    reg = r;
+    /* Already waiting from a previous visit. controller is null on the
+       very first run, and that install is not an update to announce. */
+    if(r.waiting && navigator.serviceWorker.controller) offer();
+    r.addEventListener("updatefound", ()=>{
+      const nw = r.installing; if(!nw) return;
+      nw.addEventListener("statechange", ()=>{
+        if(nw.state === "installed" && navigator.serviceWorker.controller) offer();
+      });
+    });
+  };
+
+  const check = () => {
+    const now = Date.now();
+    if(!reg || now - lastCheck < 9e5) return;      // a quarter of an hour
+    lastCheck = now;
+    reg.update().catch(()=>{});
+  };
+
+  addEventListener("load", ()=> setTimeout(()=>{
+    navigator.serviceWorker.register("sw.js", {scope:"./", updateViaCache:"none"})
+      .then(r => { watch(r); lastCheck = Date.now(); })
+      .catch(()=>{});
+  }, 1200));
+
+  /* Coming back to the app is the natural moment to find out
+     whether it has moved on. */
+  document.addEventListener("visibilitychange", ()=>{
+    if(document.visibilityState === "visible") check();
+  });
 })();
 </script>
 </body>
