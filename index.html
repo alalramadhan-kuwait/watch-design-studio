@@ -717,6 +717,36 @@ input[type=range]:active::-webkit-slider-thumb{ transform:scale(1.18) }
    because its handler resolves through closest(). The handler does that now
    too; this rule is the guard, so no icon added later can do it again. */
 button svg, .lico svg, .gcar{ pointer-events:none }
+
+/* ---- saved versions, as the watches they are -----------------------
+   A version was a line of text and two 12px buttons at the foot of a
+   sheet that also held export, the technical PDF and the defaults — so
+   the one thing anybody recognises a design by, its face, was the one
+   thing not shown. */
+.vgrid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(136px,1fr));
+  gap:12px; align-items:start }
+.vcard{ position:relative; display:flex; flex-direction:column; gap:1px; padding:8px;
+  background:var(--ds-panel-2); border:1px solid var(--ds-border-2);
+  border-radius:var(--ds-r-md); cursor:pointer; text-align:left;
+  transition:border-color var(--ds-fast) ease-out }
+.vcard:active{ transform:var(--ds-press, scale(.985)) }
+.vcard.now{ border-color:var(--ds-brand); cursor:default }
+.vcard .vth{ aspect-ratio:1; display:grid; place-items:center; overflow:hidden;
+  border-radius:var(--ds-r-sm); background:var(--ds-fill) }
+.vcard .vth svg{ width:100%; height:100%; display:block }
+.vcard .vnm{ margin-top:6px; font-size:13px; font-weight:500; color:var(--ds-text);
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+.vcard .vat{ font-size:11px; color:var(--ds-text-2) }
+.vcard .vdel{ position:absolute; top:5px; right:5px; min-width:32px; height:32px; padding:0;
+  border-radius:var(--ds-r-pill); background:var(--ds-chrome, rgba(255,255,255,.9));
+  backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
+  border:1px solid var(--ds-border-2); color:var(--ds-text-2);
+  font-family:inherit; font-size:13px; line-height:1; cursor:pointer }
+/* Removing a version cannot be undone, so the first tap only asks. */
+.vcard.confirm .vdel{ padding:0 11px; background:var(--ds-red,#FF3B30); color:#fff;
+  border-color:transparent; font-size:12px }
+.vcard .vsave{ margin-top:8px; width:100% }
+.vnone{ grid-column:1/-1; margin:0; font-size:13px; color:var(--ds-text-2) }
 .layer .eye, .layer .lock{
   background:none; border:0; padding:3px; line-height:0; cursor:pointer;
   color:var(--ds-text-3); border-radius:var(--ds-r-xs);
@@ -7483,13 +7513,11 @@ refineBootRender();
     return b;
   };
   /* Back returns to the saved designs, which is the screen above this one.
-     Browser history is unreliable here — the app is often opened directly. */
-  const back = ico("Back", "‹", ()=>{
-    openMore();
-    const sheet = document.getElementById("mMore");
-    sheet && sheet.scrollTop === 0 && sheet.querySelector("#mMoreVers")
-      && sheet.querySelector("#mMoreVers").scrollIntoView({block:"start"});
-  });
+     Browser history is unreliable here — the app is often opened directly.
+     It used to open More and try to scroll to the versions at the bottom of
+     it, which only worked if the sheet happened to be at the top; it opens
+     the versions themselves now. */
+  const back = ico("Back", "‹", ()=> openVers());
   const title = document.createElement("div"); title.className = "ttl";
   const setTitle = ()=>{ title.textContent = (S && S.meta && S.meta.name) || "Watch"; };
   const undoB = byId("undo"), redoB = byId("redo");
@@ -7611,10 +7639,124 @@ refineBootRender();
            ()=>{ closeMore(); exportBtn.click(); }), moreB);
 
   ["autoNote","dup","setDefault","clrDefault"].forEach(id=>{ const b=byId(id); if(b) slots.appendChild(b); });
-  const versHost = more.querySelector("#mMoreVers");
-  const versions = byId("versions");
-  if(versions){ const h=document.createElement("div"); h.className="sec"; h.textContent="Saved versions";
-                versHost.append(h, versions); }
+
+  /* ---- saved versions ----
+     A version is a watch, so it is shown as one. The rail's text list stays
+     where it is for the desktop; this is a screen of its own, because the
+     tail of a sheet holding export, the PDF and the defaults is not where
+     anybody would look for their own designs.
+
+     NOTE: the element must not be called `versions` here. That is the name
+     of the array of saved designs, and a const of the same name in this
+     scope would shadow it for the whole shell — every reference below would
+     get a <div>, and any reached before this line would throw outright. */
+  const versSheet = document.createElement("div");
+  versSheet.className = "sheet"; versSheet.id = "mVers";
+  versSheet.innerHTML = `<button class="sheetX" data-close="1" aria-label="Close">✕</button>
+    <div class="card"><h2>Saved versions</h2>
+      <p class="sub">Tap one to open it. Every change you make is kept automatically —
+        a version marks a direction worth coming back to.</p>
+      <div id="vGrid" class="vgrid"></div></div>`;
+  document.body.appendChild(versSheet);
+  const vGrid = versSheet.querySelector("#vGrid");
+
+  const ago = ts => {
+    if(!ts) return "";
+    const m = (Date.now()-ts)/60000;
+    if(m < 1.5) return "just now";
+    if(m < 60)  return Math.round(m) + " min ago";
+    const h = m/60;
+    if(h < 24)  return Math.round(h) + (Math.round(h)===1 ? " hour ago" : " hours ago");
+    const d = h/24;
+    if(d < 7)   return Math.round(d) + (Math.round(d)===1 ? " day ago" : " days ago");
+    return new Date(ts).toLocaleDateString(undefined,{day:"numeric",month:"short"});
+  };
+  /* Drawn one per frame rather than all at once: the sheet opens straight
+     away and fills in, however many are in there. */
+  let thumbRun = 0;
+  const drawThumbs = () => {
+    const run = ++thumbRun;
+    const slots = [...vGrid.querySelectorAll(".vth")];
+    let i = 0;
+    const step = () => {
+      if(run !== thumbRun || !versSheet.classList.contains("open") || i >= slots.length) return;
+      const el = slots[i], key = el.dataset.th; i++;
+      try{
+        /* An old design has to come through the same door a loaded one
+           does, or it draws with settings it was saved before. */
+        const st = key === "now" ? S : migrateHands(clone(versions[+key].state));
+        /* Every id in the document shares one scope, so each thumbnail is
+           namespaced — the same thing the compare view does for its three. */
+        /* Cropped to the case. Drawn whole, the strap takes half the card
+           and the dial — the only part you would recognise it by — comes out
+           the size of a fingernail. The drawing is unchanged; the window
+           onto it is tighter. */
+        const side = CASE_SPEC.flat*1.06;
+        el.innerHTML = buildSVG(st, {tag:"v"+key, matPx:96})
+          .replace(/viewBox="[^"]*"/, `viewBox="${f(-side/2,2)} ${f(-side/2,2)} ${f(side,2)} ${f(side,2)}"`);
+      }catch(e){ el.textContent = "—"; }
+      requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  };
+  const paintVersCards = () => {
+    const name = esc((S.meta && S.meta.name) || "Working copy");
+    vGrid.innerHTML =
+      `<div class="vcard now"><div class="vth" data-th="now"></div>
+         <div class="vnm">${name}</div><div class="vat">open now</div>
+         <button class="btn key vsave" type="button">Save this version</button></div>`
+      + (versions.length
+        ? versions.map((v,i)=>`<div class="vcard" data-vopen="${i}">
+             <div class="vth" data-th="${i}"></div>
+             <div class="vnm">${esc(v.name)}</div>
+             <div class="vat">${esc(ago(v.at))}</div>
+             <button class="vdel" type="button" data-vdel="${i}" aria-label="Delete this version">✕</button>
+           </div>`).join("")
+        : `<p class="vnone">Nothing saved yet.</p>`);
+    drawThumbs();
+  };
+  function openVers(){ versSheet.classList.add("open"); versSheet.style.display="grid"; paintVersCards(); }
+  function closeVers(){ versSheet.classList.remove("open"); versSheet.style.display="none"; thumbRun++; }
+  /* The list is read from storage after the first paint, so a sheet opened
+     in the meantime has to hear about it. */
+  if(typeof paintVersions === "function"){
+    const origPV = paintVersions;
+    window.paintVersions = function(){ origPV.apply(this, arguments);
+      if(versSheet.classList.contains("open")) paintVersCards(); };
+  }
+  versSheet.addEventListener("click", e=>{
+    const t = e.target;
+    if(t === versSheet || (t.closest && t.closest("[data-close]"))) return closeVers();
+    if(!t.closest) return;
+    const del = t.closest("[data-vdel]");
+    if(del){
+      const card = del.closest(".vcard");
+      if(!card.classList.contains("confirm")){
+        vGrid.querySelectorAll(".vcard.confirm").forEach(c=>{
+          c.classList.remove("confirm"); const b=c.querySelector(".vdel"); if(b) b.textContent="✕"; });
+        card.classList.add("confirm"); del.textContent = "Delete?";
+        clearTimeout(card._undo);
+        card._undo = setTimeout(()=>{ card.classList.remove("confirm"); del.textContent="✕"; }, 4000);
+        return;
+      }
+      versions.splice(+del.dataset.vdel, 1);
+      store.write(versions); paintVersions(); paintVersCards();
+      toast("Version deleted");
+      return;
+    }
+    if(t.closest(".vsave")){ closeVers(); saveBtn && saveBtn.click(); return; }
+    const open = t.closest("[data-vopen]");
+    if(open){
+      const v = versions[+open.dataset.vopen]; if(!v) return;
+      S = migrateHands(clone(v.state)); commit(); paintAll();
+      closeVers(); toast("Opened “" + v.name + "”");
+    }
+  });
+  /* One row in More rather than the list itself dumped at the bottom. */
+  const versRow = act("Saved versions", "Open a direction you marked earlier",
+                      ()=>{ closeMore(); openVers(); });
+  more.querySelector("#mMoreVers").appendChild(versRow);
+
   function openMore(){ more.classList.add("open"); more.style.display="grid"; }
   function closeMore(){ more.classList.remove("open"); more.style.display="none"; }
   more.addEventListener("click", e=>{ if(e.target.dataset.close || e.target===more) closeMore(); });
