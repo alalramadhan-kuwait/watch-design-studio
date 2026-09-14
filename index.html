@@ -1076,10 +1076,11 @@ const BASE = {
   chapter:{on:true, outerD:30.5, innerD:27.0, color:"#003087", finish:"flat", separator:true, sepColor:"#8BB8E8"},
   sector:{on:false, waveGrowth:0, wavePhase:0, radialPhase:0, stamp:0, outerD:26.0, innerD:20.0, color:"#D6D2C4", ringColor:"#A89968", finish:"matte", band:true, arms:true, lineW:0.16,
           pattern:"same as dial", cell:0.85, pitch:0.42, rays:200, waveAmp:0.35, waveN:12, wall:32},
-  minute:{on:true, diameter:29.6, thickness:.30, style:"dots", color:"#FFFFFF", fives:true, fiveLen:.9},
+  minute:{on:true, diameter:29.6, thickness:.30, style:"dots", color:"#FFFFFF", fives:true, fiveLen:.9,
+          textBreak:true, textGap:0.5, tech:"printed", edgeLight:0.55},
   hour:{on:false, diameter:26.6, thickness:.5, color:"#FFFFFF", style:"ticks"},
   indices:{on:false, style:"baton", radius:12.8, length:2.4, width:.55, color:"#FFFFFF", applied:true, count:12, skipNumerals:true},
-  numerals:{on:true, style:"vernoy", size:3.4, radius:11.7, color:"#FFFFFF", set:"all",
+  numerals:{on:true, style:"vernoy", size:3.4, radius:11.7, color:"#FFFFFF", set:"all", edgeLight:0.55,
             orient:"upright", arc:true, slant:9, tech:"applied", material:"metal", weight:0, gap:1, system:"western 0–9",
             metal:"polished steel", height:0.20, bevel:0.055, metalTex:false,
             /* a cut, in millimetres: how far the two lit edges reach in, how
@@ -3220,16 +3221,89 @@ function buildSVG(st, o={}){
         body.push(`<circle r="${ch.outerD/2}" fill="none" stroke="${ch.sepColor}" stroke-width="0.13" stroke-opacity="0.5"/>`);
       }
     }
+    /* Where the printed lines cross a track.
+       On a real dial the minute track stops either side of SWISS MADE rather
+       than running through it — the dots and the lettering are the same ink at
+       the same radius, so a track that carried on would print into the text.
+       Each line that sits at the track's own radius reserves the arc it
+       occupies, and the marks inside that arc are simply not laid down. */
+    const textKeepOut = (() => {
+      const tx = st.text;
+      if(!tx || tx.on === false) return [];
+      const lines = [
+        { t: tx.logo,  y: tx.logoY,  size: tx.logoSize,  track: 0.10, on: true },
+        { t: tx.line2, y: tx.line2Y, size: tx.line2Size, track: 0.14, on: tx.line2On !== false },
+        { t: tx.foot,  y: tx.footY,  size: tx.footSize,  track: 0.22, on: tx.footOn  !== false },
+      ];
+      const out = [];
+      for(const L of lines){
+        if(!L.on || !L.t || !L.y || !L.size) continue;
+        const r = Math.abs(L.y);
+        if(r < 0.5) continue;
+        /* IBM Plex Sans caps average about 0.60 em; the tracking is added per
+           character the same way the text itself spaces them out. */
+        const w = String(L.t).length * L.size * (0.60 + (L.track || 0));
+        out.push({
+          deg: L.y < 0 ? 0 : 180,                       // which end of the dial
+          half: Math.atan2(w/2, r)*180/Math.PI,
+          r, h: L.size,
+        });
+      }
+      return out;
+    })();
+    /* True when a mark at this angle would land on one of those lines. The
+       radius test keeps a track well clear of the text from being broken for
+       no reason — only a track running through the lettering gives way. */
+    const clearsText = (deg, markR, markH) => !textKeepOut.some(g => {
+      const gap = (st.minute && st.minute.textGap !== undefined) ? st.minute.textGap : 0.5;
+      if(Math.abs(markR - g.r) > (g.h/2 + markH/2 + 0.35)) return false;
+      // shortest angular distance between the mark and the middle of the line
+      const d = Math.abs(((deg - g.deg + 540) % 360) - 180);
+      return d <= g.half + Math.atan2(gap, g.r)*180/Math.PI;
+    });
+
     // minute track
     const mt = st.minute;
     if(mt.on){
       const r = mt.diameter/2, t = mt.thickness;
+      /* A printed track is made the same way the numerals are, and on this
+         dial it is the same second pass: the dots stand a little proud and
+         catch the light on the shoulder facing it. Drawn flat, a dot next to a
+         double-printed numeral reads as a different process on the same dial. */
+      let trackFx = "";
+      if((mt.tech || "printed") === "double printed"){
+        const laT = ((st.render && st.render.az) || 135)*Math.PI/180;
+        const tlx = Math.cos(laT), tly = Math.sin(laT);
+        const kt = t*0.42;                       // the shoulder is a fraction of the mark
+        const edgeT = mt.edgeLight === undefined ? 0.55 : mt.edgeLight;
+        const hiT = tint(mt.color, Math.min(0.96, 0.06 + edgeT*0.85));
+        const loT = shade(mt.color, Math.min(0.9, 0.48 + edgeT*0.25));
+        const tf = id("mtk");
+        defs.push(`<filter id="${tf}" x="-80%" y="-80%" width="260%" height="260%">
+          <feOffset in="SourceAlpha" dx="${f(tlx*kt,3)}" dy="${f(tly*kt,3)}" result="lo"/>
+          <feComposite in="SourceAlpha" in2="lo" operator="out" result="hiA"/>
+          <feFlood flood-color="${hiT}" result="hiF"/>
+          <feComposite in="hiF" in2="hiA" operator="in" result="hi"/>
+          <feOffset in="SourceAlpha" dx="${f(-tlx*kt,3)}" dy="${f(-tly*kt,3)}" result="so"/>
+          <feComposite in="SourceAlpha" in2="so" operator="out" result="shA"/>
+          <feFlood flood-color="${loT}" result="shF"/>
+          <feComposite in="shF" in2="shA" operator="in" result="sh"/>
+          <feDropShadow in="SourceGraphic" dx="${f(-tlx*kt*0.55,3)}" dy="${f(-tly*kt*0.55,3)}"
+            stdDeviation="${f(kt*0.30,3)}" flood-color="${shade(mt.color,0.35)}" flood-opacity="0.34" result="base"/>
+          <feMerge><feMergeNode in="base"/><feMergeNode in="sh"/><feMergeNode in="hi"/></feMerge>
+        </filter>`);
+        trackFx = tf;
+      }
+      /* One group so the relief is built once for the whole track rather than
+         sixty times, which also keeps each mark's shoulder consistent. */
+      if(trackFx) body.push(`<g filter="url(#${trackFx})">`);
       if(mt.style==="railroad"){
         body.push(`<circle r="${f(r+t,3)}" fill="none" stroke="${mt.color}" stroke-width="0.11"/>`);
         body.push(`<circle r="${f(r-t,3)}" fill="none" stroke="${mt.color}" stroke-width="0.11"/>`);
       }
       for(let i=0;i<60;i++){
         const a=i*6, five=i%5===0, len = five&&mt.fives ? mt.fiveLen : t*1.6;
+        if(mt.textBreak !== false && !clearsText(a, r, len)) continue;
         if(mt.style==="dots"){
           const p=pt(r,a);
           body.push(`<circle cx="${f(p[0],3)}" cy="${f(p[1],3)}" r="${f(five&&mt.fives?t*0.85:t*0.55,3)}" fill="${mt.color}"/>`);
@@ -3242,6 +3316,7 @@ function buildSVG(st, o={}){
           body.push(`<line x1="${f(p0[0],3)}" y1="${f(p0[1],3)}" x2="${f(p1[0],3)}" y2="${f(p1[1],3)}" stroke="${mt.color}" stroke-width="${f(five?mt.thickness*1.5:mt.thickness,3)}" stroke-linecap="${mt.style==="dashes"?"round":"butt"}"/>`);
         }
       }
+      if(trackFx) body.push(`</g>`);
     }
     // hour track
     const ht = st.hour;
@@ -3354,8 +3429,16 @@ function buildSVG(st, o={}){
            beneath it to throw a hard one. */
         defs.push(edgeLight(tint(face, 0.78), shade(face, 0.58), 1, castShadow(shade(face,0.55), 0.42, 1.1)));
       }else if(k > 0){
-        /* Ink standing a little proud of the surface after a second pass. */
-        defs.push(edgeLight(tint(paint, MA.hi*0.5), shade(paint, MA.lo), 1,
+        /* Ink standing a little proud of the surface after a second pass.
+           The lit edge is a reflection, not a paler version of the ink: on a
+           real dial the rounded shoulder of a double-printed numeral catches
+           the light and reads almost white against black ink. Tinting the ink
+           by its own material figure (0.12 for ink) gave a highlight barely
+           distinguishable from the letter, so the second pass looked as flat
+           as the first. */
+        const edge = nm.edgeLight === undefined ? 0.55 : nm.edgeLight;
+        defs.push(edgeLight(tint(paint, Math.min(0.96, MA.hi*0.5 + edge*0.85)),
+                            shade(paint, Math.min(0.9, MA.lo + edge*0.25)), 1,
                             MK.soft ? castShadow(shade(paint,0.35), 0.34, 0.55, 0.30) : flatBase));
       }else{
         defs.push(`<filter id="${shid}" x="-70%" y="-70%" width="240%" height="240%">
@@ -5647,7 +5730,11 @@ const SCHEMA = {
   minute:{title:"Minute track", hint:"60 divisions. Diameter is the centre line of the track.", fields:[
     N("minute.diameter","Track diameter",6,44), N("minute.thickness","Thickness",.08,1.2,.02),
     SEL("minute.style","Style",["dots","ticks","railroad","dashes"]),
-    C("minute.color","Colour"), CK("minute.fives","Emphasise 5-minute marks"), N("minute.fiveLen","5-min length",.2,3,.05)]},
+    C("minute.color","Colour"), CK("minute.fives","Emphasise 5-minute marks"), N("minute.fiveLen","5-min length",.2,3,.05),
+    SEL("minute.tech","Made by",["printed","double printed"]),
+    ...(S.minute.tech === "double printed" ? [N("minute.edgeLight","Edge light",0,1,.05,"")] : []),
+    CK("minute.textBreak","Break the track around the text"),
+    ...(S.minute.textBreak !== false ? [N("minute.textGap","Gap either side",0,2,.05)] : [])]},
   hour:{title:"Hour track", hint:"12 divisions, often inside the sector.", fields:[
     N("hour.diameter","Track diameter",6,44), N("hour.thickness","Thickness",.1,1.5,.02),
     SEL("hour.style","Style",["ticks","ring"]), C("hour.color","Colour")]},
@@ -5682,6 +5769,8 @@ const SCHEMA = {
       SEL("numerals.metal","Metal",METAL_NAMES),
       CK("numerals.metalTex","Use the loaded texture as the metal surface")
     ] : []),
+    ...(NUM_MAKE_DEF[S.numerals.tech]?.soft
+        ? [N("numerals.edgeLight","Edge light",0,1,.05,"")] : []),
     ...(NUM_MAKE_DEF[S.numerals.tech]?.piece
         ? [N("numerals.height","Piece height",0.04,0.60,.01),
            N("numerals.bevel","Bevel",0,0.20,.005)] : []),
@@ -5966,7 +6055,7 @@ function wireFile(){
 /* Choosing one of these changes what the rest of the panel should be, so the
    panel is built again rather than merely repainted. */
 const REBUILD_PROPS = new Set([
-  "dial.lock","dial.finish","dial.stone","dial.stFibre","dial.stAdv",
+  "dial.lock","dial.finish","dial.stone","dial.stFibre","dial.stAdv","minute.textBreak","minute.tech",
   "numerals.system","numerals.style","numerals.tech","numerals.material",
   "text.logoTech","text.nameMode","text.plateShape","text.logoMark","text.plateAuto",
   "text.resTech","text.resShape","text.embShape","text.stampSurface",
