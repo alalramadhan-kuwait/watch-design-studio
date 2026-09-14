@@ -710,6 +710,13 @@ input[type=range]:active::-webkit-slider-thumb{ transform:scale(1.18) }
   #share{ background:var(--ds-fill); color:var(--ds-text); font-weight:500 }
 }
 /* layer rows: eye + lock, on every size */
+/* An icon must never swallow the click meant for the button holding it.
+   The eye is a <button data-on> wrapped round an <svg>, so a real click
+   landed on the pupil, e.target.dataset.on was undefined, and hiding a
+   component silently did nothing at all — while the lock beside it worked,
+   because its handler resolves through closest(). The handler does that now
+   too; this rule is the guard, so no icon added later can do it again. */
+button svg, .lico svg, .gcar{ pointer-events:none }
 .layer .eye, .layer .lock{
   background:none; border:0; padding:3px; line-height:0; cursor:pointer;
   color:var(--ds-text-3); border-radius:var(--ds-r-xs);
@@ -721,8 +728,13 @@ input[type=range]:active::-webkit-slider-thumb{ transform:scale(1.18) }
 #view [data-layer]{ pointer-events:auto; cursor:pointer }
 /* The padlock earns its space only where it matters: the selected row, or
    any row that is actually locked. Elsewhere it stays out of the list. */
-.layer .lock.idle{ opacity:0; pointer-events:none; width:0; padding:0; margin:0 }
-.layer:hover .lock.idle, .layer:focus-within .lock.idle{ opacity:.5; pointer-events:auto; width:auto; padding:3px; margin-left:2px }
+/* The idle lock used to collapse to nothing and grow back on hover, so the
+   act of arriving at the eye widened the lock and slid the eye out from
+   under the cursor — you aimed at "hide" and pressed "lock", which then
+   refused every edit to the component you were trying to work on. It keeps
+   its place at all times now and only fades in. */
+.layer .lock.idle{ opacity:0; pointer-events:none }
+.layer:hover .lock.idle, .layer:focus-within .lock.idle{ opacity:.5; pointer-events:auto }
 /* progressive disclosure */
 @media (max-width:900px){ #mBody .sec{ display:none } }
 .linkbar{ display:flex; align-items:center; gap:var(--ds-3);
@@ -6401,12 +6413,31 @@ function paintAll(){ paintLayers(); paintProps(); paintView(); syncUndo(); }
 /* ---- events ---- */
 document.addEventListener("click", e=>{
   const t = e.target;
-  if(t.dataset.grp){ groupOpen[t.dataset.grp] = groupOpen[t.dataset.grp] === false; paintLayers(); return; }
-  if(t.dataset.hand){ activeHand = t.dataset.hand; paintProps(); paintView(); return; }
-  if(t.dataset.k){ sel=t.dataset.k; paintLayers(); paintProps(); paintView(); if(stacked()) tab("props"); }
-  if(t.dataset.on){ set(S,t.dataset.on,!get(S,t.dataset.on)); commit(); paintAll(); }
-  if(t.dataset.sw){ set(S,t.dataset.sw,t.dataset.v); commit(); paintProps(); paintView(); }
-  if(t.dataset.slab){ S.dial.slab = t.dataset.slab; commit(); paintProps(); paintView(); return; }
+  /* Read the element that carries the attribute, not the one that happened
+     to be hit. Every one of these is a button with an icon in it, and an
+     icon is an <svg> with paths inside, so the click lands on a path and
+     e.target.dataset is simply empty — no error, nothing happens. That is
+     what killed hide and unhide, the component thumbnail and the group
+     caret. data-lock and data-face in this same handler have always
+     resolved through closest; the rest do now. */
+  const own = a => (t.closest && t.closest("[data-"+a+"]")) || null;
+  const grp = own("grp");
+  if(grp){ groupOpen[grp.dataset.grp] = groupOpen[grp.dataset.grp] === false; paintLayers(); return; }
+  const hand = own("hand");
+  if(hand){ activeHand = hand.dataset.hand; paintProps(); paintView(); return; }
+  /* The eye is inside the row, so it answers first and takes the click with
+     it: a tap that means "hide this" must not also select the row and, on a
+     phone, swap the sheet over to Properties. */
+  const eye = own("on");
+  if(eye){ const pth = eye.dataset.on; set(S,pth,!get(S,pth)); commit(); paintAll(); return; }
+  /* and the row gets only what none of its own controls claimed */
+  const row = own("k");
+  if(row && !own("lock") && !own("addcmp")){
+    sel = row.dataset.k; paintLayers(); paintProps(); paintView(); if(stacked()) tab("props"); }
+  const sw = own("sw");
+  if(sw){ set(S,sw.dataset.sw,sw.dataset.v); commit(); paintProps(); paintView(); }
+  const slab = own("slab");
+  if(slab){ S.dial.slab = slab.dataset.slab; commit(); paintProps(); paintView(); return; }
   if(t.closest && t.closest("[data-face]")){
     const i = +t.closest("[data-face]").dataset.face;
     const list = stylesFor(S.numerals.system || "western 0–9");
