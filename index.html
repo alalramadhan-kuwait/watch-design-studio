@@ -801,6 +801,32 @@ button.val{ background:none; border:0; padding:0 0 1px; cursor:pointer;
 .f.typing .numbox{ display:flex }
 .f .numbox input[type=number]{ flex:1 1 auto; width:auto }
 .ends{ display:flex; justify-content:space-between; font-size:11px; color:var(--ds-text-3); margin-top:1px }
+
+/* ---- matching a colour off the watch --------------------------------
+   The commonest thing anyone wants from a colour control is the colour
+   already on screen. The pipette arms a pick; the whole stage then reads
+   as a sampling surface and nothing else on it responds. */
+.pick{ width:28px; height:28px; flex:0 0 auto; display:inline-flex; align-items:center;
+  justify-content:center; padding:0; cursor:pointer; border-radius:var(--ds-r-sm);
+  background:var(--ds-fill); border:1px solid var(--ds-border-2); color:var(--ds-text-2) }
+.pick svg{ width:15px; height:15px; display:block }
+.pick.on{ background:var(--ds-brand); border-color:transparent; color:#15181C }
+body.picking #stage, body.picking #stage *{ cursor:crosshair !important }
+/* the drawing is the target; everything floating over it steps aside */
+body.picking .zoomer, body.picking #mMeasure, body.picking #mInfoBtn,
+body.picking #mModes, body.picking .hnd{ opacity:.25; pointer-events:none }
+#loupe{ position:fixed; z-index:60; pointer-events:none; display:none;
+  padding:7px 8px 8px; border-radius:var(--ds-r-md);
+  background:var(--ds-chrome, rgba(255,255,255,.92));
+  backdrop-filter:blur(18px) saturate(180%); -webkit-backdrop-filter:blur(18px) saturate(180%);
+  border:1px solid var(--ds-border-2); box-shadow:var(--ds-sh-3);
+  color:var(--ds-text); font-size:11px; line-height:1.35; text-align:center }
+#loupe.on{ display:block }
+#loupe canvas{ display:block; width:66px; height:66px; image-rendering:pixelated;
+  border-radius:var(--ds-r-xs); border:1px solid var(--ds-border-2) }
+#loupe .hex{ font-family:var(--mono); font-size:12px; margin-top:5px; letter-spacing:.02em }
+#loupe .pan{ color:var(--ds-text-2); font-size:10px; max-width:150px }
+#loupe .none{ color:var(--ds-text-2) }
 /* On a phone the sheet header already names the component it is showing, so
    repeating it as the first line of the panel is a heading that says nothing
    the line above it did not. */
@@ -5989,6 +6015,182 @@ function paintProps(){
   splitAdvanced(q("#props"));
 
 }
+/* =====================================================================
+   MATCHING A COLOUR OFF THE WATCH
+   Every colour here was chosen by hand from a hex box or a Pantone chip,
+   and the one colour a dial designer reaches for most is the one already
+   on screen: the tone the numerals came out, the sector the indices have
+   to sit against, the dial of a case photograph loaded as the template.
+
+   It samples the picture rather than the settings, because the settings
+   are not what you are looking at — a guilloche surface, a metal gradient
+   and an engraved floor are all shaded, and none of them is the colour
+   anybody typed. So the view is rasterised once when the pipette is armed
+   and read back pixel for pixel.
+
+   The native EyeDropper would sample the whole desktop, but it exists
+   only in Chrome and Edge and is silently absent on Safari and on every
+   phone, so it cannot be the way in.
+   ===================================================================== */
+let picking = null;                       // {path} while a pick is armed
+let pickCv = null, pickCtx = null, pickRect = null, pickDpr = 1;
+const PIPETTE_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"
+  stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path
+  d="M19.4 3.6a2.2 2.2 0 0 0-3.1 0l-2.3 2.3-1-1-1.6 1.6 5.5 5.5 1.6-1.6-1-1 2.3-2.3a2.2 2.2 0 0 0 0-3.1Z"/><path
+  d="M13.1 8.4 5.5 16a2 2 0 0 0-.53 1L4.4 20l3-.57a2 2 0 0 0 1-.53l7.6-7.6"/></svg>`;
+const pipette = path => `<button type="button" class="pick${picking && picking.path===path ? " on" : ""}"`
+  + ` data-pick="${path}" aria-pressed="${!!(picking && picking.path===path)}"`
+  + ` title="Match a colour from the watch">${PIPETTE_ICON}</button>`;
+
+/* The picture on screen, as pixels. Drawn at the element's own on-screen
+   box, so mapping a tap into it is a subtraction and stays right under
+   zoom and pan — the box is already the transformed one. */
+function rasteriseView(){
+  return new Promise(res => {
+    const v = q("#view"); if(!v) return res(false);
+    const r = v.getBoundingClientRect();
+    if(!(r.width > 4 && r.height > 4)) return res(false);
+    const dpr = Math.min(3, window.devicePixelRatio || 1);
+    let svg; try{ svg = viewSVG(); }catch(e){ return res(false); }
+    const im = new Image();
+    im.onload = () => {
+      try{
+        const c = document.createElement("canvas");
+        c.width = Math.round(r.width*dpr); c.height = Math.round(r.height*dpr);
+        const g = c.getContext("2d", {willReadFrequently:true});
+        g.drawImage(im, 0, 0, c.width, c.height);
+        g.getImageData(0, 0, 1, 1);       // throws if anything tainted the canvas
+        pickCv = c; pickCtx = g; pickRect = r; pickDpr = dpr;
+        res(true);
+      }catch(e){ res(false); }
+    };
+    im.onerror = () => res(false);
+    im.src = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svg)));
+  });
+}
+/* A single pixel on guilloche or satin is whichever grain the finger landed
+   on, not the surface, so a small spot is averaged. Weighted by alpha: a
+   half-covered pixel at the rim must not drag the answer toward whatever
+   is behind the drawing. */
+const PICK_SPOT = 5;                      // CSS px across
+function sampleAt(clientX, clientY){
+  if(!pickCtx || !pickRect) return null;
+  /* The wheel zooms and the sheet resizes, either of which leaves the
+     raster describing a picture that is no longer there. */
+  const v = q("#view");
+  const now = v && v.getBoundingClientRect();
+  if(!now || Math.abs(now.left-pickRect.left) > 1 || Math.abs(now.top-pickRect.top) > 1
+     || Math.abs(now.width-pickRect.width) > 1 || Math.abs(now.height-pickRect.height) > 1)
+    return {stale:true};
+  const half = Math.max(1, Math.round(PICK_SPOT*pickDpr/2)), w = half*2 + 1;
+  const x0 = Math.round((clientX - pickRect.left)*pickDpr) - half;
+  const y0 = Math.round((clientY - pickRect.top )*pickDpr) - half;
+  const sx = Math.max(0, x0), sy = Math.max(0, y0);
+  const sw = Math.min(pickCv.width, x0+w) - sx, sh = Math.min(pickCv.height, y0+w) - sy;
+  if(sw < 1 || sh < 1) return null;
+  let d; try{ d = pickCtx.getImageData(sx, sy, sw, sh).data; }catch(e){ return null; }
+  let r=0, g=0, b=0, a=0;
+  for(let i=0;i<d.length;i+=4){ const al = d[i+3]/255; r+=d[i]*al; g+=d[i+1]*al; b+=d[i+2]*al; a+=al; }
+  if(a < sw*sh*0.25) return null;         // mostly nothing there
+  return {hex: rgb2hex([r/a, g/a, b/a]), d, sw, sh};
+}
+function loupeEl(){
+  let el = q("#loupe");
+  if(!el){
+    el = document.createElement("div");
+    el.id = "loupe"; el.setAttribute("aria-hidden","true");
+    el.innerHTML = `<canvas></canvas><div class="hex"></div><div class="pan"></div>`;
+    document.body.appendChild(el);
+  }
+  return el;
+}
+function hideLoupe(){ const el = q("#loupe"); if(el) el.classList.remove("on"); }
+/* Beside the cursor on a mouse; above the finger on a touch, because the
+   finger is sitting on the answer. Never off an edge, which on a phone is
+   where it would otherwise land. */
+function showLoupe(cx, cy, hit){
+  const el = loupeEl(), cv = el.querySelector("canvas");
+  el.classList.add("on");
+  if(hit && hit.hex){
+    cv.style.display = ""; cv.width = hit.sw; cv.height = hit.sh;
+    cv.getContext("2d").putImageData(new ImageData(new Uint8ClampedArray(hit.d), hit.sw, hit.sh), 0, 0);
+    el.querySelector(".hex").textContent = hit.hex;
+    el.querySelector(".pan").textContent = pantoneLabel(hit.hex);
+    el.querySelector(".pan").className = "pan";
+  }else{
+    cv.style.display = "none";
+    el.querySelector(".hex").textContent = "—";
+    el.querySelector(".pan").textContent = hit && hit.stale ? "re-reading the view…" : "nothing to sample here";
+    el.querySelector(".pan").className = "pan none";
+  }
+  const r = el.getBoundingClientRect(), pad = 8;
+  let x = isTouch ? cx - r.width/2 : cx + 18;
+  let y = isTouch ? cy - r.height - 26 : cy + 18;
+  if(!isTouch && x + r.width > innerWidth - pad)  x = cx - r.width - 18;
+  if(!isTouch && y + r.height > innerHeight - pad) y = cy - r.height - 18;
+  if(y < pad) y = cy + 26;
+  el.style.left = Math.max(pad, Math.min(innerWidth  - r.width  - pad, x)) + "px";
+  el.style.top  = Math.max(pad, Math.min(innerHeight - r.height - pad, y)) + "px";
+}
+async function armPick(path){
+  if(picking && picking.path === path) return endPick();
+  if(lockedLayers.has(path.split(".")[0])) return;
+  picking = {path};
+  document.body.classList.add("picking");
+  /* On a phone the sheet is over the watch, so there is nothing to point
+     at until it gets out of the way. */
+  const narrow = NARROW();
+  if(narrow && typeof sheetStop === "function") sheetStop(0);
+  paintProps();
+  if(narrow) await new Promise(r => setTimeout(r, 320));   // let the sheet settle
+  if(!picking) return;                                     // cancelled meanwhile
+  if(!await rasteriseView()){ endPick(); toast("This view cannot be sampled"); }
+}
+function endPick(repaint){
+  if(!picking) return;
+  picking = null; pickCv = pickCtx = pickRect = null;
+  document.body.classList.remove("picking");
+  hideLoupe();
+  if(repaint !== false) paintProps();
+}
+(function(){
+  const st = q("#stage"); if(!st) return;
+  let refreshing = false;
+  const read = e => {
+    const hit = sampleAt(e.clientX, e.clientY);
+    showLoupe(e.clientX, e.clientY, hit);
+    if(hit && hit.stale && !refreshing){       // the view moved under us
+      refreshing = true;
+      rasteriseView().then(ok => { refreshing = false; if(!ok) endPick(); });
+    }
+    return hit;
+  };
+  /* Capture, so the tap that samples never also selects a component, drags
+     a handle or works a floating button. */
+  const eat = e => { e.preventDefault(); e.stopPropagation(); };
+  st.addEventListener("pointermove", e => { if(picking) read(e); }, true);
+  st.addEventListener("pointerdown", e => { if(!picking) return; eat(e); read(e); }, true);
+  st.addEventListener("pointerup", e => {
+    if(!picking) return;
+    eat(e);
+    const hit = read(e);
+    if(!hit || !hit.hex) return;               // nothing there: stay armed
+    const path = picking.path;
+    set(S, path, hit.hex); commit();
+    endPick(false);
+    paintProps(); paintView();
+    toast(`${hit.hex} · ${pantoneLabel(hit.hex)}`);
+  }, true);
+  st.addEventListener("click", e => { if(picking) eat(e); }, true);
+  st.addEventListener("pointerleave", () => { if(picking) hideLoupe(); }, true);
+})();
+/* Anywhere else — the panel, the toolbar, Escape — puts the pipette down. */
+document.addEventListener("pointerdown", e => {
+  if(!picking) return;
+  if(e.target.closest && (e.target.closest("#stage") || e.target.closest("[data-pick]"))) return;
+  endPick();
+}, true);
+
 function field(fd){
   if(fd.t==="act") return `<div class="f"><button class="btn" data-act="${fd.a}" style="width:100%">${fd.l}</button></div>`;
   if(fd.t==="hands"){
@@ -6066,7 +6268,7 @@ function field(fd){
     return `<div class="f"><label>${fd.l}<span class="val">${cur||"automatic"}</span></label>
       <div class="chips">${fd.presets.map(pr=>`<button type="button" class="chip ${cur===pr[1]?"on":""}"`
         + ` data-chipp="${fd.p}" data-chipv="${pr[1]}">${pr[1]?`<i style="background:${pr[1]}"></i>`:""}${pr[0]}</button>`).join("")}
-      <input type="color" data-p="${fd.p}" value="${cur||"#000000"}" title="Any colour"></div></div>`;
+      <input type="color" data-p="${fd.p}" value="${cur||"#000000"}" title="Any colour">${pipette(fd.p)}</div></div>`;
   }
   if(fd.t==="head") return `<div class="sect" style="font-size:11px;letter-spacing:.07em;color:var(--muted);margin:14px 0 6px;padding-top:8px;border-top:1px solid var(--rule-2)">${fd.l.toUpperCase()}</div>`;
   if(fd.t==="slabs"){
@@ -6119,7 +6321,7 @@ function field(fd){
   if(fd.t==="col"){
     const pool = PANTONE.filter(x=>x[2]===swGroup);
     return `<div class="f"><label>${fd.l}<span class="val">${pantoneLabel(v)}</span></label>
-    <div class="row"><input type="color" data-p="${fd.p}" value="${v}"><input type="text" data-p="${fd.p}" value="${v}"></div>
+    <div class="row"><input type="color" data-p="${fd.p}" value="${v}"><input type="text" data-p="${fd.p}" value="${v}">${pipette(fd.p)}</div>
     <div class="row" style="margin-top:5px">
       <select data-pg="1" style="flex:1">${PGROUPS.map(g=>`<option ${g===swGroup?"selected":""}>${g}</option>`).join("")}</select>
       <button class="sw" style="background:#FFFFFF;width:26px;height:26px" data-sw="${fd.p}" data-v="#FFFFFF" title="Opaque white"></button>
@@ -6157,11 +6359,18 @@ function refineBootRender(){
   if(typeof requestIdleCallback === "function") requestIdleCallback(go, {timeout:1200});
   else setTimeout(go, 250);
 }
-function paintView(){
+/* Which of the three builders makes the picture on screen. Pulled out of
+   paintView because the eyedropper has to sample exactly what is being
+   looked at, and the only way to guarantee that is for both to ask the
+   same question. */
+function viewSVG(){
   const coarse = bootCoarse ? Math.min(BOOT_QUALITY, S.render.quality) : undefined;
-  const svg = S.render.view !== "front" ? buildElevation(S, S.render.view, {})
+  return S.render.view !== "front" ? buildElevation(S, S.render.view, {})
     : (S.tpl.on && tplImage) ? buildTemplate(S,{guide: tplGuide || sel === "tpl", matPx: coarse})
     : buildSVG(S,{measure:measureOn, handles:handlesOn, touch:isTouch, matPx: coarse});
+}
+function paintView(){
+  const svg = viewSVG();
   q("#view").outerHTML = svg.replace("<svg ",`<svg id="view" style="transform:${tf()}" `);
   q("#stage").classList.toggle("grid", measureOn);
   q("#stamp").style.display = (measureOn && !isTouch) ? "none" : "";
@@ -6364,9 +6573,16 @@ document.addEventListener("click", e=>{
     const pth = el.dataset[attr];
     if(lockedLayers.has(pth.split(".")[0])) return false;
     if(get(S,pth) === val) return false;
-    commit(); set(S, pth, val);
+    /* Set, then commit: commit pushes the state as it is, so committing
+       first pushes the old one and the new value never reaches the stack —
+       redo replays what you just left, and the autosave stays a change
+       behind. Every other route through here has always been this way
+       round; these three were not. */
+    set(S, pth, val); commit();
     return true;
   };
+  const pk = t.closest("[data-pick]");
+  if(pk){ armPick(pk.dataset.pick); return; }
   const tg = t.closest("[data-tg]");
   if(tg){ if(one(tg,"tg",!get(S,tg.dataset.tg))){ paintProps(); paintLayers(); paintView(); } return; }
   const sg = t.closest("[data-segp]");
@@ -6529,6 +6745,7 @@ function selectLayer(k){
     return Math.hypot(e.clientX - ctm.e, e.clientY - ctm.f) / ctm.a <= visR(S);
   };
   st.addEventListener("click", e=>{
+    if(picking) return;                      // the tap is sampling a colour
     if(e.target.closest && (e.target.closest(".zoomer") || e.target.closest(".hnd")
        || e.target.closest("#mModes") || e.target.closest("#mMeasure"))) return;
     const t = e.target.closest && e.target.closest("[data-layer]");
@@ -6788,7 +7005,7 @@ qa(".sheet").forEach(sh=>{
   });
 });
 addEventListener("keydown", ev=>{
-  if(ev.key === "Escape"){ qa(".sheet.open").forEach(sh=>sh.classList.remove("open")); macroOpen = false; }
+  if(ev.key === "Escape"){ endPick(); qa(".sheet.open").forEach(sh=>sh.classList.remove("open")); macroOpen = false; }
 });
 
 /* --- delivering the finished file --- */
@@ -7508,6 +7725,11 @@ refineBootRender();
   grab.addEventListener("click", e=>{ if(e.target.closest && e.target.closest("button")) return;
     if(moved > 6){ moved = 0; return; }
     stop = (stop+1) % STOPS.length; setH(vh()*STOPS[stop]); setTimeout(refit, 260); });
+  /* One way in from outside, so anything that needs the watch uncovered —
+     the eyedropper, so far — asks the sheet rather than growing a second
+     way of sizing it. */
+  window.sheetStop = i => { stop = Math.max(0, Math.min(STOPS.length-1, i));
+    setH(vh()*STOPS[stop]); setTimeout(refit, 260); };
 
 
   /* On a phone the strap is more than half the picture, so the studio opens
