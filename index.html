@@ -1398,7 +1398,30 @@ function migrateNumerals(st){
   delete nm.applied;
   return st;
 }
+/* The engraved bands were two fixed slots, inner and outer, so a dial could
+   never have a third. They are a list now, and the two old keys are simply
+   its first two entries.
+
+   The list is deliberately NOT in BASE. A preset carries its own inner and
+   outer, and the merge puts BASE's keys and the preset's side by side — a
+   list sitting in BASE would already be there when this ran, the preset's
+   own bands would be skipped, and every preset would quietly draw the
+   default ones instead. Built here, from whatever the design actually has,
+   it cannot happen. */
+function migrateBorders(st){
+  const b = st && st.borders;
+  if(!b) return st;
+  if(!Array.isArray(b.bands)){
+    b.bands = [b.inner, b.outer].filter(x => x && typeof x === "object").map(x => ({...x}));
+  }
+  /* A band with no diameter cannot be drawn and cannot be edited back into
+     existence, so it is not kept. */
+  b.bands = b.bands.filter(x => x && Number(x.dia) > 0);
+  delete b.inner; delete b.outer;
+  return st;
+}
 function migrateHands(st){
+  migrateBorders(st);
   migrateLogo(st);
   migrateNumerals(st);
   migrateHandArt(st);
@@ -3232,8 +3255,7 @@ function buildSVG(st, o={}){
         }
         return out;
       };
-      body.push(cut(bd.inner));
-      body.push(cut(bd.outer));
+      for(const rg of (bd.bands || [])) body.push(cut(rg));
     }
     body.push("</g>");
     // chapter ring
@@ -5820,27 +5842,40 @@ const SCHEMA = {
     ...((S.sector.band || (S.sector.arms !== false && S.sector.innerD > 0))
         ? [C("sector.ringColor","Boundary colour"), N("sector.lineW","Boundary width",0.04,0.6,.01)] : [])]},
   borders:{title:"Engraved borders",
-    hint:"Two narrow engraved bands that frame the numeral chapter ring — one between the guilloche and the numerals, one between the numerals and the minute track. Each is a milled band between two fine boundary lines. Separate from the markers, the minute track and the central guilloche.",
+    hint:"Narrow engraved bands that frame the dial's zones — each a milled band between two fine boundary lines. Add as many as the dial needs. Separate from the markers, the minute track and the central guilloche.",
     fields:()=>{
-      const ring = (k, label) => {
-        const rg = S.borders[k];
-        return [
-          {t:"head", l:label},
-          CK("borders."+k+".on","Show this band"),
+      const bands = S.borders.bands || [];
+      /* Listed from the centre outwards, whatever order they were added in —
+         the panel then reads the way the dial does. The array keeps its own
+         order, because every control path points at an index. */
+      const order = bands.map((_,i)=>i)
+        .sort((a,b2)=>(Number(bands[a].dia)||0) - (Number(bands[b2].dia)||0));
+      const ring = (i) => {
+        const rg = bands[i], k = "borders.bands." + i, rank = order.indexOf(i);
+        const name = bands.length === 1 ? "Band"
+          : rank === 0 ? "Innermost band"
+          : rank === bands.length-1 ? "Outermost band"
+          : `Band ${rank+1}`;
+        return SUB(name, [
+          CK(k+".on","Show this band"),
           ...(rg.on ? [
-            N("borders."+k+".dia","Diameter",6,31,.05),
-            N("borders."+k+".band","Band width",0.15,2.0,.01),
-            N("borders."+k+".line","Boundary line width",0.02,0.25,.005),
-            N("borders."+k+".depth","Engraving depth",0,0.20,.005),
-            N("borders."+k+".spacing","Cut spacing",0.10,1.40,.01),
-            N("borders."+k+".angle","Cut angle",0,75,1,"\u00b0"),
-            SEL("borders."+k+".metal","Metal",METAL_NAMES),
-            C("borders."+k+".color","Colour")
-          ] : [])
-        ];
+            N(k+".dia","Diameter",6,31,.05),
+            N(k+".band","Band width",0.15,2.0,.01),
+            N(k+".line","Boundary line width",0.02,0.25,.005),
+            N(k+".depth","Engraving depth",0,0.20,.005),
+            N(k+".spacing","Cut spacing",0.10,1.40,.01),
+            N(k+".angle","Cut angle",0,75,1,"\u00b0"),
+            SEL(k+".metal","Metal",METAL_NAMES),
+            C(k+".color","Colour")
+          ] : []),
+          ACT("borderDel:"+i, "Remove this band")
+        ], `\u00d8${f(rg.dia)}${rg.on ? "" : " · hidden"}`);
       };
       return [CK("borders.on","Show the engraved borders"),
-        ...(S.borders.on ? [...ring("inner","Inner band"), ...ring("outer","Outer band")] : [])];
+        ...(S.borders.on ? [
+          ...order.map(ring),
+          ...(bands.length < 8 ? [ACT("borderAdd","Add another band")] : [])
+        ] : [])];
     }},
   chapter:{title:"Chapter ring", hint:"Outer band carrying the minute track.", fields:[
     N("chapter.outerD","Outer diameter",8,44), N("chapter.innerD","Inner diameter",4,42),
@@ -6185,7 +6220,7 @@ const REBUILD_PROPS = new Set([
 const PRIMARY = {
   dial:     ["dial.color","dial.finish","dial.diameter","dial.pattern","dial.dome","dial.satin"],
   sector:   ["sector.on","sector.outerD","sector.innerD","sector.color","sector.finish","sector.pattern"],
-  borders:  ["borders.on","borders.inner.on","borders.inner.dia","borders.outer.on","borders.outer.dia"],
+  borders:  ["borders.on"],   /* each band is its own collapsible row */
   numerals: ["numerals.on","numerals.system","numerals.style","numerals.tech","numerals.material","numerals.size","numerals.gap","numerals.radius","numerals.color"],
   indices:  ["indices.on","indices.style","indices.count","indices.radius","indices.color"],
   minute:   ["minute.on","minute.style","minute.diameter","minute.color"],
@@ -6723,6 +6758,37 @@ document.addEventListener("click", e=>{
     if(uf){ uf.noLiga = !uf.noLiga;
       try{ KV.set("wds:font:"+uf.id, JSON.stringify(uf)); }catch(e){}
       paintProps(); paintView(); }
+    return;
+  }
+  /* A new band goes where a dial usually wants one: in the widest gap
+     between the bands already there, so it lands somewhere visible instead
+     of on top of one of them. */
+  if(t.dataset.act === "borderAdd"){
+    const bands = S.borders.bands || (S.borders.bands = []);
+    const sorted = [...bands].filter(b=>Number(b.dia)>0).sort((a,b2)=>a.dia-b2.dia);
+    let dia = 24;
+    if(sorted.length === 1) dia = Math.min(31, Number(sorted[0].dia) + 1.5);
+    else if(sorted.length > 1){
+      let best = 0, at = Number(sorted[0].dia) + 1.5;
+      for(let i=0;i<sorted.length-1;i++){
+        const gap = Number(sorted[i+1].dia) - Number(sorted[i].dia);
+        if(gap > best){ best = gap; at = Number(sorted[i].dia) + gap/2; }
+      }
+      /* No gap worth using — the bands sit on top of each other — so go
+         outside the widest instead of adding an invisible one. */
+      dia = best > 0.6 ? at : Math.min(31, Number(sorted[sorted.length-1].dia) + 1.5);
+    }
+    const from = sorted[sorted.length-1] || bands[0];
+    bands.push({...(from || {band:0.62, line:0.07, depth:0.05, spacing:0.42, angle:38,
+                           metal:"polished steel", color:"#9AA0A8"}),
+                on:true, dia:Math.round(Math.max(6, Math.min(31, dia))*20)/20});
+    commit(); paintProps(); paintView();
+    toast("Band added"); return;
+  }
+  if((t.dataset.act || "").startsWith("borderDel:")){
+    const i = +t.dataset.act.split(":")[1];
+    const bands = S.borders.bands || [];
+    if(bands[i]){ bands.splice(i, 1); commit(); paintProps(); paintView(); toast("Band removed"); }
     return;
   }
   if(t.dataset.act === "stReset"){ applyFamilyDefaults(S.dial.stone); commit(); paintProps(); paintView();
