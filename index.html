@@ -6765,8 +6765,8 @@ qa("#tabs button").forEach(b=>b.onclick=()=>tab(b.dataset.tab));
 /* toolbar */
 q("#undo").onclick=undo; q("#redo").onclick=redo;
 q("#measure").onclick=e=>{ measureOn=!measureOn; e.target.classList.toggle("on",measureOn); paintView(); };
-q("#zoomIn").onclick=()=>{ zoom=Math.min(4,zoom*1.2); applyTF(); };
-q("#zoomOut").onclick=()=>{ zoom=Math.max(.5,zoom/1.2); applyTF(); };
+q("#zoomIn").onclick=()=>{ zoom=Math.min(4,zoom*1.2); userFramed=true; applyTF(); };
+q("#zoomOut").onclick=()=>{ zoom=Math.max(.5,zoom/1.2); userFramed=true; applyTF(); };
 q("#zoomFit").onclick=()=>{ fitTo(fitMode === "case" ? "watch" : "case"); };
 function applyTF(){ const v=q("#view"); if(v) v.style.transform=tf(); }
 
@@ -6843,10 +6843,23 @@ function selectLayer(k){
    element only — exportPlan rebuilds from buildSVG — so nothing here can
    reach a saved SVG, a PNG or the share image. --------------------- */
 let fitMode = "watch";
+/* Set the moment anybody pinches, drags or steps the zoom themselves. The
+   automatic re-framing then leaves the view alone: a sheet moving or a URL
+   bar collapsing is not a reason to throw away the crop somebody chose, and
+   having it yanked back is most of what "sometimes it zooms" was. Pressing
+   Fit, which is a deliberate request to re-frame, clears it again. */
+let userFramed = false;
 function fitTo(mode){
   const v = q("#view"), st = q("#stage");
   if(!v || !st) return;
+  const sr0 = st.getBoundingClientRect();
+  /* Nothing sane can be worked out against a stage with no area — and there
+     is one, whenever the sheet is still holding a height measured for a
+     screen of a different shape. Leave the view as it is and let the caller
+     come back once the layout has caught up. */
+  if(!(sr0.width > 40 && sr0.height > 40)) return;
   fitMode = mode;
+  userFramed = false;
   const keep = v.style.transform;
   v.style.transform = "none";                 // measure the drawing, not the framing
   let box = null;
@@ -6898,7 +6911,7 @@ function fitTo(mode){
     pts.set(e.pointerId,{x:e.clientX,y:e.clientY});
     if(pinch && pts.size===2){
       const [a,b]=[...pts.values()];
-      zoom=Math.max(.5,Math.min(4, pinch.z * Math.hypot(a.x-b.x,a.y-b.y)/pinch.d));
+      zoom=Math.max(.5,Math.min(4, pinch.z * Math.hypot(a.x-b.x,a.y-b.y)/pinch.d)); userFramed=true;
       applyTF(); e.preventDefault();
     } else if(pan && pts.size===1 && zoom>1.01){
       /* A finger never lands perfectly still, and the preview is now framed
@@ -6909,14 +6922,14 @@ function fitTo(mode){
          drag, which distinguishes a drag from a tap the same way. */
       if(!pan.live && Math.hypot(e.clientX-pan.x0, e.clientY-pan.y0) < 8) return;
       pan.live = true;
-      panX=e.clientX-pan.x; panY=e.clientY-pan.y; applyTF(); e.preventDefault();
+      panX=e.clientX-pan.x; panY=e.clientY-pan.y; userFramed=true; applyTF(); e.preventDefault();
     }
   });
   const end=e=>{ pts.delete(e.pointerId); if(pts.size<2) pinch=null; if(!pts.size) pan=null; };
   stage.addEventListener("pointerup",end); stage.addEventListener("pointercancel",end);
   stage.addEventListener("wheel", e=>{
     if(!e.ctrlKey && !e.metaKey) return;
-    e.preventDefault(); zoom=Math.max(.5,Math.min(4, zoom*(e.deltaY<0?1.08:0.92))); applyTF();
+    e.preventDefault(); zoom=Math.max(.5,Math.min(4, zoom*(e.deltaY<0?1.08:0.92))); userFramed=true; applyTF();
   },{passive:false});
 })();
 q("#save").onclick=()=>{
@@ -7898,6 +7911,24 @@ refineBootRender();
   grab.addEventListener("click", e=>{ if(e.target.closest && e.target.closest("button")) return;
     if(moved > 6){ moved = 0; return; }
     stop = (stop+1) % STOPS.length; setH(vh()*STOPS[stop]); setTimeout(refit, 260); });
+  /* The sheet holds a height in pixels worked out from the screen it was set
+     on. Turn the phone, or let the URL bar collapse, and that number is no
+     longer the fraction it was meant to be — in landscape it was taller than
+     the whole window, so the stage came out zero high and the preview was
+     framed against nothing. The stop is the truth; the pixels are rederived
+     whenever the window changes. */
+  window.sheetReflow = () => {
+    /* Without animating it. The sheet and the stage both transition their
+       size, which is right when a finger moved them and wrong here: there is
+       nothing to animate between when the screen itself changed shape, and a
+       transition only means whatever measures next catches them halfway —
+       which is how coming back from landscape used to land at the wrong
+       zoom. The drag class is what already turns those transitions off. */
+    sheet.classList.add("dragging"); shell.classList.add("dragging");
+    setH(vh()*STOPS[stop]);
+    void sheet.offsetHeight;                  // settle it before anyone measures
+    sheet.classList.remove("dragging"); shell.classList.remove("dragging");
+  };
   /* One way in from outside, so anything that needs the watch uncovered —
      the eyedropper, so far — asks the sheet rather than growing a second
      way of sizing it. */
@@ -7908,12 +7939,20 @@ refineBootRender();
   /* On a phone the strap is more than half the picture, so the studio opens
      framed on the case; Fit swaps to the whole watch and back. Re-framed
      whenever the stage changes shape — rotation, or the sheet moving. */
-  const refit = () => { if(typeof fitTo === "function") fitTo(fitMode); };
+  const refit = () => {
+    if(typeof fitTo !== "function") return;
+    if(typeof userFramed !== "undefined" && userFramed) return;  // their crop, not ours
+    fitTo(fitMode);
+  };
   const openOnCase = () => { if(typeof fitTo === "function") fitTo("case"); };
   requestAnimationFrame(()=> setTimeout(openOnCase, 60));
   let rt = null;
-  addEventListener("resize", ()=>{ clearTimeout(rt); rt = setTimeout(refit, 180); });
-  addEventListener("orientationchange", ()=>{ clearTimeout(rt); rt = setTimeout(refit, 300); });
+  const reflow = ms => { clearTimeout(rt); rt = setTimeout(()=>{
+    if(typeof sheetReflow === "function") sheetReflow();   // the sheet first…
+    refit();                                               // …then frame what is left
+  }, ms); };
+  addEventListener("resize", ()=> reflow(180));
+  addEventListener("orientationchange", ()=> reflow(300));
 
   const origPaint = typeof paintAll === "function" ? paintAll : null;
   if(origPaint) window.paintAll = function(){ origPaint.apply(this, arguments); setTitle(); };
