@@ -1095,7 +1095,7 @@ const BASE = {
         logoCurve:false, line2Curve:false, footCurve:true, logoMark:"none",
         logoTech:"printed", logoMetal:"polished steel", logoHeight:0.20, logoBevel:0.05,
         plateShape:"rounded", platePad:0.55, plateTaper:0.0, plateAuto:true, plateW:7.0, plateH:2.2, plateMetal:"polished steel", plateTint:"", plateTintOn:false,
-        embShape:"arc", embW:8.0, embH:2.6, embBorder:0.22, embDepth:0.14, embInset:0.30,
+        embShape:"arc", embAuto:true, embPad:0.55, embW:8.0, embH:2.6, embBorder:0.22, embDepth:0.14, embInset:0.30,
         resShape:"arc", resW:8.4, resH:2.4, resCurve:1.0, resBorder:0.09,
         resDepth:0.07, resPad:0.34, resTextScale:1.0, resAutoFit:true,
         nameMode:"engraved", nameColor:"#25282A", nameHeight:0.10,
@@ -3870,6 +3870,21 @@ function buildSVG(st, o={}){
         const bendLogo = useMark && Math.abs(tx.logoY) > 0.01 && (
              (ltech === "applied nameplate"  && (tx.plateShape || "arc") === "arc")
           || (ltech === "embossed cartouche" && (tx.embShape   || "arc") === "arc"));
+        /* How big a shape behind the logo has to be to actually hold it.
+           Only the applied nameplate could follow its logo; both cartouches
+           were fixed boxes, so changing the logo size left the name rattling
+           around inside one or spilling out of it, and no control tied them
+           together. The same measurement now drives all three.
+           A flat mark on a curved band also needs the band grown by the arc's
+           drop across the mark's width, or its ends poke out of the shape. */
+        const cartBox = (pad, shape) => {
+          let sag = 0;
+          if(shape === "arc" && useMark && !bendLogo){
+            const rr = Math.abs(tx.logoY) || 0.01, half = Math.min(logoW/2, rr*0.98);
+            sag = rr - Math.sqrt(Math.max(0, rr*rr - half*half));
+          }
+          return { w: logoW + pad*2, h: logoH + sag + pad*0.68 };
+        };
         const lg = id("lgo");
         defs.push(`<g id="${lg}">${useMark
           ? (mk => bendLogo ? bendArt(mk, logoW, Math.abs(tx.logoY), tx.logoY < 0, defs, id) : mk)(
@@ -3885,12 +3900,17 @@ function buildSVG(st, o={}){
              which is what makes it read as smoother than its surroundings.
              The only depth cue is a shallow step — a thin shadow on the lit
              side and a thin catch of light opposite, both deliberately faint. */
-          const rw = tx.resW === undefined ? 8.4 : tx.resW;
-          const rh = tx.resH === undefined ? 2.4 : tx.resH;
           const rcv = tx.resCurve === undefined ? 1.0 : tx.resCurve;
           const rbw = tx.resBorder === undefined ? 0.09 : tx.resBorder;
           const rdp = tx.resDepth === undefined ? 0.07 : tx.resDepth;
           const rpd = tx.resPad === undefined ? 0.34 : tx.resPad;
+          /* Auto-match grows the reserved area to the logo. It used to work the
+             other way round — the logo was shrunk into a fixed patch — which
+             did nothing at all for imported artwork, only for typed text. */
+          const resAuto = tx.resAutoFit !== false;
+          const resBox = cartBox(rpd + rbw, tx.resShape || "arc");
+          const rw = resAuto ? resBox.w : (tx.resW === undefined ? 8.4 : tx.resW);
+          const rh = resAuto ? resBox.h : (tx.resH === undefined ? 2.4 : tx.resH);
           const face = st.dial.color;
           const shp2 = tx.resShape || "arc";
           const y0 = tx.logoY;
@@ -3955,7 +3975,9 @@ function buildSVG(st, o={}){
           const col2 = tx.nameColor || "#1B1B1B";
           const scaleUser = tx.resTextScale === undefined ? 1 : tx.resTextScale;
           let size2 = tx.logoSize * scaleUser;
-          if(tx.resAutoFit !== false && tx.logo){
+          if(!resAuto && tx.logo && !useMark){
+            /* a hand-set patch keeps its size, so the lettering is the thing
+               that has to give way rather than spill over the border */
             const perChar = (tx.logoFont === "serif" ? 0.74 : 0.66) + 0.10;
             const availW = Math.max(0.2, rw - rpd*2);
             const availH = Math.max(0.2, rh - rpd*2);
@@ -4030,10 +4052,16 @@ function buildSVG(st, o={}){
              carries the dial's own colour and finish. Only the light tells you
              it is raised — a lit border on the side facing the light, a shadow
              on the far side, and a soft cast shadow beneath the whole area. */
-          const ew = tx.embW === undefined ? 8.0 : tx.embW;
-          const eh = tx.embH === undefined ? 2.6 : tx.embH;
           const bw = tx.embBorder === undefined ? 0.22 : tx.embBorder;
           const dep = tx.embDepth === undefined ? 0.14 : tx.embDepth;
+          const ins = tx.embInset === undefined ? 0.30 : tx.embInset;
+          /* Auto-match sizes the pressed shape from the logo it has to hold,
+             counting the raised rim and the inner inset — the name sits in the
+             flat field inside those, not in the outline. */
+          const embPad = tx.embPad === undefined ? 0.55 : tx.embPad;
+          const embBox = cartBox(embPad + bw + ins, tx.embShape || "arc");
+          const ew = tx.embAuto === false ? (tx.embW === undefined ? 8.0 : tx.embW) : embBox.w;
+          const eh = tx.embAuto === false ? (tx.embH === undefined ? 2.6 : tx.embH) : embBox.h;
           const face = st.dial.color;
           const shp = tx.embShape || "arc";
           const eid = id("emb");
@@ -4087,7 +4115,6 @@ function buildSVG(st, o={}){
           </filter>`);
           body.push(`<use href="#${eid}" fill="${face}" filter="url(#${ebev})"/>`);
           /* the flat inner field, inset so the rim reads as a raised border */
-          const ins = tx.embInset === undefined ? 0.30 : tx.embInset;
           const kx = Math.max(0.05, 1 - (ins*2)/Math.max(ew,0.1));
           const ky = Math.max(0.05, 1 - (ins*2)/Math.max(eh,0.1));
           body.push(`<g transform="translate(0,${f(y0,3)}) scale(${f(kx,5)},${f(ky,5)}) translate(0,${f(-y0,3)})">`
@@ -5430,28 +5457,35 @@ const logoTechFields = T => (LOGO_TECH_FIELDS[T.logoTech] || LOGO_TECH_FIELDS["p
    so the three cartouche techniques answer the same three questions. */
 const LOGO_CART_FIELDS = {
   res: T => [
-    TG("text.resAutoFit","Auto-fit logo"),
+    TG("text.resAutoFit","Match the logo size"),
     SUB("Shape",[
       SEL("text.resShape","Cartouche shape",["arc","rounded","oval","rectangle"]),
-      N("text.resW","Width",3,20,.05),
-      N("text.resH","Height across",0.8,6,.05),
+      /* Width and height are the shape's own once it has stopped following
+         the logo; while it follows, showing them would offer a number that
+         the next logo change overwrites. */
+      ...(T.resAutoFit === false
+          ? [N("text.resW","Width",3,20,.05), N("text.resH","Height across",0.8,6,.05)]
+          : []),
       ...((T.resShape||"arc") === "arc" ? [N("text.resCurve","Curvature",0,1.6,.02)] : [])
     ], T.resShape || "arc"),
     SUB("Border",[N("text.resBorder","Border thickness",0,0.30,.005)],
         (T.resBorder === undefined ? 0.09 : T.resBorder) > 0.02 ? "hairline" : "none"),
     SUB("Interior",[
-      N("text.resPad","Inner padding",0,1.5,.02),
+      N("text.resPad", T.resAutoFit === false ? "Inner padding" : "Space around the logo",0,1.5,.02),
       ...(T.resAutoFit === false ? [N("text.resTextScale","Logo scale",0.3,1.6,.02)] : [])
-    ], "same as dial")
+    ], T.resAutoFit === false ? "set by hand" : "follows the logo")
   ],
   emb: T => [
+    TG("text.embAuto","Match the logo size"),
     SUB("Shape",[
       SEL("text.embShape","Cartouche shape",["arc","rounded","oval","rectangle"]),
-      N("text.embW","Width",3,20,.05),
-      N("text.embH","Height across",0.8,6,.05)
+      ...(T.embAuto === false
+          ? [N("text.embW","Width",3,20,.05), N("text.embH","Height across",0.8,6,.05)]
+          : [N("text.embPad","Space around the logo",0.05,3,.05)])
     ], T.embShape || "arc"),
     SUB("Border",[N("text.embBorder","Border thickness",0.05,0.80,.01)], "raised"),
-    SUB("Interior",[N("text.embInset","Inner field inset",0,1.2,.02)], "same as dial")
+    SUB("Interior",[N("text.embInset","Inner field inset",0,1.2,.02)],
+        T.embAuto === false ? "set by hand" : "follows the logo")
   ],
   plate: T => [
     TG("text.plateAuto","Auto-fit logo"),
@@ -5492,8 +5526,8 @@ const textAdvanced = T => [
   ...(LOGO_CART[T.logoTech] === "plate"
       ? [N("text.nameHeight","Raised name height",0.02,0.40,.01)] : []),
   ...(T.logoTech === "applied metal" ? [N("text.logoBevel","Bevel",0,0.20,.005)] : []),
-  ...(LOGO_CART[T.logoTech] === "res" && T.resAutoFit !== false
-      ? [N("text.resTextScale","Logo scale",0.3,1.6,.02)] : [])
+  /* Logo scale lives in the cartouche's own Interior group; listing it here
+     as well put two of the same slider in the panel. */
 ];
 const SCHEMA = {
   case:{title:"Case — locked", hint:"Fixed to the RD26-0172 drawing set. Colour and strap are render settings only; the geometry below is the factory's.", fields:[
@@ -5936,7 +5970,7 @@ const REBUILD_PROPS = new Set([
   "numerals.system","numerals.style","numerals.tech","numerals.material",
   "text.logoTech","text.nameMode","text.plateShape","text.logoMark","text.plateAuto",
   "text.resTech","text.resShape","text.embShape","text.stampSurface",
-  "text.engFill","text.debFill","text.resAutoFit","text.plateTintOn",
+  "text.engFill","text.debFill","text.resAutoFit","text.embAuto","text.plateTintOn",
   "sector.band","sector.arms","sector.pattern",
   "hHand.style","mHand.style","sHand.style","indices.style"
 ]);
