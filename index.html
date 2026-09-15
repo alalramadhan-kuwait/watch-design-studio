@@ -1640,8 +1640,51 @@ function migrateHandMetal(st){
   }
   return st;
 }
+/* The dial was a field and exactly one disc on top of it, so a dial with three
+   concentric zones — a chapter ring, a step, a centre — could not be built;
+   the step had to be faked with an engraved band. The zones are a list now,
+   and the single sector is its first entry.
+
+   Deliberately not in BASE, for the same reason the engraved bands are not: a
+   preset carries its own sector, and a default list sitting in BASE would be
+   in place before this ran, so every design would quietly draw the default
+   zone instead of its own. */
+/* The zones a dial has, largest first — the order they are drawn in, and the
+   order anything asking about them wants them in. */
+const zonesOf = st => ((st && st.sector && st.sector.zones) || [])
+  .filter(z => z && z.on !== false && z.outerD > 0)
+  .slice().sort((a,b) => b.outerD - a.outerD);
+/* The innermost one: the centre field, which is what "the sector" used to
+   mean and what a hand reaching "to the centre field" is aiming at. */
+const innerZone = st => { const z = zonesOf(st); return z.length ? z[z.length-1] : null; };
+
+const ZONE_KEYS = ["outerD","innerD","color","finish","pattern","cell","pitch","rays",
+  "waveAmp","waveN","waveGrowth","wavePhase","radialPhase","stamp","wall",
+  "band","ringColor","lineW","arms"];
+function migrateZones(st){
+  const sc = st && st.sector;
+  if(!sc) return st;
+  if(!Array.isArray(sc.zones)){
+    const z = {};
+    for(const k of ZONE_KEYS) if(sc[k] !== undefined) z[k] = sc[k];
+    z.on = true;
+    /* edge: what marks the boundary. "band" is what the old sector drew — the
+       pair of fine circles — and stays the default for anything that had it. */
+    z.edge = sc.band ? "line" : "none";
+    sc.zones = (z.outerD > 0) ? [z] : [];
+  }
+  for(const z of sc.zones){
+    if(z.edge === undefined) z.edge = z.band ? "line" : "none";
+    if(z.beadD === undefined) z.beadD = 0.14;
+    if(z.beadGap === undefined) z.beadGap = 1.9;
+  }
+  for(const k of ZONE_KEYS) delete sc[k];
+  delete sc.band;
+  return st;
+}
 function migrateHands(st){
   migrateBorders(st);
+  migrateZones(st);
   migrateHandMetal(st);
   migrateLogo(st);
   migrateNumerals(st);
@@ -2351,8 +2394,24 @@ function guilFieldRaw(P, ux, uy, r, a){
 
     case "clous": {                       // four planar facets per cell
       const c = P.cell;
-      const u = wrap1(ux/c) - 0.5, v = wrap1(uy/c) - 0.5;
-      return (0.5 - Math.max(Math.abs(u), Math.abs(v)))*c*tw;
+      /* The lay. A clous de Paris is turned on a rose engine whose grid can be
+         set at any angle to the dial, and on most of them it runs at 45° — the
+         pyramids point at the numerals rather than sitting square to them.
+         Without this the grid was always axis-aligned, which is the one lay
+         almost no real dial has. */
+      let gx = ux, gy = uy;
+      const lay = P.lay || 0;
+      if(lay){
+        const la = lay*Math.PI/180, cs = Math.cos(la), sn = Math.sin(la);
+        gx = ux*cs - uy*sn; gy = ux*sn + uy*cs;
+      }
+      const u = wrap1(gx/c) - 0.5, v = wrap1(gy/c) - 0.5;
+      /* Facet contrast. The slope of a pyramid is the same at any cell size,
+         so a fine hobnail comes out with the same gentle faces as a coarse
+         one — and then loses most of what is left to the sampling fade, which
+         is why it flattened into a waffle. This deepens the cut without
+         touching its pitch, which is what a finer tool actually does. */
+      return (0.5 - Math.max(Math.abs(u), Math.abs(v)))*c*tw*(P.facet || 1);
     }
 
     case "orge": {                        // brick-offset interlocking grains
@@ -3385,6 +3444,38 @@ function buildSVG(st, o={}){
     body.push(`<circle r="${f(opening/2+0.04,3)}" fill="none" stroke="${shade(M0,0.70)}" stroke-opacity="0.55" stroke-width="0.09"/>`);
   }
 
+  /* A pearled ring: the fine row of turned beads that marks a zone boundary
+     on a dial of this period, and that a minute track can be made of.
+
+     Not a row of flat dots. Each bead is a little hemisphere — lit on the side
+     facing the light, dark where it meets the dial, with a contact shadow
+     under it. One gradient in bounding-box units serves the whole ring, so
+     sixty beads cost one definition rather than sixty.
+
+     `lit` is a unit vector pointing at the light in the dial's own frame; the
+     highlight sits on that side of each bead and the shadow opposite. */
+  const beadRing = (r, count, beadR, colour, opt) => {
+    if(!(r > 0) || !(count > 0) || !(beadR > 0)) return "";
+    const o = opt || {};
+    const la = ((st.render && st.render.az) || 135)*Math.PI/180;
+    const bx = Math.cos(la), by = Math.sin(la);
+    const gid = id("prl"), hi = tint(colour, 0.80), lo = shade(colour, 0.52);
+    defs.push(`<radialGradient id="${gid}" cx="${f(0.5 + bx*0.24,3)}" cy="${f(0.5 + by*0.24,3)}" r="0.70">
+      <stop offset="0" stop-color="${hi}"/>
+      <stop offset="0.42" stop-color="${colour}"/>
+      <stop offset="1" stop-color="${lo}"/></radialGradient>`);
+    let out = "";
+    const sh = shade(colour, 0.70), off = beadR*0.30;
+    for(let i=0;i<count;i++){
+      const a = o.from === undefined ? i*360/count : o.from + i*360/count;
+      const p = pt(r, a);
+      if(o.skip && o.skip(a, beadR)) continue;
+      out += `<circle cx="${f(p[0]-bx*off,3)}" cy="${f(p[1]-by*off,3)}" r="${f(beadR,3)}" fill="${sh}" fill-opacity="0.40"/>`;
+      out += `<circle cx="${f(p[0],3)}" cy="${f(p[1],3)}" r="${f(beadR,3)}" fill="url(#${gid})"/>`;
+    }
+    return out;
+  };
+
   /* ---------------- DIAL STACK ---------------- */
   const dialStart = body.length;
   if(scope!=="hands"){
@@ -3392,23 +3483,45 @@ function buildSVG(st, o={}){
     if(d.on){
       body.push(finishLayer(R, 0, d.color, d.finish, {rays:d.rays}));
     }
-    // sector band
+    /* Dial zones, outermost first so an inner one lies over its neighbour —
+       which is how a dial is actually made up, one disc printed or turned on
+       top of the last. */
     const sc = st.sector;
     if(sc.on){
-      body.push(finishLayer(sc.outerD/2, sc.innerD/2, sc.color, sc.finish,
-        sc.pattern && sc.pattern !== "same as dial"
-          ? {guil:{pattern:sc.pattern, cell:sc.cell, pitch:sc.pitch, rays:sc.rays,
-                   waveAmp:sc.waveAmp, waveN:sc.waveN, waveGrowth:sc.waveGrowth, wavePhase:sc.wavePhase, radialPhase:sc.radialPhase, stamp:sc.stamp, wall:sc.wall}} : {}));
-      const lw = sc.lineW === undefined ? 0.16 : sc.lineW;
-      if(sc.band){                       // the two circles bounding the zone
-        body.push(`<circle r="${f(sc.outerD/2,3)}" fill="none" stroke="${sc.ringColor}" stroke-width="${f(lw,3)}"/>`);
-        if(sc.innerD > 0)
-          body.push(`<circle r="${f(sc.innerD/2,3)}" fill="none" stroke="${sc.ringColor}" stroke-width="${f(lw,3)}"/>`);
-      }
-      if(sc.arms !== false && sc.innerD > 0){   // radial arms at the quarters
-        for(const a of [0,90,180,270]){
-          const p0=pt(sc.innerD/2,a), p1=pt(sc.outerD/2,a);
-          body.push(`<line x1="${f(p0[0],3)}" y1="${f(p0[1],3)}" x2="${f(p1[0],3)}" y2="${f(p1[1],3)}" stroke="${sc.ringColor}" stroke-width="${f(lw,3)}"/>`);
+      const zones = (sc.zones || []).filter(z => z && z.on !== false && z.outerD > 0)
+                                    .sort((a,b) => b.outerD - a.outerD);
+      for(const z of zones){
+        body.push(finishLayer(z.outerD/2, (z.innerD||0)/2, z.color, z.finish,
+          z.pattern && z.pattern !== "same as dial"
+            ? {guil:{pattern:z.pattern, cell:z.cell, pitch:z.pitch, rays:z.rays,
+                     waveAmp:z.waveAmp, waveN:z.waveN, waveGrowth:z.waveGrowth, wavePhase:z.wavePhase,
+                     radialPhase:z.radialPhase, stamp:z.stamp, wall:z.wall,
+                     lay:z.lay, facet:z.facet}} : {}));
+        const lw = z.lineW === undefined ? 0.16 : z.lineW;
+        const edge = z.edge || "none";
+        if(edge === "line"){                       // the two circles bounding the zone
+          body.push(`<circle r="${f(z.outerD/2,3)}" fill="none" stroke="${z.ringColor}" stroke-width="${f(lw,3)}"/>`);
+          if(z.innerD > 0)
+            body.push(`<circle r="${f(z.innerD/2,3)}" fill="none" stroke="${z.ringColor}" stroke-width="${f(lw,3)}"/>`);
+        }
+        else if(edge === "beads"){
+          /* A pearled boundary. The bead count comes from the circumference
+             and the spacing, so beads stay the same size on any diameter
+             instead of stretching to fit a fixed number. */
+          const bd = Math.max(0.03, (z.beadD === undefined ? 0.14 : z.beadD));
+          const gap = Math.max(1.2, (z.beadGap === undefined ? 1.9 : z.beadGap));
+          const ring = (rr) => {
+            const n = Math.max(12, Math.round(2*Math.PI*rr/(bd*gap)));
+            body.push(beadRing(rr, n, bd/2, z.ringColor || z.color));
+          };
+          ring(z.outerD/2);
+          if(z.innerD > 0) ring(z.innerD/2);
+        }
+        if(z.arms !== false && z.innerD > 0){      // radial arms at the quarters
+          for(const a of [0,90,180,270]){
+            const p0=pt(z.innerD/2,a), p1=pt(z.outerD/2,a);
+            body.push(`<line x1="${f(p0[0],3)}" y1="${f(p0[1],3)}" x2="${f(p1[0],3)}" y2="${f(p1[1],3)}" stroke="${z.ringColor}" stroke-width="${f(lw,3)}"/>`);
+          }
         }
       }
     }
@@ -3633,13 +3746,18 @@ function buildSVG(st, o={}){
            text runs: a dot is as wide as it is tall, a tick only as wide as
            its stroke. Without it the clearance was measured to the mark's
            centre and half a dot still overlapped the last letter. */
-        const wide = mt.style === "dots" ? (five&&mt.fives ? t*1.7 : t*1.1)
+        const wide = (mt.style === "dots" || mt.style === "beads") ? (five&&mt.fives ? t*1.7 : t*1.1)
                    : mt.style === "railroad" ? (five||!mt.fives ? (five?0.22:0.11) : 0.09)
                    : (five ? mt.thickness*1.5 : mt.thickness);
         if(mt.textBreak !== false && !clearsText(a, r, len, wide)) continue;
         if(mt.style==="dots"){
           const p=pt(r,a);
           body.push(`<circle cx="${f(p[0],3)}" cy="${f(p[1],3)}" r="${f(five&&mt.fives?t*0.85:t*0.55,3)}" fill="${mt.color}"/>`);
+        } else if(mt.style==="beads"){
+          /* Turned, not printed — so it is drawn one bead at a time here
+             rather than from the ring helper, which would not know which
+             marks the lettering has taken out. */
+          body.push(beadRing(r, 1, five&&mt.fives ? t*0.85 : t*0.55, mt.color, {from:a}));
         } else if(mt.style==="railroad"){
           const p0=pt(r-t,a), p1=pt(r+t,a);
           if(five||!mt.fives) body.push(`<line x1="${f(p0[0],3)}" y1="${f(p0[1],3)}" x2="${f(p1[0],3)}" y2="${f(p1[1],3)}" stroke="${mt.color}" stroke-width="${five?0.22:0.11}"/>`);
@@ -4608,7 +4726,9 @@ function buildSVG(st, o={}){
           const plateBase = (()=>{
             if(tx.plateTintOn && tx.plateTint) return tx.plateTint;
             if(tx.plateMetal === "match the dial")   return st.dial.color;
-            if(tx.plateMetal === "match the sector") return st.sector.color || st.dial.color;
+            if(tx.plateMetal === "match the sector"){
+              const z = innerZone(st); return (z && z.color) || st.dial.color;
+            }
             return null;
           })();
           const PTmetal = METALS[tx.plateMetal] || MT;
@@ -5303,7 +5423,13 @@ function handPath(h, ctx){
     const ring = k.ring ? Math.max(g.ring, h.width*k.ring) : g.ring;
     const stemTop = g.pc + g.pr*0.72, w0 = W, w1 = W*g.taper;
     const cy1 = T + (stemTop - T)*0.42, cy2 = T + (stemTop - T)*0.80;
-    const bow = 0.80;
+    /* The waist. A Breguet stem is not one shape: some run almost straight
+       from the boss to the pomme, some are strongly hollowed, and that curve
+       is most of what separates one maker's hand from another's. It used to be
+       a single hard-coded 0.80 bow, so every hand in the catalogue had the
+       same profile no matter what else was set. 1 is straight-sided; below
+       that the flanks pull in, above it they belly out. */
+    const bow = h.waist === undefined ? 0.80 : h.waist;
     const stemD =
       `M${f(-w0/2,3)} ${f(T,3)}`
     + `C${f(-w0*0.5*bow,3)} ${f(cy1,3)} ${f(-w1*0.62,3)} ${f(cy2,3)} ${f(-w1/2,3)} ${f(stemTop,3)}`
@@ -5489,8 +5615,19 @@ function radialDims(st){
     {label:"Dial blank (fixed)", short:"blank", value:dialD, on:st.dial.on, layer:"dial", path:st.dial.lock?null:"dial.diameter", angle:10},
     {label:"Chapter ring outer", short:"chap-o", value:st.chapter.outerD, on:st.chapter.on, layer:"chapter", path:"chapter.outerD", angle:20},
     {label:"Chapter ring inner", short:"chap-i", value:st.chapter.innerD, on:st.chapter.on, layer:"chapter", path:"chapter.innerD", angle:20},
-    {label:"Sector outer", short:"sect-o", value:st.sector.outerD, on:st.sector.on, layer:"sector", path:"sector.outerD", angle:-20},
-    {label:"Sector inner", short:"sect-i", value:st.sector.innerD, on:st.sector.on, layer:"sector", path:"sector.innerD", angle:-20},
+    /* One measurement per zone, named for where it sits, so a three-ring dial
+       can be checked ring by ring rather than reporting one "sector". */
+    ...zonesOf(st).flatMap((z, i, all) => {
+      const name = all.length === 1 ? "Zone"
+                 : i === 0 ? "Outer zone" : i === all.length-1 ? "Centre field" : `Zone ${i+1}`;
+      const idx = (st.sector.zones || []).indexOf(z);
+      return [
+        {label:name+" outer", short:"z"+(i+1)+"-o", value:z.outerD, on:st.sector.on,
+         layer:"sector", path:`sector.zones.${idx}.outerD`, angle:-20 - i*8},
+        ...(z.innerD > 0 ? [{label:name+" inner", short:"z"+(i+1)+"-i", value:z.innerD, on:st.sector.on,
+         layer:"sector", path:`sector.zones.${idx}.innerD`, angle:-20 - i*8}] : [])
+      ];
+    }),
     {label:"Minute track", short:"min-tr", value:st.minute.diameter, on:st.minute.on, layer:"minute", path:"minute.diameter", angle:-40},
     {label:"Hour track", short:"hr-tr", value:st.hour.diameter, on:st.hour.on, layer:"hour", path:"hour.diameter", angle:-50},
     {label:"Index circle", short:"index", value:st.indices.radius*2, on:st.indices.on, layer:"indices", path:"indices.radius", angle:-60, half:true},
@@ -5542,8 +5679,8 @@ function dialLandmark(st, which){
         ? Math.max(1, st.numerals.radius - (st.numerals.size || 2.8)*0.55)
         : (st.indices && st.indices.on ? Math.max(1, st.indices.radius) : open*0.80);
     case "to the centre field":
-      return st.sector && st.sector.on && st.sector.outerD > 0
-        ? st.sector.outerD/2 : open*0.62;
+      { const z = st.sector && st.sector.on ? innerZone(st) : null;
+        return z ? z.outerD/2 : open*0.62; }
     case "to the dial edge":
       return st.dial && st.dial.diameter ? Math.min(open, st.dial.diameter/2) : open;
   }
@@ -5563,7 +5700,7 @@ function handLength(h, k, st){
   return Math.max(0.5, lm * (h.reachTrim != null ? h.reachTrim : 0.97));
 }
 
-const HAND_SHARE = ["style","finish","color","lume","taper","pommePos"];
+const HAND_SHARE = ["style","finish","material","color","lume","taper","waist","pommePos"];
 const HAND_SCALE = ["width","pommeD","ringW","tipW"];
 const handScale = k => k==="hHand" ? 1
                     : k==="mHand" ? (S.handSet.minuteScale||0.8)
@@ -6125,6 +6262,9 @@ const SCHEMA = {
     SEL("dial.finish","Finish",["matte","gloss","sunburst","guilloche","brushed","grained","sandblasted","enamel","lacquer","stone","metallic","circular","mop"])];
     if(S.dial.finish === "guilloche") return base.concat([
       SEL("dial.pattern","Guilloché pattern",GUIL_PATTERNS),
+      ...(S.dial.pattern === "clous"
+          ? [N("dial.lay","Lay angle",0,90,1,"°"),
+             N("dial.facet","Facet contrast",0.2,2.0,.05,"×")] : []),
       N("dial.wall","Groove wall angle",8,55,1,"°"),
       N("dial.stamp","Stamped (vs engraved)",0,1,.05,""),
       N("dial.cell","Cell size (clous/orge/panier/damier)",0.25,2.20,.05),
@@ -6173,30 +6313,63 @@ const SCHEMA = {
       return base.concat([N("dial.rays","Legacy ray count",12,120,1,"")]);
     return base;
   }},
-  sector:{title:"Sector", hint:"A second dial zone. Set the inner diameter to 0 for a centre disc.", fields:()=>[
-    {t:"head", l:"Zone"},
-    N("sector.outerD","Outer diameter",6,44),
-    N("sector.innerD","Inner diameter (0 = disc)",0,42),
-    C("sector.color","Zone colour"),
-    SEL("sector.finish","Finish",["matte","gloss","grained","sunburst","guilloche","enamel"]),
-
-    {t:"head", l:"Engine turning"},
-    SEL("sector.pattern","Pattern",["same as dial"].concat(GUIL_PATTERNS)),
-    ...(S.sector.pattern !== "same as dial" ? [
-      N("sector.cell","Cell size",0.25,2.20,.05), N("sector.pitch","Groove pitch",0.12,1.20,.02),
-      N("sector.rays","Ray count",40,420,4,""), N("sector.waveAmp","Wave amplitude",0,1.2,.01),
-      N("sector.waveN","Wave lobes",3,40,1,""),
-      N("sector.waveGrowth","Amplitude growth per mm",0,0.20,.002),
-      N("sector.wavePhase","Lobe rotation",-30,30,.1,"°"),
-      N("sector.radialPhase","Ring offset",-0.6,0.6,.01),
-      N("sector.wall","Wall angle",8,55,1,"°"),
-      N("sector.stamp","Stamped (vs engraved)",0,1,.05,"")] : []),
-
-    {t:"head", l:"Boundary"},
-    CK("sector.band","Ring at each edge"),
-    ...(S.sector.innerD > 0 ? [CK("sector.arms","Arms at the quarters")] : []),
-    ...((S.sector.band || (S.sector.arms !== false && S.sector.innerD > 0))
-        ? [C("sector.ringColor","Boundary colour"), N("sector.lineW","Boundary width",0.04,0.6,.01)] : [])]},
+  sector:{title:"Dial zones",
+    hint:"The concentric rings a dial is built from — a chapter ring, a step, a centre field. Each zone is a disc or an annulus laid over the one outside it. Add as many as the dial needs.",
+    fields:()=>{
+      const zones = (S.sector.zones || []);
+      /* Listed outside in, and named for where they sit, so the panel reads
+         the way the dial does however the zones were added. */
+      const order = zones.map((_,i)=>i)
+        .sort((a,b)=>(Number(zones[b].outerD)||0) - (Number(zones[a].outerD)||0));
+      const zone = (i) => {
+        const z = zones[i], k = "sector.zones." + i, rank = order.indexOf(i);
+        const name = zones.length === 1 ? "Zone"
+          : rank === 0 ? "Outer zone"
+          : rank === zones.length-1 ? "Centre field"
+          : `Zone ${rank+1}`;
+        const edge = z.edge || "none";
+        return SUB(name, [
+          CK(k+".on","Show this zone"),
+          ...(z.on !== false ? [
+            N(k+".outerD","Outer diameter",6,44),
+            N(k+".innerD","Inner diameter (0 = disc)",0,42),
+            C(k+".color","Zone colour"),
+            SEL(k+".finish","Finish",["matte","gloss","grained","sunburst","brushed","circular","guilloche","enamel"]),
+            SUB("Engine turning", [
+              SEL(k+".pattern","Pattern",["same as dial"].concat(GUIL_PATTERNS)),
+              ...(z.pattern && z.pattern !== "same as dial" ? [
+                N(k+".cell","Cell size",0.25,2.20,.05), N(k+".pitch","Groove pitch",0.12,1.20,.02),
+                ...(z.pattern === "clous" ? [
+                  N(k+".lay","Lay angle",0,90,1,"°"),
+                  N(k+".facet","Facet contrast",0.2,2.0,.05,"×")] : []),
+                N(k+".rays","Ray count",40,420,4,""), N(k+".waveAmp","Wave amplitude",0,1.2,.01),
+                N(k+".waveN","Wave lobes",3,40,1,""),
+                N(k+".waveGrowth","Amplitude growth per mm",0,0.20,.002),
+                N(k+".wavePhase","Lobe rotation",-30,30,.1,"°"),
+                N(k+".radialPhase","Ring offset",-0.6,0.6,.01),
+                N(k+".wall","Wall angle",8,55,1,"°"),
+                N(k+".stamp","Stamped (vs engraved)",0,1,.05,"")] : [])
+            ], z.pattern && z.pattern !== "same as dial" ? z.pattern : "same as dial"),
+            SUB("Boundary", [
+              SEL(k+".edge","Edge",["none","line","beads"]),
+              ...(edge === "beads" ? [
+                N(k+".beadD","Bead diameter",0.05,0.60,.01),
+                N(k+".beadGap","Spacing",1.2,4.0,.05,"×")] : []),
+              ...(z.innerD > 0 ? [CK(k+".arms","Arms at the quarters")] : []),
+              ...((edge !== "none" || (z.arms !== false && z.innerD > 0))
+                  ? [C(k+".ringColor","Boundary colour"),
+                     ...(edge === "line" ? [N(k+".lineW","Boundary width",0.04,0.6,.01)] : [])] : [])
+            ], edge === "none" ? "plain" : edge)
+          ] : []),
+          ACT("zoneDel:"+i, "Remove this zone")
+        ], `\u00d8${f(z.outerD)}${z.on === false ? " \u00b7 hidden" : ""}`);
+      };
+      return [CK("sector.on","Show the dial zones"),
+        ...(S.sector.on ? [
+          ...order.map(zone),
+          ...(zones.length < 6 ? [ACT("zoneAdd","Add another zone")] : [])
+        ] : [])];
+    }},
   borders:{title:"Engraved borders",
     hint:"Narrow engraved bands that frame the dial's zones — each a milled band between two fine boundary lines. Add as many as the dial needs. Separate from the markers, the minute track and the central guilloche.",
     fields:()=>{
@@ -6239,7 +6412,7 @@ const SCHEMA = {
     CK("chapter.separator","Separator lines"), C("chapter.sepColor","Separator colour")]},
   minute:{title:"Minute track", hint:"60 divisions. Diameter is the centre line of the track.", fields:[
     N("minute.diameter","Track diameter",6,44), N("minute.thickness","Thickness",.08,1.2,.02),
-    SEL("minute.style","Style",["dots","ticks","railroad","dashes"]),
+    SEL("minute.style","Style",["dots","beads","ticks","railroad","dashes"]),
     C("minute.color","Colour"), CK("minute.fives","Emphasise 5-minute marks"), N("minute.fiveLen","5-min length",.2,3,.05),
     SEL("minute.tech","Made by",["printed","double printed"]),
     ...(S.minute.tech === "double printed" ? [N("minute.edgeLight","Edge light",0,1,.05,"")] : []),
@@ -6402,7 +6575,8 @@ function handSchema(k,title){
     ...(POMME[S[k].style] ? [
       N(k+".pommeD","Pomme diameter",.4,6,.05), N(k+".pommePos","Pomme position",30,95,1,"%"),
       N(k+".ringW","Pomme wall",.08,1.2,.02), N(k+".tipW","Tip width",.06,1.2,.02),
-      N(k+".taper","Stem taper at pomme",.3,1,.02,"")] : []),
+      N(k+".taper","Stem taper at pomme",.3,1,.02,""),
+      N(k+".waist","Stem waist",.45,1.35,.02,"")] : []),
     SEL(k+".material","Metal",HAND_MATERIALS),
     SEL(k+".finish","Finish",["polished","brushed","matte"]),
     CK(k+".lume","Lume fill")
@@ -6474,7 +6648,7 @@ function layerIcon(k){
     case "dial": return wrap(disc(d.color || "#D6D2C4")
       + ring(6.4, .7, ink) + ring(3.1, .7, ink) + edge(10));
     case "sector": return wrap(disc(d.color || "#D6D2C4")
-      + ring(6.6, 1.5, (S.sector && S.sector.ringColor) || "#A89968") + edge(6.6) + edge(10));
+      + ring(6.6, 1.5, ((innerZone(S) || {}).ringColor) || "#A89968") + edge(6.6) + edge(10));
     case "borders": return wrap(disc(d.color || "#D6D2C4")
       + `<circle r="7.6" fill="none" stroke="${ink}" stroke-width="1.2" stroke-dasharray="1.6 1.4"/>` + edge(10));
     case "chapter": return wrap(disc(d.color || "#D6D2C4")
@@ -6584,7 +6758,7 @@ const REBUILD_PROPS = new Set([
 ]);
 const PRIMARY = {
   dial:     ["dial.color","dial.finish","dial.diameter","dial.pattern","dial.dome","dial.satin"],
-  sector:   ["sector.on","sector.outerD","sector.innerD","sector.color","sector.finish","sector.pattern"],
+  sector:   ["sector.on"],   /* each zone is its own collapsible row */
   borders:  ["borders.on"],   /* each band is its own collapsible row */
   numerals: ["numerals.on","numerals.system","numerals.style","numerals.tech","numerals.material","numerals.size","numerals.gap","numerals.radius","numerals.color"],
   indices:  ["indices.on","indices.style","indices.count","indices.radius","indices.color"],
@@ -6656,7 +6830,7 @@ function paintProps(){
       const R = d.value/2, pct = d.value/vis*100;
       return `<div${d.value>vis+0.001?' class="warn"':''}><span>${d.label}</span><b>Ø${f(d.value)} · R${f(R)} · ${f(pct,1)}%</b></div>`;
     });
-    if(sel==="sector"){ const w=(S.sector.outerD-S.sector.innerD)/2;
+    if(sel==="sector"){ const z0 = innerZone(S) || {outerD:0, innerD:0}; const w=(z0.outerD-(z0.innerD||0))/2;
       rows.push(`<div><span>Band width</span><b>${f(w)} mm</b></div>`); }
     if(sel==="chapter"){ const w=(S.chapter.outerD-S.chapter.innerD)/2;
       rows.push(`<div><span>Ring width</span><b>${f(w)} mm</b></div>`); }
@@ -7132,6 +7306,27 @@ document.addEventListener("click", e=>{
   /* A new band goes where a dial usually wants one: in the widest gap
      between the bands already there, so it lands somewhere visible instead
      of on top of one of them. */
+  /* A new zone goes inside the innermost one, which is where a dial gains a
+     zone: you divide the centre, you do not add a ring outside the chapter. */
+  if(t.dataset.act === "zoneAdd"){
+    const zs = S.sector.zones || (S.sector.zones = []);
+    const inner = zs.filter(z=>Number(z.outerD)>0).sort((a,b)=>a.outerD-b.outerD)[0];
+    const dia = inner ? Math.max(4, Number(inner.outerD)*0.62) : 20;
+    zs.push(Object.assign({}, inner || {
+      color:"#E8E8E4", finish:"guilloche", pattern:"clous", cell:0.6, pitch:0.35,
+      rays:200, waveAmp:0.1, waveN:12, waveGrowth:0, wavePhase:0, radialPhase:0,
+      stamp:0.5, wall:22, ringColor:"#A89968", lineW:0.14, arms:false
+    }, {on:true, outerD:Math.round(dia*20)/20, innerD:0, edge:"none", beadD:0.14, beadGap:1.9}));
+    S.sector.on = true;
+    commit(); paintProps(); paintView();
+    toast("Zone added"); return;
+  }
+  if((t.dataset.act || "").startsWith("zoneDel:")){
+    const i = +t.dataset.act.split(":")[1];
+    const zs = S.sector.zones || [];
+    if(zs[i]){ zs.splice(i,1); commit(); paintProps(); paintView(); toast("Zone removed"); }
+    return;
+  }
   if(t.dataset.act === "borderAdd"){
     const bands = S.borders.bands || (S.borders.bands = []);
     const sorted = [...bands].filter(b=>Number(b.dia)>0).sort((a,b2)=>a.dia-b2.dia);
@@ -7384,6 +7579,7 @@ function drawMacro(){
     light:{az:+S.render.az, el:+S.render.el},
     guil:{pattern:S.dial.pattern, cell:S.dial.cell, pitch:S.dial.pitch,
           rays:S.dial.rays2, twist:S.dial.twist, wall:S.dial.wall,
+          lay:S.dial.lay, facet:S.dial.facet,
           waveAmp:S.dial.waveAmp, waveN:S.dial.waveN},
     crop:{cx:macroR*Math.cos(ang), cy:macroR*Math.sin(ang), span:macroSpan}, ss:2});
   const img = ctx.createImageData(px, px); img.data.set(buf); ctx.putImageData(img, 0, 0);
