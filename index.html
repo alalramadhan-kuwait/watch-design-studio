@@ -1601,8 +1601,48 @@ function migrateBorders(st){
   delete b.inner; delete b.outer;
   return st;
 }
+/* Hands gain a material and a reach.
+
+   Both are deliberately absent from BASE. The preset merge fills any key BASE
+   already has, so a default sitting there would be in place before this ran
+   and a design's own choice would never be seen — the same trap the engraved
+   bands fell into.
+
+   The reach chosen here is what the trade does and what the files already
+   showed: the minute hand to the minute track, the hour hand about two thirds
+   of it. On the seven presets it lands within a tenth of a millimetre of the
+   lengths that were measured off their photographs, which is the reason to
+   believe it rather than my word for it. */
+function migrateHandMetal(st){
+  for(const k of ["hHand","mHand","sHand"]){
+    const h = st && st[k];
+    if(!h) continue;
+    if(h.material === undefined){
+      h.material = h.finish === "blued" ? "blued steel"
+                 : (h.color && /^#(f|e)/i.test(h.color)) ? "polished steel"
+                 : h.color && h.color !== "#FFFFFF" ? "polished steel"
+                 : "polished steel";
+      if(h.finish === "blued") h.finish = "polished";
+    }
+    if(h.reach === undefined){
+      h.reach = k === "hHand" ? "share of the minute hand" : "to the minute track";
+      if(k === "hHand"){
+        /* keep the proportion the design was actually drawn at, so nothing
+           moves on opening a file that was already right */
+        const m = st.mHand && st.mHand.length;
+        h.hourShare = m ? Math.round(Math.min(0.90, Math.max(0.45, h.length/m))*100)/100 : 0.66;
+      }else{
+        const track = st.minute && st.minute.on
+          ? st.minute.diameter/2 - (st.minute.thickness || 0.3)*0.5 : null;
+        h.reachTrim = track ? Math.round(Math.min(1.05, Math.max(0.80, h.length/track))*100)/100 : 0.97;
+      }
+    }
+  }
+  return st;
+}
 function migrateHands(st){
   migrateBorders(st);
+  migrateHandMetal(st);
   migrateLogo(st);
   migrateNumerals(st);
   migrateHandArt(st);
@@ -4707,8 +4747,12 @@ function buildSVG(st, o={}){
     const shid = id("hsh");
     defs.push(`<filter id="${shid}" x="-70%" y="-70%" width="240%" height="240%"><feDropShadow dx="${f(-lxH*0.20,3)}" dy="${f(-lyH*0.20,3)}" stdDeviation="0.09" flood-opacity="0.42"/></filter>`);
     const hctx = {defs, id, lx:lxH, ly:lyH};
-    const draw = (h,a,k)=>{
-      if(!h.on) return "";
+    const draw = (h0,a,k)=>{
+      if(!h0.on) return "";
+      /* Resolved here, once, so the artwork branch and the drawn branch cannot
+         disagree about how long the hand is. */
+      const L = handLength(h0, k, st);
+      const h = (L === h0.length) ? h0 : Object.assign({}, h0, {length:L});
       const vec = handVec(h, k);
       if(vec){
         /* Supplied geometry: scale so the tip lands at the set length, pivot
@@ -4719,20 +4763,13 @@ function buildSVG(st, o={}){
            flipped by where the light falls, so it stays right as it sweeps. */
         const want = h.length || vec.tip;
         const dOut = vec.zone ? stretchHand(vec.d, vec.zone, vec.tip, want) : vec.d;
-        const F = h.finish === "blued" ? "#2B3F73" : h.color;
+        const F = handCore(h);
         let fill = F;
         if(h.finish !== "matte"){
           const ar = a*Math.PI/180;
           const llx = lxH*Math.cos(ar) + lyH*Math.sin(ar);
-          const lit = llx >= 0 ? 1 : -1, amt = Math.min(1, Math.abs(llx) + 0.35);
-          const gid = id("hv");
-          defs.push(`<linearGradient id="${gid}" gradientUnits="userSpaceOnUse"
-            x1="${f(-vec.halfW*lit,3)}" y1="0" x2="${f(vec.halfW*lit,3)}" y2="0">
-            <stop offset="0" stop-color="${shade(F,0.42*amt)}"/>
-            <stop offset="0.42" stop-color="${F}"/>
-            <stop offset="0.72" stop-color="${tint(F,0.85*amt)}"/>
-            <stop offset="1" stop-color="${tint(F,0.45*amt)}"/></linearGradient>`);
-          fill = `url(#${gid})`;
+          const lit = llx >= 0 ? 1 : -1;
+          fill = handMaterialFill({defs, id}, handMat(h), vec.halfW, lit, Math.abs(llx), {core:F}) || F;
         }
         return `<g transform="rotate(${f(a,3)})" filter="url(#${shid})">`
              + `<path d="${dOut}" fill="${fill}" fill-rule="evenodd"/></g>`;
@@ -4745,7 +4782,12 @@ function buildSVG(st, o={}){
 
     /* centre stack: flat collet, raised dome, pivot — lit by the scene light */
     const bossR = Math.max(st.hHand.boss, st.mHand.boss)/2;
-    const col = st.hHand.color;
+    /* The collet is the same steel as the hands sitting on it, and was drawn
+       in the raw hand colour — a flat light grey that read as a plastic button
+       under two polished hands. It takes the hour hand's material now. */
+    const col = handCore(st.hHand);
+    const bossMat = HAND_MATERIAL[handMat(st.hHand)] || HAND_MATERIAL["polished steel"];
+    const bossDark = mix(col, bossMat.dark, 0.72), bossLite = mix(col, bossMat.lite, 0.85);
     const rg = (n, cxp, cyp) => { const gid=id(n);
       defs.push(`<radialGradient id="${gid}" cx="${cxp}%" cy="${cyp}%" r="78%">
         <stop offset="0" stop-color="${tint(col,0.72)}"/>
@@ -4753,10 +4795,12 @@ function buildSVG(st, o={}){
         <stop offset="1" stop-color="${shade(col,0.50)}"/></radialGradient>`); return gid; };
     const gx = 50 - lxH*26, gy = 50 - lyH*26;
     const g1 = rg("cs", gx, gy), g2 = rg("cs", gx, gy);
-    body.push(`<circle r="${f(bossR,3)}" fill="url(#${g1})" stroke="${shade(col,0.55)}" stroke-opacity=".55" stroke-width="0.05"/>`);
-    body.push(`<circle r="${f(bossR*0.80,3)}" fill="none" stroke="${shade(col,0.35)}" stroke-opacity=".45" stroke-width="0.045"/>`);
-    body.push(`<circle r="${f(bossR*0.60,3)}" fill="url(#${g2})" stroke="${shade(col,0.45)}" stroke-opacity=".5" stroke-width="0.04"/>`);
-    body.push(`<circle r="${f(bossR*0.14,3)}" fill="${shade(col,0.62)}"/>`);
+    body.push(`<circle r="${f(bossR,3)}" fill="url(#${g1})" stroke="${bossDark}" stroke-opacity=".62" stroke-width="0.05"/>`);
+    body.push(`<circle r="${f(bossR*0.80,3)}" fill="none" stroke="${bossDark}" stroke-opacity=".40" stroke-width="0.045"/>`);
+    body.push(`<circle r="${f(bossR*0.60,3)}" fill="url(#${g2})" stroke="${bossDark}" stroke-opacity=".5" stroke-width="0.04"/>`);
+    /* the turned pivot catches the light rather than reading as a drilled hole */
+    body.push(`<circle r="${f(bossR*0.16,3)}" fill="${bossDark}"/>`);
+    body.push(`<circle cx="${f(-lxH*bossR*0.06,3)}" cy="${f(-lyH*bossR*0.06,3)}" r="${f(bossR*0.09,3)}" fill="${bossLite}" fill-opacity="0.75"/>`);
   }
 
   /* --- everything on the dial is masked by the Ø30.50 bezel opening --- */
@@ -5124,6 +5168,86 @@ function stretchHand(d, z, tip, target){
   });
 }
 const HAND_VEC_NAMES = Object.keys(BUILTIN_HAND_VEC);
+/* ---------------------------------------------------------------------
+   WHAT A HAND IS MADE OF
+
+   A polished steel hand does not have a colour. It is a mirror a third of a
+   millimetre wide, and what you see in it is the room: a near-black band where
+   it looks at the case flank and the shadowed half of the sky, a near-white
+   band where it looks at the light, and a hard line between the two. That
+   range — almost black to almost white across the width of the hand — is the
+   whole reason a real hand reads as metal.
+
+   What this used to draw was one grey with a soft two-stop gradient across it,
+   which is a picture of a grey strip of paper, not of steel. The cross-section
+   below is the real one: the flat top of the hand, a chamfer down each flank,
+   and a specular line where the lit chamfer turns over.
+
+   `core` is the body, `dark` what the far chamfer reflects, `lite` the lit
+   chamfer, and `spec` how hard the highlight is — a mirror polish is 1, a
+   brushed or thermally blued surface scatters and sits lower. */
+const HAND_MATERIAL = {
+  "polished steel":  {core:"#9CA4AD", dark:"#20252B", lite:"#FFFFFF", spec:1.00},
+  "rhodium":         {core:"#A9AFB6", dark:"#272B31", lite:"#FFFFFF", spec:0.96},
+  "white gold":      {core:"#A9A69D", dark:"#282620", lite:"#FFFBF2", spec:0.92},
+  "yellow gold":     {core:"#C9A24E", dark:"#3A2A07", lite:"#FFF6D0", spec:0.90},
+  "rose gold":       {core:"#C69076", dark:"#3B2016", lite:"#FFE6D6", spec:0.90},
+  "blackened steel": {core:"#31363C", dark:"#0B0D10", lite:"#8D959D", spec:0.70},
+  /* Heat blue is not paint. The oxide is thin and slightly translucent, so the
+     body is a deep indigo that goes almost black where it turns away and opens
+     to a pale periwinkle where the light catches it — and it scatters, so the
+     highlight is a soft band rather than a chrome line. */
+  "blued steel":     {core:"#26355E", dark:"#080D22", lite:"#8296C6", spec:0.42},
+  "flame blue":      {core:"#25467F", dark:"#08122E", lite:"#B9CBF0", spec:0.62},
+  "gilt":            {core:"#B08A3C", dark:"#32230A", lite:"#F6E2A6", spec:0.85}
+};
+const HAND_MATERIALS = Object.keys(HAND_MATERIAL);
+
+/* The cross-section, as a gradient across the hand, built in the hand's own
+   frame and flipped by which flank the light is on so it stays right as the
+   hand sweeps round the dial. `t` is how squarely the light hits (0 edge-on,
+   1 straight down the width) — a hand pointing at the light shows its length,
+   not its width, and goes quiet. */
+function handMaterialFill(ctx, mat, halfW, lit, t, opts){
+  const m = HAND_MATERIAL[mat];
+  if(!m || !ctx) return null;
+  const o = opts || {};
+  const amt = 0.35 + 0.65*Math.min(1, Math.max(0, t));       // never entirely flat
+  const core = o.core || m.core;
+  const dark = mix(core, m.dark, 0.55 + 0.40*amt);
+  const deep = mix(core, m.dark, 0.26 + 0.30*amt);
+  const brt  = mix(core, m.lite, 0.45 + 0.40*amt);
+  const spec = mix(core, m.lite, Math.min(1, (0.72 + 0.28*amt) * m.spec + (1 - m.spec)*0.45));
+  const roll = mix(core, m.dark, 0.16 + 0.18*amt);
+  const gid = ctx.id("hm");
+  ctx.defs.push(`<linearGradient id="${gid}" gradientUnits="userSpaceOnUse"
+    x1="${f(-halfW*lit,3)}" y1="${f(o.y1||0,3)}" x2="${f(halfW*lit,3)}" y2="${f(o.y2||0,3)}">
+    <stop offset="0" stop-color="${dark}"/>
+    <stop offset="0.14" stop-color="${deep}"/>
+    <stop offset="0.46" stop-color="${core}"/>
+    <stop offset="${f(0.60 + 0.16*m.spec,3)}" stop-color="${brt}"/>
+    <stop offset="${f(0.80 + 0.10*m.spec,3)}" stop-color="${spec}"/>
+    <stop offset="1" stop-color="${roll}"/></linearGradient>`);
+  return `url(#${gid})`;
+}
+
+/* Which material a hand is drawn in. `finish` used to carry this — "blued" was
+   one hard-coded navy and everything else took the raw hand colour — so a
+   hand could be any colour you liked and still not be made of anything. */
+function handMat(h){
+  if(h.material && HAND_MATERIAL[h.material]) return h.material;
+  if(h.finish === "blued") return "blued steel";
+  return "polished steel";
+}
+/* The body colour the material is tinted towards, so a hand can still be a
+   chosen colour — gilt, a black hand — without losing its cross-section. */
+function handCore(h){
+  const m = handMat(h);
+  if(h.material && HAND_MATERIAL[h.material]) return HAND_MATERIAL[m].core;
+  if(h.finish === "blued") return HAND_MATERIAL["blued steel"].core;
+  return h.color && h.color !== "#FFFFFF" ? h.color : HAND_MATERIAL["polished steel"].core;
+}
+
 const POMME = {
   "pomme-ouverte": {pomme:"open",  ring:0.30},   // hollow ring
   "pomme-pleine":  {pomme:"full"},               // filled ring
@@ -5150,10 +5274,8 @@ function handVec(h, k){              // the geometry behind a "vector · " style
 function handPath(h, ctx){
   const L=h.length, T=h.tail||0;
   const W = h.width*(STYLE_W[h.style] || 1);
-  const F = h.finish==="blued" ? "#2B3F73" : h.color;
+  const F = handCore(h);
   const lume = h.lume ? `<rect x="${-W*0.28}" y="${-L*0.8}" width="${W*0.56}" height="${L*0.42}" fill="#D8E4C8" rx="${W*0.2}"/>` : "";
-  const shine = h.finish==="polished"
-    ? `<path d="M${-W*0.16} ${-L*0.9} L0 ${-L*0.9} L0 ${T} L${-W*0.16} ${T} Z" fill="#fff" fill-opacity="0.3"/>` : "";
 
   /* A polished steel hand is a flat top with a chamfer down each flank, so
      one edge catches the light and the other goes dark. That cross-section
@@ -5161,20 +5283,19 @@ function handPath(h, ctx){
      the hand's own frame and flipped by where the light sits, so they stay
      correct as the hand sweeps round. */
   let flankGrad = null, lit = 1;
+  const MAT = handMat(h);
   if(ctx && h.finish !== "matte"){
     const ar = (ctx.angle||0)*Math.PI/180;
     const llx = ctx.lx*Math.cos(ar) + ctx.ly*Math.sin(ar);   // light across the hand
     lit = llx >= 0 ? 1 : -1;
-    const amt = Math.min(1, Math.abs(llx) + 0.35);
-    const gid = ctx.id("hf");
-    const dark = shade(F, 0.42*amt), mid = F, brt = tint(F, 0.85*amt);
-    ctx.defs.push(`<linearGradient id="${gid}" gradientUnits="userSpaceOnUse" x1="${f(-W*lit,3)}" y1="0" x2="${f(W*lit,3)}" y2="0">
-      <stop offset="0" stop-color="${dark}"/><stop offset="0.42" stop-color="${mid}"/>
-      <stop offset="0.72" stop-color="${brt}"/><stop offset="1" stop-color="${tint(F,0.45*amt)}"/></linearGradient>`);
-    flankGrad = `url(#${gid})`;
+    flankGrad = handMaterialFill(ctx, MAT, W/2, lit, Math.abs(llx), {core:F});
   }
   const FILL = flankGrad || F;
-  const edgeDark = shade(F, 0.50), edgeLite = tint(F, 0.95);
+  /* The edges take the material's own extremes rather than a shade of the body
+     colour: on steel that is nearly black against nearly white, which is what
+     draws the chamfer. */
+  const MM = HAND_MATERIAL[MAT] || HAND_MATERIAL["polished steel"];
+  const edgeDark = mix(F, MM.dark, 0.72), edgeLite = mix(F, MM.lite, 0.88);
 
   if(POMME[h.style]){
     const k = POMME[h.style], g = handGeom(h);
@@ -5220,11 +5341,9 @@ function handPath(h, ctx){
       const rMid = g.pr - ring/2;
       let rg = F;
       if(ctx){
-        const gid = ctx.id("hr");
-        ctx.defs.push(`<linearGradient id="${gid}" gradientUnits="userSpaceOnUse" x1="${f(-g.pr*lit,3)}" y1="${f(g.pc-g.pr,3)}" x2="${f(g.pr*lit,3)}" y2="${f(g.pc+g.pr,3)}">
-          <stop offset="0" stop-color="${tint(F,0.90)}"/><stop offset="0.45" stop-color="${F}"/>
-          <stop offset="1" stop-color="${shade(F,0.45)}"/></linearGradient>`);
-        rg = `url(#${gid})`;
+        rg = handMaterialFill(ctx, MAT, g.pr, lit,
+               Math.abs(ctx.lx*Math.cos((ctx.angle||0)*Math.PI/180) + ctx.ly*Math.sin((ctx.angle||0)*Math.PI/180)),
+               {core:F, y1:g.pc-g.pr, y2:g.pc+g.pr}) || F;
       }
       out += `<circle cy="${f(g.pc,3)}" r="${f(rMid,3)}" fill="none" stroke="${rg}" stroke-width="${f(ring,3)}"/>`;
       out += `<circle cy="${f(g.pc,3)}" r="${f(g.pr,3)}" fill="none" stroke="${edgeDark}" stroke-opacity="0.42" stroke-width="0.045"/>`;
@@ -5299,25 +5418,25 @@ function handPath(h, ctx){
     case "english":{
       const b=W*1.5;
       return `<path d="M0 ${T} C${-b} ${-L*0.24} ${-b*0.75} ${-L*0.52} 0 ${-L*0.62}
-        C${b*0.75} ${-L*0.52} ${b} ${-L*0.24} 0 ${T} Z" fill="none" stroke="${F}" stroke-width="${f(W*0.26,3)}"/>
-        <path d="M0 ${-L*0.62} L0 ${-L}" stroke="${F}" stroke-width="${f(W*0.22,3)}"/>
-        <path d="M0 ${-L*0.58} L0 ${T}" stroke="${F}" stroke-width="${f(W*0.16,3)}"/>`;
+        C${b*0.75} ${-L*0.52} ${b} ${-L*0.24} 0 ${T} Z" fill="none" stroke="${FILL}" stroke-width="${f(W*0.26,3)}"/>
+        <path d="M0 ${-L*0.62} L0 ${-L}" stroke="${FILL}" stroke-width="${f(W*0.22,3)}"/>
+        <path d="M0 ${-L*0.58} L0 ${T}" stroke="${FILL}" stroke-width="${f(W*0.16,3)}"/>`;
     }
     case "a-tact":
-      return `<rect x="${f(-W*0.22,3)}" y="${f(-L*0.72,3)}" width="${f(W*0.44,3)}" height="${f(L*0.72+T,3)}" fill="${F}"/>
-        <path d="M0 ${f(-L,3)} L${f(W*1.3,3)} ${f(-L*0.7,3)} L${f(-W*1.3,3)} ${f(-L*0.7,3)} Z" fill="${F}"/>`;
+      return `<rect x="${f(-W*0.22,3)}" y="${f(-L*0.72,3)}" width="${f(W*0.44,3)}" height="${f(L*0.72+T,3)}" fill="${FILL}"/>
+        <path d="M0 ${f(-L,3)} L${f(W*1.3,3)} ${f(-L*0.7,3)} L${f(-W*1.3,3)} ${f(-L*0.7,3)} Z" fill="${FILL}"/>`;
     case "retrograde":
-      return `<path d="M0 ${T} C${-W*0.5} ${-L*0.3} ${W*0.5} ${-L*0.55} 0 ${-L*0.9}" fill="none" stroke="${F}" stroke-width="${f(W*0.5,3)}"/>
-        <path d="M0 ${f(-L,3)} L${f(W*0.7,3)} ${f(-L*0.86,3)} L${f(-W*0.7,3)} ${f(-L*0.86,3)} Z" fill="${F}"/>`;
+      return `<path d="M0 ${T} C${-W*0.5} ${-L*0.3} ${W*0.5} ${-L*0.55} 0 ${-L*0.9}" fill="none" stroke="${FILL}" stroke-width="${f(W*0.5,3)}"/>
+        <path d="M0 ${f(-L,3)} L${f(W*0.7,3)} ${f(-L*0.86,3)} L${f(-W*0.7,3)} ${f(-L*0.86,3)} Z" fill="${FILL}"/>`;
     case "counter":
-      return `<rect x="${f(-W/2,3)}" y="${f(-L,3)}" width="${W}" height="${f(L*0.9,3)}" fill="${F}"/>
-        <circle r="${f(W*1.4,3)}" fill="none" stroke="${F}" stroke-width="${f(W*0.5,3)}"/>
-        <rect x="${f(-W*0.35,3)}" y="${f(W*1.4,3)}" width="${f(W*0.7,3)}" height="${f(Math.max(0,T-W*1.4),3)}" fill="${F}"/>`;
+      return `<rect x="${f(-W/2,3)}" y="${f(-L,3)}" width="${W}" height="${f(L*0.9,3)}" fill="${FILL}"/>
+        <circle r="${f(W*1.4,3)}" fill="none" stroke="${FILL}" stroke-width="${f(W*0.5,3)}"/>
+        <rect x="${f(-W*0.35,3)}" y="${f(W*1.4,3)}" width="${f(W*0.7,3)}" height="${f(Math.max(0,T-W*1.4),3)}" fill="${FILL}"/>`;
     case "dauphine":
-      return `<g fill="${F}"><path d="M0 ${-L} L${W/2} ${-L*0.22} L${W*0.34} ${T} L${-W*0.34} ${T} L${-W/2} ${-L*0.22} Z"/></g>
-        <path d="M0 ${-L} L0 ${T}" stroke="#000" stroke-opacity="0.30" stroke-width="${W*0.08}"/>${shine}`;
+      return `<g fill="${FILL}"><path d="M0 ${-L} L${W/2} ${-L*0.22} L${W*0.34} ${T} L${-W*0.34} ${T} L${-W/2} ${-L*0.22} Z"/></g>
+        <path d="M0 ${-L} L0 ${T}" stroke="#000" stroke-opacity="0.30" stroke-width="${W*0.08}"/>`;
     case "leaf":
-      return `<path d="M0 ${-L} C${W*0.9} ${-L*0.55} ${W*0.75} ${-L*0.12} 0 ${T} C${-W*0.75} ${-L*0.12} ${-W*0.9} ${-L*0.55} 0 ${-L} Z" fill="${F}"/>${lume}${shine}`;
+      return `<path d="M0 ${-L} C${W*0.9} ${-L*0.55} ${W*0.75} ${-L*0.12} 0 ${T} C${-W*0.75} ${-L*0.12} ${-W*0.9} ${-L*0.55} 0 ${-L} Z" fill="${FILL}"/>${lume}`;
     case "feuille": {
       /* the classic slender leaf: a fine point, the belly about 40% out,
          and a narrow neck at the collet */
@@ -5331,31 +5450,31 @@ function handPath(h, ctx){
       const ridge = `<path d="M0 ${f(-L*0.95,3)} L0 ${f(T,3)}" stroke="${shade(F,0.35)}" stroke-opacity="0.45" stroke-width="${f(W*0.06,3)}" fill="none"/>`;
       const lit = `<path d="M0 ${f(-L*0.92,3)} C${f(bx*0.34,3)} ${f(-L*0.62,3)} ${f(bx*0.42,3)} ${f(-L*0.34,3)} ${f(nx2*0.5,3)} ${f(-L*0.04,3)}"
                      fill="none" stroke="${tint(F,0.75)}" stroke-opacity="0.7" stroke-width="${f(W*0.12,3)}" stroke-linecap="round"/>`;
-      return `<path d="${d}" fill="${F}"/>${ridge}${lit}${lume}`;
+      return `<path d="${d}" fill="${FILL}"/>${ridge}${lit}${lume}`;
     }
     case "sword":
-      return `<path d="M0 ${-L} L${W/2} ${-L*0.78} L${W*0.44} ${T} L${-W*0.44} ${T} L${-W/2} ${-L*0.78} Z" fill="${F}"/>
-        <path d="M0 ${-L*0.94} L${W*0.2} ${-L*0.6} L${-W*0.2} ${-L*0.6} Z" fill="#fff" fill-opacity="0.25"/>${lume}${shine}`;
+      return `<path d="M0 ${-L} L${W/2} ${-L*0.78} L${W*0.44} ${T} L${-W*0.44} ${T} L${-W/2} ${-L*0.78} Z" fill="${FILL}"/>
+        <path d="M0 ${-L*0.94} L${W*0.2} ${-L*0.6} L${-W*0.2} ${-L*0.6} Z" fill="#fff" fill-opacity="0.25"/>${lume}`;
     case "alpha":
-      return `<path d="M0 ${-L} L${W*0.72} ${-L*0.30} L${W*0.30} ${T} L${-W*0.30} ${T} L${-W*0.72} ${-L*0.30} Z" fill="${F}"/>${lume}${shine}`;
+      return `<path d="M0 ${-L} L${W*0.72} ${-L*0.30} L${W*0.30} ${T} L${-W*0.30} ${T} L${-W*0.72} ${-L*0.30} Z" fill="${FILL}"/>${lume}`;
     case "pencil":
-      return `<path d="M0 ${-L} L${W/2} ${-L*0.88} L${W/2} ${T} L${-W/2} ${T} L${-W/2} ${-L*0.88} Z" fill="${F}"/>${lume}${shine}`;
+      return `<path d="M0 ${-L} L${W/2} ${-L*0.88} L${W/2} ${T} L${-W/2} ${T} L${-W/2} ${-L*0.88} Z" fill="${FILL}"/>${lume}`;
     case "syringe":
-      return `<g fill="${F}"><rect x="${-W*0.22}" y="${-L}" width="${W*0.44}" height="${L*0.42}"/>
-        <rect x="${-W/2}" y="${-L*0.58}" width="${W}" height="${L*0.58+T}" ${h.lume?`fill="#D8E4C8" stroke="${F}" stroke-width="${f(W*0.14,3)}"`:""}/></g>${shine}`;
+      return `<g fill="${FILL}"><rect x="${-W*0.22}" y="${-L}" width="${W*0.44}" height="${L*0.42}"/>
+        <rect x="${-W/2}" y="${-L*0.58}" width="${W}" height="${L*0.58+T}" ${h.lume?`fill="#D8E4C8" stroke="${FILL}" stroke-width="${f(W*0.14,3)}"`:""}/></g>`;
     case "obelisque":
-      return `<path d="M0 ${-L} L${W*0.5} ${-L*0.12} L0 ${T} L${-W*0.5} ${-L*0.12} Z" fill="${F}"/>
-        <path d="M0 ${-L} L0 ${T}" stroke="#000" stroke-opacity="0.28" stroke-width="${W*0.07}"/>${shine}`;
+      return `<path d="M0 ${-L} L${W*0.5} ${-L*0.12} L0 ${T} L${-W*0.5} ${-L*0.12} Z" fill="${FILL}"/>
+        <path d="M0 ${-L} L0 ${T}" stroke="#000" stroke-opacity="0.28" stroke-width="${W*0.07}"/>`;
     case "cathedral":
-      return `<g fill="${F}"><path d="M0 ${-L} L${W*0.34} ${-L*0.80} L${W*0.34} ${T} L${-W*0.34} ${T} L${-W*0.34} ${-L*0.80} Z"/>
+      return `<g fill="${FILL}"><path d="M0 ${-L} L${W*0.34} ${-L*0.80} L${W*0.34} ${T} L${-W*0.34} ${T} L${-W*0.34} ${-L*0.80} Z"/>
         <ellipse cy="${-L*0.58}" rx="${W*0.78}" ry="${L*0.13}"/>
         <ellipse cy="${-L*0.32}" rx="${W*0.62}" ry="${L*0.11}"/></g>${lume}`;
     case "mercedes":
-      return `<g fill="${F}"><rect x="${-W*0.26}" y="${-L*0.78}" width="${W*0.52}" height="${L*0.78+T}"/>
+      return `<g fill="${FILL}"><rect x="${-W*0.26}" y="${-L*0.78}" width="${W*0.52}" height="${L*0.78+T}"/>
         <circle cy="${-L*0.80}" r="${W*0.85}"/><path d="M0 ${-L} L${W*0.2} ${-L*0.86} L${-W*0.2} ${-L*0.86} Z"/></g>${lume}`;
     default: // baton / stick
-      return `<rect x="${-W/2}" y="${-L}" width="${W}" height="${L+T}" fill="${F}" rx="${W*0.1}"/>
-        ${T>1?`<circle cy="${T*0.72}" r="${W*1.5}" fill="${F}"/>`:""}${lume}${shine}`;
+      return `<rect x="${-W/2}" y="${-L}" width="${W}" height="${L+T}" fill="${FILL}" rx="${W*0.1}"/>
+        ${T>1?`<circle cy="${T*0.72}" r="${W*1.5}" fill="${FILL}"/>`:""}${lume}`;
   }
 }
 
@@ -5389,6 +5508,61 @@ const visR = st => (st.case.locked ? CASE_SPEC.opening : st.case.opening)/2;
    Length and counterweight stay independent, since those are set by how
    far each hand has to reach.
    --------------------------------------------------------------------- */
+/* ---------------------------------------------------------------------
+   HOW LONG A HAND IS
+
+   Length was a number in millimetres and nothing else, so it had no
+   relationship to the dial it was pointing at. Move the minute track, change
+   the numeral ring, open the centre field, and the hands stayed exactly where
+   they were — reaching past the track on one design and stopping short of the
+   numerals on the next. Every dial needed the two lengths re-tuned by hand,
+   and they were wrong again the moment anything else moved.
+
+   A watchmaker does not think in millimetres here. The minute hand reaches the
+   minute track; the hour hand is about two thirds of it, landing on or just
+   inside the numerals. So that is what a hand stores: the place it has to
+   reach, and a trim. Millimetres are still available — "free" — for a hand
+   that genuinely is a fixed length.
+   --------------------------------------------------------------------- */
+const HAND_REACH = ["free", "to the minute track", "to the numerals",
+                    "to the centre field", "to the dial edge"];
+const HAND_REACH_H = ["share of the minute hand"].concat(HAND_REACH);
+
+function dialLandmark(st, which){
+  const open = ((typeof CASE_SPEC !== "undefined" && CASE_SPEC.dialD) || 30.5)/2;
+  switch(which){
+    case "to the minute track":
+      return st.minute && st.minute.on
+        ? Math.max(1, st.minute.diameter/2 - (st.minute.thickness || 0.3)*0.5)
+        : open*0.94;
+    case "to the numerals":
+      /* the inner edge of the numeral band, not its centre line — a hand that
+         stopped at the centre line would have its tip buried in the figures */
+      return st.numerals && st.numerals.on
+        ? Math.max(1, st.numerals.radius - (st.numerals.size || 2.8)*0.55)
+        : (st.indices && st.indices.on ? Math.max(1, st.indices.radius) : open*0.80);
+    case "to the centre field":
+      return st.sector && st.sector.on && st.sector.outerD > 0
+        ? st.sector.outerD/2 : open*0.62;
+    case "to the dial edge":
+      return st.dial && st.dial.diameter ? Math.min(open, st.dial.diameter/2) : open;
+  }
+  return null;
+}
+
+/* The length a hand is actually drawn at. Everything that draws a hand asks
+   this rather than reading h.length, so the two can never disagree. */
+function handLength(h, k, st){
+  if(!h) return 0;
+  if(k === "hHand" && h.reach === "share of the minute hand"){
+    const m = handLength(st.mHand, "mHand", st);
+    return Math.max(0.5, m * (h.hourShare != null ? h.hourShare : 0.66));
+  }
+  const lm = dialLandmark(st, h.reach);
+  if(lm == null) return h.length;                       // "free", or an old file
+  return Math.max(0.5, lm * (h.reachTrim != null ? h.reachTrim : 0.97));
+}
+
 const HAND_SHARE = ["style","finish","color","lume","taper","pommePos"];
 const HAND_SCALE = ["width","pommeD","ringW","tipW"];
 const handScale = k => k==="hHand" ? 1
@@ -5766,7 +5940,8 @@ const CHIP=(p,l,presets=INK_CHIPS)=>({t:"chips",p,l,presets});
    every repaint and is remembered per component. */
 const shutGroups=new Set(), openGroups=new Set();
 const fieldCount = fs => fs.reduce((n,fd)=>
-  n + (fd.t==="group"||fd.t==="sub" ? fieldCount(fd.fields) : (fd.t==="head"?0:1)), 0);
+  n + (fd.t==="group"||fd.t==="sub" ? fieldCount(fd.fields)
+       : (fd.t==="head"||fd.t==="say" ? 0 : 1)), 0);
 
 /* =====================================================================
    HOW THE LOGO IS MADE
@@ -6210,18 +6385,27 @@ function handSchema(k,title){
     /* A supplied hand cannot be shorter than the parts of it that do not
        scale, so the slider stops where the boss and the pomme meet rather
        than pretending to go lower and drawing the same hand three times. */
-    handVec(S[k], k)
-      ? N(k+".length","Length from centre",
-          Math.round(handFloor(handVec(S[k], k).zone || HAND_ZONES.hour)*100)/100, 24, .01)
-      : N(k+".length","Length from centre",2,24),
+    /* Where the hand has to reach, rather than how many millimetres long it
+       is. A dial that moves takes its hands with it. */
+    SEL(k+".reach","Length", k === "hHand" ? HAND_REACH_H : HAND_REACH),
+    ...(S[k].reach === "share of the minute hand"
+        ? [N(k+".hourShare","Share of the minute hand",0.45,0.90,.01,"×")]
+        : S[k].reach && S[k].reach !== "free"
+        ? [N(k+".reachTrim","Stop short of it",0.80,1.05,.01,"×"),
+           {t:"say", l:`Drawn at ${f(handLength(S[k], k, S))} mm from the centre`}]
+        : [handVec(S[k], k)
+            ? N(k+".length","Length from centre",
+                Math.round(handFloor(handVec(S[k], k).zone || HAND_ZONES.hour)*100)/100, 24, .01)
+            : N(k+".length","Length from centre",2,24)]),
     N(k+".width","Body width",.1,3.5,.05),
     N(k+".tail","Counterweight tail",0,8,.1), N(k+".boss","Central boss diameter",.3,3,.05),
     ...(POMME[S[k].style] ? [
       N(k+".pommeD","Pomme diameter",.4,6,.05), N(k+".pommePos","Pomme position",30,95,1,"%"),
       N(k+".ringW","Pomme wall",.08,1.2,.02), N(k+".tipW","Tip width",.06,1.2,.02),
       N(k+".taper","Stem taper at pomme",.3,1,.02,"")] : []),
-    SEL(k+".finish","Finish",["polished","brushed","blued","matte"]),
-    C(k+".color","Colour"), CK(k+".lume","Lume fill")
+    SEL(k+".material","Metal",HAND_MATERIALS),
+    SEL(k+".finish","Finish",["polished","brushed","matte"]),
+    CK(k+".lume","Lume fill")
   ].filter(fd => !handVec(S[k], k) || !fd.p ||
       ["style","length","on","color","finish"].includes(fd.p.split(".")[1]))};
 }
@@ -6797,6 +6981,10 @@ function field(fd){
         ${sel2.builtin ? "" : `<button class="mini" data-delslab="${S.dial.slab}" style="margin-top:4px">Remove this cut</button>`}` : ""}
       </div>`;
   }
+  /* A quiet line of fact under a control — what a derived value actually
+     came out as, so a setting that computes something does not have to be
+     taken on trust. */
+  if(fd.t==="say") return `<div class="f" style="margin-top:-4px"><span class="phint">${esc(fd.l)}</span></div>`;
   if(fd.t==="note") return `<div class="readout" style="margin-bottom:9px">${
     tplImage ? `<div><span>Photograph</span><b>${tplW}×${tplH} loaded</b></div>`
              : `<div class="warn"><span>No photograph loaded</span><b>using the drawn case</b></div>`}</div>`;
