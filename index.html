@@ -1624,6 +1624,9 @@ function migrateHandMetal(st){
                  : "polished steel";
       if(h.finish === "blued") h.finish = "polished";
     }
+    /* The renderer has always defaulted this to 0.80, but nothing ever wrote
+       it, so the slider had no value to show and its label read NaN. */
+    if(h.waist === undefined) h.waist = 0.80;
     if(h.reach === undefined){
       h.reach = k === "hHand" ? "share of the minute hand" : "to the minute track";
       if(k === "hHand"){
@@ -5723,7 +5726,11 @@ function snapVectorLengths(master){
   }
   for(const k of ks){
     const v = handVec(S[k], k);
-    if(v) S[k].length = v.tip;
+    /* The snap is a length in millimetres, so the hand has to be on a length
+       for it to take: left on a landmark, handLength never reads .length and
+       the whole thing was a no-op. Reach is still there to be set afterwards
+       if you would rather the drawing followed the dial. */
+    if(v){ S[k].length = v.tip; S[k].reach = "free"; }
   }
 }
 function syncHands(master){
@@ -6536,6 +6543,14 @@ const SCHEMA = {
     N("meta.time.h","Hour",0,11,1,""), N("meta.time.m","Minute",0,59,1,""), N("meta.time.s","Second",0,59,1,""),
     TX("meta.name","Design name")]}
 };
+/* What a supplied drawing already decides, and so does not ask for. This was
+   the other way round — a list of the fields to keep — which meant every
+   control added afterwards silently disappeared the moment a vector hand was
+   chosen. Reach arrived, length left, and the panel was down to Style and
+   Finish with no way to set a length at all. Naming what the artwork supplies
+   cannot go stale in the same way. */
+const VEC_SUPPLIES = new Set(["width","tail","stem","lume",
+                              "pommeD","pommePos","ringW","tipW","taper","waist"]);
 function handSchema(k,title){
   const HAND_STYLES = [
     ...HAND_VEC_NAMES.map(n=>"vector · "+n),
@@ -6580,8 +6595,7 @@ function handSchema(k,title){
     SEL(k+".material","Metal",HAND_MATERIALS),
     SEL(k+".finish","Finish",["polished","brushed","matte"]),
     CK(k+".lume","Lume fill")
-  ].filter(fd => !handVec(S[k], k) || !fd.p ||
-      ["style","length","on","color","finish"].includes(fd.p.split(".")[1]))};
+  ].filter(fd => !handVec(S[k], k) || !fd.p || !VEC_SUPPLIES.has(fd.p.split(".")[1]))};
 }
 let swGroup = "Blue";   // which Pantone family the swatch grid shows
 
@@ -6754,8 +6768,21 @@ const REBUILD_PROPS = new Set([
   "text.resTech","text.resShape","text.embShape","text.stampSurface",
   "text.engFill","text.debFill","text.resAutoFit","text.embAuto","text.plateTintOn",
   "sector.band","sector.arms","sector.pattern",
-  "hHand.style","mHand.style","sHand.style","indices.style"
+  "hHand.style","mHand.style","sHand.style","indices.style",
+  /* Reach decides whether the next control is a share, a trim or a length in
+     millimetres. Without a rebuild, choosing "free" left the trim slider on
+     screen writing a number nothing reads, and the millimetre slider never
+     appeared — so the length could not be set at all. */
+  "hHand.reach","mHand.reach","sHand.reach"
 ]);
+/* The controls a hand panel opens on. Length is the one anybody comes here
+   for, and it was opening inside Advanced: the entry below named hHand.length
+   and hHand.color, paths that stopped existing when length became a reach and
+   colour became a metal, so nothing matched — and the individual hHand/mHand/
+   sHand panels had no entry at all and fell back to "the first six fields",
+   which the link bar and the style rows filled on their own. */
+const handPrimary = k => [k+".style", k+".reach", k+".hourShare",
+                          k+".reachTrim", k+".length", k+".material", k+".finish"];
 const PRIMARY = {
   dial:     ["dial.color","dial.finish","dial.diameter","dial.pattern","dial.dome","dial.satin"],
   sector:   ["sector.on"],   /* each zone is its own collapsible row */
@@ -6766,8 +6793,10 @@ const PRIMARY = {
   hour:     ["hour.on","hour.style","hour.diameter","hour.color"],
   chapter:  ["chapter.on","chapter.outerD","chapter.innerD","chapter.color","chapter.finish"],
   text:     ["text.on","text.logo","text.logoTech","text.logoMark","text.logoSize","text.logoY"],   /* unused: the schema names its own sections */
-  hands:    ["handSet.link","hHand.style","hHand.length","hHand.color","hHand.finish",
-             "mHand.style","mHand.length","sHand.on"],
+  hands:    ["handSet.link"].concat(handPrimary("hHand"), handPrimary("mHand"), handPrimary("sHand")),
+  hHand:    ["handSet.link"].concat(handPrimary("hHand")),
+  mHand:    ["handSet.link"].concat(handPrimary("mHand")),
+  sHand:    ["handSet.link"].concat(handPrimary("sHand")),
   case:     ["case.metal","case.finish","case.strapColor","case.cab"],
   tpl:      ["tpl.on","tpl.cx","tpl.cy","tpl.dia"],
   render:   ["render.mode","render.az","render.el","render.quality"],
@@ -6786,6 +6815,12 @@ function splitAdvanced(host){
     const keep = PRIMARY[sel] || null;
     const isPrimary = fd => {
       if(!keep) return false;
+      /* Two rows carry no property of their own and would be swept into
+         Advanced on that alone: the picker that says which hand is being
+         edited — without which the panel cannot be pointed at a hand at all —
+         and a computed reading, which belongs beside the control it reports
+         on rather than in a different section from it. */
+      if(fd.querySelector("[data-hand]") || fd.classList.contains("say")) return true;
       const ctl = fd.querySelector("[data-p]");
       return !!ctl && keep.includes(ctl.dataset.p);
     };
@@ -6837,7 +6872,11 @@ function paintProps(){
     read = rows.join("");
   }
   if(sel==="hHand"||sel==="mHand"||sel==="sHand"){
-    const h=S[sel], g=handGeom(h), isP=!!POMME[h.style];
+    /* The length it is drawn at, not the millimetres left in the file: a hand
+       on a landmark keeps an old .length the renderer never reads, and a
+       readout quoting that would be describing a hand nobody can see. */
+    const h=Object.assign({}, S[sel], {length:handLength(S[sel], sel, S)}),
+          g=handGeom(h), isP=!!POMME[h.style];
     const reachIx = S.indices.on ? S.indices.radius - S.indices.length/2 : null;
     const reachMt = S.minute.on ? S.minute.diameter/2 : null;
     read = `<div><span>Tip radius</span><b>${f(h.length)} mm</b></div>
@@ -7158,7 +7197,7 @@ function field(fd){
   /* A quiet line of fact under a control — what a derived value actually
      came out as, so a setting that computes something does not have to be
      taken on trust. */
-  if(fd.t==="say") return `<div class="f" style="margin-top:-4px"><span class="phint">${esc(fd.l)}</span></div>`;
+  if(fd.t==="say") return `<div class="f say" style="margin-top:-4px"><span class="phint">${esc(fd.l)}</span></div>`;
   if(fd.t==="note") return `<div class="readout" style="margin-bottom:9px">${
     tplImage ? `<div><span>Photograph</span><b>${tplW}×${tplH} loaded</b></div>`
              : `<div class="warn"><span>No photograph loaded</span><b>using the drawn case</b></div>`}</div>`;
