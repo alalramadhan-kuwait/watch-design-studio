@@ -8902,6 +8902,24 @@ refineBootRender();
     paintAdd(); addSheet.classList.add("open");
   });
 
+  /* Every sheet closes the same way: its ✕, or the backdrop behind it.
+     mInfo and mAdd were built with a ✕ that nothing was listening to, so Case
+     dimensions and Add component were both traps on a phone — once open, the
+     only way out was to reload the application and lose the view you were in.
+     One handler for all of them, rather than one per sheet that the next
+     person has to remember to write. The sheets that already close themselves
+     keep doing so; this only makes sure none of them can be built without it.
+
+     The inline display is only cleared if it was set inline: a sheet shown by
+     the class alone would be permanently stuck shut by an inline none. */
+  document.addEventListener("click", e=>{
+    const sh = e.target.closest && e.target.closest(".sheet");
+    if(!sh || !sh.classList.contains("open")) return;
+    if(e.target !== sh && !(e.target.closest && e.target.closest("[data-close]"))) return;
+    sh.classList.remove("open");
+    if(sh.style.display) sh.style.display = "none";
+  });
+
   /* ---- More: everything that is not needed constantly ---- */
   const more = document.createElement("div");
   more.className = "sheet"; more.id = "mMore";
