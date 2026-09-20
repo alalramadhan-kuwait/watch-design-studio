@@ -112,3 +112,36 @@ Designs that sync by themselves would need accounts and a backend.
 - **Share** carries a lighter dial surface than **Export image (PNG)**, so it
   can be produced without locking the page up. Geometry, numerals and
   lettering are vector and identical in both. For artwork, use Export.
+
+## Atelier tools
+
+The Atelier strip adds a searchable collection of 47 techniques across engine
+turning, decorative relief, surface finishes, stone, lettering and hands. Surface
+swatches use the actual material shader and the current dial colour. Applying a
+technique is one undoable edit and opens its component properties.
+
+Seven additional procedural height fields are available in the dial, zone and
+close-up pattern selectors: tapisserie, perlage, Geneva waves, écaille, chevron,
+linen and hammered relief. They are visual studies, not manufacturing toolpaths.
+Use Studio or Neutral rendering for material previews; the legacy renderer uses
+its original simplified surface illustration.
+
+**Design studies** offers six coordinated dial directions. A study preserves the
+case geometry, changes dial styling, and switches from the photograph to the drawn
+case so strap colours can be previewed. Undo restores the prior design.
+
+**Design check** reports approximate hand clearance, base-colour contrast,
+component envelopes, dial coverage and surface detail scale. It always calls out
+production review: it does not validate movement compatibility, dial feet,
+vertical hand clearance or manufacturing feasibility.
+
+**Specification** exports a JSON brief containing the design state, reference case
+specification and check results. Reopen it using Export → More formats → Open
+design file. Imported photographs, slabs and fonts remain separate assets, as in
+the existing design export workflow.
+
+Run the dependency-free regression suite with Node.js 18 or newer:
+
+```sh
+node --test tests/atelier.test.cjs
+```

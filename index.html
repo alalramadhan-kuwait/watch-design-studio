@@ -52,7 +52,7 @@
 <link rel="apple-touch-startup-image" href="app/splash-ipadpro11-landscape.png" media="(device-width:834px) and (device-height:1194px) and (-webkit-device-pixel-ratio:2) and (orientation:landscape)">
 <link rel="apple-touch-startup-image" href="app/splash-ipadpro129-portrait.png" media="(device-width:1024px) and (device-height:1366px) and (-webkit-device-pixel-ratio:2) and (orientation:portrait)">
 <link rel="apple-touch-startup-image" href="app/splash-ipadpro129-landscape.png" media="(device-width:1024px) and (device-height:1366px) and (-webkit-device-pixel-ratio:2) and (orientation:landscape)">
-<title>Watch Design Studio — v1</title>
+<title>Watch Design Studio — Atelier</title>
 <meta name="robots" content="noindex, nofollow">
 <meta name="description" content="Parametric watch dial and case design studio. Runs entirely in the browser.">
 <link rel="icon" href='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="7" fill="%23111418"/><circle cx="16" cy="16" r="9" fill="none" stroke="%23D4AF37" stroke-width="1.6"/><path d="M16 10.5V16l3.6 2.4" fill="none" stroke="%23D4AF37" stroke-width="1.6" stroke-linecap="round"/></svg>'>
@@ -1056,6 +1056,35 @@ button, .layer, .vrow, .chip, .sw, .tabs, #mHead, .ghead, summary, label{
   #updBar .btn{ padding:5px 10px }
 }
 </style>
+<style id="atelier-style">
+:root{--ds-brand:#947849;--ds-accent:#947849;--ds-canvas:#e9e6df;--atelier-ink:#22342e;--atelier-paper:#faf8f3}
+body{grid-template-rows:auto auto minmax(0,1fr)}
+.bar{box-shadow:none;border-bottom:1px solid #e5e1d8}.mark{white-space:nowrap}
+.atelier-nav{display:flex;align-items:center;gap:7px;padding:10px 18px;background:#22342e;color:#fff;overflow-x:auto;scrollbar-width:none;z-index:5}
+.atelier-nav .atelier-word{font-size:10px;letter-spacing:2.3px;color:#d4bf95;margin-right:22px;white-space:nowrap}
+.atelier-nav button{border:1px solid #ffffff25;border-radius:5px;background:transparent;color:#eee9df;font-size:12px;white-space:nowrap;padding:8px 14px}
+.atelier-nav button:hover{background:#ffffff18}.atelier-nav button:first-of-type{background:#e3d4b5;color:#22342e;border-color:#e3d4b5}
+.atelier-nav .atelier-note{margin-left:auto;white-space:nowrap;font-size:11px;color:#c4d0c9}
+.atelier-dialog{width:min(1050px,calc(100vw - 40px));max-height:calc(100dvh - 48px);padding:0;border:1px solid #d7d3c9;border-radius:12px;background:var(--atelier-paper);color:#27342e;box-shadow:0 24px 100px #0005}
+.atelier-dialog::backdrop{background:#18241fcc;backdrop-filter:blur(5px)}
+.atelier-head{display:flex;align-items:flex-start;gap:20px;padding:28px 32px 18px;border-bottom:1px solid #dedbd2}
+.atelier-eyebrow{font:10px var(--mono);letter-spacing:2px;text-transform:uppercase;color:#826b45;margin:0 0 8px}
+.atelier-head h2{font:38px/1.1 'Cormorant Garamond',Georgia,serif;margin:0 0 10px;color:#233a30}.atelier-head p{font-size:13px;max-width:660px;color:#687067;margin:0;line-height:1.6}
+.atelier-close{margin-left:auto;border:1px solid #d7d3c9;background:transparent;border-radius:50%;width:34px;height:34px;flex-shrink:0;color:#263b31}
+.atelier-tools{display:flex;gap:10px;flex-wrap:wrap;padding:18px 32px 10px}.atelier-tools input{flex:1;min-width:180px;background:white;color:#27342e;border:1px solid #d7d3c9;border-radius:6px;padding:12px}.atelier-tools select{width:auto;flex:0 1 210px;background:white;color:#27342e;border:1px solid #d7d3c9;padding:10px;border-radius:6px;max-width:100%}
+.atelier-count{padding:0 32px 12px;color:#73786d;font:11px var(--mono)}
+.atelier-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:15px;padding:0 32px 28px}
+.atelier-item{background:#fff;border:1px solid #dedbd3;border-radius:8px;overflow:hidden;display:flex;flex-direction:column;transition:border-color .15s}.atelier-item:hover{border-color:#958058}
+.atelier-swatch{height:115px;display:grid;place-items:center;background:radial-gradient(ellipse at 50% 30%,#f8f5ee,#e3ddd0);position:relative}.atelier-swatch canvas{width:96px;height:96px;border-radius:50%;box-shadow:0 3px 10px #0003;border:3px solid #b7a789}
+.atelier-item-body{padding:17px;display:flex;flex-direction:column;flex:1}.atelier-item small{color:#8a7450;letter-spacing:1px;text-transform:uppercase;font-size:9px}.atelier-item h3{font-family:Georgia,serif;font-weight:normal;font-size:19px;margin:7px 0}.atelier-item p{font-size:12px;line-height:1.6;color:#687067;margin:0 0 16px;flex:1}.atelier-apply{width:100%;padding:10px;border-radius:5px;border:1px solid #d6d3c9;background:#f7f6f1;color:#263f33;font-size:12px}.atelier-apply:hover{background:#233c30;color:white}
+.atelier-symbol{font:32px Georgia,serif;letter-spacing:5px;color:#796644}.atelier-report{padding:20px 32px 30px}.atelier-check{padding:15px 0;border-bottom:1px solid #dedbd3;display:flex;gap:16px;align-items:start}.atelier-check strong{font-size:13px}.atelier-check p{font-size:12px;color:#687067;margin:6px 0;line-height:1.6}.atelier-check button{margin-left:auto;white-space:nowrap;border:1px solid #d6d3c9;background:white;color:#263f33;padding:8px;border-radius:4px}.atelier-status{font:10px var(--mono);color:#337357;min-width:57px;padding-top:3px}.atelier-status.review{color:#9b6224}.atelier-report>p{font-size:12px;line-height:1.7;color:#687067}.atelier-download{background:#233c30;color:white;padding:12px 18px;border:0;border-radius:5px;margin-top:20px}
+.atelier-dialog :focus-visible,.atelier-nav :focus-visible{outline:3px solid #b28c49;outline-offset:3px}
+@media(min-width:901px){.rail{background:#faf9f6}.stage,#view{background:#e9e6df}.layer.sel{background:#eee7d8!important}.props{background:#fdfcf9}}
+@media(max-width:900px){body{grid-template-rows:auto auto minmax(0,1fr)!important}.atelier-nav{padding:7px 10px;gap:6px}.atelier-word,.atelier-note{display:none}.atelier-nav button{padding:7px 5px;font-size:10px;white-space:normal;min-height:38px}.atelier-nav{display:grid;grid-template-columns:repeat(4,minmax(0,1fr))}.atelier-dialog{width:calc(100vw - 16px);max-height:calc(100dvh - 20px)}.atelier-head{padding:22px 18px 16px}.atelier-head h2{font-size:30px}.atelier-tools{padding:14px 18px 10px}.atelier-count{padding:0 18px 12px}.atelier-grid{padding:0 18px 20px;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.atelier-report{padding:16px 18px}.atelier-item-body{padding:12px}.atelier-item h3{font-size:17px}.atelier-check{gap:8px}}
+@media(max-width:420px){.atelier-grid{grid-template-columns:1fr}.atelier-swatch{height:95px}.atelier-swatch canvas{width:80px;height:80px}}
+@media(prefers-reduced-motion:reduce){.atelier-item{transition:none}}
+</style>
+
 </head>
 <body>
 
@@ -1083,6 +1112,19 @@ button, .layer, .vrow, .chip, .sw, .tabs, #mHead, .ghead, summary, label{
     <button class="btn" id="exp">Export</button>
   </div>
 </header>
+
+<nav class="atelier-nav" aria-label="Design resources">
+  <span class="atelier-word">THE WATCHMAKER’S ATELIER</span>
+  <button type="button" data-atelier="techniques">◈ &nbsp;Technique library</button>
+  <button type="button" data-atelier="studies">Design studies</button>
+  <button type="button" data-atelier="check">Design check</button>
+  <button type="button" data-atelier="spec">Specification</button>
+  <span class="atelier-note">Local-first · Made to explore</span>
+</nav>
+<dialog id="atelier-dialog" class="atelier-dialog" aria-labelledby="atelier-title">
+  <div class="atelier-head"><div><div class="atelier-eyebrow">Watch Design Studio / Atelier</div><h2 id="atelier-title"></h2><p id="atelier-description"></p></div><button type="button" class="atelier-close" aria-label="Close atelier">✕</button></div>
+  <div id="atelier-content"></div>
+</dialog>
 
 <div class="shell">
   <!-- LEFT -->
@@ -2355,10 +2397,10 @@ const MFINISH = {
    so it appears through changing reflection and vanishes if you flatten
    the light — which is exactly how a real engine-turned dial behaves.
    --------------------------------------------------------------------- */
-const GUIL_PATTERNS = ["clous","orge","soleil","cercles","vagues","flamme","panier","damier"];
+const GUIL_PATTERNS = ["clous","orge","soleil","cercles","vagues","flamme","panier","damier","tapisserie","perlage","geneva","ecaille","chevron","linen","hammered"];
 const GUIL_LABEL = {clous:"clous de Paris (hobnail)", orge:"grain d'orge (barleycorn)",
   soleil:"soleil (radial channels)", cercles:"cercles (concentric)", vagues:"vagues (waves)",
-  flamme:"flammé (spiral)", panier:"panier (basket)", damier:"damier (checker)"};
+  flamme:"flammé (spiral)", panier:"panier (basket)", damier:"damier (checker)", tapisserie:"tapisserie (stepped squares)", perlage:"perlage (overlapping circles)", geneva:"Geneva waves", ecaille:"écaille (fish scales)", chevron:"chevron", linen:"linen weave", hammered:"hammered relief"};
 const wrap1 = u => u - Math.floor(u);
 
 /* the smallest repeating feature of each pattern, in mm — used to decide
@@ -2373,6 +2415,10 @@ function guilFeature(P, r){
     case "orge":   return P.cell;
     case "panier": return P.cell;
     case "damier": return P.cell;
+    case "perlage": return P.cell/8;
+    case "linen": return P.cell*.3;
+    case "chevron": return P.pitch;
+    case "geneva": return Math.min(P.cell*2,P.pitch);
     default:       return P.cell;
   }
 }
@@ -2394,6 +2440,46 @@ function guilField(P, ux, uy, r, a){
 function guilFieldRaw(P, ux, uy, r, a){
   const tw = Math.tan((P.wall || 30)*Math.PI/180);
   switch(P.pattern){
+
+    // Atelier patterns: deterministic height fields in millimetres. These
+    // are visual studies of finishes, not machining toolpaths.
+    case "tapisserie": {
+      const c=P.cell, x=Math.abs(wrap1(ux/c)-.5)*2, y=Math.abs(wrap1(uy/c)-.5)*2;
+      const edge=Math.max(x,y), shoulder=Math.max(0,Math.min(1,(.88-edge)/.18));
+      return c*tw*.16*shoulder + c*tw*.012*Math.sin(ux/c*24*Math.PI)*shoulder;
+    }
+    case "perlage": {
+      const c=P.cell, row=Math.floor(uy/(c*.65));
+      const x=(wrap1(ux/c+(row%2)*.5)-.5)*c, y=(wrap1(uy/(c*.65))-.5)*c*.65;
+      const d=Math.hypot(x,y);
+      return Math.sin(d/c*16*Math.PI)*c*tw*.018 + Math.cos(d/c*Math.PI)*c*tw*.04;
+    }
+    case "geneva": {
+      const c=P.cell*2, u=wrap1(ux/c);
+      return Math.cos(u*Math.PI*2)*c*tw*.07 + Math.sin(uy/P.pitch*Math.PI*2)*P.pitch*tw*.035;
+    }
+    case "ecaille": {
+      const c=P.cell,row=Math.floor(uy/(c*.6)), x=(wrap1(ux/c+(row%2)*.5)-.5)*c;
+      const y=wrap1(uy/(c*.6))*c*.6;
+      const d=Math.hypot(x,y);
+      return -Math.pow(Math.max(0,1-Math.abs(d-c*.55)/(c*.065)),2)*c*tw*.08;
+    }
+    case "chevron": {
+      const c=P.cell, zig=Math.abs(wrap1(ux/(c*2))*2-1)*c;
+      return -(1-Math.abs(2*wrap1((uy+zig)/P.pitch)-1))*P.pitch*tw*.25;
+    }
+    case "linen": {
+      const c=P.cell*.3;
+      return (Math.sin(ux/c*Math.PI*2)+Math.sin(uy/c*Math.PI*2)) * c*tw*.07;
+    }
+    case "hammered": {
+      const c=P.cell, ix=Math.floor(ux/c), iy=Math.floor(uy/c); let d=2;
+      for(let y=-1;y<=1;y++) for(let x=-1;x<=1;x++){
+        const gx=ix+x,gy=iy+y;
+        d=Math.min(d,Math.hypot(ux/c-gx-mHash(gx,gy),uy/c-gy-mHash(gy+31,gx+7)));
+      }
+      return -Math.max(0,1-d*d)*c*tw*.14;
+    }
 
     case "clous": {                       // four planar facets per cell
       const c = P.cell;
@@ -6274,8 +6360,8 @@ const SCHEMA = {
              N("dial.facet","Facet contrast",0.2,2.0,.05,"×")] : []),
       N("dial.wall","Groove wall angle",8,55,1,"°"),
       N("dial.stamp","Stamped (vs engraved)",0,1,.05,""),
-      N("dial.cell","Cell size (clous/orge/panier/damier)",0.25,2.20,.05),
-      N("dial.pitch","Groove pitch (cercles/vagues)",0.12,1.20,.02),
+      N("dial.cell","Pattern cell size",0.25,2.20,.05),
+      N("dial.pitch","Groove pitch",0.12,1.20,.02),
       N("dial.rays2","Ray count (soleil/flammé)",40,420,4,""),
       N("dial.twist","Flammé twist",0,0.40,.01),
       N("dial.waveAmp","Wave amplitude",0,1.2,.01), N("dial.waveN","Wave lobes",3,40,1,""),
@@ -7297,7 +7383,15 @@ function paintVersions(){
       <button class="mini" data-del="${i}">✕</button></div>`).join("")
     : `<div style="padding:4px 12px 8px;font-size:12px;color:var(--muted)">Save a version to lock in a direction before you keep pushing.</div>`;
 }
-function paintAll(){ paintLayers(); paintProps(); paintView(); syncUndo(); }
+function syncPresetLabel(){
+  const picker=q("#preset"); if(!picker)return;
+  let custom=picker.querySelector('[data-current-design]');
+  if(!Object.hasOwn(PRESETS,S.meta.name)){
+    if(!custom){custom=document.createElement('option');custom.value='__current__';custom.disabled=true;custom.dataset.currentDesign='1';picker.appendChild(custom);}
+    custom.textContent=S.meta.name+' · current design';picker.value='__current__';
+  }else{if(custom)custom.remove();picker.value=S.meta.name;}
+}
+function paintAll(){ paintLayers(); paintProps(); paintView(); syncUndo(); syncPresetLabel(); }
 
 /* ---- events ---- */
 document.addEventListener("click", e=>{
@@ -7954,7 +8048,10 @@ q("#openJson").onchange = e => {
   const r = new FileReader();
   r.onload = () => {
     try{
-      S = migrateHands(deep(BASE, JSON.parse(r.result)));
+      const parsed=JSON.parse(r.result);
+      const design=parsed.schema==='watch-design-studio/atelier-brief'?parsed.design:parsed;
+      if(!design||typeof design!=='object'||Array.isArray(design)||!design.dial||!design.meta)throw new Error('Not a watch design');
+      S = migrateHands(deep(BASE, design));
       commit(); paintAll();
       q("#expSheet").classList.remove("open");
       toast("Design loaded");
@@ -9018,6 +9115,165 @@ refineBootRender();
     if(document.visibilityState === "visible") check();
   });
 })();
+</script>
+<script>
+/* Atelier: discoverable techniques, reversible studies and design handoff.
+   All state goes through the existing history/autosave pipeline. */
+(() => {
+  'use strict';
+  const dialog=document.getElementById('atelier-dialog');
+  const content=document.getElementById('atelier-content');
+  let generation=0, activeCategory='All', query='', lastOpener=null;
+  const technique=(id,name,category,description,patch,layer='dial')=>({id,name,category,description,patch,layer});
+  const patternDescriptions={
+    clous:'Small pyramidal facets catch the light. Adjust cell size, lay angle and facet contrast.',
+    orge:'Interlocking elongated grains with a softly raised centre.',
+    soleil:'Radial channels sweep outward from the centre. Tune the ray count and wall angle.',
+    cercles:'Concentric cuts create a restrained, circular rhythm. Tune groove pitch.',
+    vagues:'Concentric waves with adjustable amplitude, lobe count and phase.',
+    flamme:'Spiralling radial channels. Control the ray count and spiral twist.',
+    panier:'Alternating bundles of woven strands with a rounded relief.',
+    damier:'Alternating squares of parallel cuts change the direction of reflection.',
+    tapisserie:'Stepped square plateaus with finely scored tops. Tune pattern cell size.',
+    perlage:'An overlapping circular-grain study. Increase cell size for broader swirls.',
+    geneva:'Broad undulating stripes crossed by fine grooves. A decorative surface study.',
+    ecaille:'Offset rows of scalloped cuts evoke overlapping fish scales.',
+    chevron:'V-shaped repeating grooves. Cell size controls width; pitch controls spacing.',
+    linen:'Two fine perpendicular grain directions produce a woven linen relief.',
+    hammered:'Irregular shallow dimples give an organic hammered-metal study.'
+  };
+  const library=GUIL_PATTERNS.map(id=>technique('pattern-'+id,GUIL_LABEL[id],
+    ['perlage','geneva','linen','hammered'].includes(id)?'Decorative relief':'Engine turning',patternDescriptions[id],
+    {dial:{finish:'guilloche',pattern:id,cell:id==='perlage'?1.8:.85,pitch:.36,wall:26,stamp:0,satin:0}},'dial'));
+  [
+    ['enamel','Grand feu enamel','A glass-like surface with a deep body and rolled highlights. Visual simulation; firing is not modelled.'],
+    ['lacquer','Polished lacquer','A high-gloss coating with a pronounced clear-coat response.'],
+    ['sunburst','Sunray brushing','Radial anisotropic reflections shift with the studio light.'],
+    ['brushed','Straight brushing','Linear directional grain for a clean metallic dial.'],
+    ['circular','Circular brushing','Fine circular grain creates a restrained rotating reflection.'],
+    ['sandblasted','Fine sandblasting','A diffuse, finely textured surface with gentle metallic response.'],
+    ['grained','Frosted grain','Soft irregular grain reduces the intensity of highlights.'],
+    ['mop','Pearlescent finish','A pearlescent material response. For a patterned shell study, use mother of pearl under Stone.']
+  ].forEach(([id,name,description])=>library.push(technique('finish-'+id,name,'Surface finish',description,{dial:{finish:id,satin:0}},'dial')));
+  SYNTHETIC_STONES.forEach(id=>library.push(technique('stone-'+id,id[0].toUpperCase()+id.slice(1),'Stone',
+    'Procedural material study, not a photographed slab. Import your own slab in Dial base for a material-specific design.',
+    {dial:{finish:'stone',stone:id,slab:'',stoneTint:0,satin:0}},'dial')));
+  [
+    ['printed','Pad-printed lettering','Flat ink lettering with controls for thickness, finish and colour.'],
+    ['double printed','Double printing','Layered ink creates an offset base and a second impression.'],
+    ['engraved','Engraved lettering','Recessed lettering with controllable depth and optional fill.'],
+    ['embossed','Embossed lettering','Raised lettering formed from the dial surface.'],
+    ['applied nameplate','Applied nameplate','A separate metal plate with a fitted wordmark and border.']
+  ].forEach(([id,name,description])=>library.push(technique('letter-'+id,name,'Lettering',description,{text:{on:true,logoTech:id}},'text')));
+  ['dauphine','leaf','sword','pomme-ouverte','cathedral','syringe'].forEach(id=>library.push(technique('hands-'+id,id==='pomme-ouverte'?'Open pomme hands':id[0].toUpperCase()+id.slice(1)+' hands','Hands',
+    'Apply this silhouette to the hour and minute hands. Refine proportions and materials in the Hands panel.',
+    {hHand:{style:id,on:true},mHand:{style:id,on:true}},'hands')));
+  const studies=[
+    {name:'Midnight Tapisserie',subtitle:'Architectural / blue / steel',color:'#123C50',ink:'#D9DFDE',strap:'#172B32',pattern:'tapisserie',finish:'guilloche',hand:'dauphine',category:'Design study'},
+    {name:'Salmon Atelier',subtitle:'Warm relief / rose / charcoal',color:'#C59179',ink:'#293432',strap:'#594037',pattern:'orge',finish:'guilloche',hand:'leaf',category:'Design study'},
+    {name:'Porcelain No. 01',subtitle:'Quiet / ivory / blued hands',color:'#F1EBDD',ink:'#183752',strap:'#2E3540',finish:'enamel',hand:'pomme-ouverte',category:'Design study'},
+    {name:'Forest Linen',subtitle:'Organic / green / champagne',color:'#254E40',ink:'#D9C498',strap:'#493A28',finish:'guilloche',pattern:'linen',hand:'sword',category:'Design study'},
+    {name:'Silver Écaille',subtitle:'Scalloped / silver / graphite',color:'#B7B8B0',ink:'#273C42',strap:'#343939',finish:'guilloche',pattern:'ecaille',hand:'dauphine',category:'Design study'},
+    {name:'Obsidian Minimal',subtitle:'Gloss / black / warm metal',color:'#171B1C',ink:'#D6BC87',strap:'#202223',finish:'lacquer',hand:'leaf',category:'Design study'}
+  ];
+  const studyPatch=t=>({
+    meta:{name:t.name},tpl:{on:false},case:{strapColor:t.strap},
+    dial:{on:true,color:t.color,finish:t.finish,pattern:t.pattern||'clous',cell:.85,pitch:.36,wall:26,stamp:0,satin:0,dome:0},
+    sector:{on:false},chapter:{on:false},borders:{on:false},cross:{on:false},sub:{on:false},date:{on:false},hour:{on:false},
+    minute:{on:true,color:t.ink,diameter:29,style:'ticks',thickness:.14,fives:true},
+    indices:{on:true,style:'baton',radius:12.7,length:1.6,width:.35,color:t.ink,applied:true,count:12,skipNumerals:false},
+    numerals:{on:false},text:{on:true,logoTech:'printed',logoMark:'none',logo:'VERNOY',logoSize:1.3,logoY:-6.5,color:t.ink,line2:'',foot:'',logoCurve:false},
+    hHand:{on:true,style:t.hand,color:t.ink,length:8.3,width:.6},mHand:{on:true,style:t.hand,color:t.ink,length:12.3,width:.44},sHand:{on:false}
+  });
+  function apply(patch,layer,message){
+    S=migrateHands(deep(S,patch)); commit(); paintAll(); selectLayer(layer);
+    if(NARROW()&&typeof tab==='function')tab('props');
+    dialog.close(); toast(message+' · Undo to restore');
+  }
+  function show(mode,opener){
+    generation++; lastOpener=opener||document.activeElement;
+    const titles={techniques:['The technique library','Explore surface, lettering and hand treatments. Apply to the current design, then refine every detail in Properties.'],studies:['A starting point. Your signature.','Six coordinated dial studies in your existing case geometry. Applying a study replaces the dial styling and switches to the drawn case; Undo restores your design.'],check:['A second pair of eyes','Quick geometry and colour checks for the current design. These are design heuristics, not a manufacturing approval.'],spec:['From concept to conversation','A portable design brief for discussing this iteration with your dial maker. Your complete editable design is included.']};
+    document.getElementById('atelier-title').textContent=titles[mode][0];
+    document.getElementById('atelier-description').textContent=titles[mode][1];
+    if(mode==='techniques'){
+      content.innerHTML='<div class="atelier-tools"><input id="atelier-search" aria-label="Search techniques" placeholder="Search guilloché, enamel, hands…"><select id="atelier-category" aria-label="Technique category">'+['All',...new Set(library.map(t=>t.category))].map(c=>`<option>${esc(c)}</option>`).join('')+'</select></div><div id="atelier-count" class="atelier-count" aria-live="polite"></div><div id="atelier-grid" class="atelier-grid"></div>';
+      const search=document.getElementById('atelier-search'), category=document.getElementById('atelier-category');
+      search.value=query; category.value=activeCategory;
+      search.oninput=()=>{query=search.value;renderLibrary();};category.onchange=()=>{activeCategory=category.value;renderLibrary();};renderLibrary();
+    }else if(mode==='studies'){
+      content.innerHTML='<div class="atelier-count" style="padding-top:18px">06 STUDIES / ALL CHANGES ARE REVERSIBLE</div><div class="atelier-grid">'+studies.map((t,i)=>card(t,i,true)).join('')+'</div>';
+      drawSwatches(studies.map((t,i)=>({key:'study-'+i,state:deep(S,studyPatch(t))})));
+    }else renderReport(mode);
+    if(!dialog.open) dialog.showModal();
+  }
+  function card(t,i,study=false){
+    const key=study?'study-'+i:t.id, surface=study||!!t.patch.dial;
+    return `<article class="atelier-item"><div class="atelier-swatch">${surface?`<canvas width="96" height="96" data-swatch="${esc(key)}" aria-label="${esc(t.name)} material preview" role="img"></canvas>`:`<span class="atelier-symbol" aria-hidden="true">${t.category==='Hands'?'↗':'Aa'}</span>`}</div><div class="atelier-item-body"><small>${esc(t.category)}</small><h3>${esc(t.name)}</h3><p>${esc(study?t.subtitle:t.description)}</p><button class="atelier-apply" ${study?'data-study':'data-technique'}="${i}">${study?'Use this study':'Apply technique'} <span aria-hidden="true">↗</span></button></div></article>`;
+  }
+  function renderLibrary(){
+    const items=library.map((t,i)=>({t,i})).filter(({t})=>(activeCategory==='All'||t.category===activeCategory)&&[t.name,t.description,t.category].join(' ').toLowerCase().includes(query.toLowerCase()));
+    document.getElementById('atelier-count').textContent=`${items.length} TECHNIQUES / ${library.length} IN THE COLLECTION · SURFACE PREVIEWS USE YOUR DIAL COLOUR`;
+    document.getElementById('atelier-grid').innerHTML=items.length?items.map(({t,i})=>card(t,i)).join(''):'<p>No techniques match. Try another name or category.</p>';
+    drawSwatches(items.filter(({t})=>t.patch.dial).map(({t})=>({key:t.id,state:deep(S,t.patch)})));
+  }
+  function drawSwatches(items){
+    const token=++generation;
+    // One small swatch per frame keeps search and close responsive.
+    function next(){
+      if(token!==generation||!items.length)return;
+      const {key,state}=items.shift(),cv=content.querySelector(`[data-swatch="${CSS.escape(key)}"]`);
+      if(cv){
+        const d=state.dial;
+        const data=renderDialPixels({px:96,dialMM:CASE_SPEC.dialD,base:d.color,finish:MAT_FINISH[d.finish]||'matte',lighting:'studio',light:{az:135,el:45},
+          guil:d.finish==='guilloche'?{...d,rays:d.rays2}:null,stone:d.finish==='stone'?stoneArgs(state,d.color):null,
+          crop:d.finish==='guilloche'?{cx:5,cy:5,span:5}:null,ss:1});
+        const ctx=cv.getContext('2d'),img=ctx.createImageData(96,96);img.data.set(data);ctx.putImageData(img,0,0);
+      }
+      requestAnimationFrame(next);
+    }requestAnimationFrame(next);
+  }
+  function contrast(a,b){
+    const lum=h=>hex2rgb(h).map(v=>v/255).map(v=>v<=.04045?v/12.92:((v+.055)/1.055)**2.4).reduce((sum,v,i)=>sum+v*[.2126,.7152,.0722][i],0);
+    const x=lum(a),y=lum(b);return(Math.max(x,y)+.05)/(Math.min(x,y)+.05);
+  }
+  function checks(st){
+    const r=visR(st),out=[];
+    const add=(ok,title,detail,layer)=>out.push({ok,title,detail,layer});
+    add(st.case.locked!==false,'Case reference',st.case.locked!==false?'Case locked to RD26-0172 factory dimensions.':'Exploratory case dimensions: confirm a compatible case and movement.','case');
+    add(st.dial.diameter>=r*2,'Dial coverage',`Blank Ø${f(st.dial.diameter,2)} mm · visible opening Ø${f(r*2,2)} mm.`,'dial');
+    for(const [key,name]of [['hHand','Hour'],['mHand','Minute'],['sHand','Seconds']])if(st[key].on){
+      const margin=r-st[key].length;add(margin>=.3,name+' hand clearance',`${f(margin,2)} mm radial margin to the visible opening; review below 0.30 mm. This does not check vertical clearance.`,'hands');
+      const ratio=contrast(st[key].color,st.dial.color);add(ratio>=2,name+' hand contrast',`${f(ratio,1)}:1 base-colour contrast; review below 2:1. Reflections, textures and overlaid zones can change legibility.`,'hands');
+    }
+    if(st.numerals.on){const edge=st.numerals.radius+st.numerals.size*.6;add(edge<=r,'Numeral envelope',`Approximate outer radius ${f(edge,2)} mm against ${f(r,2)} mm opening. Verify actual glyphs in close-up.`,'numerals');}
+    if(st.indices.on)add(st.indices.radius+st.indices.length/2<=r,'Index envelope','Index radius plus half-length should stay inside the visible opening.','indices');
+    if(st.minute.on)add(st.minute.diameter/2+st.minute.thickness/2<=r,'Minute track envelope','Track radius plus half its thickness should stay within the opening.','minute');
+    if(st.date.on)add(Math.hypot(st.date.dist+Math.max(st.date.w,st.date.h)/2,Math.min(st.date.w,st.date.h)/2)<=r,'Date window envelope','Conservative outer-corner estimate; verify movement date alignment separately.','date');
+    if(st.dial.finish==='stone')add(false,'Stone source',st.dial.slab?'A slab is selected. Confirm scale, thickness and the exact production cut.':'Synthetic preview only. Select a photographed slab before material sign-off.','dial');
+    if(st.dial.finish==='guilloche')add(st.dial.cell>=.3&&st.dial.pitch>=.15,'Surface detail scale',`Cell ${f(st.dial.cell,2)} mm · pitch ${f(st.dial.pitch,2)} mm. Fine detail needs dial-maker review; these limits are advisory.`,'dial');
+    add(false,'Movement and production review','Confirm hand stack, dial feet, tolerances, printing minimums and complication compatibility with your manufacturer.','case');
+    return out;
+  }
+  function brief(){return{schema:'watch-design-studio/atelier-brief',version:1,createdAt:new Date().toISOString(),name:S.meta.name,referenceCase:clone(CASE_SPEC),caseMode:S.case.locked!==false?'factory locked':'exploratory',checks:checks(S),notes:'Concept design only. Reference case dimensions are not certification of the current design. Confirm all production dimensions with the manufacturer.',design:clone(S)};}
+  function renderReport(mode){
+    const rows=checks(S),reviews=rows.filter(t=>!t.ok).length;
+    content.innerHTML='<div class="atelier-report">'+(mode==='spec'?`<div class="atelier-eyebrow">${esc(S.meta.name)}</div><h3>${esc(S.dial.finish==='guilloche'?GUIL_LABEL[S.dial.pattern]||S.dial.pattern:S.dial.finish)} · ${esc(S.dial.color)}</h3><p>Dial Ø${f(S.dial.diameter,2)} mm / opening Ø${f(visR(S)*2,2)} mm<br>Case: ${esc(S.case.locked!==false?CASE_SPEC.ref:'exploratory dimensions')}<br>The JSON brief contains the editable design, case reference, and current checks. Photographs and fonts imported separately are not embedded; use the original export tools for artwork.</p>`:`<div class="atelier-eyebrow">${rows.length} CHECKS · ${reviews} FOR REVIEW</div>`)+rows.map(t=>`<div class="atelier-check"><span class="atelier-status ${t.ok?'':'review'}">${t.ok?'PASS':'REVIEW'}</span><div><strong>${esc(t.title)}</strong><p>${esc(t.detail)}</p></div><button data-inspect="${t.layer}">Inspect</button></div>`).join('')+'<button class="atelier-download" id="atelier-download">Download design brief · JSON</button></div>';
+    document.getElementById('atelier-download').onclick=()=>{
+      const blob=new Blob([JSON.stringify(brief(),null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');
+      a.href=url;a.download=(S.meta.name||'watch-design').replace(/[^a-z0-9_-]/gi,'-')+'-brief.json';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);
+    };
+  }
+  document.querySelectorAll('[data-atelier]').forEach(b=>b.onclick=()=>show(b.dataset.atelier,b));
+  dialog.querySelector('.atelier-close').onclick=()=>dialog.close();
+  dialog.addEventListener('close',()=>{generation++;lastOpener?.focus();});
+  dialog.addEventListener('click',e=>{
+    const tech=e.target.closest('[data-technique]'),study=e.target.closest('[data-study]'),inspect=e.target.closest('[data-inspect]');
+    if(tech){const t=library[+tech.dataset.technique];apply(t.patch,t.layer,t.name+' applied');}
+    if(study){const t=studies[+study.dataset.study];apply(studyPatch(t),'dial',t.name+' applied');}
+    if(inspect){dialog.close();selectLayer(inspect.dataset.inspect);if(NARROW()&&typeof tab==='function')tab('props');}
+  });
+})();
+
 </script>
 </body>
 </html>
