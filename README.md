@@ -1,13 +1,15 @@
 # Watch Design Studio
 
-A parametric watch dial and case design studio. Engine, UI, artwork and the case
-photograph all live inside a single `index.html`. No build step, no server, no
-database, and no network — your designs stay on the visitor's own device and
+A parametric watch dial and case design studio. The 2D engine, UI, artwork and case photograph live in
+`index.html`; the optional 3D view loads a bundled renderer from `vendor/`.
+No build step is needed to run the committed app, no server API, no
+database, and no third-party network requests — your designs stay on the visitor's own device and
 are never uploaded.
 
 | file | what it does | required |
 |---|---|---|
-| `index.html` | the whole app | yes |
+| `index.html` | editor and 2D engine | yes |
+| `vendor/` | optional Three.js 3D renderer and license | for 3D |
 | `manifest.webmanifest` | makes it installable: name, icon, its own window | to install it |
 | `sw.js` | holds the app offline and announces new versions | to install it |
 | `app/` | the icon and the iOS launch screens | to install it |
@@ -38,7 +40,7 @@ closer at the watch, and the canvas has its own − / + / Fit for that.
 
 ## Updating it
 
-Replace `index.html` and deploy. The service worker fetches the new copy in the
+Replace `index.html` and `vendor/` and deploy. The service worker fetches the new copy in the
 background, and the app says *A new version is ready* with an Update button
 rather than swapping itself out mid-edit. Taking it writes the design in
 progress to disk first, so the reload comes back to exactly the watch that was
@@ -88,7 +90,7 @@ Designs that sync by themselves would need accounts and a backend.
 
 - **The page requests nothing of anyone else.** The interface lettering, every
   dial face and the case photograph are carried inside the file; the only
-  things fetched are the page, its manifest and its icons, all from the same
+  things fetched are the page, its 3D bundle, its manifest and its icons, all from the same
   place. It works with no network at all, and opening it tells no one
   anything. Nothing to block, nothing to leak, nothing to go down.
 - First visit is about 1.9 MB — fine on wifi, slow on mobile data. After that
@@ -143,7 +145,7 @@ the existing design export workflow.
 Run the dependency-free regression suite with Node.js 18 or newer:
 
 ```sh
-node --test tests/atelier.test.cjs
+npm test
 ```
 
 ## Syncing your saved versions
@@ -162,3 +164,38 @@ another. Only named versions travel: the design you are in the middle of stays
 on the device you are editing it on, and so does its autosave.
 
 Signing out stops the copying. It leaves this device's versions where they are.
+
+## 3D dial and case preview
+
+Choose **3D view** in the Atelier strip. Drag to orbit, scroll or pinch to zoom,
+or focus the canvas and use the arrow keys. Perspective, Front and Macro buttons
+reset the camera; Rotate starts optional animation. **Save 3D image** exports PNG.
+
+The **Silver meteorite · twin subdials** study applies a photo-inspired silver
+dial with two recessed registers, applied markers and polished hands. It retains
+the existing cushion case dimensions. Undo restores the previous design.
+
+Applied index silhouettes and hands are extruded from the editor's artwork.
+Subdials have real openings, walls and lowered floors. Marker height, bevel,
+subdial recess, hand height, material roughness, light direction and crystal dome
+are adjustable and saved with the existing design JSON and browser autosave.
+Hand height is kept at least 0.2 mm above the selected marker height. The crystal
+is a transparent reflection surface, not an optical refraction simulation.
+
+This is an appearance study, not manufacturing CAD: case lugs and strap are
+simplified, numeral/logo/date artwork remains flat, and production clearance
+requires independent verification. Subdials outside the dial or overlapping
+another register are omitted from the 3D recesses. WebGL is required for 3D;
+the existing 2D editor remains available without it. The bundle is precached for
+offline use and all rendering stays on the device.
+
+To modify the renderer, use Node.js 22 or newer:
+
+```sh
+npm ci
+npm run build
+npm test
+```
+
+Commit `vendor/relief3d.bundle.js` after changing `src/`. Three.js is distributed
+under the included MIT license. Hosting requires the committed files only.

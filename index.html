@@ -1090,6 +1090,24 @@ body{grid-template-rows:auto auto minmax(0,1fr)}
 @media(prefers-reduced-motion:reduce){.atelier-item{transition:none}}
 </style>
 
+<style>
+#relief-dialog{width:min(1360px,calc(100vw - 24px));max-width:none;height:min(860px,calc(100dvh - 24px));max-height:none;padding:0;border:1px solid #6a7167;border-radius:12px;background:#faf8f3;color:#26392e;overflow:hidden;box-shadow:0 24px 120px #0008}
+#relief-dialog::backdrop{background:#15201ade;backdrop-filter:blur(8px)}
+.relief-head{height:110px;display:flex;justify-content:space-between;align-items:flex-start;padding:20px 26px;background:#23382f;color:#f6f1e7}
+.relief-eyebrow{font:10px var(--mono);letter-spacing:1.8px;color:#a99168;margin:0 0 8px}.relief-head h2{font:30px/1.1 'Cormorant Garamond',Georgia,serif;margin:0 0 8px}.relief-head #relief-name{font-size:11px;margin:0;color:#c5d1c9}
+#relief-close{border:1px solid #ffffff40;border-radius:50%;background:transparent;color:white;width:34px;height:34px}
+.relief-layout{display:grid;grid-template-columns:minmax(0,1fr) 275px;height:calc(100% - 110px);min-height:0}.relief-scene{position:relative;min-width:0;min-height:0;background:#d8d5cd;display:flex;flex-direction:column}
+#relief-canvas{position:relative;flex:1;min-height:0;overflow:hidden}#relief-canvas canvas{display:block;width:100%;height:100%;touch-action:none}
+.relief-view-tools{position:absolute;top:18px;left:50%;transform:translateX(-50%);display:flex;gap:4px;z-index:1;background:#fbfaf4dd;border:1px solid #ffffff80;border-radius:7px;padding:5px;white-space:nowrap}
+#relief-dialog button{font-size:12px;cursor:pointer}.relief-view-tools button,.relief-actions button{border:1px solid #c8c7ba;padding:8px 10px;background:transparent;border-radius:5px;color:#293b31}.relief-view-tools button:hover,.relief-view-tools button[aria-pressed=true]{background:#263d31;color:white}
+#relief-status{font:11px/1.6 var(--sans);text-align:center;margin:0;padding:9px 14px;color:#4c574c;min-height:36px}
+.relief-controls{padding:22px 20px;overflow-y:auto;min-height:0;border-left:1px solid #d1d0c5}.relief-controls h3{font:20px Georgia,serif;margin:22px 0 18px}.relief-help{font-size:11px;line-height:1.7;color:#73796e;margin:12px 0 18px}
+#relief-dialog .relief-primary{border:0;border-radius:5px;padding:12px;background:#274031;color:#f5f1e7;line-height:1.5}.relief-controls>button{width:100%}
+.relief-controls label{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;margin:16px 0;font-size:12px;gap:10px}.relief-controls output{font:10px var(--mono);color:#867248}.relief-controls input[type=range]{display:block;width:100%;accent-color:#8c764b;margin:0;min-height:20px}.relief-controls .relief-check{justify-content:flex-start}.relief-check input{accent-color:#8c764b}.relief-actions{display:flex;gap:7px;margin:22px 0}
+#relief-dialog :focus-visible{outline:3px solid #b8914c;outline-offset:3px}
+@media(max-width:900px){.atelier-nav{grid-template-columns:repeat(5,minmax(0,1fr))}#relief-dialog{width:100vw;height:100dvh;border:0;border-radius:0}.relief-head{height:100px;padding:18px}.relief-head h2{font-size:25px}.relief-layout{height:calc(100% - 100px);display:flex;flex-direction:column;overflow:auto}.relief-scene{flex:none;height:52dvh;min-height:310px}.relief-controls{overflow:visible;padding:20px;border-left:0;border-top:1px solid #c2c4b8}.relief-view-tools{top:10px}.relief-view-tools button{font-size:11px!important;padding:7px 9px}}
+</style>
+
 </head>
 <body>
 
@@ -1120,6 +1138,7 @@ body{grid-template-rows:auto auto minmax(0,1fr)}
 
 <nav class="atelier-nav" aria-label="Design resources">
   <span class="atelier-word">THE WATCHMAKER’S ATELIER</span>
+  <button type="button" id="open-relief">3D view</button>
   <button type="button" data-atelier="techniques">◈ &nbsp;Technique library</button>
   <button type="button" data-atelier="studies">Design studies</button>
   <button type="button" data-atelier="check">Design check</button>
@@ -2932,18 +2951,21 @@ function syntheticStone(type, ux, uy, P){
       break;
     }
     case "meteorite": {
-      // Widmanstatten: kamacite bands crossing at roughly 60 degrees
+      // Crossed lamellae: irregular etched bands with directional micro-grain.
       const tri = v => Math.abs(v - Math.round(v))*2;
-      const w = fbm(x*0.8, y*0.8, 3)*0.5;
-      let band = 0;
-      for(const th of [0, Math.PI/3, 2*Math.PI/3]){
-        const u = (x*Math.cos(th) + y*Math.sin(th))*3.2 + w*2.5;
-        band = Math.max(band, 1 - Math.min(1, tri(u)*4.5));
+      const w = fbm(x*1.8, y*1.8, 3);
+      let band = 0, grain = 0;
+      for(const [j,th] of [0, Math.PI/3, 2*Math.PI/3].entries()){
+        const u = x*Math.cos(th) + y*Math.sin(th);
+        const v = -x*Math.sin(th) + y*Math.cos(th);
+        const patch = fbm(x*2+j*13, y*2-j*9, 3);
+        const seam = 1 - Math.min(1, tri(u*2.8+w*1.5+j*.27)*5.5);
+        band = Math.max(band, seam*(.35+patch*.65));
+        grain += Math.sin(u*210+fbm(v*8+j, u*2, 2)*18)*(.2+patch)*.10;
       }
-      const grain = fbm(x*7, y*7, 3);
-      const t = Math.max(0,Math.min(1, (0.35 + band*0.55 + grain*0.18 - 0.5)*C + 0.5));
-      c = ramp([[0,hx2("#1B1E22")],[0.4,hx2("#43494F")],[0.7,hx2("#767C82")],[1,hx2("#A8AEB4")]], t);
-      rough = 0.30 - band*0.12;
+      const t = Math.max(0,Math.min(1, (0.47 + band*.32 + grain + (w-.5)*.22 - .5)*C + .5));
+      c = ramp([[0,hx2("#252B2E")],[0.4,hx2("#60676B")],[0.7,hx2("#959C9E")],[1,hx2("#CDD0CF")]], t);
+      rough = .38 - band*.12;
       break;
     }
     case "onyx": {
@@ -4487,8 +4509,8 @@ function buildSVG(st, o={}){
     tagLayer("numerals", nmFrom);
 
     // sub-dial
-    const sd = st.sub;
-    if(sd.on){
+    if(st.sub.on) for(const sd of [st.sub,...(Array.isArray(st.sub.extra)?st.sub.extra:[])]){
+      if(sd.on===false)continue;
       const p = pt(sd.dist, sd.at*30), r = sd.diameter/2;
       let g = `<g transform="translate(${f(p[0],3)},${f(p[1],3)})"><circle r="${r}" fill="${sd.color}"/><circle r="${r}" fill="none" stroke="${sd.ring}" stroke-width="0.12"/>`;
       if(sd.track) for(let i=0;i<60;i+=5){ const q0=pt(r-0.5,i*6), q1=pt(r-0.15,i*6);
@@ -9656,6 +9678,95 @@ refineBootRender();
   /* The row says "Synced 3 min ago"; without this it would say it for an hour. */
   setInterval(()=>{ const s = SYNC.state(); if(s.on && !s.busy) for(const h of hosts()) render(h, s); }, 60000);
 })();
+
+</script>
+<dialog id="relief-dialog" aria-labelledby="relief-title">
+  <header class="relief-head"><div><p class="relief-eyebrow">ATELIER / MATERIAL &amp; DEPTH</p><h2 id="relief-title">The watch, in three dimensions.</h2><p id="relief-name"></p></div><button id="relief-close" aria-label="Close 3D view">✕</button></header>
+  <div class="relief-layout">
+    <div class="relief-scene"><div id="relief-canvas"><div class="relief-view-tools"><button data-camera="angle">Perspective</button><button data-camera="front">Front</button><button data-camera="macro">Macro</button><button id="relief-rotate" aria-pressed="false">Rotate</button></div></div><p id="relief-status" role="status">Preparing 3D studio…</p></div>
+    <aside class="relief-controls" aria-label="3D material controls">
+      <p class="relief-eyebrow">INSPIRED BY YOUR REFERENCE</p>
+      <button id="relief-reference" class="relief-primary">Silver meteorite · twin subdials ↗</button>
+      <p class="relief-help">Apply the textured silver dial, polished markers and two recessed registers to your existing case. Undo restores your design.</p>
+      <h3>Shape the depth</h3>
+      <label>Marker height <output></output><input aria-label="Marker height" data-relief="markerHeight" type="range" min="0.08" max="1" step="0.01"></label>
+      <label>Marker bevel <output></output><input aria-label="Marker bevel" data-relief="bevel" type="range" min="0.01" max="0.15" step="0.01"></label>
+      <label>Subdial recess <output></output><input aria-label="Subdial recess" data-relief="subDepth" type="range" min="0.05" max="1" step="0.05"></label>
+      <label>Hand clearance <output></output><input aria-label="Hand clearance" data-relief="handLift" type="range" min="0.35" max="1.8" step="0.05"></label>
+      <h3>Find the light</h3>
+      <label>Light direction <output></output><input aria-label="Light direction" data-relief="lightAz" type="range" min="0" max="360" step="5"></label>
+      <label>Surface roughness <output></output><input aria-label="Surface roughness" data-relief="roughness" type="range" min="0.08" max="0.7" step="0.01"></label>
+      <label class="relief-check"><input aria-label="Domed crystal" data-relief="crystal" type="checkbox">Domed crystal</label>
+      <label>Crystal dome <output></output><input aria-label="Crystal dome" data-relief="crystalDome" type="range" min="0.15" max="1.5" step="0.05"></label>
+      <div class="relief-actions"><button id="relief-undo">Undo edit</button><button id="relief-export" class="relief-primary">Save 3D image</button></div>
+      <p class="relief-help">3D appearance study. Numerals, logos and date artwork remain flat; factory geometry and movement fit still need verification. Settings are saved with your design.</p>
+    </aside>
+  </div>
+</dialog>
+
+<script>
+/* Adapter keeps the optional 3D renderer on the same design/history model. */
+window.WatchReliefBridge={
+  snapshot:()=>clone(S), radius:visR, handColor:handCore,
+  settings(value){S.relief3d=value;commit();},
+  closed(){paintAll();}, undo(){undo();},
+  caseOutline(st){
+    const half=(st.case.locked?CASE_SPEC.flat:st.case.diameter)/2;
+    const outer=cushion(half,half*38/18,half*10/18),r=visR(st);
+    return `<svg xmlns="http://www.w3.org/2000/svg"><path d="${outer} ${disc(r)}" fill="#bfc4c6" fill-rule="evenodd"/></svg>`;
+  },
+  indexSVG(st,angle){let i=0;const defs=[];let body=indexShape({...st.indices,applied:false},angle,()=>`ix3d${i++}`,defs);
+    if(st.indices.style==='box'){const ix=st.indices;body=`<g transform="rotate(${angle}) translate(0,${-ix.radius})"><path fill="#fff" fill-rule="evenodd" d="M${-ix.width} ${-ix.length/2}h${ix.width*2}v${ix.length}h${-ix.width*2}z M${-ix.width+.12} ${-ix.length/2+.12}v${ix.length-.24}h${ix.width*2-.24}v${-ix.length+.24}z"/></g>`;}
+    return `<svg xmlns="http://www.w3.org/2000/svg"><defs>${defs.join('')}</defs>${body}</svg>`;
+  },
+  handSVG(st,key){const h={...st[key],length:handLength(st[key],key,st)},vec=handVec(h,key);
+    const body=vec?`<path fill="#fff" fill-rule="evenodd" d="${vec.zone?stretchHand(vec.d,vec.zone,vec.tip,h.length):vec.d}"/>`:handPath(h);
+    return `<svg xmlns="http://www.w3.org/2000/svg">${body}</svg>`;
+  },
+  surfaceSVG(st,recessed){
+    const copy=clone(st);copy.case.on=false;copy.tpl.on=false;copy.hHand.on=copy.mHand.on=copy.sHand.on=false;
+    if(copy.indices.applied)copy.indices.on=false;if(recessed)copy.sub.on=false;
+    copy.render.mode='neutral';copy.render.quality=512;
+    const r=visR(st);let svg=buildSVG(copy,{scope:'surface',matPx:512,px:1024});
+    svg=svg.replace(/viewBox="[^"]+"/,`viewBox="${-r} ${-r} ${r*2} ${r*2}"`);
+    return prepSVG(svg,1024,1024);
+  },
+  heightCanvas(st,px){
+    const cv=document.createElement('canvas');cv.width=cv.height=px;const ctx=cv.getContext('2d'),img=ctx.createImageData(px,px),d=st.dial,r=visR(st),gu={...d,rays:d.rays2};
+    for(let y=0;y<px;y++)for(let x=0;x<px;x++){
+      const ux=(x/(px-1)-.5)*r*2,uy=(y/(px-1)-.5)*r*2;let v=.5;
+      if(d.finish==='guilloche')v=.5+guilField(gu,ux,uy,Math.hypot(ux,uy),Math.atan2(uy,ux))*2;
+      else if(d.finish==='stone'&&d.stone==='meteorite'){
+        const result=syntheticStone('meteorite',ux,uy,{scale:d.stoneScale||22,contrast:d.stoneContrast||1,rot:d.stoneRot||0,tint:0});v=result.c.reduce((a,b)=>a+b,0)/3;
+      }else if(['brushed','sunburst','circular'].includes(d.finish)){
+        const p=d.finish==='brushed'?uy:d.finish==='circular'?Math.hypot(ux,uy):Math.atan2(uy,ux)*12;v=.5+.12*Math.sin(p*130);
+      }
+      const i=(y*px+x)*4,b=Math.round(Math.max(0,Math.min(1,v))*255);img.data[i]=img.data[i+1]=img.data[i+2]=b;img.data[i+3]=255;
+    }ctx.putImageData(img,0,0);return cv;
+  },
+  reference(){
+    S=migrateHands(deep(S,{
+      meta:{name:'Silver meteorite — relief study',time:{h:10,m:10,s:36}},tpl:{on:false},case:{on:true,strap:true,strapColor:'#242825'},
+      dial:{on:true,finish:'stone',stone:'meteorite',slab:'',color:'#BBC0BD',stoneScale:6,stoneRot:15,stoneTint:.2,stoneContrast:1.1,satin:0},
+      chapter:{on:true,outerD:30.5,innerD:27.6,color:'#EEEDE5',finish:'matte',separator:true,sepColor:'#626B6A'},
+      sector:{on:false},borders:{on:false},cross:{on:false},hour:{on:false},numerals:{on:false},date:{on:false},
+      minute:{on:true,diameter:29.5,style:'railroad',color:'#4E5857',thickness:.16,fives:true,fiveLen:.7},
+      indices:{on:true,applied:true,style:'dagger',radius:12.5,length:2.4,width:.36,count:12,color:'#D0D3CC',skipNumerals:false},
+      hHand:{on:true,style:'dauphine',length:8.2,width:.68,color:'#CBD0CA',finish:'polished'},mHand:{on:true,style:'dauphine',length:12.4,width:.48,color:'#CBD0CA',finish:'polished'},sHand:{on:true,style:'counter',length:13.4,width:.14,color:'#444C48'},
+      text:{on:true,logo:'VERNOY',logoMark:'none',logoTech:'printed',logoY:-6.5,logoSize:1.3,color:'#F6F4E9',line2:'',foot:'',logoCurve:false},
+      sub:{on:true,at:9,dist:7.7,diameter:8.1,color:'#EEEDE3',ring:'#4D5653',track:true,extra:[{on:true,at:3,dist:7.7,diameter:8.1,color:'#EEEDE3',ring:'#4D5653',track:true}]},
+      relief3d:{markerHeight:.5,bevel:.08,subDepth:.65,handLift:.9,crystal:true,crystalDome:.7,lightAz:135,roughness:.27}
+    }));commit();paintAll();
+  }
+};
+let reliefLoad;
+document.getElementById('open-relief').onclick=async()=>{
+  const button=document.getElementById('open-relief');button.disabled=true;
+  try{
+    if(!window.WatchRelief3D){if(!reliefLoad)reliefLoad=new Promise((resolve,reject)=>{const script=document.createElement('script');script.src='./vendor/relief3d.bundle.js';script.onload=resolve;script.onerror=()=>{script.remove();reliefLoad=null;reject(new Error('3D assets could not load'));};document.head.appendChild(script);});await reliefLoad;}
+    await window.WatchRelief3D.open();
+  }catch(error){toast(error.message+' — try reopening the 3D view.');}finally{button.disabled=false;}
+};
 
 </script>
 </body>

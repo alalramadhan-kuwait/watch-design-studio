@@ -1,10 +1,11 @@
 /* Watch Design Studio — offline shell.
 
-   The studio is one self-contained file: the interface fonts, the numeral
+   The 2D studio is self-contained: the interface fonts, the numeral
    faces, the case photograph and every texture are carried inside it as data
-   URIs, and nothing is fetched to draw a watch. That makes the cache unusually
-   simple — hold index.html and the icons, and the whole application is
-   offline, not merely its frame.
+   URIs, and nothing is fetched to draw a watch. The optional 3D renderer is
+   the one piece that lives beside the file rather than inside it, and it is
+   same-origin. Hold index.html, the vendor bundle and the icons, and the whole
+   application is offline, not merely its frame.
 
    Signing in to sync your saved versions is the one thing that does reach the
    network, and it goes to another origin, which this worker passes straight
@@ -28,6 +29,7 @@ const SHELL = [
   /* Not "./" as well: it is the same 1.9 MB file under a second name, and the
      navigation handler below answers every way in from this one copy. */
   "./index.html",
+  "./vendor/relief3d.bundle.js",
   "./manifest.webmanifest",
   "./app/icon-192.png",
   "./app/icon-512.png",
