@@ -145,3 +145,20 @@ Run the dependency-free regression suite with Node.js 18 or newer:
 ```sh
 node --test tests/atelier.test.cjs
 ```
+
+## Syncing your saved versions
+
+Saved versions live in the browser's own storage, so until you sign in they are
+that device's alone — which is why a version named on a desktop was not on the
+phone. Signing in with your Timekeeper account (the same email and password as
+the Daily Store Report) copies them through `public.watch_designs` in the shared
+Supabase project, and they appear on every device you sign in on. Row-level
+security keys every row to the person who saved it; nobody sees anybody else's.
+
+The local list stays the working set, so saving, opening and deleting versions
+all work with no connection and catch up when there is one. Deletes leave a
+tombstone, so throwing a version away on one device does not bring it back from
+another. Only named versions travel: the design you are in the middle of stays
+on the device you are editing it on, and so does its autosave.
+
+Signing out stops the copying. It leaves this device's versions where they are.

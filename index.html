@@ -163,6 +163,11 @@ button{cursor:pointer}
    colour when the browser is refusing to store anything. */
 .autoNote{font-size:11.5px;line-height:1.4;color:var(--muted);padding:2px 2px 6px}
 .autoNote.warn{color:var(--danger);font-weight:600}
+.syncRow{padding:2px 12px 10px;display:flex;flex-direction:column;gap:4px;font-size:11px;color:var(--muted)}
+.syncWho{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text);font-size:11.5px}
+.syncLine{display:flex;align-items:center;gap:6px}
+.syncLine span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#mSyncRow{padding:0 0 14px;border-bottom:1px solid var(--rule-2);margin-bottom:14px}
 
 /* layers */
 .lgrp{margin-bottom:1px}
@@ -1133,6 +1138,7 @@ body{grid-template-rows:auto auto minmax(0,1fr)}
     <div id="layers"></div>
     <div class="sec">Saved versions</div>
     <div id="versions"></div>
+    <div id="syncRow" class="syncRow"></div>
     <div style="padding:8px 12px 20px;display:flex;flex-direction:column;gap:6px">
       <div id="autoNote" class="autoNote">Every change is kept automatically.</div>
       <button class="btn" id="dup">Duplicate current</button>
@@ -1808,6 +1814,253 @@ const store = {
   async read(){ try{ const r = await KV.get("wds:versions"); return r?JSON.parse(r.value):[] }catch(e){ return [] } },
   async write(v){ try{ await KV.set("wds:versions", JSON.stringify(v)); return true; }catch(e){ return false; } }
 };
+
+/* =====================================================================
+   SYNC — the versions library, on every device you sign in on
+
+   The studio has never had an account. A saved version lives in the
+   browser's own storage, which is exactly why one named on the desktop
+   was not on the phone: two devices, two unrelated lists, nothing in
+   between. Export moved a single design; it did not move the library.
+
+   This is the smallest thing that fixes that without changing what the
+   studio is. The local list stays the working set — open the app on a
+   plane, save a version, delete another, and nothing waits on a network.
+   Signing in adds a second copy in the database the shop's other two
+   applications already use, and devices reconcile against it.
+
+   Reconciling, not replacing, and three details make that work:
+
+   - Every version carries an id minted here, so it has an identity
+     before it has ever reached the server. Without one there is no way
+     to tell "the same version, edited" from "a new version".
+   - A delete leaves a tombstone. A list that only ever learns about new
+     rows raises the dead: delete on the desktop, sync the phone, and the
+     version you just threw away comes back.
+   - The server's clock decides what is newer. A phone whose date is a
+     day fast would otherwise win every argument it took part in.
+
+   Only named versions travel. The design you are in the middle of stays
+   on the device you are editing it on — two devices quietly overwriting
+   one unfinished dial is a merge nobody asked for, and the autosave that
+   protects it is per-device for the same reason.
+
+   Signing out leaves this device's versions exactly where they are. It
+   stops the copying; it is not a way to lose your work.
+   ===================================================================== */
+const SYNC = (()=>{
+  const API = "https://ttshgrujnycapugrmyxs.supabase.co";
+  /* Publishable, and public on purpose — it identifies the project and
+     nothing else. Every row is behind row-level security keyed on the
+     signed-in person, so this key on its own opens nothing. */
+  const KEY = "sb_publishable_R49Hbogb0gEQ46drzVizqg_wSnQSgMG";
+  const AUTH = "wds:auth", CURSOR = "wds:sync:cursor", TOMBS = "wds:tombs";
+  const PAGE = 500, TOMB_DAYS = 90, QUIET = 20000;
+
+  let who = null;                 // {email, user_id, refresh_token}
+  let access = null, accessTill = 0;
+  let tombs = [], cursor = null;
+  let busy = false, lastAt = 0, problem = null, ready = false;
+  const watchers = [];
+
+  const uuid = () => (crypto.randomUUID ? crypto.randomUUID()
+    : "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, c => {
+        const r = crypto.getRandomValues(new Uint8Array(1))[0] % 16;
+        return (c === "x" ? r : (r & 3) | 8).toString(16); }));
+
+  const view = () => ({on: !!(who && who.refresh_token), email: who && who.email,
+                       busy, lastAt, problem, ready});
+  const announce = () => { for(const f of watchers){ try{ f(view()); }catch(e){} } };
+
+  const readJSON = async (k, fb) => { try{ const r = await KV.get(k); return r ? JSON.parse(r.value) : fb; }catch(e){ return fb; } };
+  const writeJSON = (k, v) => KV.set(k, JSON.stringify(v));
+  const save = async () => { await store.write(versions); await writeJSON(TOMBS, tombs); await writeJSON(CURSOR, cursor); };
+  const repaint = () => { if(typeof paintVersions === "function") paintVersions(); };
+  const bump = u => { if(u && (!cursor || Date.parse(u) > Date.parse(cursor))) cursor = u; };
+
+  /* ---- the account ---- */
+  async function token(){
+    if(access && Date.now() < accessTill) return access;
+    if(!who || !who.refresh_token) return null;
+    let r;
+    try{
+      r = await fetch(API + "/auth/v1/token?grant_type=refresh_token", {
+        method:"POST", headers:{apikey:KEY, "Content-Type":"application/json"},
+        body: JSON.stringify({refresh_token: who.refresh_token})});
+    }catch(e){ return null; }          // no network: not a reason to sign anyone out
+    if(!r.ok){
+      /* A refused refresh token is gone for good — signed out elsewhere, or
+         simply expired. Any other status is the server having a bad day and
+         must not cost the sign-in. */
+      if(r.status === 400 || r.status === 401) await signOut(true);
+      return null;
+    }
+    const j = await r.json();
+    access = j.access_token;
+    accessTill = Date.now() + ((j.expires_in || 3600) - 120)*1000;
+    who = {refresh_token: j.refresh_token || who.refresh_token,
+           email: (j.user && j.user.email) || who.email,
+           user_id: (j.user && j.user.id) || who.user_id};
+    await writeJSON(AUTH, who);
+    return access;
+  }
+
+  async function signIn(email, password){
+    const r = await fetch(API + "/auth/v1/token?grant_type=password", {
+      method:"POST", headers:{apikey:KEY, "Content-Type":"application/json"},
+      body: JSON.stringify({email: String(email||"").trim(), password})});
+    const j = await r.json().catch(()=>({}));
+    if(!r.ok) throw new Error(j.error_description || j.msg || j.error || "Could not sign in");
+    access = j.access_token;
+    accessTill = Date.now() + ((j.expires_in || 3600) - 120)*1000;
+    who = {refresh_token: j.refresh_token, email: (j.user && j.user.email) || email,
+           user_id: j.user && j.user.id};
+    cursor = null;                     // a fresh sign-in reads the whole library
+    await writeJSON(AUTH, who);
+    announce();
+    await sync(true);
+    return view();
+  }
+
+  async function signOut(quiet){
+    if(!quiet){
+      const t = await token();
+      if(t) try{ await fetch(API + "/auth/v1/logout", {method:"POST",
+        headers:{apikey:KEY, Authorization:"Bearer " + t}}); }catch(e){}
+    }
+    who = null; access = null; accessTill = 0; cursor = null; problem = null;
+    try{ await KV.delete(AUTH); }catch(e){}
+    await writeJSON(CURSOR, null);
+    /* The versions themselves stay. They are this device's, and signing
+       out of the copying service is not a request to throw them away. */
+    announce();
+  }
+
+  /* ---- the rows ---- */
+  async function rest(path, opt){
+    const o = opt || {};
+    const t = await token();
+    if(!t) throw new Error("signed out");
+    const r = await fetch(API + "/rest/v1/" + path, {
+      method: o.method || "GET",
+      headers: Object.assign({apikey:KEY, Authorization:"Bearer " + t,
+                              "Content-Type":"application/json"}, o.headers || {}),
+      body: o.body});
+    if(!r.ok) throw new Error("the server answered " + r.status);
+    return r.status === 204 ? null : r.json();
+  }
+
+  async function push(){
+    const mine = versions.filter(v => v.dirty && v.id);
+    if(mine.length){
+      const back = await rest("watch_designs", {method:"POST",
+        headers:{Prefer:"resolution=merge-duplicates,return=representation"},
+        body: JSON.stringify(mine.map(v => ({
+          id: v.id, name: v.name, state: v.state,
+          saved_at: new Date(v.at || Date.now()).toISOString(), deleted_at: null})))});
+      const by = {}; for(const r of back || []) by[r.id] = r;
+      for(const v of mine){ const r = by[v.id]; if(r){ v.dirty = false; v.srv = r.updated_at; bump(r.updated_at); } }
+    }
+    /* A version deleted before it was ever uploaded has nothing to tombstone,
+       so those never reach here at all. */
+    const gone = tombs.filter(t => !t.sent);
+    if(gone.length){
+      const back = await rest("watch_designs?id=in.(" + gone.map(t=>t.id).join(",") + ")",
+        {method:"PATCH", headers:{Prefer:"return=representation"},
+         body: JSON.stringify({deleted_at: new Date().toISOString()})});
+      for(const t of gone) t.sent = true;
+      for(const r of back || []) bump(r.updated_at);
+    }
+    return mine.length + gone.length;
+  }
+
+  async function pull(){
+    let moved = 0, more = true;
+    while(more){
+      const rows = await rest("watch_designs?select=id,name,state,saved_at,updated_at,deleted_at"
+        + "&order=updated_at.asc&limit=" + PAGE
+        + (cursor ? "&updated_at=gt." + encodeURIComponent(cursor) : ""));
+      more = !!rows && rows.length === PAGE;
+      for(const r of rows || []){
+        bump(r.updated_at);
+        const i = versions.findIndex(v => v.id === r.id);
+        if(r.deleted_at){
+          if(i >= 0){ versions.splice(i, 1); moved++; }
+          if(!tombs.some(t => t.id === r.id)) tombs.push({id:r.id, at:Date.parse(r.updated_at) || Date.now(), sent:true});
+          continue;
+        }
+        if(tombs.some(t => t.id === r.id)) continue;   // thrown away here, not yet pushed
+        const v = {id:r.id, name:r.name, state:r.state, at: Date.parse(r.saved_at) || Date.now(),
+                   srv:r.updated_at, dirty:false};
+        /* A local edit that has not been pushed yet outranks what the server
+           still thinks — push() runs first, so anything still dirty here is
+           newer by definition. */
+        if(i < 0){ versions.push(v); moved++; }
+        else if(!versions[i].dirty){ versions[i] = v; moved++; }
+      }
+      if(!rows || !rows.length) break;
+    }
+    return moved;
+  }
+
+  function prune(){
+    const cut = Date.now() - TOMB_DAYS*864e5;
+    tombs = tombs.filter(t => !t.sent || t.at > cut);
+  }
+
+  async function sync(force){
+    if(!who || !who.refresh_token) return view();
+    if(busy) return view();
+    if(!force && lastAt && Date.now() - lastAt < QUIET) return view();
+    busy = true; problem = null; announce();
+    try{
+      await push();
+      const moved = await pull();
+      prune();
+      await save();
+      if(moved) repaint();
+      lastAt = Date.now();
+    }catch(e){
+      /* Offline is the ordinary case, not a fault worth shouting about. */
+      problem = (e && e.message === "signed out") ? null
+              : (typeof navigator !== "undefined" && navigator.onLine === false) ? null
+              : (e && e.message) || "sync failed";
+    }
+    busy = false; announce();
+    return view();
+  }
+
+  /* ---- what the rest of the app calls ---- */
+  function mint(v){ if(!v.id) v.id = uuid(); v.dirty = true; return v; }
+
+  function forget(v){
+    if(!v) return;
+    /* Only a version the server has heard of needs a tombstone. */
+    if(v.id && v.srv) tombs.push({id:v.id, name:v.name, at:Date.now(), sent:false});
+  }
+
+  async function adopt(){
+    /* Versions saved before any of this existed have no id. Giving them one
+       and marking them dirty is what carries an existing library up on the
+       first sign-in. */
+    let n = 0;
+    for(const v of versions) if(!v.id){ v.id = uuid(); v.dirty = true; n++; }
+    if(n) await store.write(versions);
+    return n;
+  }
+
+  async function boot(){
+    who = await readJSON(AUTH, null);
+    tombs = await readJSON(TOMBS, []) || [];
+    cursor = await readJSON(CURSOR, null);
+    ready = true;
+    announce();
+  }
+
+  return {boot, adopt, signIn, signOut, sync, mint, forget,
+          state: view, on(f){ watchers.push(f); try{ f(view()); }catch(e){} }};
+})();
+
 
 /* ---------------------------------------------------------------
    Autosave.
@@ -7520,7 +7773,9 @@ document.addEventListener("click", e=>{
     toast(t.dataset.act === "matchFromHour" ? "Set matched to the hour hand" : "Set matched to the minute hand");
   }
   if(t.dataset.load!==undefined && t.dataset.load!==""){ S=migrateHands(clone(versions[+t.dataset.load].state)); commit(); paintAll(); toast("Version loaded"); }
-  if(t.dataset.del!==undefined && t.dataset.del!==""){ versions.splice(+t.dataset.del,1); store.write(versions); paintVersions(); }
+  if(t.dataset.del!==undefined && t.dataset.del!==""){
+    SYNC.forget(versions[+t.dataset.del]);
+    versions.splice(+t.dataset.del,1); store.write(versions); paintVersions(); SYNC.sync(true); }
 });
 
 /* ---------------------------------------------------------------
@@ -7952,10 +8207,11 @@ q("#saveCancel").onclick=()=>q("#saveSheet").classList.remove("open");
 async function doSaveVersion(){
   const name = (q("#saveName").value || "").trim();
   if(!name){ toast("Give the version a name"); return; }
-  versions.push({name, state:clone(S), at:Date.now()});
+  versions.push(SYNC.mint({name, state:clone(S), at:Date.now()}));
   q("#saveSheet").classList.remove("open");
   paintVersions();
   await store.write(versions);
+  SYNC.sync(true);
   toast(KV.kind === "memory"
     ? "Saved for this session only — this browser will not store it"
     : "Saved “" + name + "”");
@@ -8470,6 +8726,9 @@ addEventListener("resize", ()=>{ paintView(); paintLayers(); });
     if(t){ const o = JSON.parse(t.value); tplImage = o.d; tplW = o.w; tplH = o.h; }
   }catch(e){}
   try{ versions = await store.read(); paintVersions(); }catch(e){}
+  /* The account and the sync cursor, then a catch-up that nothing waits on:
+     the studio opens on what this device already has. */
+  try{ await SYNC.boot(); await SYNC.adopt(); paintVersions(); SYNC.sync(true); }catch(e){}
   /* Where the watch on screen comes from, in order: work in progress from
      last time, then a chosen default, then the built-in. Unfinished work
      outranks the default — it is the thing you would be sorry to lose. */
@@ -8766,8 +9025,9 @@ refineBootRender();
         card._undo = setTimeout(()=>{ card.classList.remove("confirm"); del.textContent="✕"; }, 4000);
         return;
       }
+      SYNC.forget(versions[+del.dataset.vdel]);
       versions.splice(+del.dataset.vdel, 1);
-      store.write(versions); paintVersions(); paintVersCards();
+      store.write(versions); paintVersions(); paintVersCards(); SYNC.sync(true);
       toast("Version deleted");
       return;
     }
@@ -9284,6 +9544,117 @@ refineBootRender();
     if(study){const t=studies[+study.dataset.study];apply(studyPatch(t),'dial',t.name+' applied');}
     if(inspect){dialog.close();selectLayer(inspect.dataset.inspect);if(NARROW()&&typeof tab==='function')tab('props');}
   });
+})();
+
+/* ---------------------------------------------------------------------
+   The sync row, and the sign-in behind it.
+
+   One renderer, two hosts: the desktop rail under Saved versions, and the
+   top of the phone's versions sheet — which is where somebody who has just
+   found their library empty on a second device will actually be looking.
+   --------------------------------------------------------------------- */
+(()=>{
+  const sheet = document.createElement("div");
+  sheet.className = "sheet"; sheet.id = "syncSheet";
+  sheet.innerHTML = `<button class="sheetX" data-close="1" aria-label="Close">✕</button>
+    <div class="card" style="max-width:400px">
+      <h2>Sync your versions</h2>
+      <p class="sub">Sign in with your Timekeeper account — the same email and
+        password as the Daily Store Report. Your saved versions then appear on
+        every device you sign in on. Only you can see them.</p>
+      <div class="f"><label for="syncEmail">Email</label>
+        <input type="email" id="syncEmail" autocomplete="username" inputmode="email" spellcheck="false"></div>
+      <div class="f"><label for="syncPass">Password</label>
+        <input type="password" id="syncPass" autocomplete="current-password"></div>
+      <p id="syncErr" class="phint" style="color:var(--danger);display:none"></p>
+      <div class="tools" style="flex-direction:column;align-items:stretch;gap:8px;margin-top:10px">
+        <button class="btn key" id="syncGo">Sign in</button>
+        <button class="btn" data-close="1">Not now</button>
+      </div>
+    </div>`;
+  document.body.appendChild(sheet);
+
+  const err = sheet.querySelector("#syncErr");
+  const show = m => { err.textContent = m; err.style.display = m ? "" : "none"; };
+  const open = () => { show(""); sheet.classList.add("open");
+    setTimeout(()=>{ const e = sheet.querySelector("#syncEmail"); if(e) e.focus(); }, 60); };
+  const close = () => sheet.classList.remove("open");
+  sheet.addEventListener("click", e => {
+    if(e.target === sheet || (e.target.closest && e.target.closest("[data-close]"))) close(); });
+
+  async function go(){
+    const b = sheet.querySelector("#syncGo");
+    const email = sheet.querySelector("#syncEmail").value;
+    const pass  = sheet.querySelector("#syncPass").value;
+    if(!email || !pass) return show("Both, please.");
+    b.disabled = true; b.textContent = "Signing in…"; show("");
+    try{
+      await SYNC.adopt();          // carry this device's existing library up
+      await SYNC.signIn(email, pass);
+      sheet.querySelector("#syncPass").value = "";
+      close(); toast("Signed in — your versions are syncing");
+    }catch(e){
+      show(/Invalid login/i.test(e.message) ? "That email and password did not match."
+         : /fetch|network/i.test(e.message) ? "No connection to the server."
+         : e.message);
+    }
+    b.disabled = false; b.textContent = "Sign in";
+  }
+  sheet.querySelector("#syncGo").onclick = go;
+  sheet.querySelector("#syncPass").addEventListener("keydown", e => { if(e.key === "Enter") go(); });
+
+  const when = t => {
+    if(!t) return "not yet";
+    const m = (Date.now() - t)/60000;
+    return m < 1.5 ? "just now" : m < 60 ? Math.round(m) + " min ago"
+         : m < 1440 ? Math.round(m/60) + "h ago" : "a while ago";
+  };
+
+  function render(host, s){
+    if(!host) return;
+    if(!s.on){
+      host.innerHTML = `<button class="mini" data-sync="in" style="width:100%">Sign in to sync</button>`;
+      return;
+    }
+    const line = s.busy ? "Syncing…" : s.problem ? "Offline — will catch up" : "Synced " + when(s.lastAt);
+    host.innerHTML =
+      `<div class="syncWho" title="${esc(s.email || "")}">${esc(s.email || "signed in")}</div>
+       <div class="syncLine">
+         <span class="${s.problem ? "warn" : ""}">${esc(line)}</span>
+         <button class="mini" data-sync="now" ${s.busy ? "disabled" : ""}>Sync now</button>
+         <button class="mini" data-sync="out">Sign out</button>
+       </div>`;
+  }
+
+  const hosts = () => {
+    const out = [document.getElementById("syncRow")];
+    const card = document.querySelector("#mVers .card");
+    if(card){
+      let row = card.querySelector("#mSyncRow");
+      if(!row){ row = document.createElement("div"); row.id = "mSyncRow"; row.className = "syncRow";
+                const grid = card.querySelector("#vGrid");
+                card.insertBefore(row, grid); }
+      out.push(row);
+    }
+    return out.filter(Boolean);
+  };
+
+  SYNC.on(s => { for(const h of hosts()) render(h, s); });
+
+  document.addEventListener("click", e => {
+    const b = e.target.closest && e.target.closest("[data-sync]");
+    if(!b) return;
+    if(b.dataset.sync === "in")  return open();
+    if(b.dataset.sync === "now") return void SYNC.sync(true);
+    if(b.dataset.sync === "out") return void SYNC.signOut().then(()=>toast("Signed out — your versions stay on this device"));
+  });
+
+  /* Catch up when the device comes back, and when you return to the app —
+     a phone that was asleep in a pocket has missed everything. */
+  window.addEventListener("online", ()=>SYNC.sync(true));
+  document.addEventListener("visibilitychange", ()=>{ if(!document.hidden) SYNC.sync(); });
+  /* The row says "Synced 3 min ago"; without this it would say it for an hour. */
+  setInterval(()=>{ const s = SYNC.state(); if(s.on && !s.busy) for(const h of hosts()) render(h, s); }, 60000);
 })();
 
 </script>

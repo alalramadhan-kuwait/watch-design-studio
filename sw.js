@@ -2,9 +2,14 @@
 
    The studio is one self-contained file: the interface fonts, the numeral
    faces, the case photograph and every texture are carried inside it as data
-   URIs, and nothing is fetched while you work. That makes the cache unusually
+   URIs, and nothing is fetched to draw a watch. That makes the cache unusually
    simple — hold index.html and the icons, and the whole application is
    offline, not merely its frame.
+
+   Signing in to sync your saved versions is the one thing that does reach the
+   network, and it goes to another origin, which this worker passes straight
+   through and never caches. Everything about drawing still works with the
+   aeroplane on.
 
    Cache-first, deliberately. A design tool that pauses on a slow train to ask
    the network whether it may open is worse than one that opens instantly on
