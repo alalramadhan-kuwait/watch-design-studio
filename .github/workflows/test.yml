@@ -13,4 +13,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: node --test tests/atelier.test.cjs
+      - run: npm ci
+      - run: npm run build
+      - run: git diff --exit-code -- vendor/relief3d.bundle.js
+      - run: npm test

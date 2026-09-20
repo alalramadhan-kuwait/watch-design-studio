@@ -1,9 +1,9 @@
 /* Watch Design Studio — offline shell.
 
-   The studio is one self-contained file: the interface fonts, the numeral
+   The 2D studio is self-contained: the interface fonts, the numeral
    faces, the case photograph and every texture are carried inside it as data
-   URIs, and nothing is fetched while you work. That makes the cache unusually
-   simple — hold index.html and the icons, and the whole application is
+   URIs. The optional 3D renderer is a same-origin bundle. Hold index.html,
+   the vendor bundle and the icons, and the whole application is
    offline, not merely its frame.
 
    Cache-first, deliberately. A design tool that pauses on a slow train to ask
@@ -23,6 +23,7 @@ const SHELL = [
   /* Not "./" as well: it is the same 1.9 MB file under a second name, and the
      navigation handler below answers every way in from this one copy. */
   "./index.html",
+  "./vendor/relief3d.bundle.js",
   "./manifest.webmanifest",
   "./app/icon-192.png",
   "./app/icon-512.png",
