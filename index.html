@@ -162,6 +162,12 @@ button{cursor:pointer}
 /* Quiet by default — it is reassurance, not an announcement. It only takes
    colour when the browser is refusing to store anything. */
 .autoNote{font-size:11.5px;line-height:1.4;color:var(--muted);padding:2px 2px 6px}
+.autoNote .mini{padding:2px 7px;font-size:11px;margin-left:2px}
+.ttlName{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ttlSave{font-size:10.5px;color:var(--muted);line-height:1.3;margin-top:1px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ttlSave.warn{color:var(--danger)}
+.ttlSave .mini{padding:1px 6px;font-size:10px;margin-left:3px}
 .autoNote.warn{color:var(--danger);font-weight:600}
 .syncRow{padding:2px 12px 10px;display:flex;flex-direction:column;gap:4px;font-size:11px;color:var(--muted)}
 .syncWho{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text);font-size:11.5px}
@@ -2077,8 +2083,156 @@ const SYNC = (()=>{
   }
 
   return {boot, adopt, signIn, signOut, sync, mint, forget,
+          /* the save engine speaks to the same database over the same token */
+          uuid, rest,
           state: view, on(f){ watchers.push(f); try{ f(view()); }catch(e){} }};
 })();
+
+/* =====================================================================
+   THE SAVE ENGINE
+
+   A design is a project now, and the project lives in the database. This is
+   what keeps the two in step, and the whole of it is built around one rule:
+   the app may not say your work is safe until the database has said so
+   first. "All changes saved" is a promise, and a promise made on the
+   strength of a request that has only been *sent* is not one.
+
+   So there are four states and they are all true when shown:
+
+     Saving…                          the request is in flight
+     All changes saved                the row came back from the database
+     Offline — saved on this device    the request could not leave
+     Couldn't sync — Retry             it left and was refused
+
+   and a fifth for somebody who has not signed in, because the studio still
+   opens and works without an account:
+
+     Saved on this device · Sign in to keep
+
+   Edits are written to this browser first and always, on every change, with
+   the database following after a pause. That order is deliberate: the local
+   write cannot fail for want of a network, so the worst case is work that is
+   safe but not yet shared, never work that is neither.
+
+   CONFLICTS. If the row moved while we were editing — the same design open
+   on a phone, say — the other device's state is written into the version
+   history before ours goes over the top of it. Last-write-wins is fine for
+   what is displayed; it is not fine as a way of disposing of somebody's
+   afternoon. Nothing is overwritten that cannot be got back.
+   ===================================================================== */
+const SAVE = (()=>{
+  const PAUSE = 1500, RETRY_MAX = 4;
+  let proj = null;            // {id, name, srv} — the open project
+  let status = "idle", detail = "", timer = null, inflight = false;
+  let pendingJSON = null, retries = 0, lastSavedAt = 0;
+  const watchers = [];
+
+  const view = () => ({status, detail, name: proj && proj.name, id: proj && proj.id,
+                       at: lastSavedAt, pending: !!pendingJSON});
+  const announce = () => { for(const f of watchers){ try{ f(view()); }catch(e){} } };
+  const set = (s, d) => { status = s; detail = d || ""; announce(); };
+
+  /* The words, in one place, so the phone and the desktop cannot disagree
+     about whether your work is safe. */
+  function phrase(){
+    switch(status){
+      case "saving":  return {text:"Saving…", tone:""};
+      case "saved":   return {text:"All changes saved", tone:"ok"};
+      case "offline": return {text:"Offline — changes saved on this device", tone:"warn"};
+      case "error":   return {text:"Couldn't sync", tone:"bad", action:"Retry"};
+      case "local":   return {text:"Saved on this device", tone:"", action:"Sign in to keep"};
+      default:        return {text:"", tone:""};
+    }
+  }
+
+  /* ---- the project row ---- */
+  async function ensureProject(){
+    if(proj) return proj;
+    if(!SYNC.state().on) return null;
+    const name = (S.meta && S.meta.name) || "Untitled design";
+    const id = SYNC.uuid();
+    const row = await SYNC.rest("watch_designs", {method:"POST",
+      headers:{Prefer:"return=representation"},
+      body: JSON.stringify([{id, name, state:S, saved_at:new Date().toISOString(),
+                             opened_at:new Date().toISOString()}])});
+    proj = {id, name, srv: row && row[0] && row[0].updated_at};
+    await KV.set("wds:project", JSON.stringify(proj));
+    return proj;
+  }
+
+  /* Somebody else's newer state goes into the history before ours lands on
+     top of it, so "the phone won" is recoverable rather than final. */
+  async function keepTheirs(id){
+    try{
+      const rows = await SYNC.rest(`watch_designs?id=eq.${id}&select=state,updated_at,name`);
+      const row = rows && rows[0];
+      if(!row || !row.updated_at) return;
+      if(proj.srv && Date.parse(row.updated_at) <= Date.parse(proj.srv)) return;   // nothing new
+      await SYNC.rest("watch_design_versions", {method:"POST",
+        body: JSON.stringify([{design_id:id, state:row.state, kind:"auto",
+                               label:"From another device"}])});
+    }catch(e){ /* a history we could not write is not a reason to lose the edit */ }
+  }
+
+  async function push(){
+    if(inflight || !pendingJSON) return;
+    if(!SYNC.state().on){ set("local"); return; }
+    inflight = true; set("saving");
+    const json = pendingJSON;
+    try{
+      const p = await ensureProject();
+      if(!p){ inflight = false; set("local"); return; }
+      await keepTheirs(p.id);
+      const state = JSON.parse(json);
+      const name = (state.meta && state.meta.name) || p.name;
+      const back = await SYNC.rest(`watch_designs?id=eq.${p.id}`, {method:"PATCH",
+        headers:{Prefer:"return=representation"},
+        body: JSON.stringify({name, state, saved_at:new Date().toISOString()})});
+      const row = back && back[0];
+      if(!row) throw new Error("the database did not confirm the save");
+      /* Only now. The row is back; the promise can be made. */
+      proj.srv = row.updated_at; proj.name = row.name;
+      await KV.set("wds:project", JSON.stringify(proj));
+      if(pendingJSON === json) pendingJSON = null;     // more may have arrived meanwhile
+      retries = 0; lastSavedAt = Date.now();
+      set(pendingJSON ? "saving" : "saved");
+      if(pendingJSON) queue(0);
+    }catch(e){
+      const offline = (typeof navigator !== "undefined" && navigator.onLine === false)
+                   || /Failed to fetch|NetworkError|load failed/i.test(e.message || "");
+      set(offline ? "offline" : "error", e.message || "");
+      if(offline && retries < RETRY_MAX){ retries++; setTimeout(()=>{ inflight=false; push(); }, 4000*retries); }
+    }
+    inflight = false;
+    announce();
+  }
+
+  function queue(ms){
+    clearTimeout(timer);
+    timer = setTimeout(()=>{ timer = null; push(); }, ms === undefined ? PAUSE : ms);
+  }
+
+  /* What the editor calls on every change. The local write has already
+     happened by the time this runs; this is only the database half. */
+  function touch(){
+    try{ pendingJSON = JSON.stringify(S); }catch(e){ return; }
+    if(!SYNC.state().on){ set("local"); return; }
+    if(status !== "saving") set("saving");
+    queue();
+  }
+
+  const retry = () => { retries = 0; inflight = false; push(); };
+
+  async function boot(){
+    try{ const r = await KV.get("wds:project"); proj = r ? JSON.parse(r.value) : null; }catch(e){ proj = null; }
+    set(SYNC.state().on ? (proj ? "saved" : "idle") : "local");
+  }
+
+  return {boot, touch, retry, push, phrase, state: view,
+          open(p){ proj = p; announce(); },
+          on(f){ watchers.push(f); try{ f(view()); }catch(e){} }};
+})();
+
 
 
 /* ---------------------------------------------------------------
@@ -2113,6 +2267,10 @@ function saveNow(){
     autoLast = json; autoAt = Date.now();
     noteAutosave(r && r.persisted);
   }).catch(()=> noteAutosave(false));
+  /* The local write above cannot fail for want of a network, so it goes
+     first and always; the database follows after a pause. The worst case is
+     work that is safe but not yet shared, never work that is neither. */
+  try{ SAVE.touch(); }catch(e){}
 }
 
 /* Silent while it is working. It speaks up only when it cannot keep a
@@ -2120,6 +2278,9 @@ function saveNow(){
    would be the worst outcome. */
 function noteAutosave(persisted){
   const el = document.getElementById("autoNote");
+  /* Once there is an account, the save engine owns this line: what matters is
+     whether the database has the work, not whether this browser does. */
+  if(typeof SAVE !== "undefined" && SAVE.state().status !== "idle"){ paintSaveState(); return; }
   if(persisted){
     if(el){ el.textContent = "Every change is kept — saved " + clockOf(autoAt) + "."; el.classList.remove("warn"); }
     return;
@@ -2131,6 +2292,30 @@ function noteAutosave(persisted){
   }
 }
 const clockOf = t => new Date(t).toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"});
+
+/* The save state, in the rail on a desktop and under the name on a phone.
+   One renderer for both: the two must never be able to disagree about
+   whether your work is safe. */
+function paintSaveState(){
+  if(typeof SAVE === "undefined") return;
+  const p = SAVE.phrase(), st = SAVE.state();
+  const hosts = [document.getElementById("autoNote"), ...document.querySelectorAll("[data-save-state]")];
+  for(const el of hosts){
+    if(!el) continue;
+    const when = st.status === "saved" && st.at ? ` · ${clockOf(st.at)}` : "";
+    el.innerHTML = p.text
+      ? `<span>${esc(p.text)}${when}</span>`
+        + (p.action ? ` <button class="mini" data-save-act="${st.status === "error" ? "retry" : "signin"}">${esc(p.action)}</button>` : "")
+      : "";
+    el.classList.toggle("warn", p.tone === "warn" || p.tone === "bad");
+  }
+}
+document.addEventListener("click", e=>{
+  const b = e.target.closest && e.target.closest("[data-save-act]");
+  if(!b) return;
+  if(b.dataset.saveAct === "retry") SAVE.retry();
+  else { const s = document.getElementById("syncSheet"); if(s) s.classList.add("open"); }
+});
 
 /* iOS in particular may never fire another timer once the tab goes
    away, so the pending write is forced out at the last moment. */
@@ -8751,6 +8936,7 @@ addEventListener("resize", ()=>{ paintView(); paintLayers(); });
   /* The account and the sync cursor, then a catch-up that nothing waits on:
      the studio opens on what this device already has. */
   try{ await SYNC.boot(); await SYNC.adopt(); paintVersions(); SYNC.sync(true); }catch(e){}
+  try{ await SAVE.boot(); SAVE.on(paintSaveState); }catch(e){}
   /* Where the watch on screen comes from, in order: work in progress from
      last time, then a chosen default, then the built-in. Unfinished work
      outranks the default — it is the thing you would be sorry to lose. */
@@ -8827,7 +9013,14 @@ refineBootRender();
      the versions themselves now. */
   const back = ico("Back", "‹", ()=> openVers());
   const title = document.createElement("div"); title.className = "ttl";
-  const setTitle = ()=>{ title.textContent = (S && S.meta && S.meta.name) || "Watch"; };
+  /* The name, and under it whether the database has the work. On a phone this
+     is the only place the answer can live, and it is the question people
+     actually have when they put the phone down. */
+  const titleName = document.createElement("div"); titleName.className = "ttlName";
+  const titleSave = document.createElement("div"); titleSave.className = "ttlSave";
+  titleSave.setAttribute("data-save-state", "1");
+  title.append(titleName, titleSave);
+  const setTitle = ()=>{ titleName.textContent = (S && S.meta && S.meta.name) || "Watch"; };
   const undoB = byId("undo"), redoB = byId("redo");
   if(undoB){ undoB.className = "ico"; undoB.textContent = "↺"; undoB.setAttribute("aria-label","Undo"); }
   if(redoB){ redoB.className = "ico"; redoB.textContent = "↻"; redoB.setAttribute("aria-label","Redo"); }
