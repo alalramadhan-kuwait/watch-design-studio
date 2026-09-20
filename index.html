@@ -2232,6 +2232,132 @@ const SAVE = (()=>{
           open(p){ proj = p; announce(); },
           on(f){ watchers.push(f); try{ f(view()); }catch(e){} }};
 })();
+/* =====================================================================
+   PROJECTS — the one list
+
+   There were four lists and nobody could have said which was which:
+   PRESETS in a picker, "Saved versions" in the rail, a "default" design
+   somewhere behind two buttons that each said something different, and the
+   autosaved working copy that was none of them. Opening one silently
+   replaced another. This is the single list that replaces all of it.
+
+   A design is a project. A version is an earlier state of that project, and
+   lives in the Version History panel rather than in a list of its own. A
+   template is a starting point and is not in here at all.
+
+   It reads from the database when there is an account and from this browser
+   when there is not, and the shape it hands back is the same either way so
+   the view above it never has to ask which it is talking to.
+   ===================================================================== */
+const PROJECTS = (()=>{
+  const LOCAL = "wds:projects";
+  let cache = [], loadedAt = 0;
+
+  const local = {
+    async read(){ try{ const r = await KV.get(LOCAL); return r ? JSON.parse(r.value) : []; }catch(e){ return []; } },
+    async write(v){ try{ await KV.set(LOCAL, JSON.stringify(v)); }catch(e){} }
+  };
+
+  const shape = r => ({
+    id: r.id, name: r.name || "Untitled design", state: r.state,
+    editedAt: Date.parse(r.updated_at || r.editedAt || 0) || 0,
+    openedAt: Date.parse(r.opened_at || r.openedAt || 0) || 0,
+    trashedAt: r.trashed_at || r.trashedAt ? (Date.parse(r.trashed_at || r.trashedAt) || 0) : 0
+  });
+
+  /* Newest work first, and "newest" means when you last touched it rather
+     than when a background save happened to fire. */
+  const order = a => a.slice().sort((x,y) =>
+    Math.max(y.openedAt, y.editedAt) - Math.max(x.openedAt, x.editedAt));
+
+  async function list(opts){
+    const o = opts || {};
+    if(SYNC.state().on){
+      const rows = await SYNC.rest("watch_designs?select=id,name,state,updated_at,opened_at,trashed_at,deleted_at"
+        + "&deleted_at=is.null&order=updated_at.desc&limit=200");
+      cache = (rows || []).map(shape);
+    }else{
+      cache = (await local.read()).map(shape);
+    }
+    loadedAt = Date.now();
+    return order(cache.filter(p => o.trash ? p.trashedAt : !p.trashedAt));
+  }
+
+  async function create(name, state){
+    const id = SYNC.uuid();
+    const row = {id, name: name || "Untitled design", state: clone(state || S),
+                 saved_at: new Date().toISOString(), opened_at: new Date().toISOString()};
+    if(SYNC.state().on){
+      await SYNC.rest("watch_designs", {method:"POST", body: JSON.stringify([row])});
+    }else{
+      const all = await local.read();
+      all.push({...row, updated_at: new Date().toISOString()});
+      await local.write(all);
+    }
+    const made = shape({...row, updated_at: new Date().toISOString()});
+    /* Into the cache immediately. Duplicating twice in a row asks the cache
+       what names are taken, and a project that exists but is not in it yet
+       is a name that looks free — which is how you get two designs called
+       "Cushion Roman copy", the exact thing this screen exists to prevent. */
+    cache.push(made);
+    return made;
+  }
+
+  /* One writer for every field that is not the design itself, so rename,
+     duplicate, trash and restore cannot drift apart. */
+  async function patch(id, fields){
+    if(SYNC.state().on){
+      await SYNC.rest(`watch_designs?id=eq.${id}`, {method:"PATCH", body: JSON.stringify(fields)});
+    }else{
+      const all = await local.read();
+      const row = all.find(r => r.id === id);
+      if(row){ Object.assign(row, fields, {updated_at: new Date().toISOString()}); await local.write(all); }
+    }
+    const c = cache.find(p => p.id === id);
+    if(c){
+      if(fields.name !== undefined) c.name = fields.name;
+      if(fields.trashed_at !== undefined) c.trashedAt = fields.trashed_at ? Date.parse(fields.trashed_at) : 0;
+      if(fields.opened_at !== undefined) c.openedAt = Date.parse(fields.opened_at) || 0;
+    }
+  }
+
+  const rename  = (id, name) => patch(id, {name: String(name || "").trim().slice(0,200) || "Untitled design"});
+  /* Trash, not delete. deleted_at is the tombstone that propagates a real
+     removal between devices; this is the step in front of it that somebody
+     can walk back. */
+  const trash   = id => patch(id, {trashed_at: new Date().toISOString()});
+  const restore = id => patch(id, {trashed_at: null});
+  const touch   = id => patch(id, {opened_at: new Date().toISOString()});
+
+  async function duplicate(id){
+    const src = cache.find(p => p.id === id) || (await list()).find(p => p.id === id);
+    if(!src) return null;
+    /* "Copy" rather than a silent second row with the same name — two
+       designs called the same thing is the problem this whole screen is
+       here to end. */
+    const base = src.name.replace(/ copy( \d+)?$/i, "");
+    const names = new Set(cache.map(p => p.name));
+    let name = base + " copy", i = 2;
+    while(names.has(name)) name = `${base} copy ${i++}`;
+    return create(name, src.state);
+  }
+
+  /* Permanent, and only from the trash. The tombstone is what tells the
+     other devices, so it is set rather than the row simply vanishing. */
+  async function destroy(id){
+    if(SYNC.state().on){
+      await SYNC.rest(`watch_designs?id=eq.${id}`, {method:"PATCH",
+        body: JSON.stringify({deleted_at: new Date().toISOString()})});
+    }else{
+      await local.write((await local.read()).filter(r => r.id !== id));
+    }
+    cache = cache.filter(p => p.id !== id);
+  }
+
+  return {list, create, rename, duplicate, trash, restore, destroy, touch,
+          cached: () => order(cache), shape};
+})();
+
 
 
 
