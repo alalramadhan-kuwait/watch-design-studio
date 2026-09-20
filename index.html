@@ -2415,7 +2415,12 @@ function guilFeature(P, r){
     case "orge":   return P.cell;
     case "panier": return P.cell;
     case "damier": return P.cell;
-    case "perlage": return P.cell/8;
+    /* The circular grain, not the fine ripple laid over it. The ripple is a
+       sixteenth-period detail at less than half the amplitude; quoting it here
+       told the shader the whole pattern was sub-pixel, and the shader — which
+       fades anything under 1.6 px — obligingly erased it. At the default cell
+       perlage came out perfectly flat unless the preview was run at 720 px. */
+    case "perlage": return P.cell*.65;
     case "linen": return P.cell*.3;
     case "chevron": return P.pitch;
     case "geneva": return Math.min(P.cell*2,P.pitch);
@@ -9144,7 +9149,7 @@ refineBootRender();
   };
   const library=GUIL_PATTERNS.map(id=>technique('pattern-'+id,GUIL_LABEL[id],
     ['perlage','geneva','linen','hammered'].includes(id)?'Decorative relief':'Engine turning',patternDescriptions[id],
-    {dial:{finish:'guilloche',pattern:id,cell:id==='perlage'?1.8:.85,pitch:.36,wall:26,stamp:0,satin:0}},'dial'));
+    {dial:{finish:'guilloche',pattern:id,cell:.85,pitch:.36,wall:26,stamp:0,satin:0}},'dial'));
   [
     ['enamel','Grand feu enamel','A glass-like surface with a deep body and rolled highlights. Visual simulation; firing is not modelled.'],
     ['lacquer','Polished lacquer','A high-gloss coating with a pronounced clear-coat response.'],
@@ -9242,8 +9247,15 @@ refineBootRender();
     add(st.case.locked!==false,'Case reference',st.case.locked!==false?'Case locked to RD26-0172 factory dimensions.':'Exploratory case dimensions: confirm a compatible case and movement.','case');
     add(st.dial.diameter>=r*2,'Dial coverage',`Blank Ø${f(st.dial.diameter,2)} mm · visible opening Ø${f(r*2,2)} mm.`,'dial');
     for(const [key,name]of [['hHand','Hour'],['mHand','Minute'],['sHand','Seconds']])if(st[key].on){
-      const margin=r-st[key].length;add(margin>=.3,name+' hand clearance',`${f(margin,2)} mm radial margin to the visible opening; review below 0.30 mm. This does not check vertical clearance.`,'hands');
-      const ratio=contrast(st[key].color,st.dial.color);add(ratio>=2,name+' hand contrast',`${f(ratio,1)}:1 base-colour contrast; review below 2:1. Reflections, textures and overlaid zones can change legibility.`,'hands');
+      /* handLength, not .length: a hand set to reach a landmark keeps whatever
+         millimetres were last written to the file, and the renderer never reads
+         them. Measuring those instead of the drawn length let a hand running
+         under the bezel report a comfortable margin and pass. */
+      const margin=r-handLength(st[key],key,st);add(margin>=.3,name+' hand clearance',`${f(margin,2)} mm radial margin to the visible opening; review below 0.30 mm. This does not check vertical clearance.`,'hands');
+      /* handCore for the same reason: since hands are made of a metal, the
+         colour they are drawn in comes from the material, and .color is only
+         the tint underneath it. */
+      const ratio=contrast(handCore(st[key]),st.dial.color);add(ratio>=2,name+' hand contrast',`${f(ratio,1)}:1 base-colour contrast; review below 2:1. Reflections, textures and overlaid zones can change legibility.`,'hands');
     }
     if(st.numerals.on){const edge=st.numerals.radius+st.numerals.size*.6;add(edge<=r,'Numeral envelope',`Approximate outer radius ${f(edge,2)} mm against ${f(r,2)} mm opening. Verify actual glyphs in close-up.`,'numerals');}
     if(st.indices.on)add(st.indices.radius+st.indices.length/2<=r,'Index envelope','Index radius plus half-length should stay inside the visible opening.','indices');
