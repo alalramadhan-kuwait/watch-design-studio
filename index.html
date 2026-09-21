@@ -1981,7 +1981,7 @@ const SYNC = (()=>{
       const back = await rest("watch_designs", {method:"POST",
         headers:{Prefer:"resolution=merge-duplicates,return=representation"},
         body: JSON.stringify(mine.map(v => ({
-          id: v.id, name: v.name, state: v.state,
+          id: v.id, name: v.name, state: v.state, kind: "version",
           saved_at: new Date(v.at || Date.now()).toISOString(), deleted_at: null})))});
       const by = {}; for(const r of back || []) by[r.id] = r;
       for(const v of mine){ const r = by[v.id]; if(r){ v.dirty = false; v.srv = r.updated_at; bump(r.updated_at); } }
@@ -2002,8 +2002,10 @@ const SYNC = (()=>{
   async function pull(){
     let moved = 0, more = true;
     while(more){
+      /* Versions only. The working design lives in this table too now, and
+         it is not something anybody chose to keep. */
       const rows = await rest("watch_designs?select=id,name,state,saved_at,updated_at,deleted_at"
-        + "&order=updated_at.asc&limit=" + PAGE
+        + "&kind=eq.version&order=updated_at.asc&limit=" + PAGE
         + (cursor ? "&updated_at=gt." + encodeURIComponent(cursor) : ""));
       more = !!rows && rows.length === PAGE;
       for(const r of rows || []){
@@ -2153,7 +2155,12 @@ const SAVE = (()=>{
     const id = SYNC.uuid();
     const row = await SYNC.rest("watch_designs", {method:"POST",
       headers:{Prefer:"return=representation"},
-      body: JSON.stringify([{id, name, state:S, saved_at:new Date().toISOString(),
+      /* kind:'project' — the design currently open, not a save in its own
+         right. Without it the sync below treats this row as a version
+         somebody meant to keep and pulls it into their list, where it then
+         changes under them on every edit. */
+      body: JSON.stringify([{id, name, state:S, kind:"project",
+                             saved_at:new Date().toISOString(),
                              opened_at:new Date().toISOString()}])});
     proj = {id, name, srv: row && row[0] && row[0].updated_at};
     await KV.set("wds:project", JSON.stringify(proj));
