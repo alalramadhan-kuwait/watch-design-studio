@@ -2232,6 +2232,18 @@ const SAVE = (()=>{
 
   async function boot(){
     try{ const r = await KV.get("wds:project"); proj = r ? JSON.parse(r.value) : null; }catch(e){ proj = null; }
+    /* A browser that ran the build before this one already pulled the working
+       copy into its saved list, and filtering what arrives from now on does
+       not remove what is already sitting there. The project row is known by
+       id, so it can be taken out of the list exactly once, here. */
+    if(proj && proj.id && typeof versions !== "undefined" && Array.isArray(versions)){
+      const i = versions.findIndex(v => v && v.id === proj.id);
+      if(i >= 0){
+        versions.splice(i, 1);
+        try{ await store.write(versions); }catch(e){}
+        if(typeof paintVersions === "function") paintVersions();
+      }
+    }
     set(SYNC.state().on ? (proj ? "saved" : "idle") : "local");
   }
 
