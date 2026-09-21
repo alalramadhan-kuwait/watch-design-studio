@@ -6891,6 +6891,14 @@ const SCHEMA = {
           ...(z.on !== false ? [
             N(k+".outerD","Outer diameter",6,44),
             N(k+".innerD","Inner diameter (0 = disc)",0,42),
+            /* How far this disc stands above the dial, or sinks into it. Zero
+               is flat, which is every design made before this existed. It is
+               geometry in the 3D view — a real step with a real shadow — and
+               the 2D drawing is unchanged, because a plan view of a stepped
+               dial looks the same from directly above. */
+            N(k+".lift","Height above the dial",-1.2,1.2,.05,"mm"),
+            {t:"say", l: (z.lift || 0) === 0 ? "Flat. Give it a height to make it a real step in the 3D view."
+              : (z.lift > 0 ? `Stands ${f(z.lift,2)} mm proud` : `Sunk ${f(-z.lift,2)} mm`) + " — shown in 3D view."},
             C(k+".color","Zone colour"),
             SEL(k+".finish","Finish",["matte","gloss","grained","sunburst","brushed","circular","guilloche","enamel"]),
             SUB("Engine turning", [
@@ -9943,14 +9951,31 @@ window.WatchReliefBridge={
     return prepSVG(svg,1024,1024);
   },
   heightCanvas(st,px){
-    const cv=document.createElement('canvas');cv.width=cv.height=px;const ctx=cv.getContext('2d'),img=ctx.createImageData(px,px),d=st.dial,r=visR(st),gu={...d,rays:d.rays2};
+    const cv=document.createElement('canvas');cv.width=cv.height=px;const ctx=cv.getContext('2d'),img=ctx.createImageData(px,px),d=st.dial,r=visR(st);
+    /* The relief under each radius belongs to whichever zone covers it. This
+       read st.dial alone, so a chapter ring with its own engine turning laid
+       over a plain dial came out of the bump map perfectly smooth — the one
+       surface on the watch whose whole point is that it is not. An inner zone
+       lies over its neighbour, the same rule the 2D renderer draws by, so the
+       innermost covering zone wins. */
+    const zs=(st.sector&&st.sector.on&&Array.isArray(st.sector.zones)?st.sector.zones:[])
+      .filter(z=>z&&z.on!==false&&z.outerD>0).slice().sort((a,b)=>b.outerD-a.outerD);
+    const surfaceAt=rad=>{
+      let hit=null;
+      for(const z of zs) if(rad<z.outerD/2&&rad>=(z.innerD||0)/2) hit=z;
+      if(!hit) return d;
+      /* "same as dial" means exactly that, pattern and all. */
+      const pat=(!hit.pattern||hit.pattern==='same as dial')?d.pattern:hit.pattern;
+      return {...d,...hit,pattern:pat,finish:hit.finish||d.finish};
+    };
     for(let y=0;y<px;y++)for(let x=0;x<px;x++){
-      const ux=(x/(px-1)-.5)*r*2,uy=(y/(px-1)-.5)*r*2;let v=.5;
-      if(d.finish==='guilloche')v=.5+guilField(gu,ux,uy,Math.hypot(ux,uy),Math.atan2(uy,ux))*2;
-      else if(d.finish==='stone'&&d.stone==='meteorite'){
-        const result=syntheticStone('meteorite',ux,uy,{scale:d.stoneScale||22,contrast:d.stoneContrast||1,rot:d.stoneRot||0,tint:0});v=result.c.reduce((a,b)=>a+b,0)/3;
-      }else if(['brushed','sunburst','circular'].includes(d.finish)){
-        const p=d.finish==='brushed'?uy:d.finish==='circular'?Math.hypot(ux,uy):Math.atan2(uy,ux)*12;v=.5+.12*Math.sin(p*130);
+      const ux=(x/(px-1)-.5)*r*2,uy=(y/(px-1)-.5)*r*2,rad=Math.hypot(ux,uy);let v=.5;
+      const d2=zs.length?surfaceAt(rad):d, gu={...d2,rays:d2.rays2||d2.rays};
+      if(d2.finish==='guilloche')v=.5+guilField(gu,ux,uy,rad,Math.atan2(uy,ux))*2;
+      else if(d2.finish==='stone'&&d2.stone==='meteorite'){
+        const result=syntheticStone('meteorite',ux,uy,{scale:d2.stoneScale||22,contrast:d2.stoneContrast||1,rot:d2.stoneRot||0,tint:0});v=result.c.reduce((a,b)=>a+b,0)/3;
+      }else if(['brushed','sunburst','circular'].includes(d2.finish)){
+        const p=d2.finish==='brushed'?uy:d2.finish==='circular'?rad:Math.atan2(uy,ux)*12;v=.5+.12*Math.sin(p*130);
       }
       const i=(y*px+x)*4,b=Math.round(Math.max(0,Math.min(1,v))*255);img.data[i]=img.data[i+1]=img.data[i+2]=b;img.data[i+3]=255;
     }ctx.putImageData(img,0,0);return cv;

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {reliefSettings,subdialLayout,handAngles,markerAngles} from '../src/relief-model.js';
+import {reliefSettings,subdialLayout,handAngles,markerAngles, zoneStack, zoneBands} from '../src/relief-model.js';
 
 test('old designs and null settings receive safe defaults',()=>{
   assert.deepEqual(reliefSettings(),reliefSettings(null));
@@ -33,4 +33,47 @@ test('raised markers follow applied mode and numeral exclusions',()=>{
 });
 test('hands preserve the selected time',()=>{
   assert.deepEqual(handAngles({h:10,m:10,s:30}),[305,63,180]);
+});
+
+test('a dial with no lifts stays one flat disc',()=>{
+  const flat={sector:{on:true,zones:[{outerD:30,innerD:22},{outerD:22,innerD:0,lift:0}]}};
+  assert.deepEqual(zoneBands(flat,15.25,.5),[],'no bands means the old single blank is used');
+  assert.deepEqual(zoneStack(flat,15.25),[]);
+});
+
+test('zones become bands at their own heights, innermost winning the overlap',()=>{
+  const st={sector:{on:true,zones:[{outerD:30,innerD:22,lift:.25},{outerD:22,innerD:0,lift:-.3}]}};
+  const bands=zoneBands(st,15.25,.5);
+  assert.equal(bands.length,3);
+  assert.deepEqual(bands.map(b=>b.lift),[-.3,.25,0]);
+  assert.deepEqual(bands.map(b=>[+b.lo.toFixed(2),+b.hi.toFixed(2)]),[[0,11],[11,15],[15,15.25]]);
+  // every band is solid from its own face down to the shared underside
+  for(const b of bands) assert.ok(Math.abs((b.z+b.depth)-b.lift)<1e-9,'top face sits at the lift');
+});
+
+test('an inner zone laid over a larger one takes the overlap',()=>{
+  const st={sector:{on:true,zones:[{outerD:30,innerD:0,lift:.4},{outerD:16,innerD:0,lift:-.2}]}};
+  const bands=zoneBands(st,15.25,.5);
+  assert.deepEqual(bands.map(b=>b.lift),[-.2,.4,0]);
+});
+
+test('nonsense zones are left out rather than drawn wrong',()=>{
+  const bad={sector:{on:true,zones:[
+    {outerD:30,innerD:31,lift:.3},        // inner outside outer
+    {outerD:-4,innerD:0,lift:.3},         // negative
+    {outerD:20,innerD:0,lift:'x'},        // not a number
+    {outerD:20,innerD:0,lift:.002},       // below the flat threshold
+    {outerD:20,innerD:0,lift:.3,on:false} // switched off
+  ]}};
+  assert.deepEqual(zoneStack(bad,15.25),[]);
+});
+
+test('a lift is clamped rather than allowed to swallow the case',()=>{
+  const st={sector:{on:true,zones:[{outerD:30,innerD:0,lift:99}]}};
+  assert.equal(zoneStack(st,15.25)[0].lift,1.2);
+  assert.equal(zoneStack({sector:{on:true,zones:[{outerD:30,innerD:0,lift:-99}]}},15.25)[0].lift,-1.2);
+});
+
+test('zones are ignored entirely when the sector is off',()=>{
+  assert.deepEqual(zoneStack({sector:{on:false,zones:[{outerD:30,innerD:0,lift:.5}]}},15.25),[]);
 });

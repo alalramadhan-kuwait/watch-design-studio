@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 import {SVGLoader} from 'three/addons/loaders/SVGLoader.js';
 import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
-import {reliefSettings,subdialLayout,handAngles,markerAngles} from './relief-model.js';
+import {reliefSettings,subdialLayout,handAngles,markerAngles,zoneBands} from './relief-model.js';
 
 const bridge=window.WatchReliefBridge;
 const dialog=document.getElementById('relief-dialog');
@@ -102,7 +102,28 @@ async function rebuild(){
     subdials.forEach(sub=>{const hole=new THREE.Path();hole.absarc(sub.x,sub.y,sub.r,0,Math.PI*2,true);shape.holes.push(hole);});
     const bump=texture(bridge.heightCanvas(state,384),false);
     const dialMaterial=new THREE.MeshStandardMaterial({map:texture(cv),color:'#ffffff',metalness:state.dial.finish==='stone'?.25:.4,roughness:settings.roughness,bumpMap:bump,bumpScale:state.dial.finish==='guilloche'?.10:.055,envMapIntensity:.85});
-    const blank=mesh(new THREE.ExtrudeGeometry(shape,{depth:Math.max(.4,settings.subDepth),bevelEnabled:false,curveSegments:96,UVGenerator:uv}),[dialMaterial,mat(state.dial.color,.4,.6)]);blank.position.z=-Math.max(.4,settings.subDepth);
+    const base=Math.max(.4,settings.subDepth),wallMat=mat(state.dial.color,.4,.6);
+    const bands=zoneBands(state,r,base);
+    if(bands.length){
+      /* The dial is a stack of discs rather than one wearing a picture of a
+         stack. Each band is solid from its own face down to the shared
+         underside, so the step between two zones is geometry: it has a
+         silhouette at a grazing angle and it casts onto what is below it.
+         Every band samples the same dial artwork through the same planar UV,
+         so the printing lands exactly where it always did. */
+      for(const band of bands){
+        const ring=new THREE.Shape();ring.absarc(0,0,band.hi,0,Math.PI*2,false);
+        if(band.lo>.02){const inner=new THREE.Path();inner.absarc(0,0,band.lo,0,Math.PI*2,true);ring.holes.push(inner);}
+        for(const sub of subdials){
+          const d=Math.hypot(sub.x,sub.y);
+          if(d-sub.r<band.hi&&d+sub.r>band.lo){const h=new THREE.Path();h.absarc(sub.x,sub.y,sub.r,0,Math.PI*2,true);ring.holes.push(h);}
+        }
+        const disc=mesh(new THREE.ExtrudeGeometry(ring,{depth:band.depth,bevelEnabled:false,curveSegments:96,UVGenerator:uv}),[dialMaterial,wallMat]);
+        disc.position.z=band.z;
+      }
+    }else{
+      const blank=mesh(new THREE.ExtrudeGeometry(shape,{depth:base,bevelEnabled:false,curveSegments:96,UVGenerator:uv}),[dialMaterial,wallMat]);blank.position.z=-base;
+    }
     // Front/back share the map; hole walls use the second material.
     for(const sub of subdials){
       const floor=mat('#ffffff',.85,0);floor.envMapIntensity=.3;floor.map=texture(subArtwork(sub));circle(sub.r,floor,-settings.subDepth+.012,sub.x,sub.y);

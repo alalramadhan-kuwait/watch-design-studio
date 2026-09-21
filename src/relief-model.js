@@ -32,3 +32,54 @@ export function markerAngles(state){
   const count=Math.min(60,Math.max(4,Math.round(i.count||12)));
   return Array.from({length:count},(_,n)=>({n,angle:n*360/count})).filter(({n})=>!i.skipNumerals||!occupied.includes(n===0?12:n)).map(i=>i.angle);
 }
+
+/* A dial is made up: discs printed or turned on top of one another, and a
+   chapter ring standing proud of a sunken centre is a step you can feel with
+   a fingernail. The 2D renderer has described that as a list of concentric
+   zones for a while; in 3D it was still one flat disc wearing a picture of
+   them, so a step read as a painted ring — no silhouette at a grazing angle,
+   nothing casting onto what is below it.
+   A zone carries a lift in millimetres. Zero means flat, which is every
+   design that existed before this and is why nothing moves unless you ask. */
+export function zoneStack(state, radius){
+  const zones = state?.sector?.on ? (Array.isArray(state.sector.zones) ? state.sector.zones : []) : [];
+  const out = [];
+  for(const z of zones.slice(0, 8)){
+    if(!z || z.on === false) continue;
+    const outer = Math.min(Number(z.outerD)/2, radius);
+    const inner = Math.max(0, Number(z.innerD || 0)/2);
+    const lift  = Number(z.lift);
+    if(!Number.isFinite(outer) || outer <= 0) continue;
+    if(!Number.isFinite(inner) || inner >= outer - .02) continue;
+    if(!Number.isFinite(lift) || Math.abs(lift) < .005) continue;   // a flat zone stays paint
+    out.push({outer, inner, lift: Math.min(1.2, Math.max(-1.2, lift))});
+  }
+  return out.sort((a, b) => b.outer - a.outer);        // outermost first
+}
+
+/* The radius, cut into bands that each sit at one height. An inner zone lies
+   over its neighbour — the same rule the 2D renderer draws by — so where two
+   overlap the innermost wins. Adjacent bands at the same height are merged:
+   a wall between two faces that are level is a seam for nothing. */
+export function zoneBands(state, radius, floor){
+  const zones = zoneStack(state, radius);
+  if(!zones.length) return [];
+  const cuts = new Set([0, radius]);
+  for(const z of zones){ cuts.add(z.outer); cuts.add(z.inner); }
+  const edge = [...cuts].filter(v => v >= 0 && v <= radius).sort((a, b) => a - b);
+  const bands = [];
+  for(let i = 0; i < edge.length - 1; i++){
+    const lo = edge[i], hi = edge[i + 1];
+    if(hi - lo < .02) continue;
+    const mid = (lo + hi)/2;
+    let lift = 0;
+    for(const z of zones) if(mid < z.outer && mid >= z.inner) lift = z.lift;
+    const last = bands[bands.length - 1];
+    if(last && Math.abs(last.lift - lift) < 1e-9) last.hi = hi;
+    else bands.push({lo, hi, lift});
+  }
+  /* Each band is solid from its own face down to the common underside, so the
+     wall between two of them is geometry rather than a drawn edge. */
+  const base = Number.isFinite(floor) ? floor : .4;
+  return bands.map(b => ({...b, depth: b.lift + base, z: -base}));
+}
