@@ -66,7 +66,7 @@ function extrudeSVG(svg,material,depth,bevel,z,parent=model){
 /* A fluted bezel, as a ring of straight radial flutes on an outward slope:
    polished land at the crystal, the fluted slope, then a short outer wall.
    Each flute is a ridge and a valley, sampled so both land on vertices. */
-function flutedBezel(rb,rbi,land,n,z0,height,material){
+function flutedBezel(rb,rbi,land,n,z0,height,material,depth){
   const top=z0+height,prof=[[rbi,top-.15],[rbi+.1,top],[rbi+land,top],[rb,z0+.55],[rb,z0+.3],[rb,z0]];
   const slope=2,dense=[];
   for(let i=0;i<prof.length-1;i++){const [r0,z1]=prof[i],[r1,z2]=prof[i+1],k=i===slope?18:2;for(let j=0;j<k;j++){const t=j/k;dense.push([r0+(r1-r0)*t,z1+(z2-z1)*t,i===slope||(i===slope+1&&j===0)]);}}
@@ -76,8 +76,9 @@ function flutedBezel(rb,rbi,land,n,z0,height,material){
     const th=2*Math.PI*a/seg,u=(n*th/(2*Math.PI))%1,tri=1-4*Math.abs(u-.5);
     for(const [r,z,fl] of dense){
       let zz=z;
-      /* a V cut, about 34% of the pitch deep, running out through the outer edge */
-      if(fl){const t=Math.min(1,Math.max(0,(r-rbi-land)/(rb-rbi-land))),env=Math.min(1,t/.05);zz+=.34*(2*Math.PI*r/n)/2*env*tri;}
+      /* a V cut running out through the outer edge, as deep as the case's
+         flutes are cut (0.41 mm on the B6098G-A1), or a third of the pitch */
+      if(fl){const t=Math.min(1,Math.max(0,(r-rbi-land)/(rb-rbi-land))),env=Math.min(1,t/.05),d=depth||.34*(2*Math.PI*r/n);zz+=d/2*env*tri;}
       pos.push(r*Math.cos(th),r*Math.sin(th),zz);
     }
   }
@@ -133,7 +134,7 @@ async function rebuild(){
     if(state.case.on){
       extrudeSVG(outline,steel,state.case.thickness||7.9,.22,-(state.case.thickness||7.9)+.5);
       if(round){
-        flutedBezel(spec.bezelOD/2,Math.max(r+.6,spec.bezelID/2),spec.land||.5,spec.flutes||60,.5,1.15,steel);
+        flutedBezel(spec.bezelOD/2,Math.max(r+.6,spec.bezelID/2),spec.land||.5,spec.flutes||60,.5,1.15,steel,spec.fluteDepth);
         torus(r+.15,.30,.55,steel);
       }else{
         // A polished rolled inner rim picks up the studio softboxes.

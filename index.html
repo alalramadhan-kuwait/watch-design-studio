@@ -1318,7 +1318,7 @@ const NOREL_R3 = {
   ref:"B6098G-A1 (R3)", steel:"S.S 316L", wr:"10 ATM", movement:"Sellita SW240-1",
   flat:41.00, diagonal:41.00, rSide:20.50, rCorner:20.50,                 // round: no flats or corners
   midFlat:41.00, midDiagonal:41.00, midRSide:20.50, midRCorner:20.50,
-  bezelOD:40.00, bezelID:34.80, land:0.50, flutes:60,                     // fluted bezel, polished land at the crystal
+  bezelOD:40.00, bezelID:34.80, land:0.50, flutes:72, fluteDepth:0.41,   // from the supplied STEP: 72 V flutes 0.41 deep on a 45° slope, polished land at the crystal
   lugToLug:48.00, lugWidth:21.00, lugOuter:26.40, springBar:1.80, clasp:16.00,
   height:11.50, bezelH:2.97, midH:5.53,
   opening:32.50, glassSeat:34.80, glassD:34.50, glassT:1.50, glassBevel:"flat sapphire with a 7.0 × 5.0 cyclops at 3H",
@@ -10290,7 +10290,7 @@ window.WatchReliefBridge={
   snapshot:()=>clone(S), radius:visR, handColor:handCore,
   settings(value){S.relief3d=value;commit();},
   closed(){paintAll();}, undo(){undo();},
-  caseSpec(st){const K=caseOf(st);return {shape:K.shape,flat:K.flat,bezelOD:K.bezelOD,bezelID:K.bezelID,land:K.land,flutes:K.flutes,bracelet:!!K.bracelet,crownD:K.crownD};},
+  caseSpec(st){const K=caseOf(st);return {shape:K.shape,flat:K.flat,bezelOD:K.bezelOD,bezelID:K.bezelID,land:K.land,flutes:K.flutes,fluteDepth:K.fluteDepth,bracelet:!!K.bracelet,crownD:K.crownD};},
   caseOutline(st){
     const K=caseOf(st),half=(st.case.locked?K.flat:st.case.diameter)/2;
     const outer=K.shape==='round'?disc(half):cushion(half,half*38/18,half*10/18),r=visR(st);
