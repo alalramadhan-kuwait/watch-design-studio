@@ -67,21 +67,23 @@ function extrudeSVG(svg,material,depth,bevel,z,parent=model){
    polished land at the crystal, the fluted slope, then a short outer wall.
    Each flute is a ridge and a valley, sampled so both land on vertices. */
 function flutedBezel(rb,rbi,land,n,z0,height,material){
-  const top=z0+height,prof=[[rbi,top-.15],[rbi+.1,top],[rbi+land,top],[rb-.08,z0+.55],[rb,z0+.3],[rb,z0]];
+  const top=z0+height,prof=[[rbi,top-.15],[rbi+.1,top],[rbi+land,top],[rb,z0+.55],[rb,z0+.3],[rb,z0]];
   const slope=2,dense=[];
-  for(let i=0;i<prof.length-1;i++){const [r0,z1]=prof[i],[r1,z2]=prof[i+1],k=i===slope?18:2;for(let j=0;j<k;j++){const t=j/k;dense.push([r0+(r1-r0)*t,z1+(z2-z1)*t,i===slope]);}}
+  for(let i=0;i<prof.length-1;i++){const [r0,z1]=prof[i],[r1,z2]=prof[i+1],k=i===slope?18:2;for(let j=0;j<k;j++){const t=j/k;dense.push([r0+(r1-r0)*t,z1+(z2-z1)*t,i===slope||(i===slope+1&&j===0)]);}}
   dense.push([...prof[prof.length-1],false]);
   const seg=Math.max(360,n*12),pos=[],idx=[],np=dense.length;
   for(let a=0;a<=seg;a++){
     const th=2*Math.PI*a/seg,u=(n*th/(2*Math.PI))%1,tri=1-4*Math.abs(u-.5);
     for(const [r,z,fl] of dense){
       let zz=z;
-      if(fl){const t=Math.min(1,Math.max(0,(r-rbi-land)/(rb-.08-rbi-land))),env=Math.min(1,t/.08,(1-t)/.05);zz+=.13*env*tri;}
+      /* a V cut, about 34% of the pitch deep, running out through the outer edge */
+      if(fl){const t=Math.min(1,Math.max(0,(r-rbi-land)/(rb-rbi-land))),env=Math.min(1,t/.05);zz+=.34*(2*Math.PI*r/n)/2*env*tri;}
       pos.push(r*Math.cos(th),r*Math.sin(th),zz);
     }
   }
   for(let a=0;a<seg;a++)for(let i=0;i<np-1;i++){const q=a*np+i,r2=(a+1)*np+i;idx.push(q,q+1,r2,q+1,r2+1,r2);}
-  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));g.setIndex(idx);g.computeVertexNormals();
+  let g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));g.setIndex(idx);
+  g=g.toNonIndexed();g.computeVertexNormals();   // flat faces, so each side of a flute catches the light on its own
   const m=mesh(g,material);m.material.side=THREE.DoubleSide;return m;
 }
 /* A President-style bracelet: rows of three links, brushed outers and a

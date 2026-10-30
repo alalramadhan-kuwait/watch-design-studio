@@ -4108,17 +4108,21 @@ function buildSVG(st, o={}){
     let flutes = "";
     for(let i=0;i<n;i++){
       const a0 = i*360/n, a1 = a0 + 180/n, a2 = a0 + 360/n;
-      /* The bezel slope faces outward, so the side toward the light is bright
-         and the far side dark; each facet of a flute then turns a little
-         toward or away from it. */
-      const lit = (am, side) => { const rel = (am - 90 - la)*Math.PI/180;
-        return 0.5 + 0.28*Math.cos(rel) + side*0.16*Math.sin(rel); };
-      const tA = lit((a0+a1)/2, 1), tB = lit((a1+a2)/2, -1);
-      const col = t => t > 0.5 ? tint(M0, Math.min(0.85,(t-0.5)*1.6)) : shade(M0, Math.min(0.5,(0.5-t)*0.9));
+      /* Each flute is a V cut: two flat faces meeting at a ridge (a1). The
+         faces turn opposite ways, so they mirror opposite sides of the room,
+         and in a studio of light and dark panels one face of a flute is
+         bright and its neighbour dark, all the way round - the look of a
+         polished fluted bezel. The room here alternates twice round. */
+      const room = az => 0.5 + 0.5*Math.tanh(2.4*Math.cos(2*(az - la)*Math.PI/180));
+      const tA = room(a1 - 45), tB = room(a1 + 45);
+      const col = t => t > 0.5 ? tint(M0, Math.min(0.9,(t-0.5)*1.8)) : shade(M0, Math.min(0.62,(0.5-t)*1.25));
       const q = (r,a) => { const p = pt(r,a); return `${f(p[0],3)} ${f(p[1],3)}`; };
-      flutes += `<path d="M${q(r0,a0)}L${q(r1,a0)}L${q(r1,a1)}L${q(r0,a1)}Z" fill="${col(tA)}"/>`
-             +  `<path d="M${q(r0,a1)}L${q(r1,a1)}L${q(r1,a2)}L${q(r0,a2)}Z" fill="${col(tB)}"/>`
-             +  `<path d="M${q(r0+0.08,a1)}L${q(r1-0.05,a1)}" stroke="${tint(M0,0.9)}" stroke-opacity=".55" stroke-width="0.05"/>`;
+      const rm = (r0 + r1)/2;
+      /* a face is a little darker toward the crystal, where it reflects lower in the room */
+      for(const [b0, b1, t] of [[a0, a1, tA], [a1, a2, tB]])
+        flutes += `<path d="M${q(r0,b0)}L${q(rm,b0)}L${q(rm,b1)}L${q(r0,b1)}Z" fill="${col(t - 0.1)}"/>`
+               +  `<path d="M${q(rm,b0)}L${q(r1,b0)}L${q(r1,b1)}L${q(rm,b1)}Z" fill="${col(t)}"/>`;
+      flutes += `<path d="M${q(r0+0.08,a1)}L${q(r1-0.05,a1)}" stroke="${tint(M0,0.9)}" stroke-opacity=".55" stroke-width="0.05"/>`;
     }
     body.push(`<g>${flutes}</g>`);
     body.push(`<circle r="${f(rb,3)}" fill="none" stroke="${shade(M0,0.7)}" stroke-opacity=".8" stroke-width="0.10"/>`);
