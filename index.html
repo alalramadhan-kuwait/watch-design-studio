@@ -1291,9 +1291,13 @@ body{grid-template-rows:auto auto minmax(0,1fr)}
 /* =====================================================================
    1. MODEL — every dimension is a real millimetre value
    ===================================================================== */
-/* Fixed case: RD26-0172 / FZY0192 — S.S 316L, 5 ATM, movement 1062.
-   Every value below is taken from the factory drawing set and is not user-editable. */
-const CASE_SPEC = {
+/* The cases a dial can be designed for. Each is a factory drawing set, not a
+   set of preferences: every value is taken from the drawings and is not
+   user-editable. The design names its case in case.model.
+
+   Vernoy RD26-0172 / FZY0192 — S.S 316L, 5 ATM, movement 1062. */
+const VERNOY_CASE = {
+  model:"Vernoy cushion · RD26-0172", shape:"cushion", photo:true,
   ref:"RD26-0172 (FZY0192)", steel:"S.S 316L", wr:"5 ATM", movement:"1062",
   flat:36.00, diagonal:40.05, rSide:38.00, rCorner:10.00,          // bezel / case top view
   midFlat:35.50, midDiagonal:39.55, midRSide:37.75, midRCorner:9.75,// case middle (coin edge)
@@ -1303,6 +1307,47 @@ const CASE_SPEC = {
   dialD:31.30, dialT:0.40, dialHolder:31.60, dialMat:"brass",
   movHolder:25.00, crownD:4.50, crownTube:2.00, cabochon:2.00, tol:"±0.05 mm, ±1°"
 };
+/* NOREL B6098G-A1, Blue Creations: a round 41 mm case with a fluted bezel and
+   a Sellita SW240-1 day-date. R3 is the case as drawn; Concept D is the
+   proposal that widens the bezel inward and sits it flush with the case. The
+   calendar belongs to the movement and does not move with the case: the day
+   disc shows at R11.27–13.17 mm through at most 53°, the date ring at
+   8.75–11.15 mm through 2.40 × 2.00 mm centred 9.95 mm from the centre. */
+const NOREL_R3 = {
+  model:"NOREL B6098G-A1 · R3", shape:"round", photo:false,
+  ref:"B6098G-A1 (R3)", steel:"S.S 316L", wr:"10 ATM", movement:"Sellita SW240-1",
+  flat:41.00, diagonal:41.00, rSide:20.50, rCorner:20.50,                 // round: no flats or corners
+  midFlat:41.00, midDiagonal:41.00, midRSide:20.50, midRCorner:20.50,
+  bezelOD:40.00, bezelID:34.80, land:0.50, flutes:60,                     // fluted bezel, polished land at the crystal
+  lugToLug:48.00, lugWidth:21.00, lugOuter:26.40, springBar:1.80, clasp:16.00,
+  height:11.50, bezelH:2.97, midH:5.53,
+  opening:32.50, glassSeat:34.80, glassD:34.50, glassT:1.50, glassBevel:"flat sapphire with a 7.0 × 5.0 cyclops at 3H",
+  dialD:33.50, dialT:0.40, dialHolder:33.50, dialMat:"brass",
+  movHolder:29.00, crownD:6.50, crownTube:2.50, cabochon:0, tol:"to be confirmed by Blue Creations",
+  bracelet:true, cyclops:{w:7.0, h:5.0, mag:2.0},
+  calendar:{dayRin:11.27, dayRout:13.17, dayArcMax:53, dateC:9.95, dateRin:8.75, dateRout:11.15, dateW:2.40, dateH:2.00},
+  back:["SELLITA SW240-1", "ALL STAINLESS STEEL", "10 ATM WATER RESISTANT"]
+};
+const NOREL_D = Object.assign({}, NOREL_R3, {
+  model:"NOREL B6098G-A1 · Concept D", ref:"B6098G-A1 Concept D (proposal)",
+  bezelOD:41.00, bezelID:33.80, opening:31.40, glassSeat:33.80, glassD:33.50, dialD:32.40, dialHolder:32.40,
+  cyclops:{w:7.0, h:5.6, mag:2.5}, tol:"proposal: Blue Creations to confirm bezel seat, crystal, cyclops and dial seat"
+});
+const CASES = {[VERNOY_CASE.model]:VERNOY_CASE, [NOREL_R3.model]:NOREL_R3, [NOREL_D.model]:NOREL_D};
+const CASE_MODELS = Object.keys(CASES);
+const caseOf = st => (st && st.case && CASES[st.case.model]) || VERNOY_CASE;
+/* CASE_SPEC is the case of the design on screen. It reads through to that
+   design every time, so the many places that ask it never have to be told the
+   case changed. Anything drawing some other design asks caseOf(that design). */
+const CASE_SPEC = new Proxy({}, {
+  get:(t, k) => { let st = null; try{ st = S; }catch(e){} return caseOf(st)[k]; },
+  has:(t, k) => { let st = null; try{ st = S; }catch(e){} return k in caseOf(st); },
+  ownKeys:() => { let st = null; try{ st = S; }catch(e){} return Reflect.ownKeys(caseOf(st)); },
+  getOwnPropertyDescriptor:(t, k) => { let st = null; try{ st = S; }catch(e){} const v = caseOf(st)[k];
+    return v === undefined ? undefined : {value:v, enumerable:true, configurable:true, writable:false}; }
+});
+const caseOutlinePath = (K, half, scale) => K.shape === "round" ? disc(half)
+  : cushion(half, K.rSide*(scale||1), K.rCorner*(scale||1));
 
 const BASE = {
   meta:{name:"Vernoy — RD26-0172", time:{h:10,m:9,s:32}},
@@ -1310,12 +1355,12 @@ const BASE = {
   exportPx:0,
   handSet:{link:"full set", minuteScale:0.80, secondsScale:0.52, includeSeconds:true},
   tpl:{on:true, cx:48.1, cy:43.5, dia:55.6, rot:0, recess:0.55, name:""},
-  case:{on:true, locked:true, material:"#C8C9C7", finish:"polished", cab:"#8A1538",
+  case:{on:true, locked:true, model:VERNOY_CASE.model, material:"#C8C9C7", finish:"polished", cab:"#8A1538",
         strap:true, strapColor:"#4E3629",
         // mirrors of CASE_SPEC, editable only when unlocked for exploration
-        diameter:CASE_SPEC.flat, opening:CASE_SPEC.opening, lugToLug:CASE_SPEC.lugToLug,
-        lugWidth:CASE_SPEC.lugWidth, thickness:CASE_SPEC.height},
-  dial:{on:true, dome:0, satin:0, waveGrowth:0, wavePhase:0, radialPhase:0, stamp:0, lock:true, diameter:CASE_SPEC.dialD, color:"#003087", finish:"guilloche",
+        diameter:VERNOY_CASE.flat, opening:VERNOY_CASE.opening, lugToLug:VERNOY_CASE.lugToLug,
+        lugWidth:VERNOY_CASE.lugWidth, thickness:VERNOY_CASE.height},
+  dial:{on:true, dome:0, satin:0, waveGrowth:0, wavePhase:0, radialPhase:0, stamp:0, lock:true, diameter:VERNOY_CASE.dialD, color:"#003087", finish:"guilloche",
         secondary:"#002554", rays:44,
         stone:"lapis lazuli", slab:"", stoneScale:22.0, stoneRot:0, stoneOffX:0, stoneOffY:0,
         stoneBump:1.0, stoneContrast:1.0, stoneTint:0, stoneSlot:"roughness",
@@ -1343,7 +1388,13 @@ const BASE = {
             engDepth:0.030, engBevel:0.020, engShadow:0.25, engHilite:0.42, engRecess:0.045, engSharp:1},
   cross:{on:false, width:.18, length:13.0, color:"#8BB8E8"},
   sub:{on:false, at:6, dist:7.5, diameter:9.0, color:"#D6D2C4", ring:"#84754E", track:true},
-  date:{on:false, at:3, dist:9.5, w:3.6, h:2.6, frame:"#C8C9C7", bg:"#F1E6B2", text:"#25282A"},
+  date:{on:false, at:3, dist:9.5, w:3.6, h:2.6, frame:"#C8C9C7", bg:"#F1E6B2", text:"#25282A",
+        frameW:0.14, cyclops:"none", digits:"Western", shown:31},
+  /* A day window is cut through the dial over the movement's day disc, so its
+     radius is the movement's, not the designer's: only the arc it opens, the
+     frame round it and the printing on the disc are choices. */
+  day:{on:false, arc:46.5, frame:0.60, frameColor:"#C8C9C7", bg:"#F6F5F1", text:"#16191F",
+       lang:"Arabic", shown:"Friday", textH:1.50},
   text:{on:true, logo:"VERNOY", logoY:-7.4, logoSize:2.0, logoFont:"serif",
         line2:"", line2Y:-4.9, line2Size:1.2,
         foot:"SWISS · MADE", footY:14.05, footSize:.85, color:"#FFFFFF",
@@ -1798,6 +1849,44 @@ function commit(){
 function undo(){ if(hi>0){hi--; S=clone(hist[hi]); paintAll(); queueSave();} }
 function redo(){ if(hi<hist.length-1){hi++; S=clone(hist[hi]); paintAll(); queueSave();} }
 function syncUndo(){ q("#undo").disabled = hi<=0; q("#redo").disabled = hi>=hist.length-1; }
+
+/* A dial is laid out for an opening. Moving it to another case scales every
+   radial measurement by the ratio of the two openings, so the design keeps its
+   proportions instead of running under the bezel or floating in the middle.
+   A case with a movement calendar also places the day and date where that
+   movement shows them. */
+function applyCaseModel(from, to){
+  const A = CASES[from] || VERNOY_CASE, B = CASES[to] || VERNOY_CASE;
+  const c = S.case;
+  c.model = B.model; c.locked = true;
+  c.diameter = B.flat; c.opening = B.opening; c.lugToLug = B.lugToLug; c.lugWidth = B.lugWidth; c.thickness = B.height;
+  if(S.dial.lock) S.dial.diameter = B.dialD;
+  if(!B.photo) S.tpl.on = false;
+  const k = B.opening / A.opening;
+  if(Math.abs(k - 1) > 1e-6){
+    const sc = (o, keys) => { if(o) for(const key of keys) if(typeof o[key] === "number") o[key] = +(o[key]*k).toFixed(3); };
+    if(!S.dial.lock) sc(S.dial, ["diameter"]);
+    sc(S.chapter, ["outerD","innerD"]); sc(S.minute, ["diameter"]); sc(S.hour, ["diameter"]);
+    sc(S.indices, ["radius","length"]); sc(S.numerals, ["radius","size"]);
+    sc(S.sector, ["outerD","innerD"]); (S.sector.zones || []).forEach(z => sc(z, ["outerD","innerD"]));
+    const walkBorders = o => { if(!o || typeof o !== "object") return; if(typeof o.dia === "number") sc(o, ["dia"]); for(const v of Object.values(o)) if(v && typeof v === "object") walkBorders(v); };
+    walkBorders(S.borders);
+    sc(S.cross, ["length"]); sc(S.sub, ["dist","diameter"]); (S.sub.extra || []).forEach(x => sc(x, ["dist","diameter"]));
+    sc(S.text, ["logoY","logoSize","line2Y","line2Size","footY","footSize"]);
+    if(!B.calendar) sc(S.date, ["dist","w","h"]);
+    for(const key of ["hHand","mHand","sHand"]) if(S[key] && (!S[key].reach || S[key].reach === "free")) sc(S[key], ["length"]);
+  }
+  if(B.calendar){
+    const K = B.calendar;
+    S.day.on = true;
+    S.day.arc = Math.min(S.day.arc || 46.5, K.dayArcMax);
+    Object.assign(S.date, {on:true, at:3, dist:K.dateC, w:K.dateW, h:K.dateH,
+      frameW:Math.max(S.date.frameW || 0, 0.55), cyclops:f(B.cyclops.mag,1)+"×"});
+  } else if(A.calendar){
+    S.day.on = false;
+    Object.assign(S.date, {cyclops:"none", frameW:0.14});
+  }
+}
 
 /* Persistence, in order of preference: the host's storage API, then the
    browser's own localStorage, then memory for this session only. Some
@@ -3770,7 +3859,7 @@ function stoneArgs(st, color){
 let _matLast = null;
 function materialURL(color, finish, mode, az, el, px, guil, stone, surf){
   if(typeof document === "undefined") return null;      // headless: no material
-  const key = [color, finish, mode, az, el, px,
+  const key = [color, finish, mode, az, el, px, CASE_SPEC.dialD,
                surf ? [surf.dome, surf.satin].join(".") : "-",
                guil && Object.values(guil).join(","),
                stone && [stone.type, stone.slab, stone.scale, stone.rot, stone.offX,
@@ -3813,7 +3902,7 @@ const MAT_FINISH = {flat:"matte", matte:"matte", gloss:"gloss", lacquer:"lacquer
 function buildSVG(st, o={}){
   const scope = o.scope||"full";               // full | dial | hands
   const c = st.case, d = st.dial;
-  const K = CASE_SPEC;
+  const K = caseOf(st);
   const opening = c.locked ? K.opening : c.opening;
   const dialD = d.lock ? (c.locked ? K.dialD : c.opening+0.8) : d.diameter;
   let box = (c.locked ? K.lugToLug : c.lugToLug) + (c.strap&&scope==="full"?10:5);
@@ -3855,7 +3944,7 @@ function buildSVG(st, o={}){
     if(!url) return null;
     const cid = id("mi");
     defs.push(`<clipPath id="${cid}"><path d="${rIn>0?annulus(rOut,rIn):disc(rOut)}" clip-rule="evenodd"/></clipPath>`);
-    const H2 = CASE_SPEC.dialD;
+    const H2 = K.dialD;
     return `<image href="${url}" x="${-H2/2}" y="${-H2/2}" width="${H2}" height="${H2}" clip-path="url(#${cid})" preserveAspectRatio="none"/>`;
   }
   function finishLayer(rOut, rIn, color, finish, extra={}){
@@ -3914,12 +4003,101 @@ function buildSVG(st, o={}){
     return g;
   }
 
+
+  /* ---------------- CASE + BRACELET (round fluted, B6098G-A1 top view) ----------------
+     Outside in: bracelet and lugs, the case middle, the fluted bezel, its
+     polished land, the flange falling to the opening. The flutes are straight
+     radial facets, each lit on the face turned toward the scene light. */
+  const roundCase = () => {
+    const la = ((st.render && st.render.az) || 135);
+    const M0 = c.material;
+    const lgr = (stops, ang) => { const gid = id("rg"), a = (ang === undefined ? la : ang)*Math.PI/180;
+      defs.push(`<linearGradient id="${gid}" x1="${f(0.5-Math.cos(a)*0.5,3)}" y1="${f(0.5-Math.sin(a)*0.5,3)}" x2="${f(0.5+Math.cos(a)*0.5,3)}" y2="${f(0.5+Math.sin(a)*0.5,3)}">${stops}</linearGradient>`);
+      return gid; };
+    const st3 = (a_,b_,c_) => `<stop offset="0" stop-color="${a_}"/><stop offset="0.5" stop-color="${b_}"/><stop offset="1" stop-color="${c_}"/>`;
+    const R = (c.locked ? K.flat : c.diameter)/2, k = R/(K.flat/2);
+    const rb = K.bezelOD/2*k, rbi = Math.max(opening/2 + 0.6, K.bezelID/2*k), land = K.land;
+    const l2l = c.locked ? K.lugToLug : c.lugToLug, lw = c.locked ? K.lugWidth : c.lugWidth;
+    const lo = c.locked ? K.lugOuter : lw + 5.4;
+    /* --- bracelet: President links, brushed outers and a polished centre --- */
+    if(c.strap){
+      const gB = lgr(st3(shade(M0,0.30), tint(M0,0.55), shade(M0,0.22)), 0);
+      const gP = lgr(`<stop offset="0" stop-color="${tint(M0,0.95)}"/><stop offset="0.45" stop-color="${tint(M0,0.40)}"/>
+        <stop offset="0.52" stop-color="${shade(M0,0.45)}"/><stop offset="0.62" stop-color="${tint(M0,0.80)}"/><stop offset="1" stop-color="${shade(M0,0.15)}"/>`, 90);
+      for(const sgn of [-1,1]){
+        for(let i=0;i<3;i++){
+          const hh = 4.5, half = lw/2 - i*0.35, y0 = sgn*(l2l/2 - 0.6 + i*4.7), y = sgn > 0 ? y0 : y0 - hh, cw = half*0.36;
+          body.push(`<g opacity="${f(1 - i*0.12,2)}"><rect x="${f(-half,3)}" y="${f(y,3)}" width="${f(half*2,3)}" height="${hh}" rx="1.3"
+              fill="url(#${gB})" stroke="${shade(M0,0.55)}" stroke-opacity=".6" stroke-width="0.07"/>
+            <rect x="${f(-cw,3)}" y="${f(y+0.15,3)}" width="${f(cw*2,3)}" height="${f(hh-0.3,3)}" rx="0.8"
+              fill="url(#${gP})" stroke="${shade(M0,0.6)}" stroke-opacity=".55" stroke-width="0.06"/></g>`);
+        }
+      }
+    }
+    /* --- lugs: a crescent from the case flank to the end piece --- */
+    const gL = lgr(st3(shade(M0,0.34), tint(M0,0.62), shade(M0,0.18)), 0);
+    const gE = lgr(st3(shade(M0,0.30), tint(M0,0.35), shade(M0,0.30)), 90);
+    for(const sy of [-1,1]){
+      const yEnd = sy*l2l/2, yIn = sy*(R - 2.0);
+      if(c.strap) body.push(`<rect x="${f(-lw/2,3)}" y="${f(Math.min(yIn,yEnd),3)}" width="${f(lw,3)}" height="${f(Math.abs(yEnd-yIn),3)}"
+        fill="url(#${gE})" stroke="${shade(M0,0.55)}" stroke-opacity=".5" stroke-width="0.07"/>`);
+      for(const sx of [-1,1]){
+        const xo = sx*lo/2, xi = sx*(lw/2 + 0.15);
+        body.push(`<path d="M${f(xo,3)} ${f(yIn,3)} C${f(xo,3)} ${f(yIn+sy*2.5,3)} ${f(xo-sx*0.15,3)} ${f(yEnd-sy*1.2,3)} ${f(xo-sx*0.35,3)} ${f(yEnd,3)}
+          L${f(xi,3)} ${f(yEnd,3)} L${f(xi,3)} ${f(yIn,3)} Z" fill="url(#${gL})" stroke="${shade(M0,0.6)}" stroke-opacity=".55" stroke-width="0.08"/>`);
+      }
+    }
+    /* --- crown at 3: a fluted barrel seen from above --- */
+    {
+      const ch = K.crownD*k, bw = 2.9, x0 = R - 0.3;
+      const cg = lgr(st3(shade(M0,0.42), tint(M0,0.6), shade(M0,0.34)), 90);
+      let fl = "";
+      for(let i=1;i<16;i++){ const fy = -ch/2 + ch*i/16;
+        fl += `<line x1="${f(x0+0.2,3)}" y1="${f(fy,3)}" x2="${f(x0+bw-0.15,3)}" y2="${f(fy,3)}" stroke="${i%2?tint(M0,0.6):shade(M0,0.45)}" stroke-opacity=".85" stroke-width="0.10"/>`; }
+      body.push(`<rect x="${f(x0-0.6,3)}" y="${f(-K.crownTube/2,3)}" width="1.0" height="${f(K.crownTube,3)}" fill="${shade(M0,0.3)}"/>
+        <rect x="${f(x0,3)}" y="${f(-ch/2,3)}" width="${bw}" height="${f(ch,3)}" rx="0.6" fill="url(#${cg})" stroke="${shade(M0,0.62)}" stroke-opacity=".7" stroke-width="0.08"/>${fl}`);
+    }
+    /* --- case middle, then the fluted bezel on it --- */
+    const gC = lgr(st3(shade(M0,0.36), tint(M0,0.55), shade(M0,0.28)));
+    body.push(`<circle r="${f(R,3)}" fill="url(#${gC})" stroke="${shade(M0,0.65)}" stroke-opacity=".7" stroke-width="0.09"/>`);
+    body.push(`<circle r="${f(rb,3)}" fill="${shade(M0,0.30)}"/>`);
+    const n = K.flutes || 60, r0 = rbi + land, r1 = rb - 0.10;
+    let flutes = "";
+    for(let i=0;i<n;i++){
+      const a0 = i*360/n, a1 = a0 + 180/n, a2 = a0 + 360/n;
+      /* The bezel slope faces outward, so the side toward the light is bright
+         and the far side dark; each facet of a flute then turns a little
+         toward or away from it. */
+      const lit = (am, side) => { const rel = (am - 90 - la)*Math.PI/180;
+        return 0.5 + 0.28*Math.cos(rel) + side*0.16*Math.sin(rel); };
+      const tA = lit((a0+a1)/2, 1), tB = lit((a1+a2)/2, -1);
+      const col = t => t > 0.5 ? tint(M0, Math.min(0.85,(t-0.5)*1.6)) : shade(M0, Math.min(0.5,(0.5-t)*0.9));
+      const q = (r,a) => { const p = pt(r,a); return `${f(p[0],3)} ${f(p[1],3)}`; };
+      flutes += `<path d="M${q(r0,a0)}L${q(r1,a0)}L${q(r1,a1)}L${q(r0,a1)}Z" fill="${col(tA)}"/>`
+             +  `<path d="M${q(r0,a1)}L${q(r1,a1)}L${q(r1,a2)}L${q(r0,a2)}Z" fill="${col(tB)}"/>`
+             +  `<path d="M${q(r0+0.08,a1)}L${q(r1-0.05,a1)}" stroke="${tint(M0,0.9)}" stroke-opacity=".55" stroke-width="0.05"/>`;
+    }
+    body.push(`<g>${flutes}</g>`);
+    body.push(`<circle r="${f(rb,3)}" fill="none" stroke="${shade(M0,0.7)}" stroke-opacity=".8" stroke-width="0.10"/>`);
+    // polished land between the flutes and the crystal
+    const gLand = lgr(`<stop offset="0" stop-color="${tint(M0,0.95)}"/><stop offset="0.4" stop-color="${tint(M0,0.45)}"/>
+      <stop offset="0.6" stop-color="${shade(M0,0.25)}"/><stop offset="1" stop-color="${tint(M0,0.7)}"/>`);
+    body.push(`<path d="${annulus(r0, rbi)}" fill="url(#${gLand})" fill-rule="evenodd"/>`);
+    body.push(`<circle r="${f(r0,3)}" fill="none" stroke="${shade(M0,0.5)}" stroke-opacity=".55" stroke-width="0.06"/>`);
+    // flange (rehaut) falling from the crystal edge to the opening
+    const gF = lgr(`<stop offset="0" stop-color="${tint(M0,0.55)}"/><stop offset="0.5" stop-color="${shade(M0,0.25)}"/><stop offset="1" stop-color="${shade(M0,0.5)}"/>`);
+    body.push(`<path d="${annulus(rbi, opening/2)}" fill="url(#${gF})" fill-rule="evenodd"/>`);
+    body.push(`<circle r="${f(rbi,3)}" fill="none" stroke="${shade(M0,0.7)}" stroke-opacity=".6" stroke-width="0.08"/>`);
+    body.push(`<circle r="${f(opening/2+0.30,3)}" fill="none" stroke="${shade(d.color,0.80)}" stroke-opacity="0.8" stroke-width="0.60"/>`);
+    body.push(`<circle r="${f(opening/2+0.04,3)}" fill="none" stroke="${shade(M0,0.70)}" stroke-opacity="0.55" stroke-width="0.09"/>`);
+  };
   /* ---------------- CASE + STRAP (RD26-0172 top view) ----------------
      The bezel is a rolled dome, not a flat ring: an outer flank, a broad
      bright crown, then a circular chamfer falling into the dial opening.
      Every gradient runs along the scene light rather than a fixed
      decorative diagonal. */
-  if(scope==="full" && c.on){
+  if(scope==="full" && c.on && K.shape === "round") roundCase();
+  else if(scope==="full" && c.on){
     const la = ((st.render && st.render.az) || 135)*Math.PI/180;
     const lx = Math.cos(la), ly = Math.sin(la);
     const M0 = c.material;
@@ -4721,13 +4899,61 @@ function buildSVG(st, o={}){
         g+=`<line x1="${f(q0[0],3)}" y1="${f(q0[1],3)}" x2="${f(q1[0],3)}" y2="${f(q1[1],3)}" stroke="${sd.ring}" stroke-width="0.11"/>`; }
       body.push(g+`<circle r="0.22" fill="${sd.ring}"/></g>`);
     }
+    /* day window: an arc cut over the movement's day disc, with a polished frame */
+    const dy = st.day;
+    const dayStart = body.length;
+    if(dy && dy.on){
+      const cal = K.calendar || NOREL_R3.calendar;
+      const rin = cal.dayRin, rout = cal.dayRout, half = Math.min(dy.arc, 60)/2, fr = dy.frame || 0;
+      const sector = (ri, ro, h) => { const a = pt(ro,-h), b = pt(ro,h), c2 = pt(ri,h), d2 = pt(ri,-h);
+        return `M${f(a[0],3)} ${f(a[1],3)}A${f(ro,3)} ${f(ro,3)} 0 0 1 ${f(b[0],3)} ${f(b[1],3)}L${f(c2[0],3)} ${f(c2[1],3)}A${f(ri,3)} ${f(ri,3)} 0 0 0 ${f(d2[0],3)} ${f(d2[1],3)}Z`; };
+      if(fr > 0){
+        const gid = id("dfr");
+        defs.push(`<linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${tint(dy.frameColor,0.85)}"/>
+          <stop offset="0.5" stop-color="${dy.frameColor}"/><stop offset="1" stop-color="${shade(dy.frameColor,0.35)}"/></linearGradient>`);
+        body.push(`<path d="${sector(rin-fr, rout+fr, half + fr/((rin+rout)/2)*180/Math.PI)}" fill="url(#${gid})" stroke="${shade(dy.frameColor,0.5)}" stroke-opacity=".6" stroke-width="0.05"/>`);
+      }
+      body.push(`<path d="${sector(rin, rout, half)}" fill="${dy.bg}"/>`);
+      body.push(`<path d="${sector(rin, rin+0.35, half)}" fill="${shade(dy.bg,0.25)}" fill-opacity=".35"/>`);
+      const i = Math.max(0, DAY_NAMES_EN.indexOf(dy.shown));
+      const word = dy.lang === "English" ? DAY_NAMES_EN[i].toUpperCase() : DAY_NAMES_AR[i];
+      const ar = dy.lang !== "English";
+      body.push(`<text x="0" y="${f(-(rin+rout)/2 + 0.05,3)}" text-anchor="middle" dominant-baseline="central"
+        font-family="${ar ? "'Noto Naskh Arabic','Geeza Pro','Arial',sans-serif" : "'IBM Plex Sans',sans-serif"}" font-weight="${ar ? 700 : 600}"
+        font-size="${f(dy.textH*(ar ? 1.25 : 0.95),3)}" ${ar ? 'direction="rtl"' : `letter-spacing="${f(dy.textH*0.08,3)}"`} fill="${dy.text}">${esc(word)}</text>`);
+    }
+    tagLayer("day", dayStart);
     // date window
     const dt = st.date;
     if(dt.on){
       const p = pt(dt.dist, dt.at*30);
-      body.push(`<g transform="translate(${f(p[0],3)},${f(p[1],3)})">
-        <rect x="${-dt.w/2}" y="${-dt.h/2}" width="${dt.w}" height="${dt.h}" fill="${dt.bg}" stroke="${dt.frame}" stroke-width="0.14" rx="0.15"/>
-        <text x="0" y="0.08" font-family="'IBM Plex Sans',sans-serif" font-size="${f(dt.h*0.78,2)}" fill="${dt.text}" text-anchor="middle" dominant-baseline="central">31</text></g>`);
+      const fw = dt.frameW === undefined ? 0.14 : dt.frameW;
+      const num = String(dt.shown || 31);
+      const digits = dt.digits === "Arabic-Indic" ? num.replace(/\d/g, n => "٠١٢٣٤٥٦٧٨٩"[n]) : num;
+      const ar = dt.digits === "Arabic-Indic";
+      const win = `<rect x="${-dt.w/2}" y="${-dt.h/2}" width="${dt.w}" height="${dt.h}" fill="${dt.bg}" rx="0.15"/>
+        <text x="0" y="${ar ? 0.02 : 0.08}" font-family="${ar ? "'Noto Naskh Arabic','Geeza Pro',sans-serif" : "'IBM Plex Sans',sans-serif"}" font-weight="${ar ? 700 : 500}"
+          font-size="${f(dt.h*(ar ? 0.95 : 0.78),2)}" fill="${dt.text}" text-anchor="middle" dominant-baseline="central">${digits}</text>`;
+      const frame = fw > 0.2
+        ? `<rect x="${f(-dt.w/2-fw,3)}" y="${f(-dt.h/2-fw,3)}" width="${f(dt.w+2*fw,3)}" height="${f(dt.h+2*fw,3)}" rx="${f(Math.min(fw*1.1,(dt.h+2*fw)/3),3)}"
+             fill="${dt.frame}" stroke="${shade(dt.frame,0.5)}" stroke-opacity=".6" stroke-width="0.05"/>`
+        : "";
+      const line = fw > 0.2 ? "" : `<rect x="${-dt.w/2}" y="${-dt.h/2}" width="${dt.w}" height="${dt.h}" fill="none" stroke="${dt.frame}" stroke-width="${fw}" rx="0.15"/>`;
+      body.push(`<g transform="translate(${f(p[0],3)},${f(p[1],3)})">${frame}${win}${line}</g>`);
+      /* The cyclops magnifies the date in place: what sits under the lens is
+         drawn again, larger, and clipped to the lens. */
+      const mag = parseFloat(dt.cyclops) || 1;
+      if(mag > 1 && scope !== "dial"){
+        const cyc = K.cyclops || {w:7.0, h:5.0};
+        const cid = id("cyc");
+        defs.push(`<clipPath id="${cid}"><rect x="${f(-cyc.w/2,3)}" y="${f(-cyc.h/2,3)}" width="${cyc.w}" height="${cyc.h}" rx="${f(cyc.h*0.42,3)}"/></clipPath>`);
+        body.push(`<g transform="translate(${f(p[0],3)},${f(p[1],3)})"><g clip-path="url(#${cid})">
+          <rect x="${f(-cyc.w/2,3)}" y="${f(-cyc.h/2,3)}" width="${cyc.w}" height="${cyc.h}" fill="${d.color}"/>
+          <g transform="scale(${mag})">${frame}${win}${line}</g></g>
+          <rect x="${f(-cyc.w/2,3)}" y="${f(-cyc.h/2,3)}" width="${cyc.w}" height="${cyc.h}" rx="${f(cyc.h*0.42,3)}" fill="#FFFFFF" fill-opacity="0.10"
+            stroke="#FFFFFF" stroke-opacity="0.55" stroke-width="0.10"/>
+          <path d="M${f(-cyc.w/2+0.6,3)} ${f(-cyc.h/2+0.45,3)} H${f(cyc.w/2-0.9,3)}" stroke="#FFFFFF" stroke-opacity="0.5" stroke-width="0.22" stroke-linecap="round"/></g>`);
+      }
     }
     // text
     const tx = st.text;
@@ -6179,7 +6405,7 @@ function handPath(h, ctx){
 
 /* Radial dimensions registry — powers readouts, handles, sweep & spec sheet */
 function radialDims(st){
-  const K = CASE_SPEC;
+  const K = caseOf(st);
   const opening = st.case.locked ? K.opening : st.case.opening;
   const dialD = st.dial.lock ? (st.case.locked ? K.dialD : st.case.opening+0.8) : st.dial.diameter;
   return [
@@ -6209,7 +6435,7 @@ function radialDims(st){
   ];
 }
 /* anything printed beyond this radius disappears under the bezel */
-const visR = st => (st.case.locked ? CASE_SPEC.opening : st.case.opening)/2;
+const visR = st => (st.case.locked ? caseOf(st).opening : st.case.opening)/2;
 
 /* ---------------------------------------------------------------------
    Matched hand sets. An hour and minute hand from the same family share
@@ -6239,7 +6465,7 @@ const HAND_REACH = ["free", "to the minute track", "to the numerals",
 const HAND_REACH_H = ["share of the minute hand"].concat(HAND_REACH);
 
 function dialLandmark(st, which){
-  const open = ((typeof CASE_SPEC !== "undefined" && CASE_SPEC.dialD) || 30.5)/2;
+  const open = ((typeof caseOf === "function" && caseOf(st).dialD) || 30.5)/2;
   switch(which){
     case "to the minute track":
       return st.minute && st.minute.on
@@ -6331,7 +6557,7 @@ function syncHands(master){
    ===================================================================== */
 function buildElevation(st, kind, o){
   o = o || {};
-  const K = CASE_SPEC, c = st.case, M0 = c.material;
+  const K = caseOf(st), c = st.case, M0 = c.material;
   const defs = [], body = [];
   let uid = 0; const id = p => `${p}${++uid}${o.tag||""}`;
   const la = ((st.render && st.render.az) || 135)*Math.PI/180;
@@ -6369,7 +6595,7 @@ function buildElevation(st, kind, o){
 
     // case middle with its coin edge
     let coin = "";
-    for(let x=-mw+0.35; x<mw-0.3; x+=0.42)
+    if(K.shape !== "round") for(let x=-mw+0.35; x<mw-0.3; x+=0.42)
       coin += `<line x1="${f(x,3)}" y1="${f(yBez+0.22,3)}" x2="${f(x,3)}" y2="${f(yMid-0.22,3)}" stroke="${shade(M0,0.5)}" stroke-opacity="0.5" stroke-width="0.10"/>`;
     body.push(`<rect x="${f(-mw,3)}" y="${f(yBez,3)}" width="${f(mw*2,3)}" height="${f(K.midH,3)}"
       fill="${steel}" stroke="${edge}" stroke-opacity=".6" stroke-width="0.09"/>${coin}`);
@@ -6396,8 +6622,8 @@ function buildElevation(st, kind, o){
     const rg = id("cb");
     defs.push(`<radialGradient id="${rg}" cx="34%" cy="30%" r="78%"><stop offset="0" stop-color="${tint(c.cab,0.62)}"/>
       <stop offset="0.45" stop-color="${c.cab}"/><stop offset="1" stop-color="${shade(c.cab,0.55)}"/></radialGradient>`);
-    const cabH = K.crownD*0.72;
-    body.push(`<path d="M${f(hw+bw-0.12,3)} ${f(cyC-cabH/2,3)}
+    const cabH = K.cabochon ? K.crownD*0.72 : 0;
+    if(cabH) body.push(`<path d="M${f(hw+bw-0.12,3)} ${f(cyC-cabH/2,3)}
       C${f(hw+bw+2.2,3)} ${f(cyC-cabH/2,3)} ${f(hw+bw+2.2,3)} ${f(cyC+cabH/2,3)} ${f(hw+bw-0.12,3)} ${f(cyC+cabH/2,3)}Z"
       fill="url(#${rg})" stroke="${shade(c.cab,0.6)}" stroke-opacity=".5" stroke-width="0.06"/>`);
 
@@ -6416,8 +6642,8 @@ function buildElevation(st, kind, o){
 
   /* ---- case back ---- */
   const hw = K.flat/2, k = 1;
-  const outline = cushion(hw, K.rSide, K.rCorner);
-  const midline = cushion(K.midFlat/2, K.midRSide, K.midRCorner);
+  const outline = caseOutlinePath(K, hw);
+  const midline = caseOutlinePath(K, K.midFlat/2);
   body.push(`<path d="${outline}" fill="${hgrad(`<stop offset="0" stop-color="${shade(M0,0.44)}"/><stop offset="0.45" stop-color="${tint(M0,0.55)}"/><stop offset="1" stop-color="${shade(M0,0.30)}"/>`)}"
     stroke="${edge}" stroke-opacity=".7" stroke-width="0.10"/>`);
   let coin = "";
@@ -6425,9 +6651,9 @@ function buildElevation(st, kind, o){
     coin += `<line x1="${f(p0[0],2)}" y1="${f(p0[1],2)}" x2="${f(p1[0],2)}" y2="${f(p1[1],2)}" stroke="${shade(M0,0.5)}" stroke-opacity="0.35" stroke-width="0.07"/>`; }
   const mc = id("mc"); defs.push(`<clipPath id="${mc}"><path d="${midline}"/></clipPath>`);
   body.push(`<g clip-path="url(#${mc})">${coin}</g>`);
-  body.push(`<path d="${cushion(hw-1.6, K.rSide*0.95, K.rCorner*0.92)}" fill="${shade(M0,0.16)}" stroke="${edge}" stroke-opacity=".5" stroke-width="0.08"/>`);
+  body.push(`<path d="${K.shape === "round" ? disc(hw-1.6) : cushion(hw-1.6, K.rSide*0.95, K.rCorner*0.92)}" fill="${shade(M0,0.16)}" stroke="${edge}" stroke-opacity=".5" stroke-width="0.08"/>`);
   // 4 case screws at 45 degrees on the O32.00 circle
-  for(const a of [45,135,225,315]){
+  for(const a of (K.shape === "round" ? [] : [45,135,225,315])){
     const p = pt(K.movHolder+7.0-0.0, a);      // O32.00 bolt circle
     const q2 = pt(16.0, a);
     body.push(`<g transform="translate(${f(q2[0],3)},${f(q2[1],3)})">
@@ -6435,7 +6661,7 @@ function buildElevation(st, kind, o){
       <line x1="-0.75" y1="0" x2="0.75" y2="0" stroke="${shade(M0,0.62)}" stroke-width="0.22" transform="rotate(${a+20})"/></g>`);
   }
   const brand = (st.text && st.text.logo) || "";
-  const lines = [brand, "SWISS MOVEMENT", "ALL STAINLESS STEEL", `${K.wr} WATER RESISTANT`];
+  const lines = [brand].concat(K.back || ["SWISS MOVEMENT", "ALL STAINLESS STEEL", `${K.wr} WATER RESISTANT`]);
   lines.forEach((tx,i)=>{
     if(!tx) return;
     body.push(`<text x="0" y="${f(-4.2 + i*2.6,2)}" text-anchor="middle" font-family="'Cormorant Garamond',Georgia,serif"
@@ -6603,7 +6829,7 @@ function loadTemplate(file){
    The three hands share one entry — they are chosen inside the panel. */
 const LAYER_GROUPS = [
   ["Case", [
-    ["case","Case — RD26-0172","case.on"],
+    ["case","Case","case.on"],
     ["tpl","Case photo template","tpl.on"]]],
   ["Dial", [
     ["dial","Dial base","dial.on"],
@@ -6621,6 +6847,7 @@ const LAYER_GROUPS = [
   ["Details", [
     ["text","Logo & text","text.on"],
     ["sub","Sub-dial","sub.on"],
+    ["day","Day window","day.on"],
     ["date","Date window","date.on"]]],
   ["Scene", [
     ["render","Material preview",null],
@@ -6823,16 +7050,21 @@ const textAdvanced = T => [
   /* Logo scale lives in the cartouche's own Interior group; listing it here
      as well put two of the same slider in the panel. */
 ];
+const DAY_NAMES_EN = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
+const DAY_NAMES_AR = ["الإثنين","الثلاثاء","الأربعاء","الخميس","الجمعة","السبت","الأحد"];
 const SCHEMA = {
-  case:{title:"Case — locked", hint:"Fixed to the RD26-0172 drawing set. Colour and strap are render settings only; the geometry below is the factory's.", fields:[
+  case:{title:"Case", get hint(){ return `Fixed to the ${CASE_SPEC.ref} drawing set. Colour and ${CASE_SPEC.bracelet ? "bracelet" : "strap"} are render settings only; the geometry below is the factory's. Changing the case refits the dial to its opening.`; },
+    fields:()=>[
+    SEL("case.model","Case",CASE_MODELS),
     C("case.material","Case colour (render)"),
     SEL("case.finish","Case finish (render)",["polished","brushed","satin"]),
-    C("case.cab","Cabochon colour"),
-    CK("case.strap","Show strap"), C("case.strapColor","Strap colour"),
-    CK("case.locked","Keep case locked to RD26-0172")]},
-  dial:{title:"Dial base", hint:"The brass blank everything is printed or applied onto — Ø31.30 × 0.40, of which Ø30.50 is visible.", fields:()=>{
+    ...(CASE_SPEC.cabochon ? [C("case.cab","Cabochon colour")] : []),
+    CK("case.strap", CASE_SPEC.bracelet ? "Show bracelet" : "Show strap"),
+    ...(CASE_SPEC.bracelet ? [] : [C("case.strapColor","Strap colour")]),
+    CK("case.locked",`Keep case locked to ${CASE_SPEC.ref}`)]},
+  dial:{title:"Dial base", get hint(){ return `The ${CASE_SPEC.dialMat} blank everything is printed or applied onto — Ø${f(CASE_SPEC.dialD)} × ${f(CASE_SPEC.dialT)}, of which Ø${f(CASE_SPEC.opening)} is visible.`; }, fields:()=>{
     const base = [
-      CK("dial.lock","Use the RD26-0172 blank (Ø31.30)"), N("dial.diameter","Dial diameter",18,44),
+      CK("dial.lock",`Use the ${CASE_SPEC.ref} blank (Ø${f(CASE_SPEC.dialD)})`), N("dial.diameter","Dial diameter",18,44),
       C("dial.color","Dial colour"),
       N("dial.dome","Doming (− dished, + domed)",-0.60,0.60,.01,""),
     N("dial.satin","Satin overlay",0,1,.02,""),
@@ -7061,10 +7293,22 @@ const SCHEMA = {
   sub:{title:"Sub-dial", hint:"Position is given as an hour marker plus a distance from centre.", fields:[
     N("sub.at","Position (hour)",1,12,1,"h"), N("sub.dist","Distance from centre",2,18),
     N("sub.diameter","Diameter",3,20), C("sub.color","Colour"), C("sub.ring","Track colour"), CK("sub.track","Show track")]},
-  date:{title:"Date window", fields:[
+  date:{title:"Date window", get hint(){ const K = CASE_SPEC.calendar;
+      return K ? `The ${CASE_SPEC.movement} date ring shows through ${f(K.dateW)} × ${f(K.dateH)} mm, centred ${f(K.dateC)} mm from the centre at 3. A larger window shows the ring edge or the next date.` : ""; },
+    fields:[
     N("date.at","Position (hour)",1,12,1,"h"), N("date.dist","Distance from centre",2,18),
-    N("date.w","Width",1.5,8,.1), N("date.h","Height",1.2,6,.1),
+    N("date.w","Width",1.5,8,.05), N("date.h","Height",1.2,6,.05),
+    N("date.frameW","Frame width",0,1.6,.05),
+    SEL("date.cyclops","Cyclops",["none","1.5×","2.0×","2.5×"]),
+    SEL("date.digits","Digits",["Western","Arabic-Indic"]), N("date.shown","Date shown",1,31,1,""),
     C("date.bg","Disc colour"), C("date.text","Text colour"), C("date.frame","Frame colour")]},
+  day:{title:"Day window", get hint(){ const K = CASE_SPEC.calendar || NOREL_R3.calendar;
+      return `Cut over the ${CASE_SPEC.calendar ? CASE_SPEC.movement : "SW240-1"} day disc: the radius is fixed at R${f(K.dayRin)}–${f(K.dayRout)} mm and the disc shows through at most ${K.dayArcMax}°. Only the arc, the frame and the printing are choices.`; },
+    fields:[
+    N("day.arc","Window arc",30,53,.5,"°"), N("day.frame","Frame width",0,1.0,.05),
+    SEL("day.lang","Day names",["Arabic","English"]), SEL("day.shown","Day shown",DAY_NAMES_EN),
+    N("day.textH","Day name height",1.0,1.9,.05),
+    C("day.bg","Disc colour"), C("day.text","Text colour"), C("day.frameColor","Frame colour")]},
   text:{title:"Logo & text", fields:()=>{
     const T = S.text, cart = LOGO_CART[T.logoTech];
     return [
@@ -7285,6 +7529,9 @@ function layerIcon(k){
     case "sub": return wrap(disc(d.color || "#D6D2C4")
       + `<circle cy="3.4" r="4.6" fill="${(S.sub && S.sub.color) || "#D6D2C4"}"
          stroke="${(S.sub && S.sub.ring) || "#84754E"}" stroke-width="1"/>`);
+    case "day": return wrap(disc(d.color || "#D6D2C4")
+      + `<path d="M-6.2 -3.2 A7.2 7.2 0 0 1 6.2 -3.2 L4.6 -0.4 A5.3 5.3 0 0 0 -4.6 -0.4 Z" fill="${(S.day && S.day.bg) || "#F6F5F1"}"
+         stroke="${(S.day && S.day.frameColor) || "#C8C9C7"}" stroke-width="1"/>`);
     case "date": return wrap(disc(d.color || "#D6D2C4")
       + `<rect x="1.4" y="-2.6" width="8" height="5.6" rx="1" fill="${(S.date && S.date.bg) || "#F1E6B2"}"
          stroke="${(S.date && S.date.frame) || "#C8C9C7"}" stroke-width="1"/>`);
@@ -7339,7 +7586,7 @@ function wireFile(){
    the wrong way round. */
 /* Choosing one of these changes what the rest of the panel should be, so the
    panel is built again rather than merely repainted. */
-const REBUILD_PROPS = new Set([
+const REBUILD_PROPS = new Set(["case.model",
   "dial.lock","dial.finish","dial.stone","dial.stFibre","dial.stAdv","minute.textBreak","minute.tech",
   "numerals.system","numerals.style","numerals.tech","numerals.material",
   "text.logoTech","text.nameMode","text.plateShape","text.logoMark","text.plateAuto",
@@ -7375,11 +7622,12 @@ const PRIMARY = {
   hHand:    ["handSet.link"].concat(handPrimary("hHand")),
   mHand:    ["handSet.link"].concat(handPrimary("mHand")),
   sHand:    ["handSet.link"].concat(handPrimary("sHand")),
-  case:     ["case.metal","case.finish","case.strapColor","case.cab"],
+  case:     ["case.model","case.metal","case.finish","case.strapColor","case.cab"],
   tpl:      ["tpl.on","tpl.cx","tpl.cy","tpl.dia"],
   render:   ["render.mode","render.az","render.el","render.quality"],
   sub:      ["sub.on","sub.type","sub.diameter","sub.x","sub.y"],
-  date:     ["date.on","date.x","date.y","date.w","date.h"],
+  date:     ["date.on","date.x","date.y","date.w","date.h","date.cyclops"],
+  day:      ["day.on","day.arc","day.frame","day.lang","day.shown"],
   cross:    ["cross.on","cross.color","cross.width"],
   time:     ["meta.time.h","meta.time.m","meta.time.s"]
 };
@@ -7415,6 +7663,22 @@ function splitAdvanced(host){
    pill taking up canvas the whole time. */
 function caseSpecRows(){
   const K = CASE_SPEC;
+  if(K.shape === "round") return `<div><span>Reference</span><b>${K.ref}</b></div>
+      <div><span>Case diameter</span><b>Ø${f(K.flat)} mm</b></div>
+      <div><span>Bezel</span><b>Ø${f(K.bezelOD)} / Ø${f(K.bezelID)} · ${K.flutes} flutes</b></div>
+      <div><span>Bezel band</span><b>${f((K.bezelOD-K.bezelID)/2)} mm a side · ${f(K.land)} land</b></div>
+      <div><span>Lug-to-lug</span><b>${f(K.lugToLug)} mm</b></div>
+      <div><span>Bracelet</span><b>${f(K.lugWidth)} → ${f(K.clasp)} mm</b></div>
+      <div><span>Total height</span><b>${f(K.height)} mm</b></div>
+      <div><span>Visible opening</span><b>Ø${f(K.opening)} mm</b></div>
+      <div><span>Glass</span><b>Ø${f(K.glassD)} sapphire · cyclops ${f(K.cyclops.w,1)} × ${f(K.cyclops.h,1)}</b></div>
+      <div><span>Dial blank</span><b>Ø${f(K.dialD)} × ${f(K.dialT)} ${K.dialMat}</b></div>
+      <div><span>Movement</span><b>${K.movement} · Ø${f(K.movHolder)} fit</b></div>
+      <div><span>Day window</span><b>R${f(K.calendar.dayRin)}–${f(K.calendar.dayRout)} · ≤ ${K.calendar.dayArcMax}°</b></div>
+      <div><span>Date window</span><b>${f(K.calendar.dateW)} × ${f(K.calendar.dateH)} at ${f(K.calendar.dateC)} mm</b></div>
+      <div><span>Crown</span><b>Ø${f(K.crownD)} mm at 3H</b></div>
+      <div><span>Material / WR</span><b>${K.steel} · ${K.wr}</b></div>
+      <div><span>Tolerance</span><b>${K.tol}</b></div>`;
   return `<div><span>Reference</span><b>${K.ref}</b></div>
       <div><span>Case / bezel</span><b>${f(K.flat)} × ${f(K.flat)} mm</b></div>
       <div><span>Across corners</span><b>${f(K.diagonal)} mm</b></div>
@@ -7845,7 +8109,7 @@ function refineBootRender(){
 function viewSVG(){
   const coarse = bootCoarse ? Math.min(BOOT_QUALITY, S.render.quality) : undefined;
   return S.render.view !== "front" ? buildElevation(S, S.render.view, {})
-    : (S.tpl.on && tplImage) ? buildTemplate(S,{guide: tplGuide || sel === "tpl", matPx: coarse})
+    : (S.tpl.on && tplImage && CASE_SPEC.photo) ? buildTemplate(S,{guide: tplGuide || sel === "tpl", matPx: coarse})
     : buildSVG(S,{measure:measureOn, handles:handlesOn, touch:isTouch, matPx: coarse});
 }
 function paintView(){
@@ -7864,7 +8128,7 @@ function paintView(){
   const narrow = NARROW();
   q("#stamp").textContent = synth ? "SYNTHETIC PREVIEW — placeholder, not a real stone" : narrow
     ? ""
-    : `${S.meta.name} — case ${CASE_SPEC.ref} · ${f(CASE_SPEC.flat,2)}×${f(CASE_SPEC.flat,2)} · L2L ${f(CASE_SPEC.lugToLug,2)} · ${f(CASE_SPEC.height,2)} high · opening Ø${f(visR(S)*2,2)}`;
+    : `${S.meta.name} — case ${CASE_SPEC.ref} · ${CASE_SPEC.shape === "round" ? "Ø"+f(CASE_SPEC.flat,2) : f(CASE_SPEC.flat,2)+"×"+f(CASE_SPEC.flat,2)} · L2L ${f(CASE_SPEC.lugToLug,2)} · ${f(CASE_SPEC.height,2)} high · opening Ø${f(visR(S)*2,2)}`;
   q("#stamp").style.visibility = (narrow && !synth) ? "hidden" : "";
   wireHandles();
 }
@@ -8058,9 +8322,11 @@ document.addEventListener("click", e=>{
   lockedLayers.has(k) ? lockedLayers.delete(k) : lockedLayers.add(k);
   paintLayers(); paintProps();
 });
+let casePrev = null;
 document.addEventListener("input", e=>{
   if(e.target.dataset.pg) return;
   const p = e.target.dataset.p; if(!p) return;
+  if(p === "case.model" && casePrev === null) casePrev = S.case.model;
   if(lockedLayers.has(p.split(".")[0])) { e.target.blur && e.target.blur(); return; }
   const el = e.target;
   let v = el.type==="checkbox" ? el.checked : el.type==="number"||el.type==="range" ? parseFloat(el.value) : el.value;
@@ -8085,6 +8351,12 @@ document.addEventListener("change", e=>{
     const ok = stylesFor(S.numerals.system);
     if(ok.indexOf(S.numerals.style) < 0)
       S.numerals.style = ok[0] || "vernoy";        // keep a valid pairing
+  }
+  if(e.target.dataset.p === "case.model"){
+    applyCaseModel(casePrev || VERNOY_CASE.model, S.case.model);
+    casePrev = null;
+    hist[hi] = clone(S);                     // one undo step: the case and the refit together
+    paintProps();
   }
   if(e.target.dataset.p === "dial.stone"){
     applyFamilyDefaults(S.dial.stone);
@@ -8619,7 +8891,7 @@ qa("[data-px]").forEach(b=>b.onclick=()=>{
 
 function currentView(){
   if(S.render.view !== "front") return {kind:S.render.view, vector:true};
-  if(S.tpl.on && tplImage) return {kind:"template", vector:false};
+  if(S.tpl.on && tplImage && CASE_SPEC.photo) return {kind:"template", vector:false};
   return {kind:"front", vector:true};
 }
 function currentSVG(opt){
@@ -9061,7 +9333,7 @@ refineBootRender();
   infoSheet.className = "sheet"; infoSheet.id = "mInfo";
   infoSheet.innerHTML = `<button class="sheetX" data-close="1" aria-label="Close">✕</button>
     <div class="card"><h2>Case dimensions</h2>
-      <p class="sub">The RD26-0172 drawing set, and what this design leaves visible.</p>
+      <p class="sub" id="mInfoSub"></p>
       <div class="readout" id="mInfoRows"></div></div>`;
   document.body.appendChild(infoSheet);
   const infoBtn = document.createElement("button");
@@ -9072,6 +9344,7 @@ refineBootRender();
     <circle cx="8" cy="4.9" r="1" fill="currentColor"/>
     <path d="M8 7.2v4.4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>`;
   infoBtn.onclick = ()=>{
+    infoSheet.querySelector("#mInfoSub").textContent = `The ${CASE_SPEC.ref} drawing set, and what this design leaves visible.`;
     infoSheet.querySelector("#mInfoRows").innerHTML = caseSpecRows()
       + `<div><span>Visible opening now</span><b>Ø${f(visR(S)*2,2)} mm</b></div>`;
     infoSheet.classList.add("open");
@@ -9237,7 +9510,7 @@ refineBootRender();
            and the dial — the only part you would recognise it by — comes out
            the size of a fingernail. The drawing is unchanged; the window
            onto it is tighter. */
-        const side = CASE_SPEC.flat*1.06;
+        const side = caseOf(st).flat*1.06;
         el.innerHTML = buildSVG(st, {tag:"v"+key, matPx:96})
           .replace(/viewBox="[^"]*"/, `viewBox="${f(-side/2,2)} ${f(-side/2,2)} ${f(side,2)} ${f(side,2)}"`);
       }catch(e){ el.textContent = "—"; }
@@ -9764,7 +10037,7 @@ refineBootRender();
   function checks(st){
     const r=visR(st),out=[];
     const add=(ok,title,detail,layer)=>out.push({ok,title,detail,layer});
-    add(st.case.locked!==false,'Case reference',st.case.locked!==false?'Case locked to RD26-0172 factory dimensions.':'Exploratory case dimensions: confirm a compatible case and movement.','case');
+    add(st.case.locked!==false,'Case reference',st.case.locked!==false?'Case locked to '+((typeof caseOf==='function')?caseOf(st).ref:'RD26-0172')+' factory dimensions.':'Exploratory case dimensions: confirm a compatible case and movement.','case');
     add(st.dial.diameter>=r*2,'Dial coverage',`Blank Ø${f(st.dial.diameter,2)} mm · visible opening Ø${f(r*2,2)} mm.`,'dial');
     for(const [key,name]of [['hHand','Hour'],['mHand','Minute'],['sHand','Seconds']])if(st[key].on){
       /* handLength, not .length: a hand set to reach a landmark keeps whatever
@@ -9781,12 +10054,31 @@ refineBootRender();
     if(st.indices.on)add(st.indices.radius+st.indices.length/2<=r,'Index envelope','Index radius plus half-length should stay inside the visible opening.','indices');
     if(st.minute.on)add(st.minute.diameter/2+st.minute.thickness/2<=r,'Minute track envelope','Track radius plus half its thickness should stay within the opening.','minute');
     if(st.date.on)add(Math.hypot(st.date.dist+Math.max(st.date.w,st.date.h)/2,Math.min(st.date.w,st.date.h)/2)<=r,'Date window envelope','Conservative outer-corner estimate; verify movement date alignment separately.','date');
+    /* A movement calendar is fixed, so the windows are checked against it. */
+    const cal=(typeof caseOf==='function')?caseOf(st).calendar:null;
+    if(cal&&st.date&&st.date.on){
+      add(st.date.w<=cal.dateW+1e-6&&st.date.h<=cal.dateH+1e-6,'Date window size',`${f(st.date.w,2)} × ${f(st.date.h,2)} mm against the movement's ${f(cal.dateW,2)} × ${f(cal.dateH,2)} mm aperture; larger shows the ring edge or the next date.`,'date');
+      add(Math.abs(st.date.dist-cal.dateC)<.05&&st.date.at===3,'Date window position',`At ${st.date.at} o'clock, ${f(st.date.dist,2)} mm from centre; the movement shows the date at 3, ${f(cal.dateC,2)} mm out.`,'date');
+      const cyc=caseOf(st).cyclops,mag=parseFloat(st.date.cyclops)||1;
+      if(mag>1)add(st.date.w*mag<=cyc.w-.3&&st.date.h*mag<=cyc.h-.3,'Cyclops coverage',`At ${mag}× the date appears ${f(st.date.w*mag,1)} × ${f(st.date.h*mag,1)} mm under a ${f(cyc.w,1)} × ${f(cyc.h,1)} mm lens.`,'date');
+    }
+    if(cal&&st.day&&st.day.on&&st.numerals&&st.numerals.on&&(st.numerals.set==='all'||!st.numerals.set)){
+      /* The numerals at 11 and 1 sit 30° from the window's centre line; the
+         window and its frame take half the arc plus the frame each side. */
+      const nr=st.numerals.radius,ns=st.numerals.size||3,half=st.day.arc/2+(st.day.frame||0)/((cal.dayRin+cal.dayRout)/2)*180/Math.PI;
+      const reach=Math.atan2(ns*.55,nr)*180/Math.PI,overlapR=nr+ns/2>cal.dayRin-(st.day.frame||0)&&nr-ns/2<cal.dayRout+(st.day.frame||0);
+      add(!(overlapR&&30-reach<half),'Numerals beside the day window',`The 11 and 1 figures reach ${f(30-reach,1)}° from 12 and the framed window ${f(half,1)}°. Narrow the window, shrink or move the figures, or drop 11 and 1.`,'numerals');
+    }
+    if(cal&&st.day&&st.day.on){
+      add(st.day.arc<=cal.dayArcMax+1e-6,'Day window arc',`${f(st.day.arc,1)}° of the ${cal.dayArcMax}° the day disc shows; wider reveals the gap between two names.`,'day');
+      add(cal.dayRout+(st.day.frame||0)+.6<=r,'Day window clearance',`Frame reaches R${f(cal.dayRout+(st.day.frame||0),2)} mm against a ${f(r,2)} mm opening radius.`,'day');
+    }
     if(st.dial.finish==='stone')add(false,'Stone source',st.dial.slab?'A slab is selected. Confirm scale, thickness and the exact production cut.':'Synthetic preview only. Select a photographed slab before material sign-off.','dial');
     if(st.dial.finish==='guilloche')add(st.dial.cell>=.3&&st.dial.pitch>=.15,'Surface detail scale',`Cell ${f(st.dial.cell,2)} mm · pitch ${f(st.dial.pitch,2)} mm. Fine detail needs dial-maker review; these limits are advisory.`,'dial');
     add(false,'Movement and production review','Confirm hand stack, dial feet, tolerances, printing minimums and complication compatibility with your manufacturer.','case');
     return out;
   }
-  function brief(){return{schema:'watch-design-studio/atelier-brief',version:1,createdAt:new Date().toISOString(),name:S.meta.name,referenceCase:clone(CASE_SPEC),caseMode:S.case.locked!==false?'factory locked':'exploratory',checks:checks(S),notes:'Concept design only. Reference case dimensions are not certification of the current design. Confirm all production dimensions with the manufacturer.',design:clone(S)};}
+  function brief(){return{schema:'watch-design-studio/atelier-brief',version:1,createdAt:new Date().toISOString(),name:S.meta.name,referenceCase:clone(caseOf(S)),caseMode:S.case.locked!==false?'factory locked':'exploratory',checks:checks(S),notes:'Concept design only. Reference case dimensions are not certification of the current design. Confirm all production dimensions with the manufacturer.',design:clone(S)};}
   function renderReport(mode){
     const rows=checks(S),reviews=rows.filter(t=>!t.ok).length;
     content.innerHTML='<div class="atelier-report">'+(mode==='spec'?`<div class="atelier-eyebrow">${esc(S.meta.name)}</div><h3>${esc(S.dial.finish==='guilloche'?GUIL_LABEL[S.dial.pattern]||S.dial.pattern:S.dial.finish)} · ${esc(S.dial.color)}</h3><p>Dial Ø${f(S.dial.diameter,2)} mm / opening Ø${f(visR(S)*2,2)} mm<br>Case: ${esc(S.case.locked!==false?CASE_SPEC.ref:'exploratory dimensions')}<br>The JSON brief contains the editable design, case reference, and current checks. Photographs and fonts imported separately are not embedded; use the original export tools for artwork.</p>`:`<div class="atelier-eyebrow">${rows.length} CHECKS · ${reviews} FOR REVIEW</div>`)+rows.map(t=>`<div class="atelier-check"><span class="atelier-status ${t.ok?'':'review'}">${t.ok?'PASS':'REVIEW'}</span><div><strong>${esc(t.title)}</strong><p>${esc(t.detail)}</p></div><button data-inspect="${t.layer}">Inspect</button></div>`).join('')+'<button class="atelier-download" id="atelier-download">Download design brief · JSON</button></div>';
@@ -9948,9 +10240,10 @@ window.WatchReliefBridge={
   snapshot:()=>clone(S), radius:visR, handColor:handCore,
   settings(value){S.relief3d=value;commit();},
   closed(){paintAll();}, undo(){undo();},
+  caseSpec(st){const K=caseOf(st);return {shape:K.shape,flat:K.flat,bezelOD:K.bezelOD,bezelID:K.bezelID,land:K.land,flutes:K.flutes,bracelet:!!K.bracelet,crownD:K.crownD};},
   caseOutline(st){
-    const half=(st.case.locked?CASE_SPEC.flat:st.case.diameter)/2;
-    const outer=cushion(half,half*38/18,half*10/18),r=visR(st);
+    const K=caseOf(st),half=(st.case.locked?K.flat:st.case.diameter)/2;
+    const outer=K.shape==='round'?disc(half):cushion(half,half*38/18,half*10/18),r=visR(st);
     return `<svg xmlns="http://www.w3.org/2000/svg"><path d="${outer} ${disc(r)}" fill="#bfc4c6" fill-rule="evenodd"/></svg>`;
   },
   indexSVG(st,angle){let i=0;const defs=[];let body=indexShape({...st.indices,applied:false},angle,()=>`ix3d${i++}`,defs);
