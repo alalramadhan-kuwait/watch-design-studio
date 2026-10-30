@@ -63,6 +63,42 @@ function extrudeSVG(svg,material,depth,bevel,z,parent=model){
   }
   return group;
 }
+/* A fluted bezel, as a ring of straight radial flutes on an outward slope:
+   polished land at the crystal, the fluted slope, then a short outer wall.
+   Each flute is a ridge and a valley, sampled so both land on vertices. */
+function flutedBezel(rb,rbi,land,n,z0,height,material){
+  const top=z0+height,prof=[[rbi,top-.15],[rbi+.1,top],[rbi+land,top],[rb-.08,z0+.55],[rb,z0+.3],[rb,z0]];
+  const slope=2,dense=[];
+  for(let i=0;i<prof.length-1;i++){const [r0,z1]=prof[i],[r1,z2]=prof[i+1],k=i===slope?18:2;for(let j=0;j<k;j++){const t=j/k;dense.push([r0+(r1-r0)*t,z1+(z2-z1)*t,i===slope]);}}
+  dense.push([...prof[prof.length-1],false]);
+  const seg=Math.max(360,n*12),pos=[],idx=[],np=dense.length;
+  for(let a=0;a<=seg;a++){
+    const th=2*Math.PI*a/seg,u=(n*th/(2*Math.PI))%1,tri=1-4*Math.abs(u-.5);
+    for(const [r,z,fl] of dense){
+      let zz=z;
+      if(fl){const t=Math.min(1,Math.max(0,(r-rbi-land)/(rb-.08-rbi-land))),env=Math.min(1,t/.08,(1-t)/.05);zz+=.13*env*tri;}
+      pos.push(r*Math.cos(th),r*Math.sin(th),zz);
+    }
+  }
+  for(let a=0;a<seg;a++)for(let i=0;i<np-1;i++){const q=a*np+i,r2=(a+1)*np+i;idx.push(q,q+1,r2,q+1,r2+1,r2);}
+  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));g.setIndex(idx);g.computeVertexNormals();
+  const m=mesh(g,material);m.material.side=THREE.DoubleSide;return m;
+}
+/* A President-style bracelet: rows of three links, brushed outers and a
+   polished centre, each row tipped a little further toward the wrist. */
+function bracelet(width,l2l,steel,polished){
+  for(const sgn of [-1,1]){
+    let y=sgn*(l2l/2-.4),z=-2.6,tilt=0;
+    for(let k=0;k<5;k++){
+      const w=width-k*.4,h=4.5,row=new THREE.Group();model.add(row);
+      for(const sx of [-1,1]){const o=mesh(new THREE.BoxGeometry(w*.33,h-.2,2.3),steel,row);o.position.x=sx*w*.335;}
+      const c=mesh(new THREE.BoxGeometry(w*.32,h-.5,2.6),polished,row);c.position.z=.15;
+      tilt+=sgn*(k===0?.07:.16);row.rotation.x=tilt;
+      y+=sgn*h/2*Math.cos(tilt);z-=Math.abs(Math.sin(tilt))*h/2;row.position.set(0,y,z);
+      y+=sgn*h/2*Math.cos(tilt);z-=Math.abs(Math.sin(tilt))*h/2;
+    }
+  }
+}
 function circle(r,color,z,x=0,y=0){const m=mesh(new THREE.CircleGeometry(r,96),color);m.position.set(x,y,z);return m;}
 function torus(r,t,z,material,x=0,y=0){const m=mesh(new THREE.TorusGeometry(r,t,12,128),material);m.position.set(x,y,z);return m;}
 function subArtwork(sub){
@@ -89,14 +125,26 @@ async function rebuild(){
     clearModel();uv.d=r*2;
     const steel=mat(state.case.material||'#bbc1c5',.19),darkMetal=mat('#5c6266',.34);
     const outline=bridge.caseOutline(state);
+    /* The case the design names: a round case brings its own bezel,
+       bracelet and crown; anything else keeps the cushion build. */
+    const spec=bridge.caseSpec?bridge.caseSpec(state):null,round=!!spec&&spec.shape==='round';
     if(state.case.on){
       extrudeSVG(outline,steel,state.case.thickness||7.9,.22,-(state.case.thickness||7.9)+.5);
-      // A polished rolled inner rim picks up the studio softboxes.
-      torus(r+.15,.36,.55,steel);torus(r+.48,.10,.93,steel);
-      for(const sy of [-1,1])for(const sx of [-1,1]){const lug=mesh(new THREE.BoxGeometry(2.0,6,2.2),steel);lug.position.set(sx*((state.case.lugWidth||20.1)/2+1),sy*((state.case.lugToLug||42.8)/2-2.7),-2.3);}
-      if(state.case.strap){const leather=mat(state.case.strapColor||'#34251c',.84,0);for(const sign of [-1,1]){const strap=mesh(new THREE.BoxGeometry(state.case.lugWidth||20.1,16,1.8),leather);strap.position.set(0,sign*((state.case.lugToLug||42.8)/2+4),-3.3);}}
-      const crown=mesh(new THREE.CylinderGeometry(2.2,2.2,2.7,48),steel);crown.rotation.z=Math.PI/2;crown.position.set((state.case.diameter||36)/2+1,-.1,-3.4);
-      for(let i=0;i<28;i++){const a=i*Math.PI/14;const groove=mesh(new THREE.BoxGeometry(2.6,.10,.12),darkMetal);groove.position.set(crown.position.x,Math.sin(a)*2.18-.1,Math.cos(a)*2.18-3.4);groove.rotation.x=-a;}
+      if(round){
+        flutedBezel(spec.bezelOD/2,Math.max(r+.6,spec.bezelID/2),spec.land||.5,spec.flutes||60,.5,1.15,steel);
+        torus(r+.15,.30,.55,steel);
+      }else{
+        // A polished rolled inner rim picks up the studio softboxes.
+        torus(r+.15,.36,.55,steel);torus(r+.48,.10,.93,steel);
+      }
+      const lw=state.case.lugWidth||20.1,l2l=state.case.lugToLug||42.8;
+      for(const sy of [-1,1])for(const sx of [-1,1]){const lug=mesh(new THREE.BoxGeometry(round?2.7:2.0,6,round?2.8:2.2),steel);lug.position.set(sx*(lw/2+(round?1.35:1)),sy*(l2l/2-2.7),-2.3);}
+      if(state.case.strap&&round&&spec.bracelet)bracelet(lw,l2l,mat(state.case.material||'#bbc1c5',.36),steel);
+      else if(state.case.strap){const leather=mat(state.case.strapColor||'#34251c',.84,0);for(const sign of [-1,1]){const strap=mesh(new THREE.BoxGeometry(lw,16,1.8),leather);strap.position.set(0,sign*(l2l/2+4),-3.3);}}
+      const cr=round?(spec.crownD||6.5)/2:2.2,cz=round?-3.0:-3.4;
+      const crown=mesh(new THREE.CylinderGeometry(cr,cr,round?2.9:2.7,48),steel);crown.rotation.z=Math.PI/2;crown.position.set((state.case.diameter||36)/2+(round?1.2:1),-.1,cz);
+      const ng=round?36:28;
+      for(let i=0;i<ng;i++){const a=i*2*Math.PI/ng;const groove=mesh(new THREE.BoxGeometry(round?3.0:2.6,.10,.12),darkMetal);groove.position.set(crown.position.x,Math.sin(a)*(cr-.02)-.1,Math.cos(a)*(cr-.02)+cz);groove.rotation.x=-a;}
     }
     const shape=new THREE.Shape();shape.absarc(0,0,r,0,Math.PI*2,false);
     subdials.forEach(sub=>{const hole=new THREE.Path();hole.absarc(sub.x,sub.y,sub.r,0,Math.PI*2,true);shape.holes.push(hole);});

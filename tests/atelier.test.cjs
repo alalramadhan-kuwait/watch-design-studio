@@ -62,3 +62,33 @@ test('contrast is measured on the metal the hand is drawn in',()=>{
 test('synthetic stone is always identified for review',()=>{
   const s=fixture();s.dial.finish='stone';s.dial.slab='';assert.equal(reports.checks(s).find(t=>t.title==='Stone source').ok,false);
 });
+// The case registry and the movement-calendar checks, run against the real source.
+const caseCtx=vm.createContext({hex2rgb:h=>[1,3,5].map(i=>parseInt(h.slice(i,i+2),16)),f:(n,d)=>Number(n).toFixed(d),visR:s=>s.case.opening/2});
+vm.runInContext(chunk('const VERNOY_CASE = {','const CASE_SPEC = new Proxy')+chunk('const HAND_MATERIAL = {','const POMME = {')+chunk('const HAND_REACH = [','const HAND_SHARE = [')
+  +chunk('  function contrast(a,b)', '  function brief()')+'\nthis.r={CASES,caseOf,VERNOY_CASE,NOREL_R3,NOREL_D,checks};',caseCtx);
+const {CASES,caseOf,VERNOY_CASE,NOREL_R3,NOREL_D,checks:caseChecks}=caseCtx.r;
+test('the NOREL cases carry the SW240-1 calendar, and an unknown case falls back to the Vernoy',()=>{
+  assert.equal(Object.keys(CASES).length,3);
+  assert.equal(caseOf({case:{model:'no such case'}}),VERNOY_CASE);
+  assert.equal(caseOf({case:{}}),VERNOY_CASE);
+  for(const K of [NOREL_R3,NOREL_D]){
+    assert.equal(K.shape,'round');assert.equal(K.calendar.dateW,2.4);assert.equal(K.calendar.dateH,2.0);assert.equal(K.calendar.dateC,9.95);
+    assert.ok(K.glassD<K.bezelID&&K.opening<K.glassD&&K.dialD>K.opening,'surfaces stack outside in');
+  }
+  assert.equal(NOREL_D.bezelOD,NOREL_D.flat,'Concept D sits flush with the case');
+  assert.ok(Math.abs((NOREL_D.bezelOD-NOREL_D.bezelID)/2-3.6)<1e-9);
+});
+const noreFixture=()=>({case:{locked:true,opening:31.4,model:NOREL_D.model},dial:{diameter:32.4,color:'#8DB4E4',finish:'matte'},
+  hHand:{on:true,length:8,color:'#F2F4F7'},mHand:{on:true,length:12,color:'#F2F4F7'},sHand:{on:false},numerals:{on:false},indices:{on:false},minute:{on:false},
+  date:{on:true,at:3,dist:9.95,w:2.4,h:2.0,cyclops:'2.5×'},day:{on:true,arc:46.5,frame:.6}});
+test('a calendar inside the movement apertures passes, and one outside them is flagged',()=>{
+  const ok=caseChecks(noreFixture());
+  for(const name of ['Date window size','Date window position','Cyclops coverage','Day window arc','Day window clearance'])assert.equal(ok.find(t=>t.title===name).ok,true,name);
+  const s=noreFixture();Object.assign(s.date,{w:3.0,h:2.5,dist:9.5});s.day.arc=56;
+  const bad=caseChecks(s);
+  for(const name of ['Date window size','Date window position','Day window arc'])assert.equal(bad.find(t=>t.title===name).ok,false,name);
+});
+test('the Vernoy case is not given movement-calendar checks',()=>{
+  const s=noreFixture();s.case.model=VERNOY_CASE.model;s.case.opening=30.5;
+  assert.equal(caseChecks(s).some(t=>t.title==='Date window size'||t.title==='Day window arc'),false);
+});

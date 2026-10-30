@@ -115,6 +115,33 @@ Designs that sync by themselves would need accounts and a backend.
   can be produced without locking the page up. Geometry, numerals and
   lettering are vector and identical in both. For artwork, use Export.
 
+## Cases
+
+A design names the case it is drawn for. **Case → Case** offers three, each fixed
+to its factory drawings:
+
+| case | what it is |
+|---|---|
+| Vernoy cushion · RD26-0172 | the original 36 mm cushion case, with its photograph template |
+| NOREL B6098G-A1 · R3 | Blue Creations' 41 mm round case as drawn: 40.0 / 34.8 fluted bezel, Ø32.5 opening, President bracelet, Sellita SW240-1 day-date |
+| NOREL B6098G-A1 · Concept D | the proposal: a 41.0 bezel flush with the case, 33.8 inside (3.6 mm of flutes and land a side), Ø31.4 opening, 2.5× cyclops |
+
+Changing the case refits the dial: every radial measurement — chapter ring,
+tracks, zones, borders, numerals, indices, logo position — is scaled by the
+ratio of the two openings, and it is one undo step. The NOREL cases also switch
+on the **Day window** and place the **Date window** where the SW240-1 shows
+them: the day disc at R11.27–13.17 mm through at most 53°, the date through
+2.40 × 2.00 mm centred 9.95 mm out at 3. The window radius is the movement's;
+the arc, frames, cyclops and the printing on the discs (Arabic or English day
+names, Western or Arabic-Indic dates) are design choices. **Design check**
+reports a window larger than the movement aperture, a date moved off its ring,
+a magnified date bigger than the lens, a day arc past 53°, and numerals at 11
+and 1 that run into the day window.
+
+The case photograph is of the Vernoy case, so it is not composited over a NOREL
+case; the drawn case is used instead. Concept D is a proposal: its bezel seat,
+crystal, cyclops and dial seat are for Blue Creations to confirm.
+
 ## Atelier tools
 
 The Atelier strip adds a searchable collection of 47 techniques across engine
