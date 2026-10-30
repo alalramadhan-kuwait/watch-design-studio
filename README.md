@@ -118,7 +118,8 @@ Designs that sync by themselves would need accounts and a backend.
 ## Simple mode and the full editor
 
 The studio opens in **simple mode**: one panel that walks through a watch in
-six steps — **Start** (a preset, a reference design or a saved version),
+six steps — **Start** (a fresh standard dial, a preset, a reference design or
+a saved version),
 **Case**, **Dial**, **Markers**, **Hands** and **Finish** (name, lettering,
 day and date, the design check, saving and sharing). Each step shows the
 choices that change the watch most, as pictures and swatches.
@@ -128,6 +129,10 @@ for that part, which opens the **full editor** at it, and the **Full editor**
 button in the top bar switches over entirely (**Simple mode** switches back).
 Both drive the same design, so undo, versions and exports see every change
 whichever one made it. The browser remembers which one you used last.
+
+On a phone the watch keeps the top of the screen and the steps the bottom.
+Each row of choices scrolls sideways, and the full editor is under **⋯**.
+A first visit opens on the standard dial.
 
 ## Cases
 

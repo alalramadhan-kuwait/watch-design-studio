@@ -1374,7 +1374,10 @@ const BASE = {
   render:{mode:"studio", az:135, el:40, quality:340, view:"front"},
   exportPx:0,
   handSet:{link:"full set", minuteScale:0.80, secondsScale:0.52, includeSeconds:true},
-  tpl:{on:true, cx:48.1, cy:43.5, dia:55.6, rot:0, recess:0.55, name:""},
+  /* where the built-in case photograph's opening is (BUILTIN_CASE_CAL). Every
+     preset, reference design and opened file starts from these, so a stale
+     figure here put the photographed dial in a ring round every one of them. */
+  tpl:{on:true, cx:47.11, cy:45.23, dia:66.8, rot:0, recess:0.55, name:""},
   case:{on:true, locked:true, model:VERNOY_CASE.model, material:"#C8C9C7", finish:"polished", cab:"#8A1538",
         strap:true, strapColor:"#4E3629",
         // mirrors of CASE_SPEC, editable only when unlocked for exploration
@@ -1445,6 +1448,21 @@ const BASE = {
 
 /* All presets are dial studies inside the same fixed case — Ø30.50 visible opening. */
 const PRESETS = {
+  /* the fresh start: a plain, legible three-hand dial to build from */
+  "Standard":{
+    meta:{name:"Standard"},
+    tpl:{on:true},
+    dial:{color:"#E9E7E1", finish:"sunburst", dome:0, satin:0},
+    borders:{on:false}, chapter:{on:false}, sector:{on:false}, cross:{on:false}, sub:{on:false}, hour:{on:false},
+    numerals:{on:false},
+    indices:{on:true, style:"baton", applied:true, radius:12.6, length:2.4, width:.6, count:12, color:"#2A2D32", skipNumerals:false},
+    minute:{on:true, diameter:29.7, style:"ticks", thickness:.12, color:"#3A3E44", fives:false},
+    text:{logo:"VERNOY", logoFont:"serif", logoSize:1.7, logoY:-7.0, logoTech:"printed", color:"#2A2D32",
+          line2:"AUTOMATIC", line2Y:-5.2, line2Size:.8},
+    hHand:{style:"dauphine", length:8.4, width:1.0, tail:0.6, color:"#2A2D32", material:"blackened steel"},
+    mHand:{style:"dauphine", length:12.6, width:.8, tail:0.6, color:"#2A2D32", material:"blackened steel"},
+    sHand:{on:true, style:"stick", length:13.6, width:.16, tail:3.2, color:"#2A2D32", material:"blackened steel"}
+  },
   "Vernoy — Vintage Roman": {
     /* Built from the perspective-corrected prototype photograph; scale
        anchored on the drawing's 30.50 mm opening. Measured values are
@@ -1830,6 +1848,10 @@ function migrateZones(st){
   return st;
 }
 function migrateHands(st){
+  /* designs started from a preset before the calibration above was fixed
+     carry the old figures; they are the built-in photo's, so correct them */
+  if(st && st.tpl && st.tpl.cx === 48.1 && st.tpl.cy === 43.5 && st.tpl.dia === 55.6)
+    Object.assign(st.tpl, {cx:47.11, cy:45.23, dia:66.8});
   migrateBorders(st);
   migrateZones(st);
   migrateHandMetal(st);
@@ -1849,7 +1871,7 @@ const deep = (a,b)=>{const o=clone(a);for(const k in b){o[k]=(b[k]&&typeof b[k]=
 const get = (o,p)=>p.split(".").reduce((x,k)=>x[k],o);
 const set = (o,p,v)=>{const k=p.split(".");k.slice(0,-1).reduce((x,i)=>x[i],o)[k.pop()]=v;};
 
-let S = deep(BASE, PRESETS["Vernoy — Vintage Roman"]);   // the app opens on the Vintage Roman
+let S = deep(BASE, PRESETS["Standard"]);   // a first visit opens on the standard dial
 let sel = "dial", measureOn = false, zoom = 1, panX = 0, panY = 0;
 const isTouch = matchMedia("(pointer:coarse)").matches;
 /* The one place the narrow layout is defined. It has to agree with the
@@ -10375,7 +10397,7 @@ body.guided .atelier-nav, body.guided #gHideInGuided, body.guided .bar .grp.tool
 .gCards.wide{ grid-template-columns:repeat(auto-fill,minmax(150px,1fr)) }
 .gCard{ border:1.5px solid var(--ds-border); border-radius:12px; background:var(--ds-panel); padding:6px; cursor:pointer;
   text-align:left; display:flex; flex-direction:column; gap:5px; color:var(--ds-text); font:inherit }
-.gCard:hover{ border-color:var(--ds-text-2) }
+@media (hover:hover){ .gCard:hover{ border-color:var(--ds-text-2) } }
 .gCard.on{ border-color:var(--ds-brand); box-shadow:0 0 0 2px var(--ds-brand) inset }
 .gCard .gPic{ aspect-ratio:1/1; border-radius:8px; background:#F3F2EE; overflow:hidden; display:grid; place-items:center }
 .gCard .gPic svg, .gCard .gPic img{ width:100%; height:100%; object-fit:cover; display:block }
@@ -10421,16 +10443,56 @@ body.guided .atelier-nav, body.guided #gHideInGuided, body.guided .bar .grp.tool
 .gCheck.warn{ border-color:#FF9500; background:rgba(255,149,0,.07) }
 .gCheck ul{ margin:6px 0 0; padding-left:18px } .gCheck li{ margin:3px 0 }
 #gModeBtn{ white-space:nowrap }
+/* ON A PHONE. The watch keeps the top of the screen and the steps the
+   bottom, at a fixed split: no handle to find, no overlays on the watch,
+   a header with only the name, undo, redo and More. Every row of choices
+   is one line that scrolls sideways, so a step fits without scrolling down,
+   and everything to tap is at least 40pt. */
 @media (max-width:900px){
-  #guide{ border-left:0; background:transparent }
+  #guide{ border-left:0; background:transparent; -webkit-tap-highlight-color:transparent; touch-action:manipulation }
+  #guide button{ -webkit-user-select:none; user-select:none }
   body.guided #mBody > .rail, body.guided #mBody > .props{ display:none !important }
   body.guided #mBody > #guide{ display:flex !important; height:100% }
-  body.guided #mHead #mNow, body.guided #mHead .tabs{ display:none !important }
+  body.guided #mHead{ display:none !important }
+  body.guided #mSheet{ height:58% !important; padding-bottom:0 !important; transition:none !important }
+  body.guided .stage{ bottom:58% !important; transition:none !important }
   body.guided #mBody{ overflow:hidden; display:flex; flex-direction:column }
-  .gSteps{ padding:4px 12px 8px }
-  .gBody{ padding:2px 14px 14px }
-  .gCards{ grid-template-columns:repeat(auto-fill,minmax(96px,1fr)) }
-  .gFoot{ padding:8px 12px calc(10px + env(safe-area-inset-bottom)) }
+  body.guided #mModes, body.guided #mInfoBtn, body.guided #mMeasure, body.guided .zoomer, body.guided #gModeBtn,
+  body.guided #mTop .ico[aria-label="Back"], body.guided #mTop .ico[aria-label="Save version"],
+  body.guided #mTop .ico[aria-label="Export"]{ display:none !important }
+  body.guided #mTop .ico{ width:42px; height:42px; font-size:19px }
+  .gSteps{ padding:12px 12px 6px; gap:4px }
+  .gSteps button{ height:36px; padding:0; flex-direction:row; justify-content:center; border:0; border-radius:999px;
+    background:var(--ds-fill, rgba(120,120,128,.12)); font-size:12.5px; color:var(--ds-text-2) }
+  .gSteps button b{ display:none }
+  .gSteps button.done{ color:var(--ds-text) }
+  .gSteps button.on{ background:var(--ds-text); color:var(--ds-panel) }
+  .gBody{ padding:4px 14px 16px; -webkit-overflow-scrolling:touch; overscroll-behavior:contain }
+  .gBody h2{ display:none }
+  .gBody .gLead{ font-size:14px; margin:2px 0 10px }
+  .gBody h3{ font-size:13px; font-weight:600; color:var(--ds-text-2); margin:14px 0 8px }
+  .gCards, .gChips{ display:flex; flex-wrap:nowrap; overflow-x:auto; scroll-snap-type:x proximity;
+    margin:0 -14px; padding:2px 14px 6px; scrollbar-width:none }
+  .gCards::-webkit-scrollbar, .gChips::-webkit-scrollbar{ display:none }
+  .gCards{ gap:10px }
+  .gCard{ flex:0 0 104px; scroll-snap-align:start; scroll-margin-left:14px }
+  .gCards.wide .gCard{ flex-basis:132px; min-height:64px; justify-content:center; padding:10px 12px }
+  .gCard .gName{ font-size:13px }
+  .gChips{ gap:8px }
+  .gChips button{ flex:none; min-height:40px; padding:0 16px; font-size:15px }
+  .gSw{ gap:12px }
+  .gSw button, .gSw label{ width:40px; height:40px }
+  .gRow{ min-height:44px; margin:2px 0 }
+  .gRow label{ font-size:15px }
+  .gRow input[type=text]{ font-size:16px; padding:10px 12px; max-width:62% }
+  .gRow input[type=range]{ height:36px; max-width:60% }
+  .gMore{ font-size:15px; padding:12px 0 4px; margin-top:6px }
+  .gActions button{ min-height:58px; font-size:15px }
+  .gActions [data-gdo="compare"], .gActions [data-gdo="share"]{ display:none }
+  .gCard:active, .gChips button:active, .gSw button:active, .gActions button:active, .gFoot button:active{ transform:scale(.97) }
+  .gFoot{ padding:8px 12px calc(8px + env(safe-area-inset-bottom)) }
+  .gFoot button{ height:50px; padding:0; font-size:16px; border-radius:12px }
+  .gFoot .back{ flex:0 0 32% }
 }
 </style>
 <script>
@@ -10488,9 +10550,10 @@ body.guided .atelier-nav, body.guided #gHideInGuided, body.guided .bar .grp.tool
   const VIEW = {
     start(){
       const cards = [];
+      cards.push({id:"fresh", name:"Fresh start", sub:"Standard dial", st:freshState()});
       cards.push({id:"cur", name:"Keep my current design", sub:S.meta.name, st:S});
       if(noreRef) cards.push({id:"norel", name:"NOREL Concept D", sub:"Powder blue · day-date", st:migrateHands(deep(BASE, noreRef))});
-      for(const n of Object.keys(PRESETS)) cards.push({id:"p:"+n, name:n.replace(/^Vernoy — /,""), sub:n.startsWith("Vernoy") ? "Vernoy" : "Style study", st:migrateHands(deep(BASE, PRESETS[n]))});
+      for(const n of Object.keys(PRESETS)) if(n !== "Standard") cards.push({id:"p:"+n, name:n.replace(/^Vernoy — /,""), sub:n.startsWith("Vernoy") ? "Vernoy" : "Style study", st:migrateHands(deep(BASE, PRESETS[n]))});
       const vers = (versions || []).map((v,i) => ({id:"v:"+i, name:v.name, sub:"Saved version", st:v.state ? migrateHands(deep(BASE, v.state)) : null})).filter(c => c.st);
       const card = c => `<button type="button" class="gCard ${c.id==="cur"?"on":""}" data-gstart="${esc2(c.id)}"><div class="gPic">${thumb(c.st, c.id)}</div><div class="gName">${esc2(c.name)}</div><div class="gSub">${esc2(c.sub)}</div></button>`;
       return `<div class="gCards">${cards.map(card).join("")}</div>`
@@ -10528,7 +10591,7 @@ body.guided .atelier-nav, body.guided #gHideInGuided, body.guided .bar .grp.tool
         .map(([k,l,s]) => `<button type="button" class="gCard ${k===cur?"on":""}" data-gmark="${k}"><div class="gName" style="font-size:15px">${l}</div><div class="gSub" style="font-size:14px;letter-spacing:.06em">${s}</div></button>`).join("")}</div>`;
       if(n.on) h += slider("numerals.size", "Size", 1.6, 5, 0.05, n.size);
       if(!n.on && ix.on) h += slider("indices.length", "Length", 0.8, 4, 0.05, ix.length);
-      h += `<h3>Colour</h3>` + swatches(n.on ? "numerals.color" : "indices.color", [["#FFFFFF","White"],["#D0D3D6","Silver"],["#1F2D47","Navy"],["#15171C","Black"],["#C9A55A","Gold"]], n.on ? n.color : ix.color);
+      h += `<h3>Colour</h3>` + swatches(n.on ? "numerals.color" : "indices.color", [["#FFFFFF","White"],["#D0D3D6","Silver"],["#1F2D47","Navy"],["#2A2D32","Charcoal"],["#15171C","Black"],["#C9A55A","Gold"]], n.on ? n.color : ix.color);
       h += `<h3>Minute track</h3>` + chips("minute.style", [["none","None"],["dots","Dots"],["ticks","Ticks"],["railroad","Railroad"],["beads","Beads"]], S.minute.on ? S.minute.style : "none");
       return h + more(n.on ? "numerals" : "indices", "All marker settings");
     },
@@ -10561,6 +10624,17 @@ body.guided .atelier-nav, body.guided #gHideInGuided, body.guided .bar .grp.tool
       return h;
     }
   };
+  /* the standard dial, in whichever case is chosen now */
+  function freshState(){
+    const keep = S; let st;
+    try{
+      S = migrateHands(deep(BASE, PRESETS.Standard));
+      const m = keep.case && keep.case.model;
+      if(m && m !== S.case.model){ const from = S.case.model; S.case.model = m; applyCaseModel(from, m); }
+      st = S;
+    }finally{ S = keep; }
+    return st;
+  }
   function handPic(style){
     try{
       const st = clone(S); st.hHand = {...st.hHand, style, on:true}; st.mHand = {...st.mHand, on:false}; st.sHand = {...st.sHand, on:false};
@@ -10607,8 +10681,18 @@ body.guided .atelier-nav, body.guided #gHideInGuided, body.guided .bar .grp.tool
     if(mode !== "guided") return;
     stepsEl.innerHTML = STEPS.map((s,i) => `<button type="button" role="tab" aria-selected="${i===step}" data-gstep="${i}" class="${i===step?"on":i<step?"done":""}"><b>${i+1}</b>${s.t}</button>`).join("");
     const s = STEPS[step], scroll = body.scrollTop, same = body.dataset.step === s.k;
+    /* the rows that scroll sideways on a phone are rebuilt on every change,
+       so they would snap back to their start and hide what was just tapped:
+       keep each where it was, and on a new step bring the choice into view */
+    const rowsX = [...body.querySelectorAll(".gCards, .gChips")].map(r => r.scrollLeft);
     body.innerHTML = `<h2>${s.t}</h2><p class="gLead">${s.lead}</p>` + VIEW[s.k]();
     body.dataset.step = s.k; if(same) body.scrollTop = scroll;
+    body.querySelectorAll(".gCards, .gChips").forEach((r, i) => {
+      if(r.scrollWidth <= r.clientWidth) return;
+      if(same && rowsX[i] != null){ r.scrollLeft = rowsX[i]; return; }
+      const on = r.querySelector(".on");
+      if(on && on.offsetLeft + on.offsetWidth > r.clientWidth) r.scrollLeft = on.offsetLeft - (r.clientWidth - on.offsetWidth)/2;
+    });
     guide.querySelector(".back").disabled = step === 0;
     const nx = guide.querySelector(".next"); nx.textContent = step === STEPS.length-1 ? "Save version" : `Next: ${STEPS[step+1].t}`;
     const on = stepsEl.querySelector(".on"); if(on && !same) on.scrollIntoView({block:"nearest", inline:"center"});
@@ -10629,15 +10713,16 @@ body.guided .atelier-nav, body.guided #gHideInGuided, body.guided .bar .grp.tool
     if(d.gstart){
       const id = d.gstart;
       if(id === "cur"){ step = 1; paint(); return; }
-      if(id === "norel" && noreRef) S = migrateHands(deep(BASE, noreRef));
+      if(id === "fresh") S = freshState();
+      else if(id === "norel" && noreRef) S = migrateHands(deep(BASE, noreRef));
       else if(id.startsWith("p:")){ const n = id.slice(2); S = migrateHands(deep(BASE, PRESETS[n])); S.meta.name = n; }
       else if(id.startsWith("v:")){ const v = versions[+id.slice(2)]; if(v) S = migrateHands(deep(BASE, v.state)); }
-      commit(); paintAll(); step = 1; paint(); body.scrollTop = 0; toast("Loaded. Now make it yours."); return;
+      commit(); paintAll(); step = 1; paint(); body.scrollTop = 0; toast(id === "fresh" ? "A standard dial. Now make it yours." : "Loaded. Now make it yours."); return;
     }
     if(d.gfull){ setMode("full"); sel = d.gfull; paintAll(); if(typeof stacked === "function" && stacked() && typeof tab === "function") tab("props"); return; }
     if(d.gdo){
       const click = sel_ => { const el = document.querySelector(sel_); if(el) el.click(); };
-      ({save:()=>click("#save"), export:()=>click("#exp"), share:()=>click("#share"), "3d":()=>click("#open-relief"),
+      ({save:()=>click("#save"), export:()=>click("#exp"), share:()=>{ if(document.querySelector("#share")) click("#share"); else click("#exp"); }, "3d":()=>click("#open-relief"),
         compare:()=>click("#compare"), spec:()=>click('[data-atelier="spec"]'), check:()=>click('[data-atelier="check"]')}[d.gdo] || (()=>{}))();
     }
   });
@@ -10672,9 +10757,14 @@ body.guided .atelier-nav, body.guided #gHideInGuided, body.guided .bar .grp.tool
     document.body.classList.toggle("guided", m === "guided");
     modeBtn.textContent = m === "guided" ? "Full editor" : "Simple mode";
     modeBtn.title = m === "guided" ? "Every control, for fine adjustments" : "Step by step, the main choices only";
-    mobileMode.textContent = m === "guided" ? "Full editor (every control)" : "Simple mode (step by step)";
+    mobileMode.innerHTML = m === "guided" ? `<span class="l">Full editor</span><span class="h">Every control, for fine adjustments</span>`
+                                          : `<span class="l">Simple mode</span><span class="h">Step by step, the main choices only</span>`;
     if(m === "guided") paint();
     if(typeof requestPaint === "function") requestPaint();
+    /* on a phone the two modes split the screen differently, so frame the
+       watch again in the space it now has */
+    if(typeof NARROW === "function" && NARROW() && typeof fitTo === "function")
+      setTimeout(() => { if(typeof sheetReflow === "function") sheetReflow(); userFramed = false; fitTo(fitMode || "case"); }, 60);
   }
   modeBtn.onclick = () => setMode(mode === "guided" ? "full" : "guided");
   mobileMode.onclick = () => { const mm = document.getElementById("mMore"); if(mm){ mm.classList.remove("open"); mm.style.display = "none"; } setMode(mode === "guided" ? "full" : "guided"); };
