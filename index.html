@@ -10101,6 +10101,7 @@ refineBootRender();
     add(false,'Movement and production review','Confirm hand stack, dial feet, tolerances, printing minimums and complication compatibility with your manufacturer.','case');
     return out;
   }
+  if(typeof window!=="undefined")window.WatchAtelierChecks=checks;
   function brief(){return{schema:'watch-design-studio/atelier-brief',version:1,createdAt:new Date().toISOString(),name:S.meta.name,referenceCase:JSON.parse(JSON.stringify(caseOf(S),(k,v)=>k==='photoData'||k==='photoLoading'?undefined:v)),caseMode:S.case.locked!==false?'factory locked':'exploratory',checks:checks(S),notes:'Concept design only. Reference case dimensions are not certification of the current design. Confirm all production dimensions with the manufacturer.',design:clone(S)};}
   function renderReport(mode){
     const rows=checks(S),reviews=rows.filter(t=>!t.ok).length;
@@ -10339,6 +10340,347 @@ document.getElementById('open-relief').onclick=async()=>{
   }catch(error){toast(error.message+' — try reopening the 3D view.');}finally{button.disabled=false;}
 };
 
+</script>
+<style>
+/* ============================================================
+   GUIDED MODE
+   The studio's controls, asked in the order a watch is decided:
+   which case, what dial, which markers, which hands, then the
+   finishing touches. Each step shows only the choices that change
+   the watch most, as pictures and swatches; every other control
+   is one tap away in the full editor, which is unchanged.
+   ============================================================ */
+#guide{ display:none; background:var(--ds-panel); min-height:0; min-width:0; overflow:hidden;
+  flex-direction:column; border-left:1px solid var(--ds-border) }
+body.guided #guide{ display:flex }
+/* the atelier strip is hidden here, so the page has one row fewer */
+body.guided{ grid-template-rows:auto minmax(0,1fr) !important }
+body.guided .shell{ grid-template-columns:minmax(0,1fr) 400px }
+body.guided .shell > .rail, body.guided .shell > .props{ display:none }
+body.guided .atelier-nav, body.guided #gHideInGuided, body.guided .bar .grp.tools, body.guided #preset{ display:none }
+.gSteps{ display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:4px; padding:12px 12px 8px; flex:none }
+.gSteps button{ display:flex; flex-direction:column; align-items:center; gap:4px; min-width:0;
+  border:1px solid var(--ds-border); background:var(--ds-panel); color:var(--ds-text-2);
+  border-radius:10px; padding:6px 2px; font:500 11.5px/1 var(--ds-font, inherit); cursor:pointer; white-space:nowrap }
+.gSteps button b{ display:inline-grid; place-items:center; width:18px; height:18px; border-radius:50%;
+  background:var(--ds-panel-2); color:var(--ds-text-2); font-size:10.5px }
+.gSteps button.on{ background:var(--ds-text); color:var(--ds-panel); border-color:var(--ds-text) }
+.gSteps button.on b{ background:var(--ds-brand); color:#15181C }
+.gSteps button.done b{ background:var(--ds-brand); color:#15181C }
+.gBody{ flex:1; overflow-y:auto; padding:6px 16px 20px; min-height:0 }
+.gBody h2{ font:600 21px/1.2 var(--ds-font, inherit); margin:6px 0 4px; letter-spacing:-.015em }
+.gBody .gLead{ color:var(--ds-text-2); font-size:13.5px; margin:0 0 14px; line-height:1.45 }
+.gBody h3{ font:600 13px/1.3 var(--ds-font, inherit); margin:18px 0 8px; color:var(--ds-text) }
+.gCards{ display:grid; grid-template-columns:repeat(auto-fill,minmax(108px,1fr)); gap:10px }
+.gCards.wide{ grid-template-columns:repeat(auto-fill,minmax(150px,1fr)) }
+.gCard{ border:1.5px solid var(--ds-border); border-radius:12px; background:var(--ds-panel); padding:6px; cursor:pointer;
+  text-align:left; display:flex; flex-direction:column; gap:5px; color:var(--ds-text); font:inherit }
+.gCard:hover{ border-color:var(--ds-text-2) }
+.gCard.on{ border-color:var(--ds-brand); box-shadow:0 0 0 2px var(--ds-brand) inset }
+.gCard .gPic{ aspect-ratio:1/1; border-radius:8px; background:#F3F2EE; overflow:hidden; display:grid; place-items:center }
+.gCard .gPic svg, .gCard .gPic img{ width:100%; height:100%; object-fit:cover; display:block }
+.gCard .gName{ font-size:12.5px; font-weight:600; line-height:1.25 }
+.gCard .gSub{ font-size:11.5px; color:var(--ds-text-2); line-height:1.3 }
+.gSw{ display:flex; flex-wrap:wrap; gap:8px }
+.gSw button{ width:34px; height:34px; border-radius:50%; border:1px solid rgba(0,0,0,.15); cursor:pointer; padding:0;
+  box-shadow:inset 0 0 0 2px rgba(255,255,255,.0) }
+.gSw button.on{ box-shadow:0 0 0 2px var(--ds-panel), 0 0 0 4px var(--ds-brand) }
+.gSw label{ width:34px; height:34px; border-radius:50%; border:1px dashed var(--ds-text-2); display:grid; place-items:center;
+  cursor:pointer; font-size:15px; color:var(--ds-text-2); position:relative; overflow:hidden }
+.gSw label input{ position:absolute; inset:0; opacity:0; cursor:pointer }
+.gChips{ display:flex; flex-wrap:wrap; gap:6px }
+.gChips button{ border:1px solid var(--ds-border); background:var(--ds-panel); color:var(--ds-text); border-radius:999px;
+  padding:7px 12px; font:500 13px/1 var(--ds-font, inherit); cursor:pointer }
+.gChips button.on{ background:var(--ds-text); color:var(--ds-panel); border-color:var(--ds-text) }
+.gRow{ display:flex; align-items:center; justify-content:space-between; gap:12px; margin:10px 0 }
+.gRow label{ font-size:13px; color:var(--ds-text) }
+.gRow input[type=range]{ flex:1; max-width:210px }
+.gRow input[type=text]{ flex:1; max-width:230px; border:1px solid var(--ds-border); border-radius:8px; padding:8px 10px;
+  font:14px var(--ds-font, inherit); background:var(--ds-panel); color:var(--ds-text) }
+.gSwitch{ position:relative; width:44px; height:26px; flex:none }
+.gSwitch input{ opacity:0; width:0; height:0 }
+.gSwitch span{ position:absolute; inset:0; background:var(--ds-border); border-radius:999px; transition:.15s }
+.gSwitch span::after{ content:""; position:absolute; width:22px; height:22px; left:2px; top:2px; background:#fff; border-radius:50%; transition:.15s; box-shadow:0 1px 2px rgba(0,0,0,.25) }
+.gSwitch input:checked + span{ background:var(--ds-green, #34C759) }
+.gSwitch input:checked + span::after{ transform:translateX(18px) }
+.gMore{ display:inline-block; margin-top:16px; font-size:13px; color:var(--ds-accent, #007AFF); background:none; border:0; padding:0; cursor:pointer }
+.gNote{ font-size:12px; color:var(--ds-text-2); margin:6px 0 0; line-height:1.4 }
+.gActions{ display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px }
+.gActions button{ border:1px solid var(--ds-border); background:var(--ds-panel); color:var(--ds-text); border-radius:10px; padding:11px 10px;
+  font:600 13.5px/1.2 var(--ds-font, inherit); cursor:pointer; text-align:left }
+.gActions button small{ display:block; font-weight:400; color:var(--ds-text-2); font-size:11.5px; margin-top:3px }
+.gActions button.key{ background:var(--ds-brand); border-color:var(--ds-brand); color:#15181C }
+.gActions button.key small{ color:#15181C; opacity:.7 }
+.gFoot{ display:flex; gap:8px; padding:10px 16px 14px; border-top:1px solid var(--ds-border); flex:none; background:var(--ds-panel) }
+.gFoot button{ flex:1; border-radius:10px; padding:11px; font:600 14px/1 var(--ds-font, inherit); cursor:pointer;
+  border:1px solid var(--ds-border); background:var(--ds-panel); color:var(--ds-text) }
+.gFoot button.next{ background:var(--ds-text); color:var(--ds-panel); border-color:var(--ds-text) }
+.gFoot button:disabled{ opacity:.35; cursor:default }
+.gCheck{ border:1px solid var(--ds-border); border-radius:10px; padding:10px 12px; font-size:13px; line-height:1.4 }
+.gCheck.ok{ border-color:#34C759; background:rgba(52,199,89,.07) }
+.gCheck.warn{ border-color:#FF9500; background:rgba(255,149,0,.07) }
+.gCheck ul{ margin:6px 0 0; padding-left:18px } .gCheck li{ margin:3px 0 }
+#gModeBtn{ white-space:nowrap }
+@media (max-width:900px){
+  #guide{ border-left:0; background:transparent }
+  body.guided #mBody > .rail, body.guided #mBody > .props{ display:none !important }
+  body.guided #mBody > #guide{ display:flex !important; height:100% }
+  body.guided #mHead #mNow, body.guided #mHead .tabs{ display:none !important }
+  body.guided #mBody{ overflow:hidden; display:flex; flex-direction:column }
+  .gSteps{ padding:4px 12px 8px }
+  .gBody{ padding:2px 14px 14px }
+  .gCards{ grid-template-columns:repeat(auto-fill,minmax(96px,1fr)) }
+  .gFoot{ padding:8px 12px calc(10px + env(safe-area-inset-bottom)) }
+}
+</style>
+<script>
+/* GUIDED MODE — see the stylesheet note above. It drives the same state,
+   history and painting as the full editor: a choice here is set(), then
+   commit() and paintAll(), exactly like a control in the properties panel,
+   so undo, autosave, versions and exports all see it. */
+(function(){
+  const $ = s => document.querySelector(s);
+  const MODE_KEY = "wds:ui";
+  let mode = "guided";
+  try{ mode = localStorage.getItem(MODE_KEY) || "guided"; }catch(e){}
+  let step = 0;
+  const STEPS = [
+    {k:"start",   t:"Start",   lead:"Pick a starting point. You can change everything after."},
+    {k:"case",    t:"Case",    lead:"The case and what it is worn on."},
+    {k:"dial",    t:"Dial",    lead:"The colour and surface of the dial."},
+    {k:"markers", t:"Markers", lead:"How the hours are shown."},
+    {k:"hands",   t:"Hands",   lead:"The shape and metal of the hands."},
+    {k:"finish",  t:"Finish",  lead:"Name, the finishing details, and what to do with it."}
+  ];
+
+  /* ---- building blocks ---- */
+  const esc2 = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+  const chips = (path, opts, cur) => `<div class="gChips">${opts.map(([v,l]) =>
+    `<button type="button" data-gset="${path}" data-gv='${JSON.stringify(v)}' class="${JSON.stringify(cur)===JSON.stringify(v)?"on":""}">${esc2(l)}</button>`).join("")}</div>`;
+  const swatches = (path, list, cur) => `<div class="gSw">${list.map(([c,n]) =>
+    `<button type="button" title="${esc2(n)}" aria-label="${esc2(n)}" data-gset="${path}" data-gv='"${c}"' class="${String(cur).toUpperCase()===c.toUpperCase()?"on":""}" style="background:${c}"></button>`).join("")}
+    <label title="Any colour">+<input type="color" data-gcolor="${path}" value="${/^#[0-9a-f]{6}$/i.test(cur)?cur:"#888888"}"></label></div>`;
+  const toggle = (path, label, on) => `<div class="gRow"><label>${label}</label><label class="gSwitch"><input type="checkbox" data-gtoggle="${path}" ${on?"checked":""}><span></span></label></div>`;
+  const slider = (path, label, min, max, st, v) => `<div class="gRow"><label>${label}</label><input type="range" data-grange="${path}" min="${min}" max="${max}" step="${st}" value="${v}"></div>`;
+  const textIn = (path, label, v, ph) => `<div class="gRow"><label>${label}</label><input type="text" data-gtext="${path}" value="${esc2(v||"")}" placeholder="${esc2(ph||"")}"></div>`;
+  const more = (layer, label) => `<button type="button" class="gMore" data-gfull="${layer}">${label} →</button>`;
+
+  /* small pictures of a design, cropped to the case */
+  const thumbs = new Map(); let thumbSeq = 0;
+  function thumb(st, key){
+    const j = JSON.stringify(st); let h = 0;
+    for(let i = 0; i < j.length; i++) h = (h*31 + j.charCodeAt(i)) | 0;
+    const k = key + "|" + h;
+    if(thumbs.has(k)) return thumbs.get(k);
+    if(thumbs.size > 120) thumbs.clear();
+    let svg = "";
+    try{
+      const side = caseOf(st).flat*1.12;
+      svg = buildSVG(st, {tag:"g"+(++thumbSeq), material:false})
+        .replace(/viewBox="[^"]*"/, `viewBox="${-side/2} ${-side/2} ${side} ${side}"`);
+    }catch(e){ svg = ""; }
+    thumbs.set(k, svg); return svg;
+  }
+  let noreRef = null;
+  fetch("./designs/norel-concept-d-powder-blue.json").then(r => r.ok ? r.json() : null).then(j => { if(j){ noreRef = j; if(STEPS[step].k === "start") paint(); } }).catch(()=>{});
+
+  /* ---- the steps ---- */
+  const VIEW = {
+    start(){
+      const cards = [];
+      cards.push({id:"cur", name:"Keep my current design", sub:S.meta.name, st:S});
+      if(noreRef) cards.push({id:"norel", name:"NOREL Concept D", sub:"Powder blue · day-date", st:migrateHands(deep(BASE, noreRef))});
+      for(const n of Object.keys(PRESETS)) cards.push({id:"p:"+n, name:n.replace(/^Vernoy — /,""), sub:n.startsWith("Vernoy") ? "Vernoy" : "Style study", st:migrateHands(deep(BASE, PRESETS[n]))});
+      const vers = (versions || []).map((v,i) => ({id:"v:"+i, name:v.name, sub:"Saved version", st:v.state ? migrateHands(deep(BASE, v.state)) : null})).filter(c => c.st);
+      const card = c => `<button type="button" class="gCard ${c.id==="cur"?"on":""}" data-gstart="${esc2(c.id)}"><div class="gPic">${thumb(c.st, c.id)}</div><div class="gName">${esc2(c.name)}</div><div class="gSub">${esc2(c.sub)}</div></button>`;
+      return `<div class="gCards">${cards.map(card).join("")}</div>`
+        + (vers.length ? `<h3>Your saved versions</h3><div class="gCards">${vers.map(card).join("")}</div>` : "");
+    },
+    case(){
+      const K = caseOf(S);
+      /* each case is shown wearing this dial, the way picking it would leave it */
+      const pic = m => {
+        if(m === K.model) return thumb(S, "case:" + m);
+        const keep = S; let st;
+        try{ S = clone(keep); applyCaseModel(K.model, m); st = S; }finally{ S = keep; }
+        return thumb(st, "case:" + m);
+      };
+      const sub = {[VERNOY_CASE.model]:"36 mm cushion · strap", [NOREL_R3.model]:"41 mm round · as drawn", [NOREL_D.model]:"41 mm round · proposal"};
+      let h = `<div class="gCards">${CASE_MODELS.map(m => `<button type="button" class="gCard ${m===K.model?"on":""}" data-gcase="${esc2(m)}"><div class="gPic">${pic(m)}</div><div class="gName">${esc2(m.replace(/ · RD26-0172|B6098G-A1 · /g, ""))}</div><div class="gSub">${sub[m]}</div></button>`).join("")}</div>`;
+      h += `<h3>Metal</h3>` + swatches("case.material", [["#C8C9C7","Steel"],["#E3E4E6","White gold"],["#D7B56D","Yellow gold"],["#D9A48C","Rose gold"],["#3B3D42","Black"]], S.case.material);
+      h += `<h3>Finish</h3>` + chips("case.finish", [["polished","Polished"],["brushed","Brushed"],["satin","Satin"]], S.case.finish);
+      h += toggle("case.strap", K.bracelet ? "Show the bracelet" : "Show the strap", S.case.strap);
+      if(!K.bracelet && S.case.strap) h += `<h3>Strap colour</h3>` + swatches("case.strapColor", [["#4E3629","Brown"],["#1E1E20","Black"],["#1E2B45","Navy"],["#A0744A","Tan"],["#2F3B2E","Green"],["#7A2433","Burgundy"]], S.case.strapColor);
+      if(K.photoFile || K.photo) h += toggle("tpl.on", "Show as a photograph", S.tpl.on);
+      return h + more("case", "All case settings");
+    },
+    dial(){
+      const d = S.dial;
+      let h = `<h3>Colour</h3>` + swatches("dial.color", [["#0E1F55","Navy"],["#A9C3DD","Powder blue"],["#B9D3E6","Ice blue"],["#15171C","Black"],["#E9E7E1","Silver white"],["#D9C9A3","Champagne"],["#1F4A3A","Green"],["#E6B8A2","Salmon"],["#5E1E2C","Burgundy"],["#7B828A","Slate"]], d.color);
+      h += `<h3>Surface</h3>` + chips("dial.finish", [["matte","Matte"],["sunburst","Sunburst"],["guilloche","Guilloché"],["enamel","Enamel"],["lacquer","Lacquer"],["gloss","Gloss"],["grained","Grained"],["stone","Stone"],["mop","Mother of pearl"]], d.finish);
+      if(d.finish === "guilloche") h += `<h3>Pattern</h3>` + chips("dial.pattern", GUIL_PATTERNS.map(p => [p, (GUIL_LABEL[p] || p).replace(/ \(.*/,"")]), d.pattern);
+      return h + more("dial", "All dial settings");
+    },
+    markers(){
+      const n = S.numerals, ix = S.indices;
+      const cur = !n.on && ix.on ? "batons" : !n.on ? "none" : n.system === "arabic ٠–٩" ? "arabic" : n.system === "roman I–XII" ? "roman" : "western";
+      let h = `<div class="gCards wide">${[["arabic","Arabic-Indic","١٢ ٣ ٦ ٩"],["western","Western","12 3 6 9"],["roman","Roman","XII III VI IX"],["batons","Batons only","| | | |"],["none","Clean dial","no markers"]]
+        .map(([k,l,s]) => `<button type="button" class="gCard ${k===cur?"on":""}" data-gmark="${k}"><div class="gName" style="font-size:15px">${l}</div><div class="gSub" style="font-size:14px;letter-spacing:.06em">${s}</div></button>`).join("")}</div>`;
+      if(n.on) h += slider("numerals.size", "Size", 1.6, 5, 0.05, n.size);
+      if(!n.on && ix.on) h += slider("indices.length", "Length", 0.8, 4, 0.05, ix.length);
+      h += `<h3>Colour</h3>` + swatches(n.on ? "numerals.color" : "indices.color", [["#FFFFFF","White"],["#D0D3D6","Silver"],["#1F2D47","Navy"],["#15171C","Black"],["#C9A55A","Gold"]], n.on ? n.color : ix.color);
+      h += `<h3>Minute track</h3>` + chips("minute.style", [["none","None"],["dots","Dots"],["ticks","Ticks"],["railroad","Railroad"],["beads","Beads"]], S.minute.on ? S.minute.style : "none");
+      return h + more(n.on ? "numerals" : "indices", "All marker settings");
+    },
+    hands(){
+      const hh = S.hHand;
+      const styles = [["dauphine","Dauphine"],["baton","Baton"],["sword","Sword"],["leaf","Leaf"],["alpha","Alpha"],["pomme-ouverte","Breguet"],["cathedral","Cathedral"],["syringe","Syringe"]];
+      let h = `<div class="gCards">${styles.map(([v,l]) => `<button type="button" class="gCard ${hh.style===v?"on":""}" data-ghand="${v}"><div class="gPic">${handPic(v)}</div><div class="gName">${l}</div></button>`).join("")}</div>`;
+      h += `<h3>Metal</h3>` + chips("hands.material", [["polished steel","Steel"],["blued steel","Blued steel"],["yellow gold","Gold"],["rose gold","Rose gold"],["blackened steel","Black"]], hh.material || "polished steel");
+      h += toggle("sHand.on", "Seconds hand", S.sHand.on);
+      return h + more("hands", "All hand settings");
+    },
+    finish(){
+      let h = textIn("meta.name", "Name", S.meta.name, "My watch");
+      h += `<h3>Logo and text</h3>` + textIn("text.logo", "Logo", S.text.logo, "NOREL") + textIn("text.line2", "Second line", S.text.line2, "optional")
+        + textIn("text.foot", "Bottom text", S.text.foot, "AUTOMATIC");
+      const K = caseOf(S);
+      h += `<h3>Calendar</h3>`;
+      if(K.calendar) h += toggle("day.on", "Day window at 12", S.day.on) + (S.day.on ? chips("day.lang", [["Arabic","Arabic days"],["English","English days"]], S.day.lang) : "");
+      h += toggle("date.on", "Date window at 3", S.date.on);
+      if(S.date.on) h += chips("date.cyclops", [["none","No magnifier"],["2.0×","2× magnifier"],["2.5×","2.5× magnifier"]], S.date.cyclops || "none")
+        + `<div style="height:6px"></div>` + chips("date.digits", [["Western","1 2 3"],["Arabic-Indic","١ ٢ ٣"]], S.date.digits || "Western");
+      h += `<h3>Check it</h3>` + checkSummary();
+      h += `<h3>Keep and share</h3><div class="gActions">
+        <button type="button" class="key" data-gdo="save">Save version<small>Keep this design</small></button>
+        <button type="button" data-gdo="export">Export<small>Image, PDF or file</small></button>
+        <button type="button" data-gdo="share">Share<small>Send a picture</small></button>
+        <button type="button" data-gdo="3d">3D view<small>Turn it in your hand</small></button>
+        <button type="button" data-gdo="compare">Compare<small>Side by side</small></button>
+        <button type="button" data-gdo="spec">Specification<small>For the factory</small></button></div>`;
+      return h;
+    }
+  };
+  function handPic(style){
+    try{
+      const st = clone(S); st.hHand = {...st.hHand, style, on:true}; st.mHand = {...st.mHand, on:false}; st.sHand = {...st.sHand, on:false};
+      const svg = buildSVG(st, {scope:"hands", tag:"gh"+style, material:false});
+      return svg.replace(/viewBox="[^"]*"/, `viewBox="-6 -11 12 13"`);
+    }catch(e){ return ""; }
+  }
+  function checkSummary(){
+    const rows = (window.WatchAtelierChecks ? window.WatchAtelierChecks(S) : []).filter(r => !r.ok && r.title !== "Movement and production review");
+    if(!window.WatchAtelierChecks) return `<button type="button" class="gMore" data-gdo="check">Open the design check →</button>`;
+    return rows.length
+      ? `<div class="gCheck warn"><b>${rows.length} thing${rows.length>1?"s":""} to look at</b><ul>${rows.slice(0,5).map(r => `<li>${esc2(r.title)}</li>`).join("")}</ul>
+          <button type="button" class="gMore" style="margin-top:6px" data-gdo="check">See the details →</button></div>`
+      : `<div class="gCheck ok"><b>Everything fits.</b> Nothing clashes, and the hands and markers stay inside the opening. A manufacturer still confirms the final dimensions.</div>`;
+  }
+
+  /* ---- applying a choice ---- */
+  function apply(path, v){
+    if(path === "hands.material"){ for(const k of ["hHand","mHand","sHand"]) if(S[k]) S[k].material = v; }
+    else if(path === "minute.style"){ if(v === "none") S.minute.on = false; else { S.minute.on = true; S.minute.style = v; } }
+    else if(path === "case.model"){ const from = S.case.model; S.case.model = v; applyCaseModel(from, v); }
+    else set(S, path, v);
+    if(/^hHand\./.test(path)) syncHands("hHand");
+    commit(); paintAll();
+  }
+  function setMarkers(k){
+    const n = S.numerals, ix = S.indices;
+    if(k === "batons"){ n.on = false; ix.on = true; ix.style = ix.style || "baton"; }
+    else if(k === "none"){ n.on = false; ix.on = false; }
+    else {
+      n.on = true; ix.on = false;
+      const sys = {arabic:"arabic ٠–٩", western:"western 0–9", roman:"roman I–XII"}[k];
+      n.system = sys; const ok = stylesFor(sys); if(ok.indexOf(n.style) < 0) n.style = ok[0];
+    }
+    commit(); paintAll();
+  }
+
+  /* ---- painting ---- */
+  const guide = document.createElement("section"); guide.id = "guide"; guide.setAttribute("aria-label", "Guided design");
+  guide.innerHTML = `<nav class="gSteps" role="tablist"></nav><div class="gBody"></div>
+    <div class="gFoot"><button type="button" class="back">Back</button><button type="button" class="next">Next</button></div>`;
+  const stepsEl = guide.querySelector(".gSteps"), body = guide.querySelector(".gBody");
+  function paint(){
+    if(mode !== "guided") return;
+    stepsEl.innerHTML = STEPS.map((s,i) => `<button type="button" role="tab" aria-selected="${i===step}" data-gstep="${i}" class="${i===step?"on":i<step?"done":""}"><b>${i+1}</b>${s.t}</button>`).join("");
+    const s = STEPS[step], scroll = body.scrollTop, same = body.dataset.step === s.k;
+    body.innerHTML = `<h2>${s.t}</h2><p class="gLead">${s.lead}</p>` + VIEW[s.k]();
+    body.dataset.step = s.k; if(same) body.scrollTop = scroll;
+    guide.querySelector(".back").disabled = step === 0;
+    const nx = guide.querySelector(".next"); nx.textContent = step === STEPS.length-1 ? "Save version" : `Next: ${STEPS[step+1].t}`;
+    const on = stepsEl.querySelector(".on"); if(on && !same) on.scrollIntoView({block:"nearest", inline:"center"});
+  }
+  const origPaintAll = paintAll;
+  paintAll = function(){ origPaintAll.apply(this, arguments); thumbs.clear(); paint(); };
+
+  guide.addEventListener("click", e => {
+    const t = e.target.closest("button, [data-gstart]"); if(!t) return;
+    const d = t.dataset;
+    if(d.gstep){ step = +d.gstep; paint(); body.scrollTop = 0; return; }
+    if(t.classList.contains("back")){ if(step > 0){ step--; paint(); body.scrollTop = 0; } return; }
+    if(t.classList.contains("next")){ if(step < STEPS.length-1){ step++; paint(); body.scrollTop = 0; } else { const sv = document.getElementById("save"); if(sv) sv.click(); } return; }
+    if(d.gset){ apply(d.gset, JSON.parse(d.gv)); return; }
+    if(d.gcase){ apply("case.model", d.gcase); return; }
+    if(d.gmark){ setMarkers(d.gmark); return; }
+    if(d.ghand){ S.hHand.style = d.ghand; S.mHand.style = d.ghand; if(typeof snapVectorLengths === "function"){ snapVectorLengths("hHand"); snapVectorLengths("mHand"); } syncHands("hHand"); commit(); paintAll(); return; }
+    if(d.gstart){
+      const id = d.gstart;
+      if(id === "cur"){ step = 1; paint(); return; }
+      if(id === "norel" && noreRef) S = migrateHands(deep(BASE, noreRef));
+      else if(id.startsWith("p:")){ const n = id.slice(2); S = migrateHands(deep(BASE, PRESETS[n])); S.meta.name = n; }
+      else if(id.startsWith("v:")){ const v = versions[+id.slice(2)]; if(v) S = migrateHands(deep(BASE, v.state)); }
+      commit(); paintAll(); step = 1; paint(); body.scrollTop = 0; toast("Loaded. Now make it yours."); return;
+    }
+    if(d.gfull){ setMode("full"); sel = d.gfull; paintAll(); if(typeof stacked === "function" && stacked() && typeof tab === "function") tab("props"); return; }
+    if(d.gdo){
+      const click = sel_ => { const el = document.querySelector(sel_); if(el) el.click(); };
+      ({save:()=>click("#save"), export:()=>click("#exp"), share:()=>click("#share"), "3d":()=>click("#open-relief"),
+        compare:()=>click("#compare"), spec:()=>click('[data-atelier="spec"]'), check:()=>click('[data-atelier="check"]')}[d.gdo] || (()=>{}))();
+    }
+  });
+  guide.addEventListener("change", e => {
+    const t = e.target, d = t.dataset;
+    if(d.gtoggle){ apply(d.gtoggle, t.checked); }
+    if(d.gcolor){ apply(d.gcolor, t.value.toUpperCase()); }
+    if(d.gtext){ apply(d.gtext, t.value); }
+    if(d.grange){ apply(d.grange, parseFloat(t.value)); }
+  });
+  guide.addEventListener("input", e => {
+    const t = e.target, d = t.dataset;
+    if(d.grange){ set(S, d.grange, parseFloat(t.value)); requestPaint(true); }
+    if(d.gcolor){ set(S, d.gcolor, t.value.toUpperCase()); requestPaint(true); }
+  });
+
+  /* ---- placing it, and the switch between the two modes ---- */
+  const mBody = document.getElementById("mBody");
+  if(mBody) mBody.appendChild(guide); else document.querySelector(".shell").appendChild(guide);
+  const modeBtn = document.createElement("button");
+  modeBtn.type = "button"; modeBtn.className = "btn"; modeBtn.id = "gModeBtn";
+  const bar = document.querySelector(".bar");
+  const sp = bar && bar.querySelector(".sp");
+  if(sp) sp.after(modeBtn);
+  /* the toolbar's measuring and reference buttons belong to the full editor */
+  const toolsGrp = $("#measure") && $("#measure").closest(".grp"); if(toolsGrp) toolsGrp.classList.add("tools");
+  const slots = document.getElementById("mMoreSlots");
+  const mobileMode = document.createElement("button"); mobileMode.type = "button"; mobileMode.className = "btn mact";
+  if(slots) slots.prepend(mobileMode);
+  function setMode(m){
+    mode = m; try{ localStorage.setItem(MODE_KEY, m); }catch(e){}
+    document.body.classList.toggle("guided", m === "guided");
+    modeBtn.textContent = m === "guided" ? "Full editor" : "Simple mode";
+    modeBtn.title = m === "guided" ? "Every control, for fine adjustments" : "Step by step, the main choices only";
+    mobileMode.textContent = m === "guided" ? "Full editor (every control)" : "Simple mode (step by step)";
+    if(m === "guided") paint();
+    if(typeof requestPaint === "function") requestPaint();
+  }
+  modeBtn.onclick = () => setMode(mode === "guided" ? "full" : "guided");
+  mobileMode.onclick = () => { const mm = document.getElementById("mMore"); if(mm){ mm.classList.remove("open"); mm.style.display = "none"; } setMode(mode === "guided" ? "full" : "guided"); };
+  window.WatchGuide = {setMode, get mode(){ return mode; }, go(i){ step = i; paint(); }};
+  setMode(mode);
+})();
 </script>
 </body>
 </html>

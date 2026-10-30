@@ -115,6 +115,20 @@ Designs that sync by themselves would need accounts and a backend.
   can be produced without locking the page up. Geometry, numerals and
   lettering are vector and identical in both. For artwork, use Export.
 
+## Simple mode and the full editor
+
+The studio opens in **simple mode**: one panel that walks through a watch in
+six steps — **Start** (a preset, a reference design or a saved version),
+**Case**, **Dial**, **Markers**, **Hands** and **Finish** (name, lettering,
+day and date, the design check, saving and sharing). Each step shows the
+choices that change the watch most, as pictures and swatches.
+
+Nothing has been taken away. Every step ends with a link to all the settings
+for that part, which opens the **full editor** at it, and the **Full editor**
+button in the top bar switches over entirely (**Simple mode** switches back).
+Both drive the same design, so undo, versions and exports see every change
+whichever one made it. The browser remembers which one you used last.
+
 ## Cases
 
 A design names the case it is drawn for. **Case → Case** offers three, each fixed
