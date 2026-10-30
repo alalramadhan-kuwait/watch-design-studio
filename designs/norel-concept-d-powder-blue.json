@@ -22,7 +22,7 @@
   "includeSeconds": true
  },
  "tpl": {
-  "on": false,
+  "on": true,
   "cx": 47.11,
   "cy": 45.23,
   "dia": 66.8,

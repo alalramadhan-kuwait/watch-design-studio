@@ -1325,13 +1325,17 @@ const NOREL_R3 = {
   dialD:33.50, dialT:0.40, dialHolder:33.50, dialMat:"brass",
   movHolder:29.00, crownD:6.50, crownTube:2.50, cabochon:0, tol:"to be confirmed by Blue Creations",
   bracelet:true, cyclops:{w:7.0, h:5.0, mag:2.0},
+  /* A rendered photograph of the head on its bracelet, from the STEP: 20 px/mm,
+     dial centre in the middle, the opening Ø32.50 = 650 px of the 1040 width. */
+  photoFile:"./app/case-norel-r3.jpg", photoCal:{w:1040, h:1560, cx:50, cy:50, dia:62.5},
   calendar:{dayRin:11.27, dayRout:13.17, dayArcMax:53, dateC:9.95, dateRin:8.75, dateRout:11.15, dateW:2.40, dateH:2.00},
   back:["SELLITA SW240-1", "ALL STAINLESS STEEL", "10 ATM WATER RESISTANT"]
 };
 const NOREL_D = Object.assign({}, NOREL_R3, {
   model:"NOREL B6098G-A1 · Concept D", ref:"B6098G-A1 Concept D (proposal)",
   bezelOD:41.00, bezelID:33.80, opening:31.40, glassSeat:33.80, glassD:33.50, dialD:32.40, dialHolder:32.40,
-  cyclops:{w:7.0, h:5.6, mag:2.5}, tol:"proposal: Blue Creations to confirm bezel seat, crystal, cyclops and dial seat"
+  cyclops:{w:7.0, h:5.6, mag:2.5}, tol:"proposal: Blue Creations to confirm bezel seat, crystal, cyclops and dial seat",
+  photoFile:"./app/case-norel-d.jpg", photoCal:{w:1040, h:1560, cx:50, cy:50, dia:31.4*20/1040*100}
 });
 const CASES = {[VERNOY_CASE.model]:VERNOY_CASE, [NOREL_R3.model]:NOREL_R3, [NOREL_D.model]:NOREL_D};
 const CASE_MODELS = Object.keys(CASES);
@@ -1346,6 +1350,22 @@ const CASE_SPEC = new Proxy({}, {
   getOwnPropertyDescriptor:(t, k) => { let st = null; try{ st = S; }catch(e){} const v = caseOf(st)[k];
     return v === undefined ? undefined : {value:v, enumerable:true, configurable:true, writable:false}; }
 });
+/* A case's own photograph is fetched once, kept as a data URL so that exports
+   carry it, and the view repaints when it arrives; until then the drawn case
+   stands in. */
+function casePhoto(K){
+  if(!K || !K.photoFile) return null;
+  if(K.photoData) return K.photoData;
+  if(!K.photoLoading && typeof fetch === "function"){
+    K.photoLoading = true;
+    fetch(K.photoFile).then(r => r.ok ? r.blob() : Promise.reject(new Error(r.status)))
+      .then(b => new Promise((ok, no) => { const fr = new FileReader(); fr.onload = () => ok(fr.result); fr.onerror = no; fr.readAsDataURL(b); }))
+      .then(d => { K.photoData = d; if(typeof paintAll === "function") paintAll(); })
+      .catch(() => { K.photoLoading = false; });
+  }
+  return null;
+}
+const tplAvail = st => { const K = caseOf(st); return K.photoFile ? !!casePhoto(K) : !!(tplImage && K.photo); };
 const caseOutlinePath = (K, half, scale) => K.shape === "round" ? disc(half)
   : cushion(half, K.rSide*(scale||1), K.rCorner*(scale||1));
 
@@ -1861,7 +1881,8 @@ function applyCaseModel(from, to){
   c.model = B.model; c.locked = true;
   c.diameter = B.flat; c.opening = B.opening; c.lugToLug = B.lugToLug; c.lugWidth = B.lugWidth; c.thickness = B.height;
   if(S.dial.lock) S.dial.diameter = B.dialD;
-  if(!B.photo) S.tpl.on = false;
+  S.tpl.on = !!(B.photoFile || B.photo);       // a NOREL case brings its own photograph
+  casePhoto(B);
   const k = B.opening / A.opening;
   if(Math.abs(k - 1) > 1e-6){
     const sc = (o, keys) => { if(o) for(const key of keys) if(typeof o[key] === "number") o[key] = +(o[key]*k).toFixed(3); };
@@ -6733,11 +6754,13 @@ function seedBuiltins(){
 
 function buildTemplate(st, o){
   o = o || {};
-  if(!tplImage) return buildSVG(st, {scope:"full"});
-  const T = st.tpl;
-  const cx = tplW*T.cx/100, cy = tplH*T.cy/100;
-  const dPx = tplW*T.dia/100;                 // the O30.50 opening, in image px
-  const openMM = CASE_SPEC.opening;
+  const K = caseOf(st), own = K.photoFile ? casePhoto(K) : null;
+  const IMG = own || tplImage, IW = own ? K.photoCal.w : tplW, IH = own ? K.photoCal.h : tplH;
+  if(!IMG) return buildSVG(st, {scope:"full"});
+  const T = own ? Object.assign({}, st.tpl, {cx:K.photoCal.cx, cy:K.photoCal.cy, dia:K.photoCal.dia, rot:0}) : st.tpl;
+  const cx = IW*T.cx/100, cy = IH*T.cy/100;
+  const dPx = IW*T.dia/100;                 // the O30.50 opening, in image px
+  const openMM = K.opening;
   const insert = buildSVG(st, {scope:"insert", tag:"ins", matPx:o.matPx});
   const inner = insert.replace(/^<svg[^>]*viewBox="([^"]+)"/, (m,vb)=>{
     const [vx,vy,vw] = vb.split(/\s+/).map(Number);
@@ -6746,22 +6769,22 @@ function buildTemplate(st, o){
   });
   const clip = `tplclip${o.tag||""}`, sh = `tplsh${o.tag||""}`;
   const rec = Math.max(0, T.recess);
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${tplW} ${tplH}"
-    width="${o.px || tplW}" height="${f((o.px || tplW)*tplH/tplW,0)}" preserveAspectRatio="xMidYMid meet">
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${IW} ${IH}"
+    width="${o.px || IW}" height="${f((o.px || IW)*IH/IW,0)}" preserveAspectRatio="xMidYMid meet">
     <defs>
       <clipPath id="${clip}"><circle cx="${f(cx,2)}" cy="${f(cy,2)}" r="${f(dPx/2,2)}"/></clipPath>
       <radialGradient id="${sh}" cx="50%" cy="50%" r="50%">
         <stop offset="${f(1-0.10*rec,3)}" stop-color="#000" stop-opacity="0"/>
         <stop offset="1" stop-color="#000" stop-opacity="${f(0.55*rec,3)}"/></radialGradient>
     </defs>
-    <image href="${tplImage}" x="0" y="0" width="${tplW}" height="${tplH}"/>
+    <image href="${IMG}" x="0" y="0" width="${IW}" height="${IH}"/>
     <g clip-path="url(#${clip})" transform="rotate(${f(T.rot,2)} ${f(cx,2)} ${f(cy,2)})">
       ${inner}
       <circle cx="${f(cx,2)}" cy="${f(cy,2)}" r="${f(dPx/2,2)}" fill="url(#${sh})" pointer-events="none"/>
     </g>
-    ${o.guide ? `<circle cx="${f(cx,2)}" cy="${f(cy,2)}" r="${f(dPx/2,2)}" fill="none" stroke="#C9A227" stroke-width="${f(tplW*0.003,2)}" stroke-dasharray="${f(tplW*0.012,2)} ${f(tplW*0.008,2)}"/>
-       <line x1="${f(cx-dPx*0.6,2)}" y1="${f(cy,2)}" x2="${f(cx+dPx*0.6,2)}" y2="${f(cy,2)}" stroke="#C9A227" stroke-width="${f(tplW*0.002,2)}" stroke-opacity="0.6"/>
-       <line x1="${f(cx,2)}" y1="${f(cy-dPx*0.6,2)}" x2="${f(cx,2)}" y2="${f(cy+dPx*0.6,2)}" stroke="#C9A227" stroke-width="${f(tplW*0.002,2)}" stroke-opacity="0.6"/>` : ""}
+    ${o.guide ? `<circle cx="${f(cx,2)}" cy="${f(cy,2)}" r="${f(dPx/2,2)}" fill="none" stroke="#C9A227" stroke-width="${f(IW*0.003,2)}" stroke-dasharray="${f(IW*0.012,2)} ${f(IW*0.008,2)}"/>
+       <line x1="${f(cx-dPx*0.6,2)}" y1="${f(cy,2)}" x2="${f(cx+dPx*0.6,2)}" y2="${f(cy,2)}" stroke="#C9A227" stroke-width="${f(IW*0.002,2)}" stroke-opacity="0.6"/>
+       <line x1="${f(cx,2)}" y1="${f(cy-dPx*0.6,2)}" x2="${f(cx,2)}" y2="${f(cy+dPx*0.6,2)}" stroke="#C9A227" stroke-width="${f(IW*0.002,2)}" stroke-opacity="0.6"/>` : ""}
   </svg>`;
 }
 
@@ -8109,7 +8132,7 @@ function refineBootRender(){
 function viewSVG(){
   const coarse = bootCoarse ? Math.min(BOOT_QUALITY, S.render.quality) : undefined;
   return S.render.view !== "front" ? buildElevation(S, S.render.view, {})
-    : (S.tpl.on && tplImage && CASE_SPEC.photo) ? buildTemplate(S,{guide: tplGuide || sel === "tpl", matPx: coarse})
+    : (S.tpl.on && tplAvail(S)) ? buildTemplate(S,{guide: tplGuide || sel === "tpl", matPx: coarse})
     : buildSVG(S,{measure:measureOn, handles:handlesOn, touch:isTouch, matPx: coarse});
 }
 function paintView(){
@@ -8891,7 +8914,7 @@ qa("[data-px]").forEach(b=>b.onclick=()=>{
 
 function currentView(){
   if(S.render.view !== "front") return {kind:S.render.view, vector:true};
-  if(S.tpl.on && tplImage && CASE_SPEC.photo) return {kind:"template", vector:false};
+  if(S.tpl.on && tplAvail(S)) return {kind:"template", vector:false};
   return {kind:"front", vector:true};
 }
 function currentSVG(opt){
@@ -10078,7 +10101,7 @@ refineBootRender();
     add(false,'Movement and production review','Confirm hand stack, dial feet, tolerances, printing minimums and complication compatibility with your manufacturer.','case');
     return out;
   }
-  function brief(){return{schema:'watch-design-studio/atelier-brief',version:1,createdAt:new Date().toISOString(),name:S.meta.name,referenceCase:clone(caseOf(S)),caseMode:S.case.locked!==false?'factory locked':'exploratory',checks:checks(S),notes:'Concept design only. Reference case dimensions are not certification of the current design. Confirm all production dimensions with the manufacturer.',design:clone(S)};}
+  function brief(){return{schema:'watch-design-studio/atelier-brief',version:1,createdAt:new Date().toISOString(),name:S.meta.name,referenceCase:JSON.parse(JSON.stringify(caseOf(S),(k,v)=>k==='photoData'||k==='photoLoading'?undefined:v)),caseMode:S.case.locked!==false?'factory locked':'exploratory',checks:checks(S),notes:'Concept design only. Reference case dimensions are not certification of the current design. Confirm all production dimensions with the manufacturer.',design:clone(S)};}
   function renderReport(mode){
     const rows=checks(S),reviews=rows.filter(t=>!t.ok).length;
     content.innerHTML='<div class="atelier-report">'+(mode==='spec'?`<div class="atelier-eyebrow">${esc(S.meta.name)}</div><h3>${esc(S.dial.finish==='guilloche'?GUIL_LABEL[S.dial.pattern]||S.dial.pattern:S.dial.finish)} · ${esc(S.dial.color)}</h3><p>Dial Ø${f(S.dial.diameter,2)} mm / opening Ø${f(visR(S)*2,2)} mm<br>Case: ${esc(S.case.locked!==false?CASE_SPEC.ref:'exploratory dimensions')}<br>The JSON brief contains the editable design, case reference, and current checks. Photographs and fonts imported separately are not embedded; use the original export tools for artwork.</p>`:`<div class="atelier-eyebrow">${rows.length} CHECKS · ${reviews} FOR REVIEW</div>`)+rows.map(t=>`<div class="atelier-check"><span class="atelier-status ${t.ok?'':'review'}">${t.ok?'PASS':'REVIEW'}</span><div><strong>${esc(t.title)}</strong><p>${esc(t.detail)}</p></div><button data-inspect="${t.layer}">Inspect</button></div>`).join('')+'<button class="atelier-download" id="atelier-download">Download design brief · JSON</button></div>';
