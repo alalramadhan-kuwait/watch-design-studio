@@ -1416,7 +1416,7 @@ const BASE = {
   /* A day window is cut through the dial over the movement's day disc, so its
      radius is the movement's, not the designer's: only the arc it opens, the
      frame round it and the printing on the disc are choices. */
-  day:{on:false, arc:38, fontAr:"Naskh", fontEn:"Plex Sans", frame:0.60, frameColor:"#C8C9C7", bg:"#F6F5F1", text:"#16191F",
+  day:{on:false, arc:38, fontAr:"Amiri", fontEn:"Plex Sans", frame:0.60, frameColor:"#C8C9C7", bg:"#F6F5F1", text:"#16191F",
        lang:"Arabic", shown:"Friday", textH:1.50},
   text:{on:true, logo:"VERNOY", logoY:-7.4, logoSize:2.0, logoFont:"serif",
         line2:"", line2Y:-4.9, line2Size:1.2,
@@ -2632,6 +2632,37 @@ function deleteFont(id){
   paintProps(); paintView();
 }
 /* an imported font travels with the artwork */
+/* Where the ink of a piece of text actually is, per em, measured in the
+   real font. A figure is placed by the box the font gives it, and in Arabic
+   that box says little about the ink: ٦ hangs well below the line, ١٢ sits
+   high, so figures set on one circle by their boxes come out at different
+   distances from the edge. Centring each on its own ink puts every figure's
+   middle on the circle. Measured once per font and text; a font that has not
+   finished loading is measured again, and the dial redrawn, when it has. */
+const INK_CACHE = new Map(), INK_WAIT = new Set();
+function inkMetrics(fam, text){
+  if(typeof document === "undefined" || !fam) return null;
+  const key = fam + "|" + text;
+  if(INK_CACHE.has(key)) return INK_CACHE.get(key);
+  let cv = inkMetrics.cv; if(!cv){ cv = inkMetrics.cv = document.createElement("canvas"); cv.width = cv.height = 8; }
+  const g = cv.getContext("2d"), font = `200px ${fam}`;
+  g.font = font; g.textAlign = "center"; g.textBaseline = "middle";
+  const m = g.measureText(text);
+  if(!(m.actualBoundingBoxAscent >= 0 || m.actualBoundingBoxDescent >= 0)) return null;
+  const r = {cx:(m.actualBoundingBoxRight - m.actualBoundingBoxLeft)/2/200, cy:(m.actualBoundingBoxDescent - m.actualBoundingBoxAscent)/2/200,
+             w:(m.actualBoundingBoxRight + m.actualBoundingBoxLeft)/200, h:(m.actualBoundingBoxAscent + m.actualBoundingBoxDescent)/200, adv:m.width/200};
+  let ready = true;
+  try{ ready = document.fonts.check(font, text); }catch(e){}
+  if(ready) INK_CACHE.set(key, r);
+  else if(!INK_WAIT.has(fam)){
+    INK_WAIT.add(fam);
+    try{ document.fonts.load(font, text).then(() => { for(const k of [...INK_CACHE.keys()]) if(k.startsWith(fam + "|")) INK_CACHE.delete(k);
+      if(typeof requestPaint === "function") requestPaint(); }).catch(()=>{}); }catch(e){}
+  }
+  return r;
+}
+/* the offset that puts a figure's ink centre where its anchor is */
+const inkShift = (fam, text, size) => { const m = inkMetrics(fam, text); return m ? [-m.cx*size, -m.cy*size] : [0, 0]; };
 function fontFaceCSS(style){
   const st = STYLE_ALIAS[style] || style;
   const f = userFonts.find(x => x.name === st) || BUILTIN_FONTS[st];
@@ -4960,9 +4991,10 @@ function buildSVG(st, o={}){
                 return `<g transform="translate(${f(-p[0],3)},${f(-p[1],3)})"><text font-family="${famUsed}" font-size="${nm.size}" font-weight="400"
                  letter-spacing="${f(nm.gap*nm.size*0.011,3)}" fill="inherit" dominant-baseline="central"${ligaOff}
                  ><textPath href="#${pid}" startOffset="50%" text-anchor="middle">${numeralLabel(n, sys)}</textPath></text></g>`; })()
-            : `<text x="0" y="0" font-family="${famUsed}" font-size="${nm.size}" font-weight="400"
+            : (() => { const [ix, iy] = inkShift(famUsed, numeralLabel(n, sys), nm.size);
+                return `<text x="${f(ix,3)}" y="${f(iy,3)}" font-family="${famUsed}" font-size="${nm.size}" font-weight="400"
                  letter-spacing="${f(nm.gap*nm.size*0.011,3)}" fill="inherit" text-anchor="middle"
-                 dominant-baseline="central"${ligaOff}>${numeralLabel(n, sys)}</text>`;
+                 dominant-baseline="middle"${ligaOff}>${numeralLabel(n, sys)}</text>`; })();
           defs.push(`<g id="${gid}">${glyph}</g>`);
           // the side walls lean away from the dial centre, as they do under a
           // camera looking down the middle of the watch
@@ -5004,9 +5036,11 @@ function buildSVG(st, o={}){
             g = `<text font-family="${famUsed}" font-size="${nm.size}" font-weight="400"
               letter-spacing="${f(nm.gap*nm.size*0.011,3)}" fill="${gFill}" dominant-baseline="central"${gFilt}${ligaOff}
               ><textPath href="#${pid}" startOffset="50%" text-anchor="middle">${label}</textPath></text>`;
-          } else
-          g = `<text x="${f(p[0],3)}" y="${f(p[1],3)}" font-family="${famUsed}" font-size="${nm.size}" font-weight="400"
-            letter-spacing="${f(nm.gap*nm.size*0.011,3)}" fill="${gFill}" text-anchor="middle" dominant-baseline="central"${gFilt}${ligaOff}>${label}</text>`;
+          } else {
+          const [ix, iy] = inkShift(famUsed, label, nm.size);
+          g = `<text x="${f(p[0]+ix,3)}" y="${f(p[1]+iy,3)}" font-family="${famUsed}" font-size="${nm.size}" font-weight="400"
+            letter-spacing="${f(nm.gap*nm.size*0.011,3)}" fill="${gFill}" text-anchor="middle" dominant-baseline="middle"${gFilt}${ligaOff}>${label}</text>`;
+          }
         }
         if(MK.cut){
           /* the rotation lives in the definition, so every copy and every
@@ -5056,9 +5090,28 @@ function buildSVG(st, o={}){
       const ar = dy.lang !== "English";
       const DF = DAY_FONTS[dayFontOf(ar ? dy.fontAr : dy.fontEn, ar)];
       defs.push(`<style>@font-face{font-family:'${DF.family}';src:url(${DF.src});}</style>`);
-      body.push(`<text x="0" y="${f(-(rin+rout)/2 + 0.05,3)}" text-anchor="middle" dominant-baseline="central"
-        font-family="'${DF.family}',${ar ? "'Geeza Pro','Arial'" : "'IBM Plex Sans'"},sans-serif" font-weight="400"
-        font-size="${f(dy.textH*(ar ? 1.25 : 0.95),3)}" ${ar ? 'direction="rtl"' : `letter-spacing="${f(dy.textH*0.08,3)}"`} fill="${dy.text}">${esc(word)}</text>`);
+      /* The name is printed on the disc, which turns under the window, so it
+         follows the window's curve: set on the arc through the middle of the
+         window and sized to fill it, about three quarters of its height and
+         most of its width, as a day disc is printed. */
+      const famD = `'${DF.family}'`, rm = (rin + rout)/2;
+      const im = inkMetrics(famD, word);
+      const arcLen = rm*dy.arc*Math.PI/180;
+      const scaleD = (dy.textH || 1.5)/1.5;
+      const sizeD = im && im.h > 0 && im.w > 0
+        ? Math.min((rout - rin)*(ar ? 0.86 : 0.70)/im.h, arcLen*(ar ? 0.86 : 0.80)/im.w)*scaleD
+        : dy.textH*(ar ? 1.25 : 0.95);
+      /* Set straight, with its letters joined as the font joins them, then
+         bent onto the window's arc in thin slices (the same bend the logo
+         uses). Setting Arabic along a curved path directly is broken in
+         Safari: the letters came apart and ran backwards. */
+      const [dxD, dyD] = im ? [-im.cx*sizeD, -im.cy*sizeD] : [0, 0];
+      const lsD = ar ? 0 : sizeD*0.10;
+      const straight = `<text x="${f(dxD,3)}" y="${f(dyD,3)}" text-anchor="middle" dominant-baseline="middle"
+        font-family="${famD},${ar ? "'Geeza Pro','Arial'" : "'IBM Plex Sans'"},sans-serif" font-weight="400"
+        font-size="${f(sizeD,3)}" fill="${dy.text}" ${ar ? 'direction="rtl"' : `letter-spacing="${f(lsD,3)}"`}>${esc(word)}</text>`;
+      const wD = im ? im.w*sizeD + (ar ? 0 : lsD*word.length) + 0.4 : arcLen;
+      body.push(`<g transform="translate(0,${f(-rm,3)})">${bendArt(straight, wD, rm, true, defs, id)}</g>`);
     }
     tagLayer("day", dayStart);
     // date window
@@ -5808,8 +5861,19 @@ function buildSVG(st, o={}){
     const aH = (t.h%12)*30 + t.m*0.5, aM = t.m*6 + t.s*0.1, aS = t.s*6;
     const laH = ((st.render && st.render.az) || 135)*Math.PI/180;
     const lxH = Math.cos(laH), lyH = Math.sin(laH);
-    const shid = id("hsh");
-    defs.push(`<filter id="${shid}" x="-70%" y="-70%" width="240%" height="240%"><feDropShadow dx="${f(-lxH*0.30,3)}" dy="${f(-lyH*0.30,3)}" stdDeviation="0.13" flood-opacity="0.34"/></filter>`);
+    /* Each hand gets its own shadow, its area given in millimetres round that
+       hand. A shared filter sized as a share of each hand's box left Safari
+       working out the area wrongly for some lengths and angles, and it then
+       drew nothing at all, so the minute or seconds hand vanished on iPhone. */
+    /* The shadow is a separate copy of the hand, turned black and softened,
+       laid under it and moved away from the light in the dial's frame. The
+       hand itself carries no filter: if a browser fails on the effect, only
+       the shadow goes, never the hand (Safari dropped whole minute hands). */
+    const hshF = id("hsh");
+    defs.push(`<filter id="${hshF}" x="-60%" y="-15%" width="220%" height="130%"><feColorMatrix type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.34 0"/><feGaussianBlur stdDeviation="0.13"/></filter>`);
+    const withShadow = (a, markup) =>
+      `<g transform="translate(${f(-lxH*0.30,3)},${f(-lyH*0.30,3)})"><g transform="rotate(${f(a,3)})" filter="url(#${hshF})">${markup}</g></g>`
+      + `<g transform="rotate(${f(a,3)})">${markup}</g>`;
     const hctx = {defs, id, lx:lxH, ly:lyH};
     const draw = (h0,a,k)=>{
       if(!h0.on) return "";
@@ -5835,10 +5899,9 @@ function buildSVG(st, o={}){
           const lit = llx >= 0 ? 1 : -1;
           fill = handMaterialFill({defs, id}, handMat(h), vec.halfW, lit, Math.abs(llx), {core:F}) || F;
         }
-        return `<g transform="rotate(${f(a,3)})" filter="url(#${shid})">`
-             + `<path d="${dOut}" fill="${fill}" fill-rule="evenodd"/></g>`;
+        return withShadow(a, `<path d="${dOut}" fill="${fill}" fill-rule="evenodd"/>`);
       }
-      return `<g transform="rotate(${f(a,3)})" filter="url(#${shid})">${handPath(h, Object.assign({angle:a, key:k}, hctx))}</g>` + collet(h, k);
+      return withShadow(a, handPath(h, Object.assign({angle:a, key:k}, hctx))) + collet(h, k);
     };
     /* Each hand is pressed onto its own pipe with a round collet: the hour
        hand's is the widest and lowest, the minute's sits on it, and the
@@ -6451,8 +6514,13 @@ function facetHand(h, prof, W, ctx){
   const topStops  = [[0, C(.40, 1)], [.55, C(.82, 1)], [1, C(.60, 1)]];
   let gLit = litStops[2][1], gDark = darkStops[0][1], gTop = topStops[1][1];
   if(ctx){
+    /* Measured on each facet's own box (tail at the bottom, tip at the top),
+       not in the dial's coordinates: Safari resolves a user-space gradient
+       wrongly inside the hand's shadow filter, which washed some hands out
+       and made others vanish. Every facet runs tail to tip, so the box is
+       the same span. */
     const grad = st2 => { const gid = ctx.id("hf");
-      ctx.defs.push(`<linearGradient id="${gid}" gradientUnits="userSpaceOnUse" x1="0" y1="${f(T,3)}" x2="0" y2="${f(-L,3)}">`
+      ctx.defs.push(`<linearGradient id="${gid}" x1="0" y1="1" x2="0" y2="0">`
         + st2.map(([o, c]) => `<stop offset="${o}" stop-color="${c}"/>`).join("") + `</linearGradient>`);
       return `url(#${gid})`; };
     gLit = grad(litStops); gDark = grad(darkStops); if(flat) gTop = grad(topStops);
@@ -6686,11 +6754,12 @@ function handPath(h, ctx){
       if(ctx){
         const ar = (ctx.angle||0)*Math.PI/180, lxl = ctx.lx*Math.cos(ar) + ctx.ly*Math.sin(ar), lyl = -ctx.lx*Math.sin(ar) + ctx.ly*Math.cos(ar);
         const gid = ctx.id("mr");
-        ctx.defs.push(`<linearGradient id="${gid}" gradientUnits="userSpaceOnUse" x1="${f(-lxl*R,3)}" y1="${f(cy-lyl*R,3)}" x2="${f(lxl*R,3)}" y2="${f(cy+lyl*R,3)}">
+        ctx.defs.push(`<linearGradient id="${gid}" x1="${f(.5-lxl*.5,3)}" y1="${f(.5-lyl*.5,3)}" x2="${f(.5+lxl*.5,3)}" y2="${f(.5+lyl*.5,3)}">
           <stop offset="0" stop-color="${mix(core, MMm.dark, .7)}"/><stop offset=".5" stop-color="${mix(core, MMm.lite, .35)}"/><stop offset="1" stop-color="${mix(core, MMm.lite, .95)}"/></linearGradient>`);
         ringFill = `url(#${gid})`;
       }
-      const spoke = deg => { const a2 = deg*Math.PI/180; return `<path d="M0 ${f(cy,3)} L${f(R*Math.cos(a2),3)} ${f(cy+R*Math.sin(a2),3)}" stroke="${ringFill}" stroke-width="${f(sw*0.8,3)}" stroke-linecap="round"/>`; };
+      const spokeCol = mix(core, MMm.lite, .45);
+      const spoke = deg => { const a2 = deg*Math.PI/180; return `<path d="M0 ${f(cy,3)} L${f(R*Math.cos(a2),3)} ${f(cy+R*Math.sin(a2),3)}" stroke="${spokeCol}" stroke-width="${f(sw*0.8,3)}" stroke-linecap="round"/>`; };
       const edge = mix(core, MMm.dark, .8);
       return stem + tip
         + (h.lume ? `<circle cy="${f(cy,3)}" r="${f(R,3)}" fill="#E9EFDF"/>` : "")
@@ -7375,7 +7444,7 @@ const DAY_FONTS = {
 };
 const DAY_FONTS_AR = Object.keys(DAY_FONTS).filter(k => DAY_FONTS[k].sc === "ar");
 const DAY_FONTS_EN = Object.keys(DAY_FONTS).filter(k => DAY_FONTS[k].sc === "en");
-const dayFontOf = (name, ar) => DAY_FONTS[name] && DAY_FONTS[name].sc === (ar ? "ar" : "en") ? name : (ar ? "Naskh" : "Plex Sans");
+const dayFontOf = (name, ar) => DAY_FONTS[name] && DAY_FONTS[name].sc === (ar ? "ar" : "en") ? name : (ar ? "Amiri" : "Plex Sans");
 if(typeof FontFace !== "undefined" && typeof document !== "undefined")
   for(const k in DAY_FONTS){ try{ const fc = new FontFace(DAY_FONTS[k].family, `url(${DAY_FONTS[k].src})`); fc.load().then(x => document.fonts.add(x)).catch(()=>{}); }catch(e){} }
 const SCHEMA = {
@@ -7637,7 +7706,7 @@ const SCHEMA = {
     SEL("day.lang","Day names",["Arabic","English"]),
     S.day.lang === "English" ? SEL("day.fontEn","Font",DAY_FONTS_EN) : SEL("day.fontAr","Font",DAY_FONTS_AR),
     SEL("day.shown","Day shown",DAY_NAMES_EN),
-    N("day.textH","Day name height",1.0,1.9,.05),
+    N("day.textH","Day name size (1.5 fills the window)",1.0,1.9,.05),
     C("day.bg","Disc colour"), C("day.text","Text colour"), C("day.frameColor","Frame colour")]},
   text:{title:"Logo & text", fields:()=>{
     const T = S.text, cart = LOGO_CART[T.logoTech];
