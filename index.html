@@ -4612,18 +4612,22 @@ function buildSVG(st, o={}){
       /* One group so the relief is built once for the whole track rather than
          sixty times, which also keeps each mark's shoulder consistent. */
       if(trackFx) body.push(`<g filter="url(#${trackFx})">`);
+      /* A railroad is printed fine: two hairline rails, hairline minutes
+         between them, and the five-minute marks bolder and running a little
+         inward, so the eye finds the fives without the track going heavy. */
+      const rail = Math.max(0.045, Math.min(0.08, t*0.18));
       if(mt.style==="railroad"){
-        body.push(ringMaybeBroken(r + t, 0.11, mt.color));
-        body.push(ringMaybeBroken(r - t, 0.11, mt.color));
+        body.push(ringMaybeBroken(r + t, rail, mt.color));
+        body.push(ringMaybeBroken(r - t, rail, mt.color));
       }
       for(let i=0;i<60;i++){
-        const a=i*6, five=i%5===0, len = five&&mt.fives ? mt.fiveLen : t*1.6;
+        const a=i*6, five=i%5===0, len = five&&mt.fives ? Math.max(mt.fiveLen, 0.6) : Math.max(t*1.6, 0.42);
         /* How wide the mark is ACROSS the track, which is the direction the
            text runs: a dot is as wide as it is tall, a tick only as wide as
            its stroke. Without it the clearance was measured to the mark's
            centre and half a dot still overlapped the last letter. */
         const wide = (mt.style === "dots" || mt.style === "beads") ? (five&&mt.fives ? t*1.7 : t*1.1)
-                   : mt.style === "railroad" ? (five||!mt.fives ? (five?0.22:0.11) : 0.09)
+                   : mt.style === "railroad" ? (five && mt.fives ? rail*2.6 : rail*1.15)
                    : (five ? mt.thickness*1.5 : mt.thickness);
         if(mt.textBreak !== false && !clearsText(a, r, len, wide)) continue;
         if(mt.style==="dots"){
@@ -4635,9 +4639,9 @@ function buildSVG(st, o={}){
              marks the lettering has taken out. */
           body.push(beadRing(r, 1, five&&mt.fives ? t*0.85 : t*0.55, mt.color, {from:a}));
         } else if(mt.style==="railroad"){
-          const p0=pt(r-t,a), p1=pt(r+t,a);
-          if(five||!mt.fives) body.push(`<line x1="${f(p0[0],3)}" y1="${f(p0[1],3)}" x2="${f(p1[0],3)}" y2="${f(p1[1],3)}" stroke="${mt.color}" stroke-width="${five?0.22:0.11}"/>`);
-          else body.push(`<line x1="${f(p0[0],3)}" y1="${f(p0[1],3)}" x2="${f(p1[0],3)}" y2="${f(p1[1],3)}" stroke="${mt.color}" stroke-width="0.09"/>`);
+          const bold = five && mt.fives;
+          const p0 = pt(bold ? r - t - Math.min(0.45, t*1.2) : r - t, a), p1 = pt(r + t, a);
+          body.push(`<line x1="${f(p0[0],3)}" y1="${f(p0[1],3)}" x2="${f(p1[0],3)}" y2="${f(p1[1],3)}" stroke="${mt.color}" stroke-width="${f(bold ? rail*2.6 : rail*1.15,3)}"/>`);
         } else { // ticks / dashes
           const p0=pt(r-len/2,a), p1=pt(r+len/2,a);
           body.push(`<line x1="${f(p0[0],3)}" y1="${f(p0[1],3)}" x2="${f(p1[0],3)}" y2="${f(p1[1],3)}" stroke="${mt.color}" stroke-width="${f(five?mt.thickness*1.5:mt.thickness,3)}" stroke-linecap="${mt.style==="dashes"?"round":"butt"}"/>`);
@@ -5039,7 +5043,10 @@ function buildSVG(st, o={}){
         const gid = id("dfr");
         defs.push(`<linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${tint(dy.frameColor,0.85)}"/>
           <stop offset="0.5" stop-color="${dy.frameColor}"/><stop offset="1" stop-color="${shade(dy.frameColor,0.35)}"/></linearGradient>`);
-        body.push(`<path d="${sector(rin-fr, rout+fr, half + fr/((rin+rout)/2)*180/Math.PI)}" fill="url(#${gid})" stroke="${shade(dy.frameColor,0.5)}" stroke-opacity=".6" stroke-width="0.05"/>`);
+        body.push(`<path d="${sector(rin-fr, rout+fr, half + fr/((rin+rout)/2)*180/Math.PI)}" fill="url(#${gid})" stroke="${shade(dy.frameColor,0.5)}" stroke-opacity=".6" stroke-width="0.04"/>`);
+        const gib = id("dfb"), bv = fr*0.42;
+        defs.push(`<linearGradient id="${gib}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${shade(dy.frameColor,0.40)}"/><stop offset="1" stop-color="${tint(dy.frameColor,0.80)}"/></linearGradient>`);
+        body.push(`<path d="${sector(rin-bv, rout+bv, half + bv/((rin+rout)/2)*180/Math.PI)}" fill="url(#${gib})"/>`);
       }
       body.push(`<path d="${sector(rin, rout, half)}" fill="${dy.bg}"/>`);
       body.push(`<path d="${sector(rout-0.30, rout, half)}" fill="#000" fill-opacity=".16"/><path d="${sector(rout-0.12, rout, half)}" fill="#000" fill-opacity=".12"/>`);
@@ -5067,10 +5074,21 @@ function buildSVG(st, o={}){
       const win = `<rect x="${-dt.w/2}" y="${-dt.h/2}" width="${dt.w}" height="${dt.h}" fill="${dt.bg}" rx="0.15"/>
         <text x="0" y="${ar ? 0.02 : 0.08}" font-family="'${TF.family}',${ar ? "'Geeza Pro'" : "'IBM Plex Sans'"},sans-serif" font-weight="400"
           font-size="${f(dt.h*(ar ? 0.95 : 0.78),2)}" fill="${dt.text}" text-anchor="middle" dominant-baseline="central">${digits}</text>`;
-      const frame = fw > 0.2
-        ? `<rect x="${f(-dt.w/2-fw,3)}" y="${f(-dt.h/2-fw,3)}" width="${f(dt.w+2*fw,3)}" height="${f(dt.h+2*fw,3)}" rx="${f(Math.min(fw*1.1,(dt.h+2*fw)/3),3)}"
-             fill="${dt.frame}" stroke="${shade(dt.frame,0.5)}" stroke-opacity=".6" stroke-width="0.05"/>`
-        : "";
+      /* A framed date window is a polished metal surround: its outer face
+         bright on the side toward the light, then a bevel stepping down to
+         the disc, lit the other way round. */
+      let frame = "";
+      if(fw > 0.2){
+        const laD = ((st.render && st.render.az) || 135)*Math.PI/180, dlx = Math.cos(laD), dly = Math.sin(laD);
+        const W2 = dt.w/2 + fw, H2 = dt.h/2 + fw, ga = id("dfo"), gb = id("dfi"), bev = fw*0.42;
+        defs.push(`<linearGradient id="${ga}" gradientUnits="userSpaceOnUse" x1="${f(-dlx*W2,3)}" y1="${f(-dly*H2,3)}" x2="${f(dlx*W2,3)}" y2="${f(dly*H2,3)}">
+          <stop offset="0" stop-color="${shade(dt.frame,0.35)}"/><stop offset=".55" stop-color="${tint(dt.frame,0.25)}"/><stop offset="1" stop-color="${tint(dt.frame,0.85)}"/></linearGradient>`);
+        defs.push(`<linearGradient id="${gb}" gradientUnits="userSpaceOnUse" x1="${f(dlx*W2,3)}" y1="${f(dly*H2,3)}" x2="${f(-dlx*W2,3)}" y2="${f(-dly*H2,3)}">
+          <stop offset="0" stop-color="${shade(dt.frame,0.45)}"/><stop offset="1" stop-color="${tint(dt.frame,0.75)}"/></linearGradient>`);
+        const R0 = Math.min(fw*0.9, (dt.h+2*fw)/4), R1 = Math.max(0.08, R0 - fw + bev);
+        frame = `<rect x="${f(-W2,3)}" y="${f(-H2,3)}" width="${f(W2*2,3)}" height="${f(H2*2,3)}" rx="${f(R0,3)}" fill="url(#${ga})" stroke="${shade(dt.frame,0.55)}" stroke-opacity=".6" stroke-width="0.03"/>`
+              + `<rect x="${f(-dt.w/2-bev,3)}" y="${f(-dt.h/2-bev,3)}" width="${f(dt.w+2*bev,3)}" height="${f(dt.h+2*bev,3)}" rx="${f(R1,3)}" fill="url(#${gb})"/>`;
+      }
       const line = fw > 0.2 ? "" : `<rect x="${-dt.w/2}" y="${-dt.h/2}" width="${dt.w}" height="${dt.h}" fill="none" stroke="${dt.frame}" stroke-width="${fw}" rx="0.15"/>`;
       /* the date disc is under the dial: its upper edge sits in the shadow of the cut */
       const recess = `<rect x="${f(-dt.w/2,3)}" y="${f(-dt.h/2,3)}" width="${f(dt.w,3)}" height="0.26" fill="#000" fill-opacity=".14" rx="0.12"/>`
@@ -6452,9 +6470,10 @@ function facetHand(h, prof, W, ctx){
          + `<path d="M${top(-1)}" fill="none" stroke="${mix(core, dark, .5)}" stroke-opacity=".35" stroke-width="0.022"/>`;
   }else{
     /* two facets on a ridge */
-    out += `<path d="M${q(0, T)} L${side(1)} L${q(0, -L)}Z" fill="${fR}"/>`;
-    out += `<path d="M${q(0, T)} L${side(-1)} L${q(0, -L)}Z" fill="${fL}"/>`;
-    out += `<path d="M0 ${f(T,3)} L0 ${f(-L,3)}" stroke="${mix(core, lite, .95)}" stroke-opacity=".75" stroke-width="0.024"/>`;
+    const y0 = P[0][0];
+    out += `<path d="M${q(0, y0)} L${side(1)} L${q(0, -L)}Z" fill="${fR}"/>`;
+    out += `<path d="M${q(0, y0)} L${side(-1)} L${q(0, -L)}Z" fill="${fL}"/>`;
+    out += `<path d="M0 ${f(y0,3)} L0 ${f(-L,3)}" stroke="${mix(core, lite, .95)}" stroke-opacity=".75" stroke-width="0.024"/>`;
   }
   if(h.lume){
     /* a lume channel in the body, inset from the edges, from a quarter of the way out to near the point */
@@ -6655,18 +6674,32 @@ function handPath(h, ctx){
     }
     case "mercedes":{
       /* Only the hour hand carries the circle; its minute hand is a plain
-         pointed sword, as on every watch that uses this hand. */
+         faceted sword, as on every watch that uses this hand. */
       if(ctx && ctx.key === "mHand")
-        return `<path d="M0 ${f(-L,3)} L${f(W*0.32,3)} ${f(-L*0.90,3)} L${f(W*0.26,3)} ${f(T,3)} L${f(-W*0.26,3)} ${f(T,3)} L${f(-W*0.32,3)} ${f(-L*0.90,3)}Z" fill="${FILL}"/>`
-             + (h.lume ? `<rect x="${f(-W*0.13,3)}" y="${f(-L*0.86,3)}" width="${f(W*0.26,3)}" height="${f(L*0.62,3)}" rx="${f(W*0.1,3)}" fill="#D8E4C8"/>` : "");
-      const R = W*0.82, cy = -L*0.74, sw = W*0.20;
-      const spoke = deg => { const a = deg*Math.PI/180; return `<path d="M0 ${f(cy,3)} L${f(R*Math.cos(a),3)} ${f(cy+R*Math.sin(a),3)}" stroke="${FILL}" stroke-width="${f(sw,3)}"/>`; };
-      return `<g fill="${FILL}"><rect x="${f(-W*0.24,3)}" y="${f(cy+R-sw/2,3)}" width="${f(W*0.48,3)}" height="${f(T-(cy+R)+sw/2,3)}"/>
-          <path d="M${f(-W*0.24,3)} ${f(cy-R+sw/2,3)} L0 ${f(-L,3)} L${f(W*0.24,3)} ${f(cy-R+sw/2,3)}Z"/></g>
-        ${h.lume ? `<circle cy="${f(cy,3)}" r="${f(R,3)}" fill="#D8E4C8"/>` : ""}
-        <circle cy="${f(cy,3)}" r="${f(R,3)}" fill="none" stroke="${FILL}" stroke-width="${f(sw*1.2,3)}"/>
-        ${spoke(-90)}${spoke(30)}${spoke(150)}`;
-    }    default: // baton / stick
+        return facetHand(Object.assign({}, h, {style:"sword"}), FACET.sword(L, T), W*0.78, ctx);
+      const R = W*0.80, cy = -L*0.74, sw = W*0.17;
+      const stemTop = cy + R - sw*0.3;
+      const stem = facetHand(Object.assign({}, h, {style:"baton", lume:false}), [[T,.22],[stemTop,.22]], W, ctx);
+      const tip  = facetHand(Object.assign({}, h, {style:"dauphine", lume:false}), [[cy - R + sw*0.3,.20],[-L,0]], W, ctx);
+      const MMm = HAND_MATERIAL[handMat(h)] || HAND_MATERIAL["polished steel"], core = handCore(h);
+      let ringFill = mix(core, MMm.lite, .5);
+      if(ctx){
+        const ar = (ctx.angle||0)*Math.PI/180, lxl = ctx.lx*Math.cos(ar) + ctx.ly*Math.sin(ar), lyl = -ctx.lx*Math.sin(ar) + ctx.ly*Math.cos(ar);
+        const gid = ctx.id("mr");
+        ctx.defs.push(`<linearGradient id="${gid}" gradientUnits="userSpaceOnUse" x1="${f(-lxl*R,3)}" y1="${f(cy-lyl*R,3)}" x2="${f(lxl*R,3)}" y2="${f(cy+lyl*R,3)}">
+          <stop offset="0" stop-color="${mix(core, MMm.dark, .7)}"/><stop offset=".5" stop-color="${mix(core, MMm.lite, .35)}"/><stop offset="1" stop-color="${mix(core, MMm.lite, .95)}"/></linearGradient>`);
+        ringFill = `url(#${gid})`;
+      }
+      const spoke = deg => { const a2 = deg*Math.PI/180; return `<path d="M0 ${f(cy,3)} L${f(R*Math.cos(a2),3)} ${f(cy+R*Math.sin(a2),3)}" stroke="${ringFill}" stroke-width="${f(sw*0.8,3)}" stroke-linecap="round"/>`; };
+      const edge = mix(core, MMm.dark, .8);
+      return stem + tip
+        + (h.lume ? `<circle cy="${f(cy,3)}" r="${f(R,3)}" fill="#E9EFDF"/>` : "")
+        + spoke(-90) + spoke(30) + spoke(150)
+        + `<circle cy="${f(cy,3)}" r="${f(R,3)}" fill="none" stroke="${ringFill}" stroke-width="${f(sw*1.15,3)}"/>`
+        + `<circle cy="${f(cy,3)}" r="${f(R+sw*0.58,3)}" fill="none" stroke="${edge}" stroke-opacity=".5" stroke-width="0.025"/>`
+        + `<circle cy="${f(cy,3)}" r="${f(R-sw*0.58,3)}" fill="none" stroke="${edge}" stroke-opacity=".45" stroke-width="0.025"/>`;
+    }
+    default: // baton / stick
       return `<rect x="${-W/2}" y="${-L}" width="${W}" height="${L+T}" fill="${FILL}" rx="${W*0.1}"/>
         ${T>1?`<circle cy="${T*0.72}" r="${W*1.5}" fill="${FILL}"/>`:""}${lume}`;
   }
