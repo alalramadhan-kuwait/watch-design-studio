@@ -5787,7 +5787,7 @@ function buildSVG(st, o={}){
     const laH = ((st.render && st.render.az) || 135)*Math.PI/180;
     const lxH = Math.cos(laH), lyH = Math.sin(laH);
     const shid = id("hsh");
-    defs.push(`<filter id="${shid}" x="-70%" y="-70%" width="240%" height="240%"><feDropShadow dx="${f(-lxH*0.20,3)}" dy="${f(-lyH*0.20,3)}" stdDeviation="0.09" flood-opacity="0.42"/></filter>`);
+    defs.push(`<filter id="${shid}" x="-70%" y="-70%" width="240%" height="240%"><feDropShadow dx="${f(-lxH*0.30,3)}" dy="${f(-lyH*0.30,3)}" stdDeviation="0.13" flood-opacity="0.34"/></filter>`);
     const hctx = {defs, id, lx:lxH, ly:lyH};
     const draw = (h0,a,k)=>{
       if(!h0.on) return "";
@@ -6321,8 +6321,94 @@ function handVec(h, k){              // the geometry behind a "vector · " style
   const v = BUILTIN_HAND_VEC[h.style.slice(9)];
   return v ? (k === "hHand" ? v.hour : v.minute) : null;
 }
+/* ---------------------------------------------------------------------
+   Faceted hands. A good hand is not a silhouette: it is a strip of metal
+   cut into flat facets and polished, so each facet is a small mirror. Two
+   facets meeting on a ridge (dauphine, leaf, sword, alpha) put a hard line
+   of light down the middle with one side bright and the other dark; a flat
+   top between two bevels (baton, pencil, syringe) gives a bright table with
+   a dark edge either side. Each facet also brightens along its length where
+   it catches the light, which is what makes polished steel read as steel.
+   A profile is [y, half-width as a share of the width] from tail to tip,
+   in the hand's frame (tip at -L). */
+const FACET = {
+  "dauphine":  (L,T) => [[T,.16],[0,.27],[-L*.20,.50],[-L,0]],
+  "obelisque": (L,T) => [[T,.20],[0,.30],[-L*.09,.50],[-L,0]],
+  "sword":     (L,T) => [[T,.24],[0,.28],[-L*.74,.50],[-L,0]],
+  "alpha":     (L,T) => [[T,.17],[0,.23],[-L*.12,.42],[-L*.24,.50],[-L*.45,.40],[-L*.72,.20],[-L,0]],
+  "leaf":      (L,T) => [[T,.10]].concat(Array.from({length:25}, (_,i) => { const t = i/24;
+                  return [-L*t, .10*(1-t) + .40*Math.pow(Math.sin(Math.PI*Math.pow(t,.85)), 1)]; })),
+  "feuille":   (L,T) => [[T,.08]].concat(Array.from({length:25}, (_,i) => { const t = i/24;
+                  return [-L*t, .07*(1-t) + .43*Math.pow(Math.sin(Math.PI*Math.pow(t,.72)), 1.25)]; })),
+  "day-date":  (L,T,W) => [[T,.50],[-(L - W*0.95),.50],[-L,0]],
+  "baton":     (L,T) => [[T,.50],[-L,.50]],
+  "pencil":    (L,T,W) => [[T,.50],[-(L - W*0.95),.50],[-L,0]],
+  "syringe":   (L,T) => [[T,.50],[-L*.60,.50],[-L*.655,.12],[-L*.96,.08],[-L,0]],
+  "stick":     (L,T) => [[T,.50],[-L,.50]]
+};
+const FACET_FLAT = new Set(["baton","pencil","syringe","stick"]);
+function facetHand(h, prof, W, ctx){
+  const L = h.length, T = h.tail || 0;
+  const MAT = handMat(h), MM = HAND_MATERIAL[MAT] || HAND_MATERIAL["polished steel"], core = handCore(h);
+  const flat = FACET_FLAT.has(h.style);
+  /* light across the hand decides which side is bright, and how bright */
+  let across = 0.8, sgn = 1;
+  if(ctx){ const ar = (ctx.angle||0)*Math.PI/180; const llx = ctx.lx*Math.cos(ar) + ctx.ly*Math.sin(ar); sgn = llx >= 0 ? 1 : -1; across = Math.min(1, Math.abs(llx)*1.15 + 0.15); }
+  const P = prof.map(([y, k]) => [y, k*W]);
+  const q = (x, y) => `${f(x,3)} ${f(y,3)}`;
+  const side = s2 => P.map(([y, w]) => q(s2*w, y)).join(" L");
+  const top = s2 => P.map(([y, w]) => q(s2*w*0.42, y)).join(" L");
+  const tipW = P[P.length-1][1];
+  const lite = MM.lite, dark = MM.dark;
+  const C = (k1, k2) => mix(core, k1 > 0 ? lite : dark, Math.abs(k1)*k2);
+  /* polished: bright facet runs from the metal's colour to near-white about
+     two thirds out; the dark facet stays deep with a soft lift near the tip */
+  const litStops  = [[0, C(.45, across)], [.40, C(.85, across)], [.70, C(1, across)], [.88, C(.80, across)], [1, C(.60, across)]];
+  const darkStops = [[0, C(-.80, across)], [.45, C(-.58, across)], [.80, C(-.74, across)], [1, C(-.55, across)]];
+  const topStops  = [[0, C(.40, 1)], [.55, C(.82, 1)], [1, C(.60, 1)]];
+  let gLit = litStops[2][1], gDark = darkStops[0][1], gTop = topStops[1][1];
+  if(ctx){
+    const grad = st2 => { const gid = ctx.id("hf");
+      ctx.defs.push(`<linearGradient id="${gid}" gradientUnits="userSpaceOnUse" x1="0" y1="${f(T,3)}" x2="0" y2="${f(-L,3)}">`
+        + st2.map(([o, c]) => `<stop offset="${o}" stop-color="${c}"/>`).join("") + `</linearGradient>`);
+      return `url(#${gid})`; };
+    gLit = grad(litStops); gDark = grad(darkStops); if(flat) gTop = grad(topStops);
+  }
+  const fR = sgn > 0 ? gLit : gDark, fL = sgn > 0 ? gDark : gLit;
+  const outline = `M${side(1)} L${tipW > 0.001 ? q(-tipW, -L) + " L" : ""}${P.slice().reverse().map(([y, w]) => q(-w, y)).join(" L")}Z`;
+  let out = "";
+  if(flat){
+    /* bevel, table, bevel */
+    const tr = P.map(([y, w]) => q(w*0.42, y)).reverse().join(" L"), tl = P.map(([y, w]) => q(-w*0.42, y)).reverse().join(" L");
+    out += `<path d="M${side(1)} L${tr}Z" fill="${fR}"/>`;
+    out += `<path d="M${side(-1)} L${tl}Z" fill="${fL}"/>`;
+    out += `<path d="M${top(1)} L${P.slice().reverse().map(([y, w]) => q(-w*0.42, y)).join(" L")}Z" fill="${gTop}"/>`;
+    out += `<path d="M${top(1)}" fill="none" stroke="${mix(core, lite, .9)}" stroke-opacity=".55" stroke-width="0.022"/>`
+         + `<path d="M${top(-1)}" fill="none" stroke="${mix(core, dark, .5)}" stroke-opacity=".35" stroke-width="0.022"/>`;
+  }else{
+    /* two facets on a ridge */
+    out += `<path d="M${q(0, T)} L${side(1)} L${q(0, -L)}Z" fill="${fR}"/>`;
+    out += `<path d="M${q(0, T)} L${side(-1)} L${q(0, -L)}Z" fill="${fL}"/>`;
+    out += `<path d="M0 ${f(T,3)} L0 ${f(-L,3)}" stroke="${mix(core, lite, .95)}" stroke-opacity=".75" stroke-width="0.024"/>`;
+  }
+  if(h.lume){
+    /* a lume channel in the body, inset from the edges, from a quarter of the way out to near the point */
+    const pts = P.filter(([y]) => y <= -L*0.24 && y >= -L*0.86);
+    const at = y => { for(let i = 1; i < P.length; i++){ const [y0, w0] = P[i-1], [y1, w1] = P[i]; if(y <= y0 && y >= y1) return w0 + (w1-w0)*(y-y0)/((y1-y0)||1); } return 0; };
+    const ys = [-L*0.24].concat(pts.map(p => p[0])).concat([-L*0.86]).filter((y,i,a) => a.indexOf(y) === i).sort((a,b) => b-a);
+    const lw = y => Math.max(0, at(y)*0.52 - 0.04);
+    const ld = `M${ys.map(y => q(lw(y), y)).join(" L")} L${ys.slice().reverse().map(y => q(-lw(y), y)).join(" L")}Z`;
+    out += `<path d="${ld}" fill="#E9EFDF" stroke="${mix(core, dark, .5)}" stroke-opacity=".45" stroke-width="0.03"/>`;
+  }
+  if(h.style === "stick" && T > 1)
+    out += `<circle cy="${f(T*0.72,3)}" r="${f(W*1.5,3)}" fill="${gTop}" stroke="${mix(core, dark, .7)}" stroke-opacity=".5" stroke-width="0.03"/>`;
+  /* one crisp edge round the whole hand */
+  out += `<path d="${outline}" fill="none" stroke="${mix(core, dark, .8)}" stroke-opacity=".55" stroke-width="0.03" stroke-linejoin="round"/>`;
+  return out;
+}
 function handPath(h, ctx){
   const L=h.length, T=h.tail||0;
+  if(FACET[h.style]){ const W0 = h.width*(STYLE_W[h.style] || 1); return facetHand(h, FACET[h.style](L, T, W0), W0, ctx); }
   const W = h.width*(STYLE_W[h.style] || 1);
   const F = handCore(h);
   const lume = h.lume ? `<rect x="${-W*0.28}" y="${-L*0.8}" width="${W*0.56}" height="${L*0.42}" fill="#D8E4C8" rx="${W*0.2}"/>` : "";
@@ -6489,40 +6575,6 @@ function handPath(h, ctx){
       return `<rect x="${f(-W/2,3)}" y="${f(-L,3)}" width="${W}" height="${f(L*0.9,3)}" fill="${FILL}"/>
         <circle r="${f(W*1.4,3)}" fill="none" stroke="${FILL}" stroke-width="${f(W*0.5,3)}"/>
         <rect x="${f(-W*0.35,3)}" y="${f(W*1.4,3)}" width="${f(W*0.7,3)}" height="${f(Math.max(0,T-W*1.4),3)}" fill="${FILL}"/>`;
-    case "dauphine":
-      return `<g fill="${FILL}"><path d="M0 ${-L} L${W/2} ${-L*0.22} L${W*0.34} ${T} L${-W*0.34} ${T} L${-W/2} ${-L*0.22} Z"/></g>
-        <path d="M0 ${-L} L0 ${T}" stroke="#000" stroke-opacity="0.30" stroke-width="${W*0.08}"/>`;
-    case "leaf":
-      return `<path d="M0 ${-L} C${W*0.9} ${-L*0.55} ${W*0.75} ${-L*0.12} 0 ${T} C${-W*0.75} ${-L*0.12} ${-W*0.9} ${-L*0.55} 0 ${-L} Z" fill="${FILL}"/>${lume}`;
-    case "feuille": {
-      /* the classic slender leaf: a fine point, the belly about 40% out,
-         and a narrow neck at the collet */
-      const bx = W*0.52, by = -L*0.58, nx2 = W*0.16;
-      const d = `M0 ${f(-L,3)}`
-        + `C${f(bx*0.55,3)} ${f(-L*0.86,3)} ${f(bx,3)} ${f(by,3)} ${f(bx*0.86,3)} ${f(-L*0.34,3)}`
-        + `C${f(bx*0.72,3)} ${f(-L*0.14,3)} ${f(nx2,3)} ${f(-L*0.05,3)} ${f(nx2*0.9,3)} ${f(T,3)}`
-        + `L${f(-nx2*0.9,3)} ${f(T,3)}`
-        + `C${f(-nx2,3)} ${f(-L*0.05,3)} ${f(-bx*0.72,3)} ${f(-L*0.14,3)} ${f(-bx*0.86,3)} ${f(-L*0.34,3)}`
-        + `C${f(-bx,3)} ${f(by,3)} ${f(-bx*0.55,3)} ${f(-L*0.86,3)} 0 ${f(-L,3)}Z`;
-      const ridge = `<path d="M0 ${f(-L*0.95,3)} L0 ${f(T,3)}" stroke="${shade(F,0.35)}" stroke-opacity="0.45" stroke-width="${f(W*0.06,3)}" fill="none"/>`;
-      const lit = `<path d="M0 ${f(-L*0.92,3)} C${f(bx*0.34,3)} ${f(-L*0.62,3)} ${f(bx*0.42,3)} ${f(-L*0.34,3)} ${f(nx2*0.5,3)} ${f(-L*0.04,3)}"
-                     fill="none" stroke="${tint(F,0.75)}" stroke-opacity="0.7" stroke-width="${f(W*0.12,3)}" stroke-linecap="round"/>`;
-      return `<path d="${d}" fill="${FILL}"/>${ridge}${lit}${lume}`;
-    }
-    case "sword":
-      return `<path d="M0 ${-L} L${W/2} ${-L*0.78} L${W*0.44} ${T} L${-W*0.44} ${T} L${-W/2} ${-L*0.78} Z" fill="${FILL}"/>
-        <path d="M0 ${-L*0.94} L${W*0.2} ${-L*0.6} L${-W*0.2} ${-L*0.6} Z" fill="#fff" fill-opacity="0.25"/>${lume}`;
-    case "alpha":
-      return `<path d="M0 ${-L} L${W*0.72} ${-L*0.30} L${W*0.30} ${T} L${-W*0.30} ${T} L${-W*0.72} ${-L*0.30} Z" fill="${FILL}"/>${lume}`;
-    case "pencil":
-      return `<path d="M0 ${-L} L${W/2} ${-L*0.88} L${W/2} ${T} L${-W/2} ${T} L${-W/2} ${-L*0.88} Z" fill="${FILL}"/>${lume}`;
-    case "syringe":
-      /* a barrel that shoulders into a fine needle, the needle a third of the length */
-      return `<g fill="${FILL}"><path d="M${f(-W/2,3)} ${f(T,3)} L${f(-W/2,3)} ${f(-L*0.60,3)} L${f(-W*0.09,3)} ${f(-L*0.67,3)} L0 ${f(-L,3)} L${f(W*0.09,3)} ${f(-L*0.67,3)} L${f(W/2,3)} ${f(-L*0.60,3)} L${f(W/2,3)} ${f(T,3)}Z"/></g>
-        ${h.lume?`<rect x="${f(-W*0.30,3)}" y="${f(-L*0.56,3)}" width="${f(W*0.60,3)}" height="${f(L*0.40,3)}" rx="${f(W*0.12,3)}" fill="#D8E4C8"/>`:""}`;
-    case "obelisque":
-      return `<path d="M0 ${-L} L${W*0.5} ${-L*0.12} L0 ${T} L${-W*0.5} ${-L*0.12} Z" fill="${FILL}"/>
-        <path d="M0 ${-L} L0 ${T}" stroke="#000" stroke-opacity="0.28" stroke-width="${W*0.07}"/>`;
     case "cathedral":{
       /* a gothic window: the body swells to an arch and is pierced, with a
          fine point above it */
@@ -6549,22 +6601,7 @@ function handPath(h, ctx){
         ${h.lume ? `<circle cy="${f(cy,3)}" r="${f(R,3)}" fill="#D8E4C8"/>` : ""}
         <circle cy="${f(cy,3)}" r="${f(R,3)}" fill="none" stroke="${FILL}" stroke-width="${f(sw*1.2,3)}"/>
         ${spoke(-90)}${spoke(30)}${spoke(150)}`;
-    }
-    case "day-date":{
-      /* The day-date baton: a straight bar that ends in a short point, cut
-         as two facets meeting on a centre ridge, so one half takes the light
-         and the other goes dark. A lume insert runs inside the facets. */
-      const w = W/2, sh = -L + Math.min(W*1.05, L*0.12);
-      const lite = tint(F, 0.62), dark = shade(F, 0.32);
-      const rightLit = lit > 0;
-      const left  = `M0 ${f(-L,3)} L${f(-w,3)} ${f(sh,3)} L${f(-w,3)} ${f(T,3)} L0 ${f(T,3)}Z`;
-      const right = `M0 ${f(-L,3)} L${f(w,3)} ${f(sh,3)} L${f(w,3)} ${f(T,3)} L0 ${f(T,3)}Z`;
-      let out = `<path d="${left}" fill="${rightLit ? dark : lite}"/><path d="${right}" fill="${rightLit ? lite : dark}"/>`;
-      if(h.lume) out += `<path d="M0 ${f(sh+W*0.15,3)} L${f(w*0.45,3)} ${f(sh+W*0.5,3)} L${f(w*0.45,3)} ${f(-L*0.28,3)} L${f(-w*0.45,3)} ${f(-L*0.28,3)} L${f(-w*0.45,3)} ${f(sh+W*0.5,3)}Z" fill="#E6EEDA" stroke="${edgeDark}" stroke-opacity=".3" stroke-width="0.03"/>`;
-      else out += `<path d="M0 ${f(-L,3)} L0 ${f(T,3)}" stroke="${edgeLite}" stroke-opacity=".55" stroke-width="${f(W*0.035,3)}"/>`;
-      return out + `<path d="M0 ${f(-L,3)} L${f(w,3)} ${f(sh,3)} L${f(w,3)} ${f(T,3)} L${f(-w,3)} ${f(T,3)} L${f(-w,3)} ${f(sh,3)}Z" fill="none" stroke="${edgeDark}" stroke-opacity=".38" stroke-width="0.04"/>`;
-    }
-    default: // baton / stick
+    }    default: // baton / stick
       return `<rect x="${-W/2}" y="${-L}" width="${W}" height="${L+T}" fill="${FILL}" rx="${W*0.1}"/>
         ${T>1?`<circle cy="${T*0.72}" r="${W*1.5}" fill="${FILL}"/>`:""}${lume}`;
   }
@@ -10783,7 +10820,7 @@ body.guided .atelier-nav, body.guided #gHideInGuided, body.guided .bar .grp.tool
     },
     hands(){
       const hh = S.hHand;
-      const styles = [["day-date","Day-date"],["dauphine","Dauphine"],["baton","Baton"],["sword","Sword"],["leaf","Leaf"],["feuille","Feuille"],["alpha","Alpha"],["pencil","Pencil"],["pomme-ouverte","Breguet"],["mercedes","Mercedes"],["cathedral","Cathedral"],["syringe","Syringe"],["english","Loop"]];
+      const styles = [["day-date","Day-date"],["dauphine","Dauphine"],["baton","Baton"],["sword","Sword"],["leaf","Leaf"],["feuille","Feuille"],["alpha","Alpha"],["pencil","Pencil"],["obelisque","Obelisk"],["syringe","Syringe"],["pomme-ouverte","Breguet"],["mercedes","Mercedes"]];
       let h = `<div class="gCards">${styles.map(([v,l]) => `<button type="button" class="gCard ${hh.style===v?"on":""}" data-ghand="${v}"><div class="gPic">${handPic(v)}</div><div class="gName">${l}</div></button>`).join("")}</div>`;
       const METALS6 = [["polished steel","Steel"],["white gold","White gold"],["blued steel","Blued steel"],["yellow gold","Gold"],["rose gold","Rose gold"],["blackened steel","Black"]];
       h += `<h3>Metal</h3>` + chips("hands.material", METALS6, hh.material || "polished steel");
@@ -10943,7 +10980,10 @@ body.guided .atelier-nav, body.guided #gHideInGuided, body.guided .bar .grp.tool
     if(d.gset){ apply(d.gset, JSON.parse(d.gv)); return; }
     if(d.gcase){ apply("case.model", d.gcase); return; }
     if(d.gmark){ setMarkers(d.gmark); return; }
-    if(d.ghand){ S.hHand.style = d.ghand; S.mHand.style = d.ghand; if(typeof snapVectorLengths === "function"){ snapVectorLengths("hHand"); snapVectorLengths("mHand"); } syncHands("hHand"); commit(); paintAll(); return; }
+    if(d.ghand){ S.hHand.style = d.ghand; S.mHand.style = d.ghand; if(typeof snapVectorLengths === "function"){ snapVectorLengths("hHand"); snapVectorLengths("mHand"); } syncHands("hHand");
+      /* the seconds hand is a fine needle on every one of these watches, whatever shape the hour and minute take */
+      if(S.sHand){ S.sHand.style = "stick"; if(!(S.sHand.width <= 0.35)) S.sHand.width = 0.16; }
+      commit(); paintAll(); return; }
     if(d.gstart){
       const id = d.gstart;
       if(id === "cur"){ step = 1; paint(); return; }
