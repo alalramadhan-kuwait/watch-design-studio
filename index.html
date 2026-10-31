@@ -6647,8 +6647,30 @@ function facetHand(h, prof, W, ctx){
     const ld = `M${ys.map(y => q(lw(y), y)).join(" L")} L${ys.slice().reverse().map(y => q(-lw(y), y)).join(" L")}Z`;
     out += `<path d="${ld}" fill="#E9EFDF" stroke="${mix(core, dark, .5)}" stroke-opacity=".45" stroke-width="0.03"/>`;
   }
-  if(h.style === "stick" && T > 1)
-    out += `<circle cy="${f(T*0.72,3)}" r="${f(W*1.5,3)}" fill="${gTop}" stroke="${mix(core, dark, .7)}" stroke-opacity=".5" stroke-width="0.03"/>`;
+  if(h.style === "stick"){
+    /* A seconds hand's own details: a counterweight at the tail, and at the
+       tip a lume disc (lollipop) or an arrow. Sized to the real parts, a few
+       tenths of a millimetre, not to the hand's width. */
+    const edge = mix(core, dark, .75), rim = Math.max(0.05, W*0.30);
+    const metalFill = mix(core, lite, sgn > 0 ? .55 : .35);
+    if(T > 1 && h.secTail !== "none"){
+      const r = Math.max(0.24, Math.min(0.42, W*1.1)), cy = T*0.74;
+      out += h.secTail === "ring"
+        ? `<circle cy="${f(cy,3)}" r="${f(r,3)}" fill="none" stroke="${metalFill}" stroke-width="${f(rim,3)}"/>`
+          + `<circle cy="${f(cy,3)}" r="${f(r + rim/2,3)}" fill="none" stroke="${edge}" stroke-opacity=".5" stroke-width="0.02"/>`
+        : `<circle cy="${f(cy,3)}" r="${f(r,3)}" fill="${metalFill}" stroke="${edge}" stroke-opacity=".55" stroke-width="0.025"/>`
+          + `<circle cx="${f(-r*0.3*sgn,3)}" cy="${f(cy - r*0.3,3)}" r="${f(r*0.35,3)}" fill="${lite}" fill-opacity=".45"/>`;
+    }
+    if(h.secTip === "lollipop"){
+      const r = Math.max(0.40, Math.min(0.68, W*1.9)), cy = -L*0.80;
+      out += `<circle cy="${f(cy,3)}" r="${f(r,3)}" fill="#E9EFDF" stroke="${metalFill}" stroke-width="${f(rim,3)}"/>`
+           + `<circle cy="${f(cy,3)}" r="${f(r + rim/2,3)}" fill="none" stroke="${edge}" stroke-opacity=".5" stroke-width="0.02"/>`;
+    } else if(h.secTip === "arrow"){
+      const hw = Math.max(0.30, W*1.5), len = Math.max(0.8, hw*2.6);
+      out += `<path d="M0 ${f(-L,3)} L${f(hw,3)} ${f(-L+len,3)} L${f(-hw,3)} ${f(-L+len,3)}Z" fill="${metalFill}" stroke="${edge}" stroke-opacity=".55" stroke-width="0.025" stroke-linejoin="round"/>`
+           + `<path d="M0 ${f(-L,3)} L0 ${f(-L+len,3)}" stroke="${lite}" stroke-opacity=".6" stroke-width="0.02"/>`;
+    }
+  }
   /* one crisp edge round the whole hand */
   out += `<path d="${outline}" fill="none" stroke="${mix(core, dark, .8)}" stroke-opacity=".55" stroke-width="0.03" stroke-linejoin="round"/>`;
   return out;
@@ -11124,7 +11146,13 @@ body.guided .atelier-nav, body.guided #gHideInGuided, body.guided .bar .grp.tool
       h += `<h3>Metal</h3>` + chips("hands.material", METALS6, hh.material || "polished steel");
       h += toggle("hands.lume", "Lume strip", !!hh.lume);
       h += toggle("sHand.on", "Seconds hand", S.sHand.on);
-      if(S.sHand.on) h += `<h3>Seconds hand metal</h3>` + chips("sHand.material", METALS6.concat([["flame blue","Flame blue"],["gilt","Gilt"]]), S.sHand.material || "polished steel");
+      if(S.sHand.on){
+        const sh = S.sHand, curTip = sh.style !== "stick" ? "match" : (sh.secTip || "needle");
+        h += `<h3>Seconds hand</h3><div class="gCards">${[["needle","Needle"],["lollipop","Lollipop"],["arrow","Arrow"],["match","Matching"]].map(([v,l]) =>
+          `<button type="button" class="gCard ${v===curTip?"on":""}" data-gsec="${v}"><div class="gPic">${secPic(v)}</div><div class="gName">${l}</div></button>`).join("")}</div>`;
+        h += `<h3>Counterweight</h3>` + chips("sHand.secTail", [["disc","Disc"],["ring","Ring"],["none","None"]], sh.secTail || "disc");
+        h += `<h3>Seconds hand metal</h3>` + chips("sHand.material", METALS6.concat([["flame blue","Flame blue"],["gilt","Gilt"]]), sh.material || "polished steel");
+      }
       return h + more("hands", "All hand settings");
     },
     text(){
@@ -11198,6 +11226,16 @@ body.guided .atelier-nav, body.guided #gHideInGuided, body.guided .bar .grp.tool
       st = S;
     }finally{ S = keep; }
     return st;
+  }
+  /* the seconds hand alone, as each choice would draw it */
+  function secPic(tip){
+    try{
+      const st = clone(S); st.hHand = {...st.hHand, on:false}; st.mHand = {...st.mHand, on:false};
+      st.sHand = {...st.sHand, on:true, style: tip === "match" ? S.hHand.style : "stick", secTip: tip === "match" ? "needle" : tip, width: tip === "match" ? 0.2 : (st.sHand.width || 0.16)};
+      st.meta = {...st.meta, time:{h:0, m:0, s:52.5}};          // laid corner to corner, so the tip and tail both show
+      const svg = buildSVG(st, {scope:"hands", tag:"gs"+tip, material:false});
+      return svg.replace(/viewBox="[^"]*"/, `viewBox="-11.5 -11.5 14 14"`);
+    }catch(e){ return ""; }
   }
   function handPic(style){
     try{
@@ -11278,10 +11316,16 @@ body.guided .atelier-nav, body.guided #gHideInGuided, body.guided .bar .grp.tool
     if(t.classList.contains("next")){ if(step < STEPS.length-1){ step++; paint(); body.scrollTop = 0; } else { const sv = document.getElementById("save"); if(sv) sv.click(); } return; }
     if(d.gset){ apply(d.gset, JSON.parse(d.gv)); return; }
     if(d.gcase){ apply("case.model", d.gcase); return; }
+    if(d.gsec){
+      const sh = S.sHand;
+      if(d.gsec === "match"){ sh.secTip = "match"; sh.style = S.hHand.style; sh.width = 0.2; }
+      else { sh.secTip = d.gsec; sh.style = "stick"; if(!(sh.width <= 0.22)) sh.width = 0.18; }
+      commit(); paintAll(); return;
+    }
     if(d.gmark){ setMarkers(d.gmark); return; }
     if(d.ghand){ S.hHand.style = d.ghand; S.mHand.style = d.ghand; if(typeof snapVectorLengths === "function"){ snapVectorLengths("hHand"); snapVectorLengths("mHand"); } syncHands("hHand");
       /* the seconds hand is a fine needle on every one of these watches, whatever shape the hour and minute take */
-      if(S.sHand){ S.sHand.style = "stick"; if(!(S.sHand.width <= 0.35)) S.sHand.width = 0.16; }
+      if(S.sHand){ if(S.sHand.secTip === "match"){ S.sHand.style = d.ghand; } else { S.sHand.style = "stick"; if(!(S.sHand.width <= 0.35)) S.sHand.width = 0.16; } }
       commit(); paintAll(); return; }
     if(d.gstart){
       const id = d.gstart;
