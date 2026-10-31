@@ -11344,12 +11344,13 @@ body.guided .atelier-nav, body.guided #gHideInGuided, body.guided .bar .grp.tool
          both with a short tail through the centre, and a fine seconds needle
          with a long tail and no counterweight. */
       if(d.ghand === "day-date"){
-        /* measured from Rolex's picture of the Day-Date 40: hour hand about a
-           tenth as wide as it is long, tail a quarter of its length; minute
-           about a twentieth, tail a fifth */
-        Object.assign(S.mHand, {reach:"to the minute track", reachTrim:0.97, tail:2.7, width:0.40});
-        Object.assign(S.hHand, {reach:"share of the minute hand", hourShare:0.60, tail:2.2, width:0.46});
-        Object.assign(S.sHand, {style:"stick", secTip:"needle", secTail:"none", width:0.11, tail:2.8, reach:"to the minute track", reachTrim:1.0});
+        /* measured against the dial opening in Rolex's picture of the
+           Day-Date 40: hour hand 3.9% of the opening wide (1.23 mm on a
+           31.4 mm opening), minute 3.4% (1.07 mm), so the two are nearly the
+           same width; seconds about 0.24 mm. Tails 2.2 and 2.7 mm. */
+        Object.assign(S.mHand, {reach:"to the minute track", reachTrim:0.97, tail:2.7, width:0.58});
+        Object.assign(S.hHand, {reach:"share of the minute hand", hourShare:0.62, tail:2.2, width:0.65});
+        Object.assign(S.sHand, {style:"stick", secTip:"needle", secTail:"none", width:0.15, tail:2.8, reach:"to the minute track", reachTrim:1.0});
       }
       /* the seconds hand is a fine needle on every one of these watches, whatever shape the hour and minute take */
       if(S.sHand){ if(S.sHand.secTip === "match"){ S.sHand.style = d.ghand; } else { S.sHand.style = "stick"; if(!(S.sHand.width <= 0.35)) S.sHand.width = 0.16; } }
