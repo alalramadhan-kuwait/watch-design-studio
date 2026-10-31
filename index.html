@@ -2646,7 +2646,7 @@ function inkMetrics(fam, text){
   if(INK_CACHE.has(key)) return INK_CACHE.get(key);
   let cv = inkMetrics.cv; if(!cv){ cv = inkMetrics.cv = document.createElement("canvas"); cv.width = cv.height = 8; }
   const g = cv.getContext("2d"), font = `200px ${fam}`;
-  g.font = font; g.textAlign = "center"; g.textBaseline = "middle";
+  g.font = font; g.textAlign = "center"; g.textBaseline = "alphabetic";   // the one baseline every engine and the SVG agree on
   const m = g.measureText(text);
   if(!(m.actualBoundingBoxAscent >= 0 || m.actualBoundingBoxDescent >= 0)) return null;
   const r = {cx:(m.actualBoundingBoxRight - m.actualBoundingBoxLeft)/2/200, cy:(m.actualBoundingBoxDescent - m.actualBoundingBoxAscent)/2/200,
@@ -2660,6 +2660,41 @@ function inkMetrics(fam, text){
       if(typeof requestPaint === "function") requestPaint(); }).catch(()=>{}); }catch(e){}
   }
   return r;
+}
+/* The outline of the ink itself, as a convex hull in em units round the
+   text anchor (centre, alphabetic baseline). A figure's box says where its
+   corners would be, but most figures have no ink in their corners, so a
+   figure set by its box at 1 or 5 o'clock fell short of the circle. With
+   the hull, the outermost point of the ink in any direction is exact. */
+const HULL_CACHE = new Map();
+function inkHull(fam, text){
+  if(typeof document === "undefined" || !fam) return null;
+  const key = fam + "|" + text;
+  if(HULL_CACHE.has(key)) return HULL_CACHE.get(key);
+  const S0 = 200, W = 1400, H = 700, X0 = W/2, Y0 = 470;
+  let cv = inkHull.cv; if(!cv){ cv = inkHull.cv = document.createElement("canvas"); cv.width = W; cv.height = H; }
+  const g = cv.getContext("2d", {willReadFrequently:true});
+  g.clearRect(0, 0, W, H); g.font = `${S0}px ${fam}`; g.textAlign = "center"; g.textBaseline = "alphabetic"; g.fillStyle = "#000";
+  g.fillText(text, X0, Y0);
+  const d = g.getImageData(0, 0, W, H).data, pts = [];
+  for(let y = 0; y < H; y++){
+    let first = -1, last = -1;
+    for(let x = 0; x < W; x++) if(d[(y*W + x)*4 + 3] > 110){ if(first < 0) first = x; last = x; }
+    if(first >= 0){ pts.push([(first - X0)/S0, (y - Y0)/S0]); if(last !== first) pts.push([(last + 1 - X0)/S0, (y - Y0)/S0]); }
+  }
+  if(pts.length < 3) return null;
+  pts.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+  const cross = (o, a, b) => (a[0]-o[0])*(b[1]-o[1]) - (a[1]-o[1])*(b[0]-o[0]);
+  const lo = [], hi = [];
+  for(const p of pts){ while(lo.length >= 2 && cross(lo[lo.length-2], lo[lo.length-1], p) <= 0) lo.pop(); lo.push(p); }
+  for(let i = pts.length - 1; i >= 0; i--){ const p = pts[i]; while(hi.length >= 2 && cross(hi[hi.length-2], hi[hi.length-1], p) <= 0) hi.pop(); hi.push(p); }
+  const hull = lo.slice(0, -1).concat(hi.slice(0, -1));
+  let ready = true;
+  try{ ready = document.fonts.check(`${S0}px ${fam}`, text); }catch(e){}
+  if(ready) HULL_CACHE.set(key, hull);
+  else try{ document.fonts.load(`${S0}px ${fam}`, text).then(() => { for(const k of [...HULL_CACHE.keys()]) if(k.startsWith(fam + "|")) HULL_CACHE.delete(k);
+      if(typeof requestPaint === "function") requestPaint(); }).catch(()=>{}); }catch(e){}
+  return hull;
 }
 /* the offset that puts a figure's ink centre where its anchor is */
 const inkShift = (fam, text, size) => { const m = inkMetrics(fam, text); return m ? [-m.cx*size, -m.cy*size] : [0, 0]; };
@@ -4949,12 +4984,24 @@ function buildSVG(st, o={}){
       const fsz = (() => { if(drawnOutline) return nm.size;
         const m = inkMetrics(famUsed, sys === "roman I–XII" ? "XII" : (NUM_SYSTEM[sys] || "0123456789"));
         return m && m.h > 0 ? nm.size*Math.max(0.6, Math.min(2.4, 0.72/m.h)) : nm.size; })();
-      const numR = (n, a) => {
-        if(nm.align === "centre" || drawnOutline || arcSet) return nm.radius;
-        const m = inkMetrics(famUsed, numeralLabel(n, sys)); if(!m) return nm.radius;
-        const hw = m.w*fsz/2, hh = m.h*fsz/2, ar2 = a*Math.PI/180;
-        const ext = nm.orient === "radial" ? hh : Math.abs(Math.sin(ar2))*hw + Math.abs(Math.cos(ar2))*hh;
-        return nm.radius + nm.size*0.5 - ext;
+      /* where to put a figure's text anchor: p, plus (ix, iy) in the
+         figure's own frame (which is turned about p when the figures follow
+         the radius) */
+      const placeNum = (n, a) => {
+        const label = numeralLabel(n, sys);
+        const centred = () => { const [ix, iy] = drawnOutline ? [0, 0] : inkShift(famUsed, label, fsz); return {p: pt(nm.radius, a), ix, iy}; };
+        if(nm.align === "centre" || drawnOutline || arcSet) return centred();
+        const hull = inkHull(famUsed, label); if(!hull) return centred();
+        const Ro = nm.radius + nm.size*0.5, P = hull.map(([x, y]) => [x*fsz, y*fsz]);
+        if(nm.orient === "radial"){
+          const sup = Math.max(...P.map(q => -q[1])), xs = P.map(q => q[0]);
+          return {p: pt(Ro - sup, a), ix: -(Math.min(...xs) + Math.max(...xs))/2, iy: 0};
+        }
+        const ar2 = a*Math.PI/180, u = [Math.sin(ar2), -Math.cos(ar2)], t = [Math.cos(ar2), Math.sin(ar2)];
+        const sup = Math.max(...P.map(q => q[0]*u[0] + q[1]*u[1]));
+        const ts = P.map(q => q[0]*t[0] + q[1]*t[1]), tm = (Math.min(...ts) + Math.max(...ts))/2;
+        const R = Ro - sup;
+        return {p: [R*u[0] - tm*t[0], R*u[1] - tm*t[1]], ix: 0, iy: 0};
       };
       /* ---- applied metal: built as a solid piece, not a filled outline ---- */
       if(MK.piece){
@@ -5002,7 +5049,7 @@ function buildSVG(st, o={}){
         </filter>`);
 
         for(const n of set){
-          const a = (n%12)*30, p = pt(numR(n, a), a);
+          const a = (n%12)*30, PN = placeNum(n, a), p = PN.p;
           const gid = id("gn");
           const glyph = styleUsed==="vernoy"
             ? vernoyNumeral(String(n), 0, 0, nm.size, "inherit", nm.slant||0, false, "", nm.gap)
@@ -5014,10 +5061,10 @@ function buildSVG(st, o={}){
                 return `<g transform="translate(${f(-p[0],3)},${f(-p[1],3)})"><text font-family="${famUsed}" font-size="${f(fsz,3)}" font-weight="400"
                  letter-spacing="${f(nm.gap*fsz*0.011,3)}" fill="inherit" dominant-baseline="central"${ligaOff}
                  ><textPath href="#${pid}" startOffset="50%" text-anchor="middle">${numeralLabel(n, sys)}</textPath></text></g>`; })()
-            : (() => { const [ix, iy] = inkShift(famUsed, numeralLabel(n, sys), fsz);
+            : (() => { const ix = PN.ix, iy = PN.iy;
                 return `<text x="${f(ix,3)}" y="${f(iy,3)}" font-family="${famUsed}" font-size="${f(fsz,3)}" font-weight="400"
                  letter-spacing="${f(nm.gap*fsz*0.011,3)}" fill="inherit" text-anchor="middle"
-                 dominant-baseline="middle"${ligaOff}>${numeralLabel(n, sys)}</text>`; })();
+                ${ligaOff}>${numeralLabel(n, sys)}</text>`; })();
           defs.push(`<g id="${gid}">${glyph}</g>`);
           // the side walls lean away from the dial centre, as they do under a
           // camera looking down the middle of the watch
@@ -5038,7 +5085,7 @@ function buildSVG(st, o={}){
         }
       } else
       for(const n of set){
-        const a = (n%12)*30, p = pt(numR(n, a), a);
+        const a = (n%12)*30, PN = placeNum(n, a), p = PN.p;
 
         const rot = nm.orient==="radial" ? ` transform="rotate(${a} ${f(p[0],3)} ${f(p[1],3)})"` : "";
         /* A cut carries no colour and no filter of its own: it is defined once
@@ -5060,9 +5107,9 @@ function buildSVG(st, o={}){
               letter-spacing="${f(nm.gap*fsz*0.011,3)}" fill="${gFill}" dominant-baseline="central"${gFilt}${ligaOff}
               ><textPath href="#${pid}" startOffset="50%" text-anchor="middle">${label}</textPath></text>`;
           } else {
-          const [ix, iy] = inkShift(famUsed, label, fsz);
+          const ix = PN.ix, iy = PN.iy;
           g = `<text x="${f(p[0]+ix,3)}" y="${f(p[1]+iy,3)}" font-family="${famUsed}" font-size="${f(fsz,3)}" font-weight="400"
-            letter-spacing="${f(nm.gap*fsz*0.011,3)}" fill="${gFill}" text-anchor="middle" dominant-baseline="middle"${gFilt}${ligaOff}>${label}</text>`;
+            letter-spacing="${f(nm.gap*fsz*0.011,3)}" fill="${gFill}" text-anchor="middle"${gFilt}${ligaOff}>${label}</text>`;
           }
         }
         if(MK.cut){
@@ -5155,7 +5202,7 @@ function buildSVG(st, o={}){
       const natW = imD ? imD.w*sizeD + (ar ? 0 : lsD*(word.length - 1)) : arcLen*0.8;
       const sx = Math.max(0.65, Math.min(ar ? 1.75 : 1.55, wantW/natW));
       const dxD = imD ? -imD.cx*sizeD : 0;
-      const straight = `<g transform="scale(${f(sx,4)},1)"><text x="${f(dxD - (ar ? 0 : lsD/2),3)}" y="${f(dyD,3)}" text-anchor="middle" dominant-baseline="middle"
+      const straight = `<g transform="scale(${f(sx,4)},1)"><text x="${f(dxD - (ar ? 0 : lsD/2),3)}" y="${f(dyD,3)}" text-anchor="middle"
         font-family="${famD},${ar ? "'Geeza Pro','Arial'" : "'IBM Plex Sans'"},sans-serif" font-weight="400"
         font-size="${f(sizeD,3)}" fill="${dy.text}" ${ar ? 'direction="rtl"' : `letter-spacing="${f(lsD,3)}"`}>${esc(wordD)}</text></g>`;
       const wD = natW*sx + 0.4;
