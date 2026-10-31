@@ -118,11 +118,14 @@ Designs that sync by themselves would need accounts and a backend.
 ## Simple mode and the full editor
 
 The studio opens in **simple mode**: one panel that walks through a watch in
-six steps — **Start** (a fresh standard dial, a preset, a reference design or
-a saved version),
-**Case**, **Dial**, **Markers**, **Hands** and **Finish** (name, lettering,
-day and date, the design check, saving and sharing). Each step shows the
-choices that change the watch most, as pictures and swatches.
+eight steps — **Start** (a fresh standard dial, a preset, a reference design
+or a saved version), **Case**, **Dial** (colour, surface, minute track),
+**Markers** (numeral system and font, how they are made, colour, size and
+position, or index shapes), **Hands** (shape, metal, lume, seconds hand),
+**Text** (logo, font, two lines of lettering and where they sit), **Date**
+(day and date windows, their discs and magnifier) and **Finish** (name, the
+design check, saving and sharing). Figures and indices under a day or date
+window are left off, as a dial maker would.
 
 Nothing has been taken away. Every step ends with a link to all the settings
 for that part, which opens the **full editor** at it, and the **Full editor**
