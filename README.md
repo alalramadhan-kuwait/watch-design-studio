@@ -122,7 +122,7 @@ eight steps — **Start** (a fresh standard dial, a preset, a reference design
 or a saved version), **Case**, **Dial** (colour, surface, minute track),
 **Markers** (numeral system and font, how they are made, colour, size and
 position, or index shapes), **Hands** (shape, metal, lume, seconds hand),
-**Text** (logo, font, two lines of lettering and where they sit), **Date**
+**Text** (your logo uploaded as a PNG, JPG or SVG, or typed in a font; two lines of lettering and where they sit), **Date**
 (day and date windows, their discs and magnifier) and **Finish** (name, the
 design check, saving and sharing). Figures and indices under a day or date
 window are left off, as a dial maker would.
