@@ -6009,6 +6009,7 @@ function buildSVG(st, o={}){
       /* a short tail ends under the collet; a long one (a Day-Date's) is meant to be seen, so the collet only spans the hand */
       const root = (h.tail || 0) > 1 ? hw + 0.08 : Math.hypot(hw, Math.min(h.tail || 0, 1.2)) + 0.06;
       const r = k === "sHand" ? Math.max(0.24, (h.boss || 0.8)/2*0.55)
+              : (h.tail || 0) > 1 ? Math.max(root, k === "hHand" ? 0.55 : 0.45)      // a small polished cap, as on a Day-Date
               : Math.max(root, (h.boss || (k === "hHand" ? 2.2 : 1.6))/2*0.62, k === "hHand" ? 0.78 : 0.6);
       const core = handCore(h), MM = HAND_MATERIAL[handMat(h)] || HAND_MATERIAL["polished steel"];
       const g = id("hc"), g2 = id("hc");
@@ -6583,9 +6584,9 @@ const FACET = {
                   return [-L*t, .10*(1-t) + .40*Math.pow(Math.sin(Math.PI*Math.pow(t,.85)), 1)]; })),
   "feuille":   (L,T) => [[T,.08]].concat(Array.from({length:25}, (_,i) => { const t = i/24;
                   return [-L*t, .07*(1-t) + .43*Math.pow(Math.sin(Math.PI*Math.pow(t,.72)), 1.25)]; })),
-  /* the Day-Date baton: two facets on a centre ridge, the same width from
-     tail to shoulder, then a short point */
-  "day-date":  (L,T,W) => [[T,.50],[-(L - W*0.85),.50],[-L,0]],
+  /* the Day-Date baton: a straight bar, two facets on a centre ridge, cut
+     square at the tip and at the tail (no point) */
+  "day-date":  (L,T,W) => [[T,.50],[-L,.50]],
   "baton":     (L,T) => [[T,.50],[-L,.50]],
   "pencil":    (L,T,W) => [[T,.50],[-(L - W*0.95),.50],[-L,0]],
   "syringe":   (L,T) => [[T,.50],[-L*.60,.50],[-L*.655,.12],[-L*.96,.08],[-L,0]],
@@ -6612,7 +6613,7 @@ function facetHand(h, prof, W, ctx){
      nearly black; that contrast against its bright neighbour is what makes a
      hand look sharp in a photograph of a real watch. */
   const litStops  = [[0, C(.60, across)], [.40, C(.92, across)], [.70, C(1, across)], [.88, C(.85, across)], [1, C(.72, across)]];
-  const darkStops = [[0, C(-.95, across)], [.45, C(-.82, across)], [.80, C(-.92, across)], [1, C(-.78, across)]];
+  const darkStops = [[0, C(-.95, 1)], [.45, C(-.86, 1)], [.80, C(-.93, 1)], [1, C(-.82, 1)]];
   const topStops  = [[0, C(.40, 1)], [.55, C(.82, 1)], [1, C(.60, 1)]];
   let gLit = litStops[2][1], gDark = darkStops[0][1], gTop = topStops[1][1];
   if(ctx){
@@ -6677,6 +6678,13 @@ function facetHand(h, prof, W, ctx){
       out += `<path d="M0 ${f(-L,3)} L${f(hw,3)} ${f(-L+len,3)} L${f(-hw,3)} ${f(-L+len,3)}Z" fill="${metalFill}" stroke="${edge}" stroke-opacity=".55" stroke-width="0.025" stroke-linejoin="round"/>`
            + `<path d="M0 ${f(-L,3)} L0 ${f(-L+len,3)}" stroke="${lite}" stroke-opacity=".6" stroke-width="0.02"/>`;
     }
+  }
+  /* A square-cut end is chamfered: a thin bright band across the end face
+     at the tip and at the tail, the polish catching where the facets stop. */
+  if(h.style === "day-date"){
+    const e = Math.min(W*0.16, 0.10), w = W/2;
+    out += `<path d="M${q(-w,-L)} L${q(w,-L)} L${q(w*0.86,-L+e)} L${q(-w*0.86,-L+e)}Z" fill="${mix(core, lite, .9)}" fill-opacity=".85"/>`;
+    if(T > 0.3) out += `<path d="M${q(-w,T)} L${q(w,T)} L${q(w*0.86,T-e)} L${q(-w*0.86,T-e)}Z" fill="${mix(core, lite, .8)}" fill-opacity=".7"/>`;
   }
   /* one crisp edge round the whole hand */
   out += `<path d="${outline}" fill="none" stroke="${mix(core, dark, .8)}" stroke-opacity=".55" stroke-width="0.03" stroke-linejoin="round"/>`;
@@ -11336,8 +11344,11 @@ body.guided .atelier-nav, body.guided #gHideInGuided, body.guided .bar .grp.tool
          both with a short tail through the centre, and a fine seconds needle
          with a long tail and no counterweight. */
       if(d.ghand === "day-date"){
-        Object.assign(S.mHand, {reach:"to the minute track", reachTrim:0.97, tail:2.0, width:0.50});
-        Object.assign(S.hHand, {reach:"share of the minute hand", hourShare:0.62, tail:1.8, width:0.62});
+        /* measured from Rolex's picture of the Day-Date 40: hour hand about a
+           tenth as wide as it is long, tail a quarter of its length; minute
+           about a twentieth, tail a fifth */
+        Object.assign(S.mHand, {reach:"to the minute track", reachTrim:0.97, tail:2.7, width:0.40});
+        Object.assign(S.hHand, {reach:"share of the minute hand", hourShare:0.60, tail:2.2, width:0.46});
         Object.assign(S.sHand, {style:"stick", secTip:"needle", secTail:"none", width:0.11, tail:2.8, reach:"to the minute track", reachTrim:1.0});
       }
       /* the seconds hand is a fine needle on every one of these watches, whatever shape the hour and minute take */
