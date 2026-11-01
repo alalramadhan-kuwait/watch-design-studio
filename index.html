@@ -6353,7 +6353,7 @@ const STYLE_W = {
   "retrograde":0.9,  "counter":1.6,
   "sword":2.5, "syringe":1.7, "dauphine":3.0, "feuille":2.2, "leaf":2.6,
   "baton":1.9, "alpha":2.4, "pencil":2.0, "obelisque":2.2, "cathedral":2.8,
-  "mercedes":2.2, "stick":1.6, "day-date":1.9
+  "mercedes":2.2, "stick":1.6, "day-date":1.9, "dd-seconds":1.6
 };
 /* Supplied hand artwork carried as geometry rather than as a photograph: one
    compound path per hand, drawn pointing to 12 with the pivot at the origin,
@@ -6586,7 +6586,15 @@ const FACET = {
                   return [-L*t, .07*(1-t) + .43*Math.pow(Math.sin(Math.PI*Math.pow(t,.72)), 1.25)]; })),
   /* the Day-Date baton: a straight bar, two facets on a centre ridge, cut
      square at the tip and at the tail (no point) */
-  "day-date":  (L,T,W) => [[T,.50],[-L,.50]],
+  /* full width for the first two thirds, then narrowing about 0.06 mm per
+     mm toward the tip, as measured on the Day-Date 40 (minute 1.12 mm at
+     its middle, 0.77 mm near the tip; hour 1.15 to 1.02 mm) */
+  "day-date":  (L,T,W) => { const r0 = L*0.65; return [[T,.50],[-r0,.50],[-L, Math.max(.28, .50 - 0.030*(L - r0)/W)]]; },
+  /* The Day-Date seconds hand, measured from Rolex's picture: a long tail
+     (about a third of the dial radius) that widens toward its square end,
+     and a needle that tapers from the centre to a fine point. Half-widths
+     are shares of W, which for this hand is 0.4 mm. */
+  "dd-seconds":(L,T,W) => [[T,.80],[T*0.5,.66],[0,.50],[-L*.30,.46],[-L*.62,.38],[-L*.88,.22],[-L,.07]],
   "baton":     (L,T) => [[T,.50],[-L,.50]],
   "pencil":    (L,T,W) => [[T,.50],[-(L - W*0.95),.50],[-L,0]],
   "syringe":   (L,T) => [[T,.50],[-L*.60,.50],[-L*.655,.12],[-L*.96,.08],[-L,0]],
@@ -7930,7 +7938,7 @@ function handSchema(k,title){
     ...HAND_VEC_NAMES.map(n=>"vector · "+n),
     "pomme-ouverte","pomme-pleine","pomme-facetee",
     "english","a-tact","retrograde","counter",
-    "day-date","sword","syringe","dauphine","feuille","leaf","baton","alpha","pencil","obelisque","cathedral","mercedes","stick"
+    "day-date","dd-seconds","sword","syringe","dauphine","feuille","leaf","baton","alpha","pencil","obelisque","cathedral","mercedes","stick"
   ];
   return {title, hint:"Length runs from the centre of the movement to the tip. The pomme settings drive the whole Breguet family.", fields:()=>[
     /* The linked state has to be obvious: you are either editing the whole
@@ -11162,10 +11170,10 @@ body.guided .atelier-nav, body.guided #gHideInGuided, body.guided .bar .grp.tool
       h += toggle("hands.lume", "Lume strip", !!hh.lume);
       h += toggle("sHand.on", "Seconds hand", S.sHand.on);
       if(S.sHand.on){
-        const sh = S.sHand, curTip = sh.style !== "stick" ? "match" : (sh.secTip || "needle");
-        h += `<h3>Seconds hand</h3><div class="gCards">${[["needle","Needle"],["lollipop","Lollipop"],["arrow","Arrow"],["match","Matching"]].map(([v,l]) =>
+        const sh = S.sHand, curTip = sh.style === "dd-seconds" ? "dd" : sh.style !== "stick" ? "match" : (sh.secTip || "needle");
+        h += `<h3>Seconds hand</h3><div class="gCards">${[["dd","Day-date"],["needle","Needle"],["lollipop","Lollipop"],["arrow","Arrow"],["match","Matching"]].map(([v,l]) =>
           `<button type="button" class="gCard ${v===curTip?"on":""}" data-gsec="${v}"><div class="gPic">${secPic(v)}</div><div class="gName">${l}</div></button>`).join("")}</div>`;
-        h += `<h3>Counterweight</h3>` + chips("sHand.secTail", [["disc","Disc"],["ring","Ring"],["none","None"]], sh.secTail || "disc");
+        if(sh.style === "stick") h += `<h3>Counterweight</h3>` + chips("sHand.secTail", [["disc","Disc"],["ring","Ring"],["none","None"]], sh.secTail || "disc");
         h += `<h3>Seconds hand metal</h3>` + chips("sHand.material", METALS6.concat([["flame blue","Flame blue"],["gilt","Gilt"]]), sh.material || "polished steel");
       }
       return h + more("hands", "All hand settings");
@@ -11246,7 +11254,8 @@ body.guided .atelier-nav, body.guided #gHideInGuided, body.guided .bar .grp.tool
   function secPic(tip){
     try{
       const st = clone(S); st.hHand = {...st.hHand, on:false}; st.mHand = {...st.mHand, on:false};
-      st.sHand = {...st.sHand, on:true, style: tip === "match" ? S.hHand.style : "stick", secTip: tip === "match" ? "needle" : tip, width: tip === "match" ? 0.2 : (st.sHand.width || 0.16)};
+      st.sHand = {...st.sHand, on:true, style: tip === "match" ? S.hHand.style : tip === "dd" ? "dd-seconds" : "stick", secTip: tip === "match" ? "needle" : tip,
+        width: tip === "match" ? 0.2 : tip === "dd" ? 0.25 : Math.min(st.sHand.width || 0.16, 0.2), tail: tip === "dd" ? 4.9 : st.sHand.tail};
       st.meta = {...st.meta, time:{h:0, m:0, s:52.5}};          // laid corner to corner, so the tip and tail both show
       const svg = buildSVG(st, {scope:"hands", tag:"gs"+tip, material:false});
       return svg.replace(/viewBox="[^"]*"/, `viewBox="-11.5 -11.5 14 14"`);
@@ -11334,6 +11343,7 @@ body.guided .atelier-nav, body.guided #gHideInGuided, body.guided .bar .grp.tool
     if(d.gsec){
       const sh = S.sHand;
       if(d.gsec === "match"){ sh.secTip = "match"; sh.style = S.hHand.style; sh.width = 0.2; }
+      else if(d.gsec === "dd"){ sh.secTip = "dd"; sh.style = "dd-seconds"; sh.width = 0.25; sh.tail = +(caseOf(S).opening/2*0.31).toFixed(2); }
       else { sh.secTip = d.gsec; sh.style = "stick"; if(!(sh.width <= 0.22)) sh.width = 0.18; }
       commit(); paintAll(); return;
     }
@@ -11344,16 +11354,17 @@ body.guided .atelier-nav, body.guided #gHideInGuided, body.guided .bar .grp.tool
          both with a short tail through the centre, and a fine seconds needle
          with a long tail and no counterweight. */
       if(d.ghand === "day-date"){
-        /* measured against the dial opening in Rolex's picture of the
-           Day-Date 40: hour hand 3.9% of the opening wide (1.23 mm on a
-           31.4 mm opening), minute 3.4% (1.07 mm), so the two are nearly the
-           same width; seconds about 0.24 mm. Tails 2.2 and 2.7 mm. */
-        Object.assign(S.mHand, {reach:"to the minute track", reachTrim:0.97, tail:2.7, width:0.58});
-        Object.assign(S.hHand, {reach:"share of the minute hand", hourShare:0.62, tail:2.2, width:0.65});
-        Object.assign(S.sHand, {style:"stick", secTip:"needle", secTail:"none", width:0.15, tail:2.8, reach:"to the minute track", reachTrim:1.0});
+        /* Measured in Rolex's picture of the Day-Date 40, as shares of the
+           opening radius R: minute hand to 0.935R with a 0.175R tail, hour
+           hand to 0.59R with a 0.175R tail, both about 1.13 mm wide;
+           seconds to 0.96R with a 0.31R tail. */
+        const Rr = caseOf(S).opening/2;
+        Object.assign(S.mHand, {reach:"free", length:+(Rr*0.935).toFixed(2), tail:+(Rr*0.175).toFixed(2), width:0.59});
+        Object.assign(S.hHand, {reach:"share of the minute hand", hourShare:0.63, tail:+(Rr*0.175).toFixed(2), width:0.60});
+        Object.assign(S.sHand, {style:"dd-seconds", secTip:"dd", secTail:"none", width:0.25, reach:"free", length:+(Rr*0.96).toFixed(2), tail:+(Rr*0.31).toFixed(2)});
       }
       /* the seconds hand is a fine needle on every one of these watches, whatever shape the hour and minute take */
-      if(S.sHand){ if(S.sHand.secTip === "match"){ S.sHand.style = d.ghand; } else { S.sHand.style = "stick"; if(!(S.sHand.width <= 0.35)) S.sHand.width = 0.16; } }
+      if(S.sHand && d.ghand !== "day-date"){ if(S.sHand.secTip === "match"){ S.sHand.style = d.ghand; } else if(S.sHand.style !== "dd-seconds"){ S.sHand.style = "stick"; if(!(S.sHand.width <= 0.35)) S.sHand.width = 0.16; } }
       commit(); paintAll(); return; }
     if(d.gstart){
       const id = d.gstart;
