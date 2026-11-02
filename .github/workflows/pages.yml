@@ -38,6 +38,7 @@ jobs:
       - name: Stamp the build into the service worker
         run: |
           sed -i "s/__BUILD__/${GITHUB_SHA::12}/" sw.js
+          sed -i "s/const APP_BUILD = \"__BUILD__\"/const APP_BUILD = \"${GITHUB_SHA::12}\"/" index.html
           if grep -q "__BUILD__" sw.js; then
             echo "the build placeholder is still there — the worker would never change"
             exit 1

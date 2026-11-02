@@ -1880,6 +1880,9 @@ const isTouch = matchMedia("(pointer:coarse)").matches;
 const NARROW = () => matchMedia("(max-width:900px)").matches;
 const tf = () => `translate(${panX}px,${panY}px) scale(${zoom})`;
 let hist = [clone(S)], hi = 0, versions = [];
+/* The deployed commit, stamped in at publish time (as sw.js is), so the
+   version a phone is running can be read off the More menu. */
+const APP_BUILD = "__BUILD__";
 
 /* Every route that replaces S passes through one of these three, which is
    why autosave hangs here rather than on each of the eighteen callers. */
@@ -9982,7 +9985,8 @@ refineBootRender();
     <div class="card"><h2>More</h2>
       <p class="sub">Sharing, export and your saved versions.</p>
       <div id="mMoreSlots" style="display:flex;flex-direction:column;gap:8px"></div>
-      <div id="mMoreVers" style="margin-top:14px"></div></div>`;
+      <div id="mMoreVers" style="margin-top:14px"></div>
+      <p class="sub" style="margin-top:14px;text-align:center">Version ${APP_BUILD === "__" + "BUILD__" ? "development" : APP_BUILD.slice(0,7)}</p></div>`;
   document.body.appendChild(more);
   const slots = more.querySelector("#mMoreSlots");
   /* Three output actions, each doing one thing, plus the occasional ones.
@@ -10418,7 +10422,13 @@ refineBootRender();
     });
     return el;
   };
+  /* Nothing has been changed since the app opened: the update cannot land in
+     the middle of an edit, so it is simply taken. Asking first only made
+     sense with work on screen; asking always meant that people who missed
+     the bar, or tapped Later, kept opening the old version indefinitely. */
+  const untouched = () => { try{ return hist.length <= 1; }catch(e){ return false; } };
   const offer = () => {
+    if(untouched()){ takeUpdate(); return; }
     if(offered) return; offered = true;
     const el = bar(); void el.offsetHeight; el.classList.add("show");
   };
@@ -10458,7 +10468,8 @@ refineBootRender();
 
   const check = () => {
     const now = Date.now();
-    if(!reg || now - lastCheck < 9e5) return;      // a quarter of an hour
+    if(reg && reg.waiting && navigator.serviceWorker.controller){ offered = false; offer(); return; }
+    if(!reg || now - lastCheck < 6e4) return;      // at most once a minute
     lastCheck = now;
     reg.update().catch(()=>{});
   };
