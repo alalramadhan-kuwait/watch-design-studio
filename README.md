@@ -143,7 +143,13 @@ Three collections in the Dial step (and in the full editor's colour field):
 **Studio**, a short house palette; **Watch classics**, 27 dial colours of
 well-known watches, each measured as the median colour of the dial in the
 maker's own catalogue photograph and labelled with the reference it came
-from; and **Pantone**, the curated Solid Coated list the factory works from.
+from; and **Pantone**, the full library: 2,131 colours (Solid Coated, Pastels &
+Neons and the Metallic guides, as of 2015), grouped by hue and searchable by
+code, with the code under each swatch. The sRGB values come from the open
+[pantonr](https://github.com/thompsongl/pantonr) data (MIT), built from
+Pantone's own swatch files; the names and the standard are Pantone's, and the
+newer 2001–2347 C codes are not included. The full editor keeps the earlier
+curated list as **Dial picks** and takes a typed code (Enter applies it).
 A photograph is one lighting of a dial, so a measured colour is a starting
 point; Pantone stays the binding reference. RAL Classic was considered and
 left out: its published values carry no open licence.
