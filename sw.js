@@ -75,6 +75,8 @@ self.addEventListener("fetch", e => {
   let url;
   try{ url = new URL(req.url); }catch(err){ return; }
   if(url.origin !== self.location.origin) return;
+  /* which version is published: always asked of the network, never cached */
+  if(url.pathname.endsWith("/version.json")) return;
 
   /* Opening the app: the cached shell, always, with the network only as the
      fallback for a first run. */

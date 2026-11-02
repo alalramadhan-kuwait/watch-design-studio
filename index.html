@@ -1059,6 +1059,11 @@ button, .layer, .vrow, .chip, .sw, .tabs, #mHead, .ghead, summary, label{
   transition:transform var(--ds-base) var(--ds-ease);
 }
 #updBar.show{ transform:translateX(-50%) translateY(0) }
+/* the version, small, in the corner of the watch: present in every screenshot */
+#verBadge{ position:absolute; left:10px; top:8px; z-index:6; border:0; border-radius:999px; padding:3px 9px;
+  font:500 11px/1.3 var(--ds-font, -apple-system, sans-serif); background:rgba(255,255,255,.72); color:#5b5f66;
+  -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px); cursor:default; pointer-events:auto }
+#verBadge.old{ background:#F5A524; color:#1d1d1f; font-weight:600; cursor:pointer }
 #updBar .btn{ padding:5px 12px; font-size:var(--ds-t-sm) }
 #updBar .btn[data-upd="go"]{ background:var(--ds-brand); color:#15181C; font-weight:600 }
 #updBar .btn.ghost{ background:transparent; color:var(--ds-text-2) }
@@ -1883,6 +1888,11 @@ let hist = [clone(S)], hi = 0, versions = [];
 /* The deployed commit, stamped in at publish time (as sw.js is), so the
    version a phone is running can be read off the More menu. */
 const APP_BUILD = "__BUILD__";
+/* The version people see, raised with every change that reaches them:
+   major for a new way of working, minor for something new to do, patch for
+   a fix. Shown on the watch screen, so any screenshot says which it was. */
+const APP_VERSION = "2.1.0";
+const APP_DATE = "__DATE__";
 
 /* Every route that replaces S passes through one of these three, which is
    why autosave hangs here rather than on each of the eighteen callers. */
@@ -9986,7 +9996,7 @@ refineBootRender();
       <p class="sub">Sharing, export and your saved versions.</p>
       <div id="mMoreSlots" style="display:flex;flex-direction:column;gap:8px"></div>
       <div id="mMoreVers" style="margin-top:14px"></div>
-      <p class="sub" style="margin-top:14px;text-align:center">Version ${APP_BUILD === "__" + "BUILD__" ? "development" : APP_BUILD.slice(0,7)}</p></div>`;
+      <p class="sub" style="margin-top:14px;text-align:center">Version ${APP_VERSION} · ${APP_BUILD === "__" + "BUILD__" ? "development" : APP_BUILD.slice(0,7)}</p></div>`;
   document.body.appendChild(more);
   const slots = more.querySelector("#mMoreSlots");
   /* Three output actions, each doing one thing, plus the occasional ones.
@@ -10402,9 +10412,40 @@ refineBootRender();
      the whole 1.9 MB file again, and doing that while the app is
      still starting would slow down the one thing it is meant to
      make fast. */
+  /* The version, on the watch screen. */
+  const fmtDate = d => { const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(d || ""); if(!m) return "";
+    return `${+m[3]} ${["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][+m[2]-1]}`; };
+  const badge = document.createElement("button");
+  badge.type = "button"; badge.id = "verBadge";
+  const showVer = (state, latest) => {
+    const here = `v${APP_VERSION}` + (fmtDate(APP_DATE) ? ` · ${fmtDate(APP_DATE)}` : "");
+    badge.classList.toggle("old", state === "old");
+    badge.textContent = state === "old" ? `${here} — update to v${latest}` : here;
+    badge.title = state === "old" ? "A newer version is published. Tap to update." : `Version ${APP_VERSION}, build ${String(APP_BUILD).slice(0,7)}`;
+  };
+  showVer("ok");
+  const stageEl = document.getElementById("stage"); if(stageEl) stageEl.appendChild(badge);
+  let wantUpdate = false;
+  badge.onclick = () => {
+    if(!badge.classList.contains("old")) return;
+    wantUpdate = true;
+    if(reg && reg.waiting) takeUpdate();
+    else { badge.textContent = "Updating…"; if(reg) reg.update().catch(()=>{}); setTimeout(()=>{ if(wantUpdate) location.reload(); }, 15000); }
+  };
+
   if(!("serviceWorker" in navigator) || !isSecureContext) return;
 
   let reg = null, offered = false, lastCheck = 0, reloading = false;
+  /* Ask the site which version is current. version.json is written at
+     deploy and never cached, so this is the published version, not ours. */
+  const askLatest = () => {
+    if(APP_BUILD === "__" + "BUILD__") return;
+    fetch("./version.json?t=" + Date.now(), {cache:"no-store"}).then(r => r.ok ? r.json() : null).then(v => {
+      if(!v || !v.build) return;
+      if(v.build !== APP_BUILD){ showVer("old", v.version || "?"); if(reg) reg.update().catch(()=>{}); }
+      else showVer("ok");
+    }).catch(()=>{});
+  };
 
   const bar = () => {
     let el = document.getElementById("updBar");
@@ -10428,7 +10469,7 @@ refineBootRender();
      the bar, or tapped Later, kept opening the old version indefinitely. */
   const untouched = () => { try{ return hist.length <= 1; }catch(e){ return false; } };
   const offer = () => {
-    if(untouched()){ takeUpdate(); return; }
+    if(untouched() || wantUpdate){ takeUpdate(); return; }
     if(offered) return; offered = true;
     const el = bar(); void el.offsetHeight; el.classList.add("show");
   };
@@ -10476,14 +10517,14 @@ refineBootRender();
 
   addEventListener("load", ()=> setTimeout(()=>{
     navigator.serviceWorker.register("sw.js", {scope:"./", updateViaCache:"none"})
-      .then(r => { watch(r); lastCheck = Date.now(); })
-      .catch(()=>{});
+      .then(r => { watch(r); lastCheck = Date.now(); askLatest(); })
+      .catch(()=>{ askLatest(); });
   }, 1200));
 
   /* Coming back to the app is the natural moment to find out
      whether it has moved on. */
   document.addEventListener("visibilitychange", ()=>{
-    if(document.visibilityState === "visible") check();
+    if(document.visibilityState === "visible"){ check(); askLatest(); }
   });
 })();
 </script>

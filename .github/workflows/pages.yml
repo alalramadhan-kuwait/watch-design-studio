@@ -39,6 +39,11 @@ jobs:
         run: |
           sed -i "s/__BUILD__/${GITHUB_SHA::12}/" sw.js
           sed -i "s/const APP_BUILD = \"__BUILD__\"/const APP_BUILD = \"${GITHUB_SHA::12}\"/" index.html
+          D=$(date -u +%Y-%m-%d)
+          sed -i "s/const APP_DATE = \"__DATE__\"/const APP_DATE = \"$D\"/" index.html
+          V=$(grep -o 'const APP_VERSION = "[^"]*"' index.html | head -1 | cut -d'"' -f2)
+          printf '{"version":"%s","build":"%s","date":"%s"}\n' "$V" "${GITHUB_SHA::12}" "$D" > version.json
+          cat version.json
           if grep -q "__BUILD__" sw.js; then
             echo "the build placeholder is still there — the worker would never change"
             exit 1

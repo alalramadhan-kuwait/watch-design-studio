@@ -137,6 +137,21 @@ On a phone the watch keeps the top of the screen and the steps the bottom.
 Each row of choices scrolls sideways, and the full editor is under **⋯**.
 A first visit opens on the standard dial.
 
+## Versions and updates
+
+The version and its date show in the top-left corner of the watch screen
+(**v2.1.0 · 2 Nov**), and with the build at the foot of the ⋯ menu, so any
+screenshot says which version it came from. `APP_VERSION` in `index.html` is
+raised with every change people will notice (major: a new way of working;
+minor: something new to do; patch: a fix). Each deploy stamps the commit and
+date into the app and publishes `version.json`.
+
+The app keeps an offline copy. On opening it asks the site for
+`version.json`; if a newer version is published, it installs straight away
+when nothing has been changed since the app opened, and otherwise the label
+turns orange (**update to vX**) and a tap installs it. The design is saved
+first and reopens.
+
 ## Cases
 
 A design names the case it is drawn for. **Case → Case** offers three, each fixed
