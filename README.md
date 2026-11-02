@@ -137,6 +137,17 @@ On a phone the watch keeps the top of the screen and the steps the bottom.
 Each row of choices scrolls sideways, and the full editor is under **⋯**.
 A first visit opens on the standard dial.
 
+## Dial colours
+
+Three collections in the Dial step (and in the full editor's colour field):
+**Studio**, a short house palette; **Watch classics**, 27 dial colours of
+well-known watches, each measured as the median colour of the dial in the
+maker's own catalogue photograph and labelled with the reference it came
+from; and **Pantone**, the curated Solid Coated list the factory works from.
+A photograph is one lighting of a dial, so a measured colour is a starting
+point; Pantone stays the binding reference. RAL Classic was considered and
+left out: its published values carry no open licence.
+
 ## Versions and updates
 
 The version and its date show in the top-left corner of the watch screen
