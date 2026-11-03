@@ -65,18 +65,30 @@ test('synthetic stone is always identified for review',()=>{
 // The case registry and the movement-calendar checks, run against the real source.
 const caseCtx=vm.createContext({hex2rgb:h=>[1,3,5].map(i=>parseInt(h.slice(i,i+2),16)),f:(n,d)=>Number(n).toFixed(d),visR:s=>s.case.opening/2});
 vm.runInContext(chunk('const VERNOY_CASE = {','const CASE_SPEC = new Proxy')+chunk('const HAND_MATERIAL = {','const POMME = {')+chunk('const HAND_REACH = [','const HAND_SHARE = [')
-  +chunk('  function contrast(a,b)', '  function brief()')+'\nthis.r={CASES,caseOf,VERNOY_CASE,NOREL_R3,NOREL_D,checks};',caseCtx);
-const {CASES,caseOf,VERNOY_CASE,NOREL_R3,NOREL_D,checks:caseChecks}=caseCtx.r;
+  +chunk('  function contrast(a,b)', '  function brief()')+'\nthis.r={CASES,caseOf,VERNOY_CASE,NOREL_R3,NOREL_D,NOREL_R4,checks};',caseCtx);
+const {CASES,caseOf,VERNOY_CASE,NOREL_R3,NOREL_D,NOREL_R4,checks:caseChecks}=caseCtx.r;
 test('the NOREL cases carry the SW240-1 calendar, and an unknown case falls back to the Vernoy',()=>{
-  assert.equal(Object.keys(CASES).length,3);
+  assert.equal(Object.keys(CASES).length,4);
   assert.equal(caseOf({case:{model:'no such case'}}),VERNOY_CASE);
   assert.equal(caseOf({case:{}}),VERNOY_CASE);
-  for(const K of [NOREL_R3,NOREL_D]){
+  for(const K of [NOREL_R3,NOREL_D,NOREL_R4]){
     assert.equal(K.shape,'round');assert.equal(K.calendar.dateW,2.4);assert.equal(K.calendar.dateH,2.0);assert.equal(K.calendar.dateC,9.95);
     assert.ok(K.glassD<K.bezelID&&K.opening<K.glassD&&K.dialD>K.opening,'surfaces stack outside in');
   }
   assert.equal(NOREL_D.bezelOD,NOREL_D.flat,'Concept D sits flush with the case');
   assert.ok(Math.abs((NOREL_D.bezelOD-NOREL_D.bezelID)/2-3.6)<1e-9);
+  // the 3 Nov 2026 drawing: Concept D taken up, with its own dial, bezel ring and cyclops
+  assert.equal(NOREL_R4.opening,31.4);assert.equal(NOREL_R4.dialD,32.5);assert.equal(NOREL_R4.glassD,33.5);assert.equal(NOREL_R4.height,11.2);
+  assert.ok(Math.abs((NOREL_R4.bezelOD-NOREL_R4.bezelID)/2-3.4)<1e-9,'the (3.40) bezel ring');
+  assert.ok(Math.abs(NOREL_R4.cyclops.c-NOREL_R4.calendar.dateC)<=0.1,'the cyclops is over the date');
+});
+test('the cyclops check measures the magnified window against the lens as drawn',()=>{
+  const st=noreFixture(); st.case.model=NOREL_R4.model; st.case.opening=31.4;
+  st.date.frameW=0.14; st.date.cyclops='2.5×';
+  const row=caseChecks(st).find(r=>r.title==='Cyclops coverage');
+  assert.ok(row,'there is a cyclops row');
+  st.date.cyclops='2.0×';
+  assert.equal(caseChecks(st).find(r=>r.title==='Cyclops coverage').ok,true,'2× fits the Ø7.0 × 5.5 lens');
 });
 const noreFixture=()=>({case:{locked:true,opening:31.4,model:NOREL_D.model},dial:{diameter:32.4,color:'#8DB4E4',finish:'matte'},
   hHand:{on:true,length:8,color:'#F2F4F7'},mHand:{on:true,length:12,color:'#F2F4F7'},sHand:{on:false},numerals:{on:false},indices:{on:false},minute:{on:false},

@@ -1342,7 +1342,26 @@ const NOREL_D = Object.assign({}, NOREL_R3, {
   cyclops:{w:7.0, h:5.6, mag:2.5}, tol:"proposal: Blue Creations to confirm bezel seat, crystal, cyclops and dial seat",
   photoFile:"./app/case-norel-d.jpg", photoCal:{w:1040, h:1560, cx:50, cy:50, dia:31.4*20/1040*100}
 });
-const CASES = {[VERNOY_CASE.model]:VERNOY_CASE, [NOREL_R3.model]:NOREL_R3, [NOREL_D.model]:NOREL_D};
+/* Blue Creations' assembly drawing of 3 Nov 2026 (B6098G-A1-SW240, Kevin):
+   Concept D taken up. Case and bezel Ø41.00 flush, glass Ø33.50, opening
+   Ø31.40, dial Ø32.50 × 0.40 on a Ø33.50 holder, back Ø36.50 on M34.50,
+   11.20 high over the crystal. The bezel ring is (3.40) wide, so its inner
+   edge is Ø34.20. The cyclops is drawn as a Ø7.00 lens cut flat top and
+   bottom to 5.50, 1.10 high, centred 10.00 mm out at 3 (measured off the
+   2:1 top view); the SW240-1 date sits at 9.95. Magnification is not on
+   the drawing: 2.5 is the usual, to be confirmed. */
+const NOREL_R4 = Object.assign({}, NOREL_D, {
+  model:"NOREL B6098G-A1 · R4 (3 Nov)", ref:"B6098G-A1-SW240 (drawing 2026.11.03)",
+  bezelOD:41.00, bezelID:34.20, opening:31.40, glassSeat:34.20, glassD:33.50, glassT:1.50,
+  glassBevel:"flat sapphire with a Ø7.00 × 5.50 cyclops, 1.10 high, centred 10.00 mm at 3H",
+  dialD:32.50, dialT:0.40, dialHolder:33.50, height:11.20,
+  /* 2.2×: the most this lens takes before the corners of the magnified
+     2.40 × 2.00 window run past its edge (2.5× cuts them) */
+  cyclops:{w:7.0, h:5.5, mag:2.2, c:10.0, shape:"cut circle", lift:1.10},
+  tol:"from Blue Creations' assembly drawing of 2026.11.03; cyclops magnification to confirm",
+  photoFile:"./app/case-norel-r4.jpg"
+});
+const CASES = {[VERNOY_CASE.model]:VERNOY_CASE, [NOREL_R3.model]:NOREL_R3, [NOREL_D.model]:NOREL_D, [NOREL_R4.model]:NOREL_R4};
 const CASE_MODELS = Object.keys(CASES);
 const caseOf = st => (st && st.case && CASES[st.case.model]) || VERNOY_CASE;
 /* CASE_SPEC is the case of the design on screen. It reads through to that
@@ -1929,7 +1948,7 @@ const APP_BUILD = "__BUILD__";
 /* The version people see, raised with every change that reaches them:
    major for a new way of working, minor for something new to do, patch for
    a fix. Shown on the watch screen, so any screenshot says which it was. */
-const APP_VERSION = "2.4.0";
+const APP_VERSION = "2.5.0";
 const APP_DATE = "__DATE__";
 
 /* Every route that replaces S passes through one of these three, which is
@@ -5369,13 +5388,22 @@ function buildSVG(st, o={}){
       if(mag > 1 && scope !== "dial"){
         const cyc = K.cyclops || {w:7.0, h:5.0};
         const cid = id("cyc");
-        defs.push(`<clipPath id="${cid}"><rect x="${f(-cyc.w/2,3)}" y="${f(-cyc.h/2,3)}" width="${cyc.w}" height="${cyc.h}" rx="${f(cyc.h*0.42,3)}"/></clipPath>`);
-        body.push(`<g transform="translate(${f(p[0],3)},${f(p[1],3)})"><g clip-path="url(#${cid})">
+        /* The lens sits where the case maker puts it (cyc.c, out along the
+           date's hour), and magnifies about its own centre: the date window,
+           offset from the lens axis, appears that offset times the
+           magnification away from it. The outline is the lens as drawn: a
+           circle cut flat top and bottom, or a rounded rectangle. */
+        const lc = cyc.c || dt.dist, lp = pt(lc, dt.at*30), off = [p[0]-lp[0], p[1]-lp[1]];
+        const R = cyc.w/2, hh = cyc.h/2;
+        const lens = cyc.shape === "cut circle"
+          ? (() => { const x0 = Math.sqrt(Math.max(0, R*R - hh*hh)); return `<path d="M${f(-x0,3)} ${f(-hh,3)} H${f(x0,3)} A${f(R,3)} ${f(R,3)} 0 0 1 ${f(x0,3)} ${f(hh,3)} H${f(-x0,3)} A${f(R,3)} ${f(R,3)} 0 0 1 ${f(-x0,3)} ${f(-hh,3)}Z"`; })()
+          : `<rect x="${f(-cyc.w/2,3)}" y="${f(-cyc.h/2,3)}" width="${cyc.w}" height="${cyc.h}" rx="${f(cyc.h*0.42,3)}"`;
+        defs.push(`<clipPath id="${cid}">${lens}/></clipPath>`);
+        body.push(`<g transform="translate(${f(lp[0],3)},${f(lp[1],3)})"><g clip-path="url(#${cid})">
           <rect x="${f(-cyc.w/2,3)}" y="${f(-cyc.h/2,3)}" width="${cyc.w}" height="${cyc.h}" fill="${d.color}"/>
-          <g transform="scale(${mag})">${frame}${win}${line}</g></g>
-          <rect x="${f(-cyc.w/2,3)}" y="${f(-cyc.h/2,3)}" width="${cyc.w}" height="${cyc.h}" rx="${f(cyc.h*0.42,3)}" fill="#FFFFFF" fill-opacity="0.10"
-            stroke="#FFFFFF" stroke-opacity="0.55" stroke-width="0.10"/>
-          <path d="M${f(-cyc.w/2+0.6,3)} ${f(-cyc.h/2+0.45,3)} H${f(cyc.w/2-0.9,3)}" stroke="#FFFFFF" stroke-opacity="0.5" stroke-width="0.22" stroke-linecap="round"/></g>`);
+          <g transform="scale(${mag}) translate(${f(off[0],3)},${f(off[1],3)})">${frame}${win}${line}</g></g>
+          ${lens} fill="#FFFFFF" fill-opacity="0.10" stroke="#FFFFFF" stroke-opacity="0.55" stroke-width="0.10"/>
+          <path d="M${f(-cyc.w/2+1.0,3)} ${f(-cyc.h/2+0.45,3)} H${f(cyc.w/2-1.3,3)}" stroke="#FFFFFF" stroke-opacity="0.5" stroke-width="0.22" stroke-linecap="round"/></g>`);
       }
     }
     // text
@@ -7983,7 +8011,7 @@ const SCHEMA = {
     N("date.at","Position (hour)",1,12,1,"h"), N("date.dist","Distance from centre",2,18),
     N("date.w","Width",1.5,8,.05), N("date.h","Height",1.2,6,.05),
     N("date.frameW","Frame width",0,1.6,.05),
-    SEL("date.cyclops","Cyclops",["none","1.5×","2.0×","2.5×"]),
+    SEL("date.cyclops","Cyclops",["none","1.5×","2.0×","2.2×","2.5×"]),
     SEL("date.digits","Digits",["Western","Arabic-Indic"]),
     S.date.digits === "Arabic-Indic" ? SEL("date.fontAr","Font",DAY_FONTS_AR) : SEL("date.fontEn","Font",DAY_FONTS_EN),
     N("date.shown","Date shown",1,31,1,""),
@@ -10807,7 +10835,16 @@ refineBootRender();
       add(st.date.w<=cal.dateW+1e-6&&st.date.h<=cal.dateH+1e-6,'Date window size',`${f(st.date.w,2)} × ${f(st.date.h,2)} mm against the movement's ${f(cal.dateW,2)} × ${f(cal.dateH,2)} mm aperture; larger shows the ring edge or the next date.`,'date');
       add(Math.abs(st.date.dist-cal.dateC)<.05&&st.date.at===3,'Date window position',`At ${st.date.at} o'clock, ${f(st.date.dist,2)} mm from centre; the movement shows the date at 3, ${f(cal.dateC,2)} mm out.`,'date');
       const cyc=caseOf(st).cyclops,mag=parseFloat(st.date.cyclops)||1;
-      if(mag>1)add(st.date.w*mag<=cyc.w-.3&&st.date.h*mag<=cyc.h-.3,'Cyclops coverage',`At ${mag}× the date appears ${f(st.date.w*mag,1)} × ${f(st.date.h*mag,1)} mm under a ${f(cyc.w,1)} × ${f(cyc.h,1)} mm lens.`,'date');
+      if(mag>1){
+        /* the magnified window, its frame included, has to sit inside the
+           lens outline with 0.15 mm to spare, corners and all */
+        const fw=(st.date.frameW||0)>0.2?st.date.frameW:0, W=(st.date.w/2+fw)*mag, H=(st.date.h/2+fw)*mag;
+        const s=Math.abs(st.date.dist-(cyc.c||st.date.dist))*mag, R=cyc.w/2-.15, hh=cyc.h/2-.15;
+        const inside = cyc.shape==='cut circle' ? (H<=hh && (s+W)**2+H**2<=R*R) : (W+s<=cyc.w/2-.15 && H<=hh);
+        let fits=mag; for(let m=mag;m>1;m-=.05){ const W2=(st.date.w/2+fw)*m,H2=(st.date.h/2+fw)*m,s2=Math.abs(st.date.dist-(cyc.c||st.date.dist))*m;
+          if(cyc.shape==='cut circle' ? (H2<=hh && (s2+W2)**2+H2**2<=R*R) : (W2+s2<=cyc.w/2-.15 && H2<=hh)){ fits=m; break; } }
+        add(inside,'Cyclops coverage',`At ${mag}× the date window${fw?' and its frame':''} appear${fw?'':'s'} ${f(2*W,1)} × ${f(2*H,1)} mm under a ${cyc.shape==='cut circle'?'Ø':''}${f(cyc.w,1)} × ${f(cyc.h,1)} mm lens${cyc.c?` centred ${f(cyc.c,2)} mm out (date at ${f(st.date.dist,2)})`:''}. ${inside?'It sits inside the lens.':`Its corners run past the lens edge; up to ${f(fits,2)}× it fits, or use a smaller window or frame.`}`,'date');
+      }
     }
     if(cal&&st.day&&st.day.on&&st.numerals&&st.numerals.on&&(st.numerals.set==='all'||!st.numerals.set)&&st.numerals.dayClear==='touch'){
       /* The numerals at 11 and 1 sit 30° from the window's centre line; the
@@ -11305,7 +11342,7 @@ body.guided .atelier-nav, body.guided #gHideInGuided, body.guided .bar .grp.tool
       const cards = [];
       cards.push({id:"fresh", name:"Fresh start", sub:"Standard dial", st:freshState()});
       cards.push({id:"cur", name:"Keep my current design", sub:S.meta.name, st:S});
-      if(noreRef) cards.push({id:"norel", name:"NOREL Concept D", sub:"Powder blue · day-date", st:migrateHands(deep(BASE, noreRef))});
+      if(noreRef) cards.push({id:"norel", name:"NOREL B6098G-A1", sub:"Powder blue · 3 Nov case", st:migrateHands(deep(BASE, noreRef))});
       for(const n of Object.keys(PRESETS)) if(n !== "Standard") cards.push({id:"p:"+n, name:n.replace(/^Vernoy — /,""), sub:n.startsWith("Vernoy") ? "Vernoy" : "Style study", st:migrateHands(deep(BASE, PRESETS[n]))});
       const vers = (versions || []).map((v,i) => ({id:"v:"+i, name:v.name, sub:"Saved version", st:v.state ? migrateHands(deep(BASE, v.state)) : null})).filter(c => c.st);
       const card = c => `<button type="button" class="gCard ${c.id==="cur"?"on":""}" data-gstart="${esc2(c.id)}"><div class="gPic">${thumb(c.st, c.id)}</div><div class="gName">${esc2(c.name)}</div><div class="gSub">${esc2(c.sub)}</div></button>`;
@@ -11321,7 +11358,7 @@ body.guided .atelier-nav, body.guided #gHideInGuided, body.guided .bar .grp.tool
         try{ S = clone(keep); applyCaseModel(K.model, m); st = S; }finally{ S = keep; }
         return thumb(st, "case:" + m);
       };
-      const sub = {[VERNOY_CASE.model]:"36 mm cushion · strap", [NOREL_R3.model]:"41 mm round · as drawn", [NOREL_D.model]:"41 mm round · proposal"};
+      const sub = {[VERNOY_CASE.model]:"36 mm cushion · strap", [NOREL_R3.model]:"41 mm round · R3", [NOREL_D.model]:"41 mm round · proposal", [NOREL_R4.model]:"41 mm round · 3 Nov drawing"};
       let h = `<div class="gCards">${CASE_MODELS.map(m => `<button type="button" class="gCard ${m===K.model?"on":""}" data-gcase="${esc2(m)}"><div class="gPic">${pic(m)}</div><div class="gName">${esc2(m.replace(/ · RD26-0172|B6098G-A1 · /g, ""))}</div><div class="gSub">${sub[m]}</div></button>`).join("")}</div>`;
       h += `<h3>Metal</h3>` + swatches("case.material", [["#C8C9C7","Steel"],["#E3E4E6","White gold"],["#D7B56D","Yellow gold"],["#D9A48C","Rose gold"],["#3B3D42","Black"]], S.case.material);
       h += `<h3>Finish</h3>` + chips("case.finish", [["polished","Polished"],["brushed","Brushed"],["satin","Satin"]], S.case.finish);
@@ -11439,7 +11476,7 @@ body.guided .atelier-nav, body.guided #gHideInGuided, body.guided .bar .grp.tool
       } else h += `<p class="gNote">A day window needs a day-date movement: choose a NOREL case in Case.</p>`;
       h += toggle("date.on", "Date window at 3", S.date.on);
       if(S.date.on){
-        h += `<h3>Magnifier</h3>` + chips("date.cyclops", [["none","None"],["2.0×","2×"],["2.5×","2.5×"]], S.date.cyclops || "none");
+        h += `<h3>Magnifier</h3>` + chips("date.cyclops", [["none","None"],["2.0×","2×"],["2.2×","2.2×"],["2.5×","2.5×"]], S.date.cyclops || "none");
         h += `<h3>Digits</h3>` + chips("date.digits", [["Western","1 2 3"],["Arabic-Indic","١ ٢ ٣"]], S.date.digits || "Western");
         const dar = S.date.digits === "Arabic-Indic", n31 = String(S.date.shown || 31);
         h += `<h3>Date font</h3>` + fontTiles(dar ? "date.fontAr" : "date.fontEn", dar ? DAY_FONTS_AR : DAY_FONTS_EN, dayFontOf(dar ? S.date.fontAr : S.date.fontEn, dar), dar ? n31.replace(/\d/g, n => "٠١٢٣٤٥٦٧٨٩"[n]) : n31, dar);

@@ -1,6 +1,6 @@
 {
  "meta": {
-  "name": "NOREL — Concept D powder blue",
+  "name": "NOREL — powder blue (3 Nov case)",
   "time": {
    "h": 10,
    "m": 9,
@@ -33,7 +33,7 @@
  "case": {
   "on": true,
   "locked": true,
-  "model": "NOREL B6098G-A1 · Concept D",
+  "model": "NOREL B6098G-A1 · R4 (3 Nov)",
   "material": "#C8CBCF",
   "finish": "polished",
   "cab": "#C9CDD2",
@@ -43,7 +43,7 @@
   "opening": 31.4,
   "lugToLug": 48,
   "lugWidth": 21,
-  "thickness": 11.5
+  "thickness": 11.2
  },
  "dial": {
   "on": true,
@@ -54,7 +54,7 @@
   "radialPhase": 0,
   "stamp": 0.55,
   "lock": true,
-  "diameter": 32.4,
+  "diameter": 32.5,
   "color": "#A9C3DD",
   "finish": "matte",
   "secondary": "#93AFCB",
@@ -240,8 +240,8 @@
   "frame": "#D3D6DA",
   "bg": "#F6F5F1",
   "text": "#16191F",
-  "frameW": 0.55,
-  "cyclops": "2.5×",
+  "frameW": 0.14,
+  "cyclops": "2.2×",
   "digits": "Arabic-Indic",
   "shown": 1
  },
@@ -254,7 +254,8 @@
   "text": "#16191F",
   "lang": "Arabic",
   "shown": "Friday",
-  "textH": 1.45
+  "textH": 1.45,
+  "edge": "bevel"
  },
  "text": {
   "on": true,

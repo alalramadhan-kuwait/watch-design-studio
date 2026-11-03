@@ -179,6 +179,7 @@ to its factory drawings:
 | Vernoy cushion · RD26-0172 | the original 36 mm cushion case, with its photograph template |
 | NOREL B6098G-A1 · R3 | Blue Creations' 41 mm round case as drawn: 40.0 / 34.8 fluted bezel (72 V flutes 0.41 mm deep, taken from their STEP; the photograph uses that bezel), Ø32.5 opening, President bracelet, Sellita SW240-1 day-date |
 | NOREL B6098G-A1 · Concept D | the proposal: a 41.0 bezel flush with the case, 33.8 inside (3.6 mm of flutes and land a side), Ø31.4 opening, 2.5× cyclops |
+| NOREL B6098G-A1 · R4 (3 Nov) | Blue Creations' assembly drawing of 2026.11.03, Concept D taken up: Ø41 bezel flush, (3.40) ring to Ø34.2, Ø33.5 glass, Ø31.4 opening, Ø32.5 dial, 11.2 mm; a Ø7.0 × 5.5 cut-circle cyclops centred 10.0 mm out (date at 9.95) |
 
 Changing the case refits the dial: every radial measurement — chapter ring,
 tracks, zones, borders, numerals, indices, logo position — is scaled by the

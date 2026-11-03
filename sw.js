@@ -36,7 +36,8 @@ const SHELL = [
   "./app/icon-maskable-512.png",
   "./app/apple-touch-icon.png",
   "./app/case-norel-r3.jpg",
-  "./app/case-norel-d.jpg"
+  "./app/case-norel-d.jpg",
+  "./app/case-norel-r4.jpg"
 ];
 
 self.addEventListener("install", e => {
