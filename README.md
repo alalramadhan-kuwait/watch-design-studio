@@ -137,6 +137,14 @@ On a phone the watch keeps the top of the screen and the steps the bottom.
 Each row of choices scrolls sideways, and the full editor is under **⋯**.
 A first visit opens on the standard dial.
 
+## The NOREL case photograph
+
+The R4 (3 Nov) case is shown in Blue Creations' own render of the watch on
+its bracelet (`app/case-norel-r4-real.jpg`): their case, fluted bezel, crown
+and bracelet, with the designed dial drawn into the opening (Ø31.40 = 65.14%
+of the picture's width, centred). The supplier's dial, text and colour labels
+were removed from the picture first.
+
 ## The NOREL logo
 
 NOREL's logo is built in as vector artwork, traced from the client's file of

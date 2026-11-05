@@ -1359,7 +1359,10 @@ const NOREL_R4 = Object.assign({}, NOREL_D, {
      2.40 × 2.00 window run past its edge (2.5× cuts them) */
   cyclops:{w:7.0, h:5.5, mag:2.2, c:10.0, shape:"cut circle", lift:1.10},
   tol:"from Blue Creations' assembly drawing of 2026.11.03; cyclops magnification to confirm",
-  photoFile:"./app/case-norel-r4.jpg"
+  /* Blue Creations' own render of the watch on its bracelet: their case, bezel,
+     crown and bracelet, with our dial drawn into its opening (Ø31.40 = 500 px of
+     768, centred). Earlier this was the Blender bezel on a drawn case. */
+  photoFile:"./app/case-norel-r4-real.jpg", photoCal:{w:1040, h:1560, cx:49.99, cy:50.03, dia:65.14}
 });
 const CASES = {[VERNOY_CASE.model]:VERNOY_CASE, [NOREL_R3.model]:NOREL_R3, [NOREL_D.model]:NOREL_D, [NOREL_R4.model]:NOREL_R4};
 const CASE_MODELS = Object.keys(CASES);
@@ -1948,7 +1951,7 @@ const APP_BUILD = "__BUILD__";
 /* The version people see, raised with every change that reaches them:
    major for a new way of working, minor for something new to do, patch for
    a fix. Shown on the watch screen, so any screenshot says which it was. */
-const APP_VERSION = "2.6.0";
+const APP_VERSION = "2.7.0";
 const APP_DATE = "__DATE__";
 
 /* Every route that replaces S passes through one of these three, which is
