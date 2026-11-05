@@ -1,6 +1,6 @@
 {
  "meta": {
-  "name": "NOREL — powder blue (3 Nov case)",
+  "name": "NOREL — powder blue (3 Nov case, logo)",
   "time": {
    "h": 10,
    "m": 9,
@@ -260,8 +260,8 @@
  "text": {
   "on": true,
   "logo": "NOREL",
-  "logoY": -7.6,
-  "logoSize": 1.7,
+  "logoY": -8.2,
+  "logoSize": 5.4,
   "logoFont": "serif",
   "line2": "",
   "line2Y": -5.045,
@@ -273,7 +273,7 @@
   "logoCurve": false,
   "line2Curve": false,
   "footCurve": false,
-  "logoMark": "none",
+  "logoMark": "NOREL logo",
   "logoTech": "printed",
   "logoMetal": "polished steel",
   "logoHeight": 0.2,

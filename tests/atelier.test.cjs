@@ -104,3 +104,14 @@ test('the Vernoy case is not given movement-calendar checks',()=>{
   const s=noreFixture();s.case.model=VERNOY_CASE.model;s.case.opening=30.5;
   assert.equal(caseChecks(s).some(t=>t.title==='Date window size'||t.title==='Day window arc'),false);
 });
+test('the NOREL design opens with NOREL\'s own logo, drawn from the built-in vector marks', () => {
+  const design = JSON.parse(fs.readFileSync(require('node:path').join(__dirname, '../designs/norel-concept-d-powder-blue.json'), 'utf8'));
+  assert.equal(design.text.logoMark, 'NOREL logo');
+  for (const k of ['NOREL logo', 'NOREL shield', 'NOREL wordmark']) {
+    const m = source.match(new RegExp('LOGO_MARKS\\["' + k + '"\\] = \\{w:([\\d.]+), d:"(M[^"]+)"\\}'));
+    assert.ok(m, k + ' is defined');
+    assert.ok(+m[1] > 0 && m[2].endsWith('Z'), k + ' has a width and a closed path');
+  }
+  // added after "Your logo", so the numbered ids of the older marks do not move
+  assert.ok(source.indexOf('LOGO_MARKS["Your logo"]') < source.indexOf('LOGO_MARKS["NOREL logo"]'));
+});

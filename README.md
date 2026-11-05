@@ -122,7 +122,7 @@ eight steps — **Start** (a fresh standard dial, a preset, a reference design
 or a saved version), **Case**, **Dial** (colour, surface, minute track),
 **Markers** (numeral system and font, how they are made, colour, size and
 position, or index shapes), **Hands** (shape, metal, lume, seconds hand),
-**Text** (your logo uploaded as a PNG, JPG or SVG, or typed in a font; two lines of lettering and where they sit), **Date**
+**Text** (the built-in NOREL logo or its shield alone, your own logo uploaded as a PNG, JPG or SVG, or a name typed in a font; two lines of lettering and where they sit), **Date**
 (day and date windows, their discs and magnifier) and **Finish** (name, the
 design check, saving and sharing). Figures and indices under a day or date
 window are left off, as a dial maker would.
@@ -136,6 +136,16 @@ whichever one made it. The browser remembers which one you used last.
 On a phone the watch keeps the top of the screen and the steps the bottom.
 Each row of choices scrolls sideways, and the full editor is under **⋯**.
 A first visit opens on the standard dial.
+
+## The NOREL logo
+
+NOREL's logo is built in as vector artwork, traced from the client's file of
+5 Nov 2026: **NOREL logo** (the shield over the wordmark), **NOREL shield** and
+**NOREL wordmark**. Being vectors, they stay sharp at any size and take the
+lettering colour, raised print or an applied metal like the other marks. The
+NOREL start design opens with the full logo in navy, 5.4 mm high, centred
+8.2 mm above the centre, just under the day window. In simple mode choose it
+under **Text → Logo**.
 
 ## Dial colours
 
