@@ -137,6 +137,13 @@ On a phone the watch keeps the top of the screen and the steps the bottom.
 Each row of choices scrolls sideways, and the full editor is under **⋯**.
 A first visit opens on the standard dial.
 
+## ١١ and ١ beside the day window
+
+Date → the figures beside the window can be moved aside, made smaller, left
+off, left touching, or replaced by **markers**: a short baton at 1 and at 11
+in the numerals' colour or metal, its outer end on the numerals' outer edge.
+Moved or made smaller, the two change together so the dial stays balanced.
+
 ## Stone and mother-of-pearl dials
 
 In simple mode, **Dial → Surface → Stone** lists the sixteen stones

@@ -1951,7 +1951,7 @@ const APP_BUILD = "__BUILD__";
 /* The version people see, raised with every change that reaches them:
    major for a new way of working, minor for something new to do, patch for
    a fix. Shown on the watch screen, so any screenshot says which it was. */
-const APP_VERSION = "2.9.0";
+const APP_VERSION = "2.10.0";
 const APP_DATE = "__DATE__";
 
 /* Every route that replaces S passes through one of these three, which is
@@ -5142,11 +5142,31 @@ function buildSVG(st, o={}){
       const placeNum = (n, a) => {
         const base = place(n, a, 1);
         if(!DW || (n !== 1 && n !== 11) || nm.dayClear === "touch") return base;
+        if(nm.dayClear === "index") return null;                 // a marker stands in its place (below)
         const fx = pairOf();
         if(!fx) return base;
         if(fx.drop) return null;
         return place(n, n === 1 ? fx.na : 360 - fx.na, fx.sc);
       };
+      /* "Use markers": ١١ and ١ give way to a short baton each, in the
+         numerals' own colour or metal, its outer end on the numerals' outer
+         edge. Being narrow it clears the window at 30°; on a very wide window
+         both are turned out by the same amount. */
+      if(DW && nm.dayClear === "index" && set.some(n => n === 1 || n === 11)){
+        const Ro = nm.radius + nm.size*0.5, L = nm.size*0.72, W = Math.max(0.22, nm.size*0.085);
+        const halfDeg = W/(Ro - L)*180/Math.PI;
+        const aM = Math.max(30, lim + halfDeg);
+        const metal = tech === "applied" && mat === "metal";
+        const col = metal ? (METALS[nm.metal] || METALS["polished steel"]).base : nm.color;
+        /* no filter: the shadow is its own soft copy, which every renderer
+           keeps (a filter reference was dropped in the photographed view) */
+        const mk = {style:"baton", radius:Ro - L/2, length:L, width:W, color:col, applied:false};
+        for(const n of [1, 11]) if(set.indexOf(n) >= 0){
+          const aa = n === 1 ? aM : 360 - aM;
+          if(tech === "applied") body.push(`<g transform="translate(0.06 0.10)" opacity="0.35">${indexShape(Object.assign({}, mk, {color:"#000000"}), aa, id, defs, laN)}</g>`);
+          body.push(indexShape(mk, aa, id, defs, laN));
+        }
+      }
       /* ---- applied metal: built as a solid piece, not a filled outline ---- */
       if(MK.piece){
         /* The walls and the chamfer have to be mixable colours — a slab arrives
@@ -8051,7 +8071,7 @@ const SCHEMA = {
     N("day.arc","Window arc",30,53,.5,"°"),
     SEL("day.edge","Window edge",["bevel","frame"]),
     ...(S.day.edge === "frame" ? [N("day.frame","Frame width",0,1.0,.05)] : [N("day.bevel","Bevel width",0.1,0.6,.02)]),
-    SEL("numerals.dayClear","11 and 1 beside the window",["move","shrink","drop","touch"]),
+    SEL("numerals.dayClear","11 and 1 beside the window",["move","shrink","index","drop","touch"]),
     SEL("day.lang","Day names",["Arabic","English"]),
     S.day.lang === "English" ? SEL("day.fontEn","Font",DAY_FONTS_EN) : SEL("day.fontAr","Font",DAY_FONTS_AR),
     SEL("day.shown","Day shown",DAY_NAMES_EN),
@@ -11539,7 +11559,7 @@ body.guided .atelier-nav, body.guided #gHideInGuided, body.guided .bar .grp.tool
             h += `<h3>${S.numerals.system === "arabic ٠–٩" ? "١١ and ١" : "11 and 1"} beside the window</h3>`;
             if(fit && fit.touching) h += `<p class="gNote" style="color:#B26A00">At ${f(S.day.arc,1)}° the window reaches the figures. The widest window that leaves them room is ${f(fit.arc,1)}°.</p>`
               + `<button type="button" class="gMore" style="margin:0 0 8px" data-gdo="fitday">Narrow the window to ${f(fit.arc,1)}°</button>`;
-            h += chips("numerals.dayClear", [["move","Move them aside"],["shrink","Make them smaller"],["drop","Leave them off"],["touch","Let them touch"]], S.numerals.dayClear || "move");
+            h += chips("numerals.dayClear", [["move","Move them aside"],["shrink","Make them smaller"],["index","Use markers"],["drop","Leave them off"],["touch","Let them touch"]], S.numerals.dayClear || "move");
           }
           h += `<h3>Day disc</h3>` + swatches("day.bg", DISC, S.day.bg) + `<h3>Day lettering</h3>` + swatches("day.text", INK, S.day.text);
         }
