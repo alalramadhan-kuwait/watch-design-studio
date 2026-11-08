@@ -137,6 +137,17 @@ On a phone the watch keeps the top of the screen and the steps the bottom.
 Each row of choices scrolls sideways, and the full editor is under **⋯**.
 A first visit opens on the standard dial.
 
+## Stone and mother-of-pearl dials
+
+In simple mode, **Dial → Surface → Stone** lists the sixteen stones
+(malachite, tiger's eye, meteorite, aventurine, lapis lazuli, turquoise,
+rhodonite, sodalite, carnelian, jade, onyx, snowflake obsidian, opal, white
+onyx, pietersite, red jasper), each drawn from its photographed slab.
+**Mother of pearl** uses the photographed nacre slab. Where the printing
+(numerals, logo and text, minute track) would not read on the chosen stone,
+a button sets it to white, or to navy on a pale stone; the test is the
+contrast against the slab's measured average tone.
+
 ## Numeral and lettering colours
 
 In simple mode the numerals, hour markers, minute track and text each take

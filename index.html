@@ -1951,7 +1951,7 @@ const APP_BUILD = "__BUILD__";
 /* The version people see, raised with every change that reaches them:
    major for a new way of working, minor for something new to do, patch for
    a fix. Shown on the watch screen, so any screenshot says which it was. */
-const APP_VERSION = "2.8.1";
+const APP_VERSION = "2.9.0";
 const APP_DATE = "__DATE__";
 
 /* Every route that replaces S passes through one of these three, which is
@@ -11352,6 +11352,16 @@ body.guided .atelier-nav, body.guided #gHideInGuided, body.guided .bar .grp.tool
     ["#D9B37A","Champagne"],["#C08A6E","Rose gold"],["#8C6A3F","Bronze"],["#6B4A33","Brown"],["#A9C3DD","Powder blue"],["#5C8FC9","Sky blue"],
     ["#1E6F78","Teal"],["#8FC7A8","Mint"],["#2E5E45","Green"],["#E8C547","Yellow"],["#E2652A","Orange"],["#C8102E","Signal red"],
     ["#6E1F2E","Burgundy"],["#E3A1B5","Pink"],["#5B3C88","Purple"]]);
+  /* The average tone of each stone's slab, measured from its picture: enough
+     to tell whether navy printing will read on it or white is needed. */
+  const STONE_TONE = {"mother of pearl":"#DDDBDA","meteorite":"#928E8A","aventurine":"#315439","opal":"#BBC7D5","snowflake obsidian":"#343539",
+    "onyx":"#080808","carnelian":"#B02E0A","jade":"#5D8159","rhodonite":"#A46060","lapis lazuli":"#122064","malachite":"#095137",
+    "turquoise":"#39A4A9","sodalite":"#394460","white onyx":"#DAD5CC","pietersite":"#584F3F","red jasper":"#7F240E","tiger's eye":"#834D0E"};
+  const relLum = hex => { const c = [1,3,5].map(i => parseInt(String(hex).slice(i,i+2),16)/255).map(v => v <= 0.03928 ? v/12.92 : Math.pow((v+0.055)/1.055, 2.4));
+    return 0.2126*c[0] + 0.7152*c[1] + 0.0722*c[2]; };
+  const contrastOf = (a,b) => { const x = relLum(a), y = relLum(b); return (Math.max(x,y)+0.05)/(Math.min(x,y)+0.05); };
+  const useStone = fam => { const d = S.dial; d.finish = "stone"; d.stone = fam;
+    const f = slabsOf(fam)[0]; d.slab = f ? f.id : ""; applyFamilyDefaults(fam); };
   /* Lettering colour: the printer's colours, or any Pantone by code or family. */
   const inkPicker = (path, cur) => {
     let h = chips("ui.mpal", [["ink","Print colours"],["pantone","Pantone"]], mpal);
@@ -11424,7 +11434,18 @@ body.guided .atelier-nav, body.guided #gHideInGuided, body.guided .bar .grp.tool
       else h += swatches("dial.color", [["#0E1F55","Navy"],["#1D3FA0","Royal blue"],["#A9C3DD","Powder blue"],["#9ED3EC","Ice blue"],["#15171C","Black"],["#E9E7E1","Silver white"],["#F4F2EC","White"],["#D9C9A3","Champagne"],["#1F4A3A","Green"],["#8FB8A2","Mint"],["#E6B8A2","Salmon"],["#5E1E2C","Burgundy"],["#7B828A","Slate"]], d.color);
       const cl = classicOf(d.color), pn = nearestPantone(d.color);
       h += `<p class="gNote">${cl ? `<b>${esc2(cl[0])}</b> · measured from the dial of ref. ${cl[2]} · ` : ""}${d.color}${pn ? ` · ${pn.exact ? "PANTONE " + pn.code : "nearest PANTONE " + pn.code}` : ""}</p>`;
-      h += `<h3>Surface</h3>` + chips("dial.finish", [["sunburst","Sunburst"],["matte","Matte"],["guilloche","Guilloché"],["enamel","Enamel"],["lacquer","Lacquer"],["gloss","Gloss"],["grained","Grained"],["stone","Stone"],["mop","Mother of pearl"]], d.finish);
+      const isMop = d.finish === "mop" || (d.finish === "stone" && d.stone === "mother of pearl");
+      h += `<h3>Surface</h3>` + chips("dial.finish", [["sunburst","Sunburst"],["matte","Matte"],["guilloche","Guilloché"],["enamel","Enamel"],["lacquer","Lacquer"],["gloss","Gloss"],["grained","Grained"],["stone","Stone"],["mop","Mother of pearl"]], isMop ? "mop" : d.finish);
+      if(d.finish === "stone" && !isMop){
+        h += `<h3>Stone</h3>` + chips("ui.stone", STONE_FAMILIES.filter(f => f !== "other" && f !== "mother of pearl" && BUILTIN_STONE[f]).map(f => [f, f[0].toUpperCase() + f.slice(1)]), d.stone);
+      }
+      if(d.finish === "stone"){
+        /* printing that will not read on this stone: one tap to white, or to navy */
+        const tone = STONE_TONE[d.stone], prints = [["numerals", S.numerals.on && /printed/.test(S.numerals.tech || "")], ["text", S.text.on], ["minute", S.minute.on]].filter(x => x[1]).map(x => x[0]);
+        const lowC = tone && prints.some(k => contrastOf(S[k].color, tone) < 3);
+        if(lowC){ const toWhite = relLum(tone) < 0.25;
+          h += `<p class="gNote">The printing is hard to read on ${esc2(d.stone)}.</p><button type="button" class="gMore" style="margin:0 0 8px" data-gset="ui.printOn" data-gv='"${toWhite ? "#F4F4F2" : "#1F2D47"}"'>Print in ${toWhite ? "white" : "navy"}</button>`; }
+      }
       if(d.finish === "guilloche") h += `<h3>Pattern</h3>` + chips("dial.pattern", GUIL_PATTERNS.map(p => [p, (GUIL_LABEL[p] || p).replace(/ \(.*/,"")]), d.pattern);
       h += `<h3>Minute track</h3>` + chips("minute.style", [["none","None"],["railroad","Railroad"],["ticks","Ticks"],["dots","Dots"],["beads","Beads"],["dashes","Dashes"]], S.minute.on ? S.minute.style : "none");
       if(S.minute.on) h += `<h3>Track colour</h3>` + inkPicker("minute.color", S.minute.color);
@@ -11658,6 +11679,15 @@ body.guided .atelier-nav, body.guided #gHideInGuided, body.guided .bar .grp.tool
     if(t.classList.contains("back")){ if(step > 0){ step--; paint(); body.scrollTop = 0; } return; }
     if(t.classList.contains("next")){ if(step < STEPS.length-1){ step++; paint(); body.scrollTop = 0; } else { const sv = document.getElementById("save"); if(sv) sv.click(); } return; }
     if(d.gset === "ui.palette"){ palette = JSON.parse(d.gv); paint(); return; }
+    if(d.gset === "ui.stone"){ useStone(JSON.parse(d.gv)); commit(); paintAll(); paint(); return; }
+    if(d.gset === "ui.printOn"){ const c = JSON.parse(d.gv);
+      for(const k of ["numerals","indices","text","minute"]) if(S[k] && S[k].on && (k !== "numerals" || /printed/.test(S.numerals.tech || ""))) S[k].color = c;
+      commit(); paintAll(); paint(); return; }
+    if(d.gset === "dial.finish" && (JSON.parse(d.gv) === "mop" || JSON.parse(d.gv) === "stone")){
+      const v = JSON.parse(d.gv);
+      if(v === "mop") useStone("mother of pearl");
+      else useStone(S.dial.stone && S.dial.stone !== "mother of pearl" && S.dial.stone !== "other" ? S.dial.stone : "lapis lazuli");
+      commit(); paintAll(); paint(); return; }
     if(d.gset === "ui.mpal"){ mpal = JSON.parse(d.gv); paint(); return; }
     if(d.gset === "ui.pgroup"){ pgroup = JSON.parse(d.gv); const gs = guide.querySelectorAll(".gPfound");
       if(gs.length) gs.forEach(g => { const p = g.dataset.path || "dial.color"; g.innerHTML = pantoneGrid(p, get(S, p)); }); else paint(); return; }
