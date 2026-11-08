@@ -137,6 +137,15 @@ On a phone the watch keeps the top of the screen and the steps the bottom.
 Each row of choices scrolls sideways, and the full editor is under **⋯**.
 A first visit opens on the standard dial.
 
+## Numeral and lettering colours
+
+In simple mode the numerals, hour markers, minute track and text each take
+**Print colours** (28 inks a dial printer is asked for, from cream and
+vintage lume to teal, burgundy and rose gold) or **Pantone**, the full
+library searchable by code (for example 289 C). The nearest Pantone is
+named under the swatches for any colour picked. The **+** swatch still
+takes any colour.
+
 ## The NOREL case photograph
 
 The R4 (3 Nov) case is shown in Blue Creations' own render of the watch on

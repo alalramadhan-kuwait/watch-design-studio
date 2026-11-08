@@ -1951,7 +1951,7 @@ const APP_BUILD = "__BUILD__";
 /* The version people see, raised with every change that reaches them:
    major for a new way of working, minor for something new to do, patch for
    a fix. Shown on the watch screen, so any screenshot says which it was. */
-const APP_VERSION = "2.7.0";
+const APP_VERSION = "2.8.0";
 const APP_DATE = "__DATE__";
 
 /* Every route that replaces S passes through one of these three, which is
@@ -11269,7 +11269,7 @@ body.guided .atelier-nav, body.guided #gHideInGuided, body.guided .bar .grp.tool
   const MODE_KEY = "wds:ui";
   let mode = "guided";
   try{ mode = localStorage.getItem(MODE_KEY) || "guided"; }catch(e){}
-  let step = 0, holdGuide = false, guideDirty = false, colorDirty = false, palette = "studio", pgroup = "Blues", pfind = "";
+  let step = 0, holdGuide = false, guideDirty = false, colorDirty = false, palette = "studio", pgroup = "Blues", pfind = "", mpal = "ink";
   /* The Pantone library is 2,131 colours: a search by code, or a family. */
   function pantoneGrid(path, cur){
     if(pfind.trim()){
@@ -11326,6 +11326,23 @@ body.guided .atelier-nav, body.guided #gHideInGuided, body.guided .bar .grp.tool
 
   /* the inks offered for printing and for markers, and the colours a calendar disc comes in */
   const INK = [["#FFFFFF","White"],["#D0D3D6","Silver"],["#1D2F9B","Royal blue"],["#1F2D47","Navy"],["#2A2D32","Charcoal"],["#15171C","Black"],["#C9A55A","Gold"],["#8E1B2A","Red"]];
+  /* The colours dial printers are asked for most, beyond the eight above:
+     creams and old-radium tones, the metal-coloured inks, and the greens,
+     blues and reds that sit on today's coloured dials. */
+  const INK_MORE = INK.concat([["#F1EAD7","Cream"],["#E4D3A8","Vintage lume"],["#CFE3C1","Lume green"],["#B9BEC4","Light grey"],["#7E8389","Grey"],
+    ["#D9B37A","Champagne"],["#C08A6E","Rose gold"],["#8C6A3F","Bronze"],["#6B4A33","Brown"],["#A9C3DD","Powder blue"],["#5C8FC9","Sky blue"],
+    ["#1E6F78","Teal"],["#8FC7A8","Mint"],["#2E5E45","Green"],["#E8C547","Yellow"],["#E2652A","Orange"],["#C8102E","Signal red"],
+    ["#6E1F2E","Burgundy"],["#E3A1B5","Pink"],["#5B3C88","Purple"]]);
+  /* Lettering colour: the printer's colours, or any Pantone by code or family. */
+  const inkPicker = (path, cur) => {
+    let h = chips("ui.mpal", [["ink","Print colours"],["pantone","Pantone"]], mpal);
+    if(mpal === "pantone")
+      h += `<div class="gRow"><label>Find a code</label><input type="text" data-gpfind="${path}" placeholder="e.g. 289 C" value="${esc2(pfind)}" autocomplete="off" autocapitalize="characters"></div>`
+        + `<div class="gPfound" data-path="${path}">${pantoneGrid(path, cur)}</div>`;
+    else h += swatches(path, INK_MORE, cur);
+    const pn = typeof nearestPantone === "function" ? nearestPantone(cur) : null;
+    return h + `<p class="gNote">${esc2(cur || "")}${pn ? ` · ${pn.exact ? "PANTONE " + pn.code : "nearest PANTONE " + pn.code}` : ""}</p>`;
+  };
   const DISC = [["#FFFFFF","White"],["#F6F5F1","Ivory"],["#15171C","Black"],["#1F2D47","Navy"]];
   /* small pictures of a design, cropped to the case */
   const thumbs = new Map(); let thumbSeq = 0;
@@ -11383,7 +11400,7 @@ body.guided .atelier-nav, body.guided #gHideInGuided, body.guided .bar .grp.tool
       if(palette === "classics") h += swatches("dial.color", DIAL_CLASSICS.map(c => [c[1], c[0]]), d.color);
       else if(palette === "pantone"){
         h += `<div class="gRow"><label>Find a code</label><input type="text" data-gpfind="dial.color" placeholder="e.g. 287 C" value="${esc2(pfind)}" autocomplete="off" autocapitalize="characters"></div>`;
-        h += `<div class="gPfound">${pantoneGrid("dial.color", d.color)}</div>`;
+        h += `<div class="gPfound" data-path="dial.color">${pantoneGrid("dial.color", d.color)}</div>`;
       }
       else h += swatches("dial.color", [["#0E1F55","Navy"],["#1D3FA0","Royal blue"],["#A9C3DD","Powder blue"],["#9ED3EC","Ice blue"],["#15171C","Black"],["#E9E7E1","Silver white"],["#F4F2EC","White"],["#D9C9A3","Champagne"],["#1F4A3A","Green"],["#8FB8A2","Mint"],["#E6B8A2","Salmon"],["#5E1E2C","Burgundy"],["#7B828A","Slate"]], d.color);
       const cl = classicOf(d.color), pn = nearestPantone(d.color);
@@ -11391,7 +11408,7 @@ body.guided .atelier-nav, body.guided #gHideInGuided, body.guided .bar .grp.tool
       h += `<h3>Surface</h3>` + chips("dial.finish", [["sunburst","Sunburst"],["matte","Matte"],["guilloche","Guilloché"],["enamel","Enamel"],["lacquer","Lacquer"],["gloss","Gloss"],["grained","Grained"],["stone","Stone"],["mop","Mother of pearl"]], d.finish);
       if(d.finish === "guilloche") h += `<h3>Pattern</h3>` + chips("dial.pattern", GUIL_PATTERNS.map(p => [p, (GUIL_LABEL[p] || p).replace(/ \(.*/,"")]), d.pattern);
       h += `<h3>Minute track</h3>` + chips("minute.style", [["none","None"],["railroad","Railroad"],["ticks","Ticks"],["dots","Dots"],["beads","Beads"],["dashes","Dashes"]], S.minute.on ? S.minute.style : "none");
-      if(S.minute.on) h += `<h3>Track colour</h3>` + swatches("minute.color", INK, S.minute.color);
+      if(S.minute.on) h += `<h3>Track colour</h3>` + inkPicker("minute.color", S.minute.color);
       return h + more("dial", "All dial settings");
     },
     markers(){
@@ -11405,7 +11422,7 @@ body.guided .atelier-nav, body.guided #gHideInGuided, body.guided .bar .grp.tool
         const make = `${n.tech}|${n.material || ""}`;
         h += `<h3>Made by</h3>` + chips("num.make", [["printed|ink","Printed"],["double printed|ink","Raised print"],["applied|metal","Applied metal"],["engraved + filled|lacquer / enamel","Enamel-filled"],["printed|lume","Lume"]], make);
         if(n.tech === "applied" && n.material === "metal") h += `<h3>Metal</h3>` + chips("numerals.metal", [["polished steel","Steel"],["white gold","White gold"],["yellow gold","Gold"],["rose gold","Rose gold"],["blackened steel","Black"]], n.metal || "polished steel");
-        else if(n.material !== "lume") h += `<h3>Colour</h3>` + swatches("numerals.color", INK, n.color);
+        else if(n.material !== "lume") h += `<h3>Colour</h3>` + inkPicker("numerals.color", n.color);
         h += slider("numerals.size", "Size", 1.6, 5.5, 0.05, n.size)
           + slider("numerals.radius", "Distance from centre", 8, 14.5, 0.05, n.radius)
           + slider("numerals.weight", "Thickness", -0.1, 0.45, 0.01, n.weight || 0);
@@ -11414,7 +11431,7 @@ body.guided .atelier-nav, body.guided #gHideInGuided, body.guided .bar .grp.tool
       if(!n.on && ix.on){
         h += `<h3>Shape</h3>` + chips("indices.style", [["baton","Baton"],["double","Double"],["dagger","Dagger"],["triangle","Triangle"],["dot","Dot"],["diamond","Diamond"],["box","Box"]], ix.style);
         h += toggle("indices.applied", "Applied (raised)", ix.applied);
-        h += `<h3>Colour</h3>` + swatches("indices.color", INK, ix.color);
+        h += `<h3>Colour</h3>` + inkPicker("indices.color", ix.color);
         h += slider("indices.length", "Length", 0.8, 4, 0.05, ix.length) + slider("indices.width", "Width", 0.2, 1.4, 0.02, ix.width);
       }
       return h + more(n.on ? "numerals" : "indices", "All marker settings");
@@ -11455,7 +11472,7 @@ body.guided .atelier-nav, body.guided #gHideInGuided, body.guided .bar .grp.tool
       if(T.line2On !== false && T.line2) h += slider("text.line2Size", "Size", 0.4, 2, 0.05, T.line2Size) + slider("text.line2Y", "Position", -12, 14, 0.1, T.line2Y) + toggle("text.line2Curve", "Follow the curve", !!T.line2Curve);
       h += `<h3>Lower text</h3>` + textIn("text.foot", "Text", T.footOn === false ? "" : T.foot, "SWISS MADE");
       if(T.footOn !== false && T.foot) h += slider("text.footSize", "Size", 0.4, 2, 0.05, T.footSize) + slider("text.footY", "Position", -12, 15, 0.1, T.footY) + toggle("text.footCurve", "Follow the curve", !!T.footCurve);
-      h += `<h3>Text colour</h3>` + swatches("text.color", INK, T.color);
+      h += `<h3>Text colour</h3>` + inkPicker("text.color", T.color);
       h += `<p class="gNote">Positions are millimetres from the centre: minus is towards 12, plus towards 6.</p>`;
       return h + more("text", "All text settings");
     },
@@ -11622,7 +11639,9 @@ body.guided .atelier-nav, body.guided #gHideInGuided, body.guided .bar .grp.tool
     if(t.classList.contains("back")){ if(step > 0){ step--; paint(); body.scrollTop = 0; } return; }
     if(t.classList.contains("next")){ if(step < STEPS.length-1){ step++; paint(); body.scrollTop = 0; } else { const sv = document.getElementById("save"); if(sv) sv.click(); } return; }
     if(d.gset === "ui.palette"){ palette = JSON.parse(d.gv); paint(); return; }
-    if(d.gset === "ui.pgroup"){ pgroup = JSON.parse(d.gv); const g = guide.querySelector(".gPfound"); if(g) g.innerHTML = pantoneGrid("dial.color", S.dial.color); else paint(); return; }
+    if(d.gset === "ui.mpal"){ mpal = JSON.parse(d.gv); paint(); return; }
+    if(d.gset === "ui.pgroup"){ pgroup = JSON.parse(d.gv); const gs = guide.querySelectorAll(".gPfound");
+      if(gs.length) gs.forEach(g => { const p = g.dataset.path || "dial.color"; g.innerHTML = pantoneGrid(p, get(S, p)); }); else paint(); return; }
     if(d.gset){ apply(d.gset, JSON.parse(d.gv)); return; }
     if(d.gcase){ apply("case.model", d.gcase); return; }
     if(d.gsec){
@@ -11689,7 +11708,7 @@ body.guided .atelier-nav, body.guided #gHideInGuided, body.guided .bar .grp.tool
     const t = e.target, d = t.dataset;
     if(d.grange){ set(S, d.grange, parseFloat(t.value)); requestPaint(true); }
     if(d.gcolor){ holdGuide = true; colorDirty = true; set(S, d.gcolor, t.value.toUpperCase()); requestPaint(true, 600); }
-    if(d.gpfind){ pfind = t.value; const g = guide.querySelector(".gPfound"); if(g) g.innerHTML = pantoneGrid(d.gpfind, get(S, d.gpfind)); }
+    if(d.gpfind){ pfind = t.value; const g = guide.querySelector(`.gPfound[data-path="${d.gpfind}"]`) || guide.querySelector(".gPfound"); if(g) g.innerHTML = pantoneGrid(d.gpfind, get(S, d.gpfind)); }
   });
   /* the picker has closed: commit what it left, and bring the panel up to date */
   guide.addEventListener("focusout", e => {
