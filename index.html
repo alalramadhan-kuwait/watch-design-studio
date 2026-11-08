@@ -1951,7 +1951,7 @@ const APP_BUILD = "__BUILD__";
 /* The version people see, raised with every change that reaches them:
    major for a new way of working, minor for something new to do, patch for
    a fix. Shown on the watch screen, so any screenshot says which it was. */
-const APP_VERSION = "2.8.0";
+const APP_VERSION = "2.8.1";
 const APP_DATE = "__DATE__";
 
 /* Every route that replaces S passes through one of these three, which is
@@ -5106,27 +5106,46 @@ function buildSVG(st, o={}){
           fit = Math.min(fit, 2*room); if(room < DW.half) touching = true; }
         window.__dayFit = {arc: Math.max(20, Math.floor(fit*2)/2), touching};
       } else if(typeof window !== "undefined") window.__dayFit = null;
-      const placeNum = (n, a) => {
-        const base = place(n, a, 1);
-        if(!DW || (n !== 1 && n !== 11) || nm.dayClear === "touch") return base;
-        const lim = DW.half + (DW.edge + GAP)/((DW.rin + DW.rout)/2)*180/Math.PI;   // the window and its edge, in degrees from 12
-        const off = n === 1 ? a : 360 - a;
+      /* What one of them would need on its own: nothing (null), to be left
+         off, or a position (degrees from 12) and a scale. */
+      const lim = DW ? DW.half + (DW.edge + GAP)/((DW.rin + DW.rout)/2)*180/Math.PI : 0;   // the window and its edge, in degrees from 12
+      const solo = (n) => {
+        const a = n === 1 ? 30 : 330, off = 30;
         const ex = extentAt(n, a, 1);
-        if(ex.r1 < DW.rin - DW.edge - GAP || ex.r0 > DW.rout + DW.edge + GAP) return base;   // not level with it
-        if(off - ex.half >= lim) return base;                                           // already clear
+        if(ex.r1 < DW.rin - DW.edge - GAP || ex.r0 > DW.rout + DW.edge + GAP) return null;   // not level with it
+        if(off - ex.half >= lim) return null;                                           // already clear
         const mode = nm.dayClear || "move";
-        if(mode === "drop") return null;
+        if(mode === "drop") return {drop:true};
         if(mode === "shrink"){
           let sc = 1;
           for(let i = 0; i < 12; i++){ sc *= 0.94; const e2 = extentAt(n, a, sc); if(off - e2.half >= lim) break; }
-          return place(n, a, Math.max(0.5, sc));
+          return {na:off, sc:Math.max(0.5, sc)};
         }
         /* moved round at most 8°, so it does not crowd the next figure; if
            that is not enough it is also made a little smaller */
         const na = Math.min(lim + ex.half, 38), at = n === 1 ? na : 360 - na;
         let sc = 1;
         for(let i = 0; i < 12; i++){ const e2 = extentAt(n, at, sc); if(na - e2.half >= lim) break; sc *= 0.94; }
-        return place(n, at, Math.max(0.5, sc));
+        return {na, sc:Math.max(0.5, sc)};
+      };
+      /* ١١ and ١ change as a pair, so the dial stays balanced: both moved the
+         same distance from 12 and set at the same size, taken from whichever
+         needs more (١١, being wider, usually). Left off, both go. */
+      let pairFix;
+      const pairOf = () => {
+        if(pairFix !== undefined) return pairFix;
+        const fx = [1, 11].filter(n => set.indexOf(n) >= 0).map(solo).filter(Boolean);
+        if(!fx.length) return (pairFix = null);
+        if(fx.some(x => x.drop)) return (pairFix = {drop:true});
+        return (pairFix = {na:Math.max(...fx.map(x => x.na)), sc:Math.min(...fx.map(x => x.sc))});
+      };
+      const placeNum = (n, a) => {
+        const base = place(n, a, 1);
+        if(!DW || (n !== 1 && n !== 11) || nm.dayClear === "touch") return base;
+        const fx = pairOf();
+        if(!fx) return base;
+        if(fx.drop) return null;
+        return place(n, n === 1 ? fx.na : 360 - fx.na, fx.sc);
       };
       /* ---- applied metal: built as a solid piece, not a filled outline ---- */
       if(MK.piece){
