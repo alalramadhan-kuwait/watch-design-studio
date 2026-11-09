@@ -203,7 +203,8 @@ Simple mode can be used in Arabic. The switch is on the Start step
 the top bar on a desktop; the choice is remembered on the device. Every step,
 tab, chip, note, warning, toast and button is in plain Modern Standard
 Arabic as it is written in the Gulf, with the words a watch buyer uses there:
-ميناء، عقارب، إطار، نافذة اليوم، نافذة التاريخ، مؤشرات. Millimetres and
+ميناء، عقارب، إطار، نافذة اليوم، نافذة التاريخ، مؤشرات، and القالب for the
+case and المحرك for the movement (from v3.2.0). Millimetres and
 degrees keep Western digits ("3.30 ملم"), and brand and reference names
 (NOREL, Pantone, Day-Date, Sellita, Blue Creations) stay as printed.
 
@@ -291,6 +292,55 @@ their shadows are plain shapes, never SVG filters, so they show in the
 photographed view on iPhone too; the 3D view raises each gem hour as a metal
 boss of the setting's outline.
 
+## Two-tone, gem-set bezel, pavé and ombré (v3.2.0)
+
+**Two-tone and gold cases.** Case → Metal and strap offers Steel, **Steel and
+yellow gold**, **Steel and rose gold** (Rolesor-style: gold bezel, crown and
+bracelet centre links on a steel case), and whole cases in yellow, rose or
+white gold. On the drawn case those parts are painted in gold. On the NOREL
+photograph (Blue Creations' steel render) the gold is laid onto the picture
+itself: each pixel's brightness is looked up on a measured gold ramp, so the
+flutes, the brushed links and the crown keep their own light and shade. The
+parts that take it are measured off that photograph (`NOREL_R4.photoParts`):
+the bezel from the crystal's edge to its rim (an ellipse, as the render looks
+at it slightly off the axis), the crown, and the centre links 4.50 mm either
+side of the axis. A photograph with no measured parts (the earlier NOREL
+drawings) cannot show two-tone, so the drawn case takes over with a toast, as
+it already did for a finish or a strap. Black and custom colours still show
+the drawing.
+
+**Gem-set bezel** (round cases). Under the metal: **Fluted**, **Round
+stones** (round brilliants, Ø1.5–2.7, 52 at the default Ø2.10) or
+**Baguettes** (60 tapered baguettes set edge to edge), in diamond, black
+diamond, sapphire, ruby or emerald. The ring is the case drawing's own,
+bezelOD Ø41.00 to bezelID Ø34.20, 3.40 mm wide, with 0.35 mm of polished gold
+kept each side; it is made in the case's gold, or white gold on steel. On the
+photograph it is drawn over the photographed bezel. The design check raises
+**Gem-set bezel**: the NOREL is drawn with a fluted steel bezel, so Blue
+Creations must make a gem-set one and quote it.
+
+**Pavé dial.** Dial → Surface → Pavé: **Whole dial**, **Centre** (inside the
+markers) or **Outer ring** (from the markers' inner edge to the minute
+track), with the stone (Ø0.8–1.3, 1.00 default) and the gold of the dial
+under it. Stones run in a row along each edge and a packed field between, a
+bead of gold in each gap, and are kept clear of the day and date windows, the
+hands' centre, a sub-dial, the lettering, and printed numerals and indices
+(applied figures and gem markers stand on the stones). The design check
+raises **Pavé dial** with the count and carats: the NOREL blank is brass
+Ø32.50 × 0.40 mm, while a pavé dial is normally 18k gold about 0.8–1.0 mm
+thick, so Blue Creations must confirm the stack height first.
+
+**Ombré.** Dial → Surface → Ombré (0–100 %) deepens any colour toward the
+edge, over a sunburst or any other surface, under the printing. Picking
+**Green ombré** or **Black ombré** from the watch classics turns it on at
+70 %. In the full editor these are Case → Two-tone, Gem-set bezel, Bezel
+stones and size, and Dial base → Ombré, Pavé and its stone, size and metal.
+
+Nothing is drawn with an SVG filter: shadows are offset copies, highlights
+are gradients, and a few stones are drawn once and repeated with `<use>`.
+Designs that use none of this draw exactly as before (checked byte for byte
+on every preset and reference design).
+
 ## Stone and mother-of-pearl dials
 
 In simple mode, **Dial → Surface → Stone** lists the sixteen stones
@@ -329,9 +379,11 @@ and bracelet, with the designed dial drawn into the opening (Ø31.40 = 65.14%
 of the picture's width, centred). The supplier's dial, text and colour labels
 were removed from the picture first.
 
-The photograph is the steel case on its bracelet. Choosing another metal, a
-finish or the strap while **Show as a photograph** is on switches to the
-drawn case, which shows them, and a message says so.
+The photograph is the steel case on its bracelet. Gold (two-tone or a whole
+gold case) and a gem-set bezel are laid onto it (see "Two-tone, gem-set bezel,
+pavé and ombré"). Black or a custom colour, a finish or the strap while
+**Show as a photograph** is on switches to the drawn case, which shows them,
+and a message says so.
 
 ## The NOREL logo
 

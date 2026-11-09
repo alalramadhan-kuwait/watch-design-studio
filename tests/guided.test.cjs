@@ -126,13 +126,13 @@ test('the design check is put in plain words, on the step that fixes it', () => 
   // every title the check can raise today has words of its own
   const titles = new Set([...source.matchAll(/add\([^,]+,\s*['"]([A-Z][^'"]+)['"]/g)].map(m => m[1]));
   for (const t of ['Hour','Minute','Seconds']) for (const s of [' hand clearance', ' hand contrast']) titles.add(t + s);
-  const quiet = new Set(['Movement and production review','Gem setting production review','Case reference','Stone source']);
+  const quiet = new Set(['Movement and production review','Gem setting production review','Case reference','Stone source','Two-tone parts']);
   const unworded = [...titles].filter(t => !quiet.has(t) && !G.G_CHECK_WORDS[t] && !/^Hour hand|^Minute hand|^Seconds hand|^\$|^name/.test(t));
   assert.deepEqual(unworded, []);
 });
 
-test('simple mode is version 3.1.0 and the drawing code is not touched by its preview', () => {
-  assert.match(source, /const APP_VERSION = "3\.1\.0";/);
+test('simple mode is version 3.2.0 and the drawing code is not touched by its preview', () => {
+  assert.match(source, /const APP_VERSION = "3\.2\.0";/);
   // the preview's seconds-hand change is undone whatever happens while drawing
   const v = chunk('function viewSVG(){', 'function viewSVGOf(){');
   assert.match(v, /finally\{ S\.meta\.time = t; S\.sHand\.on = on; \}/);

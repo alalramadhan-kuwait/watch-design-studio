@@ -1383,7 +1383,14 @@ const NOREL_R4 = Object.assign({}, NOREL_D, {
   /* Blue Creations' own render of the watch on its bracelet: their case, bezel,
      crown and bracelet, with our dial drawn into its opening (Ø31.40 = 500 px of
      768, centred). Earlier this was the Blender bezel on a drawn case. */
-  photoFile:"./app/case-norel-r4-real.jpg", photoCal:{w:1040, h:1560, cx:49.99, cy:50.03, dia:65.14}
+  photoFile:"./app/case-norel-r4-real.jpg", photoCal:{w:1040, h:1560, cx:49.99, cy:50.03, dia:65.14},
+  /* The parts of that photograph that turn gold on a two-tone watch, in mm
+     from the dial centre (y down), measured off it at 4×: the bezel from
+     the crystal's edge (R16.80) to its rim, which the render sees from a
+     little off the axis, so the rim is an ellipse 20.45 × 20.15 set 0.35 mm
+     low; the crown; and the centre links, 4.50 mm either side of the axis. */
+  photoParts:{bezel:{inner:[0, 0, 16.80, 16.80], outer:[0, 0.35, 20.45, 20.15]},
+              crown:{x0:20.45, x1:23.55, y0:-2.95, y1:3.83, r:0.9}, links:{half:4.50}}
 });
 const CASES = {[VERNOY_CASE.model]:VERNOY_CASE, [NOREL_R3.model]:NOREL_R3, [NOREL_D.model]:NOREL_D, [NOREL_R4.model]:NOREL_R4};
 const CASE_MODELS = Object.keys(CASES);
@@ -1429,10 +1436,18 @@ const BASE = {
   tpl:{on:true, cx:47.11, cy:45.23, dia:66.8, rot:0, recess:0.55, name:""},
   case:{on:true, locked:true, model:VERNOY_CASE.model, material:"#C8C9C7", finish:"polished", cab:"#8A1538",
         strap:true, strapColor:"#4E3629",
+        /* two-tone: "yellow gold" or "rose gold" bezel, crown and centre links
+           on steel; a gem-set bezel: "round" or "baguette", its stone and the
+           brilliants' size. "none" draws the case as it always was. */
+        twoTone:"none", gemBezel:"none", gemStone:"diamond", gemD:2.10,
         // mirrors of CASE_SPEC, editable only when unlocked for exploration
         diameter:VERNOY_CASE.flat, opening:VERNOY_CASE.opening, lugToLug:VERNOY_CASE.lugToLug,
         lugWidth:VERNOY_CASE.lugWidth, thickness:VERNOY_CASE.height},
+  /* ombre: how far the colour deepens to the edge (0 none, 1 near black);
+     pave: "full", "centre" or "ring" set with paveD mm stones in a
+     paveMetal bed, "none" for a plain dial */
   dial:{on:true, dome:0, satin:0, waveGrowth:0, wavePhase:0, radialPhase:0, stamp:0, lock:true, diameter:VERNOY_CASE.dialD, color:"#003087", finish:"guilloche",
+        ombre:0, pave:"none", paveStone:"diamond", paveD:1.00, paveMetal:"white gold",
         secondary:"#002554", rays:44,
         stone:"lapis lazuli", slab:"", stoneScale:22.0, stoneRot:0, stoneOffX:0, stoneOffY:0,
         stoneBump:1.0, stoneContrast:1.0, stoneTint:0, stoneSlot:"roughness",
@@ -1986,7 +2001,7 @@ const APP_BUILD = "__BUILD__";
 /* The version people see, raised with every change that reaches them:
    major for a new way of working, minor for something new to do, patch for
    a fix. Shown on the watch screen, so any screenshot says which it was. */
-const APP_VERSION = "3.1.0";
+const APP_VERSION = "3.2.0";
 const APP_DATE = "__DATE__";
 
 /* Every route that replaces S passes through one of these three, which is
@@ -2812,6 +2827,8 @@ function inkHull(fam, text){
    once it has. */
 const PAVE_CACHE = new Map();
 let PAVE_STATS = null;
+/* the stone count of the pavé dial last drawn, for the design check */
+let PAVE_DIAL_STATS = null;
 function paveCentres(fam, text, fz, d, weight){
   if(typeof document === "undefined" || !fam) return null;
   const key = [fam, text, gf(fz), gf(d), gf(weight || 0)].join("|");
@@ -4369,6 +4386,8 @@ function buildSVG(st, o={}){
   const roundCase = () => {
     const la = ((st.render && st.render.az) || 135);
     const M0 = c.material;
+    /* two-tone: the bezel, the crown and the bracelet's centre links in gold */
+    const two = twoToneOf(st), MG = two ? LUX_GOLD[two] : M0;
     const lgr = (stops, ang) => { const gid = id("rg"), a = (ang === undefined ? la : ang)*Math.PI/180;
       defs.push(`<linearGradient id="${gid}" x1="${f(0.5-Math.cos(a)*0.5,3)}" y1="${f(0.5-Math.sin(a)*0.5,3)}" x2="${f(0.5+Math.cos(a)*0.5,3)}" y2="${f(0.5+Math.sin(a)*0.5,3)}">${stops}</linearGradient>`);
       return gid; };
@@ -4380,15 +4399,15 @@ function buildSVG(st, o={}){
     /* --- bracelet: President links, brushed outers and a polished centre --- */
     if(c.strap){
       const gB = lgr(st3(shade(M0,0.30), tint(M0,0.55), shade(M0,0.22)), 0);
-      const gP = lgr(`<stop offset="0" stop-color="${tint(M0,0.95)}"/><stop offset="0.45" stop-color="${tint(M0,0.40)}"/>
-        <stop offset="0.52" stop-color="${shade(M0,0.45)}"/><stop offset="0.62" stop-color="${tint(M0,0.80)}"/><stop offset="1" stop-color="${shade(M0,0.15)}"/>`, 90);
+      const gP = lgr(`<stop offset="0" stop-color="${tint(MG,0.95)}"/><stop offset="0.45" stop-color="${tint(MG,0.40)}"/>
+        <stop offset="0.52" stop-color="${shade(MG,0.45)}"/><stop offset="0.62" stop-color="${tint(MG,0.80)}"/><stop offset="1" stop-color="${shade(MG,0.15)}"/>`, 90);
       for(const sgn of [-1,1]){
         for(let i=0;i<3;i++){
           const hh = 4.5, half = lw/2 - i*0.35, y0 = sgn*(l2l/2 - 0.6 + i*4.7), y = sgn > 0 ? y0 : y0 - hh, cw = half*0.36;
           body.push(`<g opacity="${f(1 - i*0.12,2)}"><rect x="${f(-half,3)}" y="${f(y,3)}" width="${f(half*2,3)}" height="${hh}" rx="1.3"
               fill="url(#${gB})" stroke="${shade(M0,0.55)}" stroke-opacity=".6" stroke-width="0.07"/>
             <rect x="${f(-cw,3)}" y="${f(y+0.15,3)}" width="${f(cw*2,3)}" height="${f(hh-0.3,3)}" rx="0.8"
-              fill="url(#${gP})" stroke="${shade(M0,0.6)}" stroke-opacity=".55" stroke-width="0.06"/></g>`);
+              fill="url(#${gP})" stroke="${shade(MG,0.6)}" stroke-opacity=".55" stroke-width="0.06"/></g>`);
         }
       }
     }
@@ -4408,20 +4427,27 @@ function buildSVG(st, o={}){
     /* --- crown at 3: a fluted barrel seen from above --- */
     {
       const ch = K.crownD*k, bw = 2.9, x0 = R - 0.3;
-      const cg = lgr(st3(shade(M0,0.42), tint(M0,0.6), shade(M0,0.34)), 90);
+      const cg = lgr(st3(shade(MG,0.42), tint(MG,0.6), shade(MG,0.34)), 90);
       let fl = "";
       for(let i=1;i<16;i++){ const fy = -ch/2 + ch*i/16;
-        fl += `<line x1="${f(x0+0.2,3)}" y1="${f(fy,3)}" x2="${f(x0+bw-0.15,3)}" y2="${f(fy,3)}" stroke="${i%2?tint(M0,0.6):shade(M0,0.45)}" stroke-opacity=".85" stroke-width="0.10"/>`; }
-      body.push(`<rect x="${f(x0-0.6,3)}" y="${f(-K.crownTube/2,3)}" width="1.0" height="${f(K.crownTube,3)}" fill="${shade(M0,0.3)}"/>
-        <rect x="${f(x0,3)}" y="${f(-ch/2,3)}" width="${bw}" height="${f(ch,3)}" rx="0.6" fill="url(#${cg})" stroke="${shade(M0,0.62)}" stroke-opacity=".7" stroke-width="0.08"/>${fl}`);
+        fl += `<line x1="${f(x0+0.2,3)}" y1="${f(fy,3)}" x2="${f(x0+bw-0.15,3)}" y2="${f(fy,3)}" stroke="${i%2?tint(MG,0.6):shade(MG,0.45)}" stroke-opacity=".85" stroke-width="0.10"/>`; }
+      body.push(`<rect x="${f(x0-0.6,3)}" y="${f(-K.crownTube/2,3)}" width="1.0" height="${f(K.crownTube,3)}" fill="${shade(MG,0.3)}"/>
+        <rect x="${f(x0,3)}" y="${f(-ch/2,3)}" width="${bw}" height="${f(ch,3)}" rx="0.6" fill="url(#${cg})" stroke="${shade(MG,0.62)}" stroke-opacity=".7" stroke-width="0.08"/>${fl}`);
     }
     /* --- case middle, then the fluted bezel on it --- */
     const gC = lgr(st3(shade(M0,0.36), tint(M0,0.55), shade(M0,0.28)));
     body.push(`<circle r="${f(R,3)}" fill="url(#${gC})" stroke="${shade(M0,0.65)}" stroke-opacity=".7" stroke-width="0.09"/>`);
-    body.push(`<circle r="${f(rb,3)}" fill="${shade(M0,0.30)}"/>`);
+    body.push(`<circle r="${f(rb,3)}" fill="${shade(MG,0.30)}"/>`);
     const n = K.flutes || 60, r0 = rbi + land, r1 = rb - 0.10;
+    /* A gem-set bezel takes the place of the flutes and the land: a ring of
+       gold from the crystal to the rim, set with its row of stones. */
+    const GB = gemBezelSpec(st);
+    if(GB){
+      const ring = {inner:[0, 0, rbi, rbi], outer:[0, 0, rb, rb]};
+      body.push(gemBezelSVG(GB, ring, la*Math.PI/180, {id, defs, grads:new Map()}));
+    }
     let flutes = "";
-    for(let i=0;i<n;i++){
+    for(let i=0;i<(GB ? 0 : n);i++){
       const a0 = i*360/n, a1 = a0 + 180/n, a2 = a0 + 360/n;
       /* Each flute is a V cut: two flat faces meeting at a ridge (a1). The
          faces turn opposite ways, so they mirror opposite sides of the room,
@@ -4430,22 +4456,24 @@ function buildSVG(st, o={}){
          polished fluted bezel. The room here alternates twice round. */
       const room = az => 0.5 + 0.5*Math.tanh(2.4*Math.cos(2*(az - la)*Math.PI/180));
       const tA = room(a1 - 45), tB = room(a1 + 45);
-      const col = t => t > 0.5 ? tint(M0, Math.min(0.9,(t-0.5)*1.8)) : shade(M0, Math.min(0.62,(0.5-t)*1.25));
+      const col = t => t > 0.5 ? tint(MG, Math.min(0.9,(t-0.5)*1.8)) : shade(MG, Math.min(0.62,(0.5-t)*1.25));
       const q = (r,a) => { const p = pt(r,a); return `${f(p[0],3)} ${f(p[1],3)}`; };
       const rm = (r0 + r1)/2;
       /* a face is a little darker toward the crystal, where it reflects lower in the room */
       for(const [b0, b1, t] of [[a0, a1, tA], [a1, a2, tB]])
         flutes += `<path d="M${q(r0,b0)}L${q(rm,b0)}L${q(rm,b1)}L${q(r0,b1)}Z" fill="${col(t - 0.1)}"/>`
                +  `<path d="M${q(rm,b0)}L${q(r1,b0)}L${q(r1,b1)}L${q(rm,b1)}Z" fill="${col(t)}"/>`;
-      flutes += `<path d="M${q(r0+0.08,a1)}L${q(r1-0.05,a1)}" stroke="${tint(M0,0.9)}" stroke-opacity=".55" stroke-width="0.05"/>`;
+      flutes += `<path d="M${q(r0+0.08,a1)}L${q(r1-0.05,a1)}" stroke="${tint(MG,0.9)}" stroke-opacity=".55" stroke-width="0.05"/>`;
     }
-    body.push(`<g>${flutes}</g>`);
-    body.push(`<circle r="${f(rb,3)}" fill="none" stroke="${shade(M0,0.7)}" stroke-opacity=".8" stroke-width="0.10"/>`);
-    // polished land between the flutes and the crystal
-    const gLand = lgr(`<stop offset="0" stop-color="${tint(M0,0.95)}"/><stop offset="0.4" stop-color="${tint(M0,0.45)}"/>
-      <stop offset="0.6" stop-color="${shade(M0,0.25)}"/><stop offset="1" stop-color="${tint(M0,0.7)}"/>`);
-    body.push(`<path d="${annulus(r0, rbi)}" fill="url(#${gLand})" fill-rule="evenodd"/>`);
-    body.push(`<circle r="${f(r0,3)}" fill="none" stroke="${shade(M0,0.5)}" stroke-opacity=".55" stroke-width="0.06"/>`);
+    if(!GB){
+      body.push(`<g>${flutes}</g>`);
+      body.push(`<circle r="${f(rb,3)}" fill="none" stroke="${shade(MG,0.7)}" stroke-opacity=".8" stroke-width="0.10"/>`);
+      // polished land between the flutes and the crystal
+      const gLand = lgr(`<stop offset="0" stop-color="${tint(MG,0.95)}"/><stop offset="0.4" stop-color="${tint(MG,0.45)}"/>
+      <stop offset="0.6" stop-color="${shade(MG,0.25)}"/><stop offset="1" stop-color="${tint(MG,0.7)}"/>`);
+      body.push(`<path d="${annulus(r0, rbi)}" fill="url(#${gLand})" fill-rule="evenodd"/>`);
+      body.push(`<circle r="${f(r0,3)}" fill="none" stroke="${shade(MG,0.5)}" stroke-opacity=".55" stroke-width="0.06"/>`);
+    }
     // flange (rehaut) falling from the crystal edge to the opening
     const gF = lgr(`<stop offset="0" stop-color="${tint(M0,0.55)}"/><stop offset="0.5" stop-color="${shade(M0,0.25)}"/><stop offset="1" stop-color="${shade(M0,0.5)}"/>`);
     body.push(`<path d="${annulus(rbi, opening/2)}" fill="url(#${gF})" fill-rule="evenodd"/>`);
@@ -4463,6 +4491,8 @@ function buildSVG(st, o={}){
     const la = ((st.render && st.render.az) || 135)*Math.PI/180;
     const lx = Math.cos(la), ly = Math.sin(la);
     const M0 = c.material;
+    /* two-tone on this case: the bezel and the crown in gold */
+    const two = twoToneOf(st), MG = two ? LUX_GOLD[two] : M0;
     const lg = (stops, spread) => {
       const gid = id("lg"), sp = spread === undefined ? 0.5 : spread;
       defs.push(`<linearGradient id="${gid}" x1="${f(0.5-lx*sp,3)}" y1="${f(0.5-ly*sp,3)}" x2="${f(0.5+lx*sp,3)}" y2="${f(0.5+ly*sp,3)}">${stops}</linearGradient>`);
@@ -4505,20 +4535,20 @@ function buildSVG(st, o={}){
     /* --- crown: fluted barrel seen from the side, with a cabochon --- */
     {
       const ch = K.crownD, bw = 2.35, x0 = flat/2 - 0.55;
-      const cg = lg(st2(shade(M0,0.42), tint(M0,0.52), shade(M0,0.34)), 0.5);
+      const cg = lg(st2(shade(MG,0.42), tint(MG,0.52), shade(MG,0.34)), 0.5);
       let fl = "";
       const nF = 13;
       for(let i=1;i<nF;i++){
         const fx = x0 + bw*i/nF;
-        fl += `<line x1="${f(fx,3)}" y1="${f(-ch/2+0.30,3)}" x2="${f(fx,3)}" y2="${f(ch/2-0.30,3)}" stroke="${i%2?tint(M0,0.55):shade(M0,0.42)}" stroke-opacity="0.85" stroke-width="0.085"/>`;
+        fl += `<line x1="${f(fx,3)}" y1="${f(-ch/2+0.30,3)}" x2="${f(fx,3)}" y2="${f(ch/2-0.30,3)}" stroke="${i%2?tint(MG,0.55):shade(MG,0.42)}" stroke-opacity="0.85" stroke-width="0.085"/>`;
       }
       body.push(`<g>
-        <rect x="${f(x0-0.5,3)}" y="${f(-K.crownTube/2,3)}" width="1.0" height="${K.crownTube}" fill="${shade(M0,0.30)}"/>
+        <rect x="${f(x0-0.5,3)}" y="${f(-K.crownTube/2,3)}" width="1.0" height="${K.crownTube}" fill="${shade(MG,0.30)}"/>
         <rect x="${f(x0,3)}" y="${f(-ch/2,3)}" width="${f(bw,3)}" height="${f(ch,3)}" rx="0.42"
-              fill="url(#${cg})" stroke="${shade(M0,0.62)}" stroke-opacity=".7" stroke-width="0.075"/>
+              fill="url(#${cg})" stroke="${shade(MG,0.62)}" stroke-opacity=".7" stroke-width="0.075"/>
         ${fl}
-        <rect x="${f(x0,3)}" y="${f(-ch/2,3)}" width="${f(bw,3)}" height="0.34" fill="${shade(M0,0.30)}" fill-opacity=".55"/>
-        <rect x="${f(x0,3)}" y="${f(ch/2-0.34,3)}" width="${f(bw,3)}" height="0.34" fill="${shade(M0,0.40)}" fill-opacity=".6"/>
+        <rect x="${f(x0,3)}" y="${f(-ch/2,3)}" width="${f(bw,3)}" height="0.34" fill="${shade(MG,0.30)}" fill-opacity=".55"/>
+        <rect x="${f(x0,3)}" y="${f(ch/2-0.34,3)}" width="${f(bw,3)}" height="0.34" fill="${shade(MG,0.40)}" fill-opacity=".6"/>
       </g>`);
       const cabH = ch*0.72, cabW = 1.55, cx0 = x0 + bw - 0.12;
       const rg = id("cab");
@@ -4534,24 +4564,24 @@ function buildSVG(st, o={}){
     body.push(`<path d="${mid}" fill="${shade(M0,0.34)}"/>`);
 
     /* --- bezel: outer flank, bright dome crown, circular chamfer --- */
-    const gFlank = lg(st2(shade(M0,0.58), tint(M0,0.45), shade(M0,0.40)), 0.5);
-    const gDome  = lg(`<stop offset="0" stop-color="${shade(M0,0.40)}"/>
-                       <stop offset="0.16" stop-color="${tint(M0,0.55)}"/>
-                       <stop offset="0.34" stop-color="${tint(M0,0.97)}"/>
-                       <stop offset="0.55" stop-color="${tint(M0,0.55)}"/>
-                       <stop offset="0.78" stop-color="${shade(M0,0.22)}"/>
-                       <stop offset="1" stop-color="${tint(M0,0.60)}"/>`, 0.5);
+    const gFlank = lg(st2(shade(MG,0.58), tint(MG,0.45), shade(MG,0.40)), 0.5);
+    const gDome  = lg(`<stop offset="0" stop-color="${shade(MG,0.40)}"/>
+                       <stop offset="0.16" stop-color="${tint(MG,0.55)}"/>
+                       <stop offset="0.34" stop-color="${tint(MG,0.97)}"/>
+                       <stop offset="0.55" stop-color="${tint(MG,0.55)}"/>
+                       <stop offset="0.78" stop-color="${shade(MG,0.22)}"/>
+                       <stop offset="1" stop-color="${tint(MG,0.60)}"/>`, 0.5);
     body.push(`<path d="${bezel}" fill="url(#${gFlank})"/>`);
-    body.push(`<path d="${bezel}" fill="none" stroke="${shade(M0,0.72)}" stroke-opacity="0.85" stroke-width="0.10"/>`);
+    body.push(`<path d="${bezel}" fill="none" stroke="${shade(MG,0.72)}" stroke-opacity="0.85" stroke-width="0.10"/>`);
     body.push(`<path d="${domeC}" fill="url(#${gDome})"/>`);
-    body.push(`<path d="${domeC}" fill="none" stroke="${tint(M0,0.85)}" stroke-opacity="0.55" stroke-width="0.07"/>`);
+    body.push(`<path d="${domeC}" fill="none" stroke="${tint(MG,0.85)}" stroke-opacity="0.55" stroke-width="0.07"/>`);
 
     // circular chamfer rolling down into the opening
-    const gCh = lg(`<stop offset="0" stop-color="${tint(M0,0.75)}"/>
-                    <stop offset="0.45" stop-color="${shade(M0,0.30)}"/>
-                    <stop offset="1" stop-color="${shade(M0,0.62)}"/>`, 0.5);
+    const gCh = lg(`<stop offset="0" stop-color="${tint(MG,0.75)}"/>
+                    <stop offset="0.45" stop-color="${shade(MG,0.30)}"/>
+                    <stop offset="1" stop-color="${shade(MG,0.62)}"/>`, 0.5);
     body.push(`<path d="${annulus(chamR, opening/2)}" fill="url(#${gCh})" fill-rule="evenodd"/>`);
-    body.push(`<circle r="${f(chamR,3)}" fill="none" stroke="${shade(M0,0.34)}" stroke-opacity="0.5" stroke-width="0.07"/>`);
+    body.push(`<circle r="${f(chamR,3)}" fill="none" stroke="${shade(MG,0.34)}" stroke-opacity="0.5" stroke-width="0.07"/>`);
     // the dial sits below the bezel: a tight shadow ring at the opening
     body.push(`<circle r="${f(opening/2+0.30,3)}" fill="none" stroke="${shade(d.color,0.80)}" stroke-opacity="0.85" stroke-width="0.60"/>`);
     body.push(`<circle r="${f(opening/2+0.04,3)}" fill="none" stroke="${shade(M0,0.70)}" stroke-opacity="0.55" stroke-width="0.09"/>`);
@@ -4798,6 +4828,37 @@ function buildSVG(st, o={}){
       }).join("");
       return `<path d="${d}" fill="none" stroke="${col}" stroke-width="${f(strokeW,3)}"/>`;
     };
+
+    /* Ombré: the dial deepens toward its edge, over whatever surface it has
+       (a sunburst keeps its rays) and the zones on it, under the printing. */
+    if(d.on && d.ombre > 0){
+      const gid = id("omb");
+      defs.push(`<radialGradient id="${gid}" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="${f(opening/2,3)}">${ombreStops(d.color, d.ombre)
+        .map(([o, col, a]) => `<stop offset="${o}" stop-color="${col}" stop-opacity="${f(a,3)}"/>`).join("")}</radialGradient>`);
+      body.push(`<circle r="${f(R,3)}" fill="url(#${gid})"/>`);
+    }
+    /* Pavé: the set field, cleared round the lettering as well as the
+       windows and the markers (paveKeepOut). The lettering is measured
+       here, where its widths are known. */
+    if(d.on && paveDialOn(st)){
+      const tx = st.text, txt = [];
+      if(tx && tx.on !== false){
+        const trk = (s, k) => hasArabic(s) ? 0 : k;
+        const mark = tx.logoMark && tx.logoMark !== "none" && LOGO_MARKS[tx.logoMark] && markW(tx) > 0;
+        for(const L of [{t:tx.logo, y:tx.logoY, size:tx.logoSize, curve:tx.logoCurve, on:true, w:mark ? markW(tx)*tx.logoSize/100 : null, track:trk(tx.logo, 0.10), fam:letterFam(tx.logoFont, "sans")},
+                        {t:tx.line2, y:tx.line2Y, size:tx.line2Size, curve:tx.line2Curve, on:tx.line2On !== false, track:trk(tx.line2, 0.14), fam:letterFam(tx.line2Font, "sans")},
+                        {t:tx.foot, y:tx.footY, size:tx.footSize, curve:tx.footCurve, on:tx.footOn !== false, track:trk(tx.foot, 0.22), fam:letterFam(tx.footFont, "sans")}]){
+          if(!L.on || !(L.t || L.w) || !L.y || !L.size) continue;
+          const w = (L.w || runWidth(String(L.t), L.size, L.fam, L.track)) + 0.3, r = Math.abs(L.y), hh = L.size*0.55 + 0.10;
+          if(L.curve && !L.w && r > 1) txt.push({t:"sector", r0:r - hh, r1:r + hh, half:Math.min(170, (w/2)/r*180/Math.PI), m:0.10, flip:L.y > 0});
+          else txt.push({t:"rect", cx:0, cy:L.y, hu:hh, hv:w/2, a:0, m:0.10});
+        }
+      }
+      const cs = paveDialCentres(st, txt);
+      if(!o.tag || o.tag === "ins") PAVE_DIAL_STATS = {sig:paveDialSig(st), n:cs.length};
+      const MT = METALS[d.paveMetal] || METALS["white gold"], laP = ((st.render && st.render.az) || 135)*Math.PI/180;
+      body.push(`<g data-layer="pave">${paveDialSVG(cs, paveDialD(st), GEM_STONES[d.paveStone] ? d.paveStone : "diamond", MT, laP, {id, defs, grads:new Map()}, 0.6, paveDialZone(st))}</g>`);
+    }
 
     // minute track
     const mt = st.minute;
@@ -7298,6 +7359,390 @@ function paveStonesSVG(cs, d, stone, MT, la, seed, sparkle){
    kept from the last drawing is used only for the design it came from */
 const paveSig = st => { const nm = st.numerals || {};
   return JSON.stringify([nm.style, nm.system, nm.size, nm.paveD, nm.weight, nm.set, perHourOn(st) ? st.markers.at : 0, !!(st.day && st.day.on), st.date && st.date.on && st.date.at]); };
+/* ---------------------------------------------------------------
+   Luxury finishes: a two-tone or gold case, a gem-set bezel, a pavé
+   dial and an ombré dial. Like the gems above, plain geometry, colour
+   and string building with no page behind it, so the tests run it as it
+   is; millimetres throughout, and no SVG filters.
+   --------------------------------------------------------------- */
+/* The golds a case is painted in: the same colours simple mode offers for
+   a whole case. Two-tone takes yellow or rose; a whole case any of three. */
+const LUX_GOLD = {"yellow gold":"#D7B56D", "rose gold":"#D9A48C", "white gold":"#E3E4E6"};
+const LUX_STEEL = "#C8C9C7";
+const TWO_TONES = ["yellow gold", "rose gold"];
+/* the gold a case colour is, by name, or null */
+const goldOf = hex => { const u = String(hex || "").toUpperCase(); for(const k in LUX_GOLD) if(LUX_GOLD[k] === u) return k; return null; };
+/* Two-tone in the Rolesor way: the bezel, the crown and the bracelet's
+   centre links in gold on a steel case. Only on a steel case; a case that
+   is all gold already has gold parts. */
+const twoToneOf = st => { const c = st && st.case; if(!c || TWO_TONES.indexOf(c.twoTone) < 0 || goldOf(c.material)) return null; return c.twoTone; };
+
+/* ---- gold on the case photograph ----
+   The photograph is Blue Creations' render of the steel watch. Gold is
+   laid onto it as a tone map: each pixel's brightness is looked up on a
+   gold ramp, so a dark flute face stays dark brown, a mid grey becomes a
+   full yellow and a highlight a pale one, and the pure white of the
+   background stays white. The ramps are measured against photographs of
+   18k yellow and Everose-type rose gold; white gold is steel made a touch
+   warmer, which is what rhodium-plated white gold looks like. */
+const LUX_RAMP = {
+  "yellow gold":[[0,"#120B03"],[.18,"#3E2A0C"],[.40,"#8E6A26"],[.60,"#C9A04C"],[.76,"#E2C377"],[.88,"#F3DFA6"],[.96,"#FDF6E0"],[1,"#FFFFFF"]],
+  "rose gold":  [[0,"#130806"],[.18,"#43221A"],[.40,"#94594A"],[.60,"#C98B76"],[.76,"#E2AE9A"],[.88,"#F1D0C2"],[.96,"#FCF0EA"],[1,"#FFFFFF"]],
+  "white gold": [[0,"#0F0F0E"],[.18,"#2F2E2C"],[.40,"#6C6A65"],[.60,"#A6A39C"],[.76,"#CDCAC2"],[.88,"#E8E6E0"],[.96,"#F9F8F4"],[1,"#FFFFFF"]]
+};
+/* the ramp as a table of 256 colours, r g b in a row */
+function luxRampLUT(tone){
+  const R = LUX_RAMP[tone] || LUX_RAMP["yellow gold"], out = new Uint8Array(768);
+  const rgb = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+  for(let v = 0; v < 256; v++){
+    const t = v/255; let k = 0;
+    while(k < R.length - 2 && t > R[k + 1][0]) k++;
+    const [t0, c0] = R[k], [t1, c1] = R[k + 1], u = Math.max(0, Math.min(1, (t - t0)/(t1 - t0))), a = rgb(c0), b = rgb(c1);
+    for(let c = 0; c < 3; c++) out[v*3 + c] = Math.round(a[c] + (b[c] - a[c])*u);
+  }
+  return out;
+}
+const smooth01 = (e0, e1, x) => { const t = Math.max(0, Math.min(1, (x - e0)/(e1 - e0))); return t*t*(3 - 2*t); };
+/* How far a point lies outside an ellipse E = [cx, cy, rx, ry], in mm
+   (negative inside): near enough for edges a pixel or two wide. */
+const ellOut = (x, y, E) => (Math.hypot((x - E[0])/E[2], (y - E[1])/E[3]) - 1)*Math.min(E[2], E[3]);
+/* How much a point of the photograph (mm from the dial centre, y down)
+   belongs to each part that turns gold, 0 to 1, softened over fe mm. The
+   parts are measured off the photograph (K.photoParts): the bezel from the
+   crystal's edge to its rim, which the render sees from a little off the
+   axis, so its rim is an ellipse set 0.35 mm low; the crown; and the
+   bracelet's centre links, beyond the bezel. */
+function photoPartAt(P, x, y, fe){
+  const out = smooth01(-fe, fe, ellOut(x, y, P.bezel.outer));
+  const bezel = (1 - out)*smooth01(-fe, fe, ellOut(x, y, P.bezel.inner));
+  const C = P.crown, qx = Math.max(C.x0 + C.r - x, x - (C.x1 - C.r), 0), qy = Math.max(C.y0 + C.r - y, y - (C.y1 - C.r), 0);
+  const crown = (1 - smooth01(-fe, fe, Math.hypot(qx, qy) - C.r))*out;
+  const links = (1 - smooth01(-fe, fe, Math.abs(x) - P.links.half))*out;
+  return {bezel, crown, links};
+}
+/* What the photograph has to show for this design: null when it shows
+   the design as it is (steel as photographed, or a colour it has always
+   been left to the drawing to show); false when it cannot, so the drawn
+   case stands in; else the gold to lay on and the parts that take it. */
+function photoPlan(st, K){
+  const c = st.case || {}, two = twoToneOf(st), full = goldOf(c.material), gem = gemBezelOn(st);
+  if(!two && !full && !gem) return null;
+  if(!K || !K.photoParts) return two || gem ? false : null;
+  return {full, two, gem};
+}
+/* The photograph's pixels with the plan laid on: src is RGBA, cal places
+   the dial centre (cx, cy in pixels) and the scale (s, pixels per mm).
+   A whole gold case takes the whole picture: the dial is drawn over it and
+   the white ground maps to white. */
+function photoTintPixels(src, w, h, cal, P, plan){
+  const out = new Uint8ClampedArray(src), tone = plan && (plan.full || plan.two);
+  if(!tone) return out;
+  const lut = luxRampLUT(tone), s = cal.s, fe = 1.1/s, part = !plan.full;
+  /* nothing right of the crown can be a part */
+  const xMax = part ? (P.crown.x1 + fe)*s + cal.cx : w;
+  for(let j = 0; j < h; j++){
+    const y = (j + 0.5 - cal.cy)/s;
+    for(let i = 0; i < w; i++){
+      let m = 1;
+      if(part){
+        if(i > xMax) break;
+        const x = (i + 0.5 - cal.cx)/s;
+        if(Math.abs(x) > P.links.half + fe && Math.hypot(x, y) < P.bezel.inner[2] - fe) continue;
+        const q = photoPartAt(P, x, y, fe);
+        m = Math.max(q.bezel, q.crown, q.links);
+        if(m <= 0) continue;
+      }
+      const o = (j*w + i)*4, L = Math.round(0.299*src[o] + 0.587*src[o + 1] + 0.114*src[o + 2])*3;
+      out[o] = src[o] + (lut[L] - src[o])*m;
+      out[o + 1] = src[o + 1] + (lut[L + 1] - src[o + 1])*m;
+      out[o + 2] = src[o + 2] + (lut[L + 2] - src[o + 2])*m;
+    }
+  }
+  return out;
+}
+
+/* ---- the gem-set bezel ----
+   A row of stones in place of the fluted bezel: round brilliants with a
+   bead between each pair, or tapered baguettes set edge to edge
+   (invisible setting). The case's own bezel ring, bezelOD to bezelID, says
+   how wide the row can be: 0.35 mm of polished gold is kept each side. */
+const GEM_BEZEL_EDGE = 0.35;
+const gemBezelOn = st => { const c = st && st.case; if(!c || (c.gemBezel !== "round" && c.gemBezel !== "baguette")) return false;
+  const K = typeof caseOf === "function" ? caseOf(st) : null; return !!(K && K.shape === "round" && K.bezelOD > K.bezelID); };
+/* the gold the bezel is made in: the case's gold, else white gold */
+const gemBezelMetal = st => twoToneOf(st) || goldOf(st.case && st.case.material) || "white gold";
+function gemBezelSpec(st){
+  if(!gemBezelOn(st)) return null;
+  const c = st.case, K = caseOf(st), rIn = K.bezelID/2, rOut = K.bezelOD/2, w = rOut - rIn, e = GEM_BEZEL_EDGE;
+  const stone = GEM_STONES[c.gemStone] ? c.gemStone : "diamond", rm = (rIn + rOut)/2, circ = 2*Math.PI*rm;
+  const o = {cut:c.gemBezel, stone, metal:gemBezelMetal(st), od:K.bezelOD, id:K.bezelID, w, rm};
+  if(c.gemBezel === "round"){
+    const want = Number.isFinite(+c.gemD) && +c.gemD > 0 ? +c.gemD : 2.10;
+    o.d = Math.max(1.2, Math.min(want, w - 2*e)); o.want = want;
+    o.n = Math.floor(circ/(o.d + 0.14));
+    o.ct = o.n*gemCarats({cut:"round", n:1, d:o.d});
+  }else{
+    o.L = w - 2*e; o.n = Math.round(circ/1.95/2)*2; o.gap = 0.07;
+    o.W = circ/o.n - o.gap;
+    o.ct = o.n*gemCarats({cut:"baguette", n:1, L:o.L, W:o.W});
+  }
+  return o;
+}
+/* A point of a bezel ring: t from its inner edge (0) to its outer (1), at
+   deg from 12. A ring is two ellipses [cx, cy, rx, ry], so the one drawing
+   fits the drawn case (two circles) and the photograph (the rim seen a
+   little from below). */
+const ringPt = (ring, t, deg) => { const a = deg*Math.PI/180, s = Math.sin(a), c = Math.cos(a), I = ring.inner, O = ring.outer;
+  const pi = [I[0] + I[2]*s, I[1] - I[3]*c], po = [O[0] + O[2]*s, O[1] - O[3]*c];
+  return [pi[0] + (po[0] - pi[0])*t, pi[1] + (po[1] - pi[1])*t]; };
+function ringPath(ring, t0, t1, N){
+  N = N || 180; const a = [], b = [];
+  for(let k = 0; k < N; k++){ const d = k*360/N; a.push(ringPt(ring, t1, d)); b.push(ringPt(ring, t0, -d)); }
+  const P = L => "M" + L.map(p => `${gf(p[0])} ${gf(p[1])}`).join("L") + "Z";
+  return P(a) + P(b);
+}
+/* A tapered baguette, its four corners given (inner pair, then outer
+   pair): three step rings, the table, the keel seen through it, a glint. */
+function gemTaper(Q, stone, la, seed, sparkle){
+  const G = GEM_STONES[stone] || GEM_STONES.diamond, lx = Math.cos(la), ly = Math.sin(la);
+  const c = [(Q[0][0] + Q[1][0] + Q[2][0] + Q[3][0])/4, (Q[0][1] + Q[1][1] + Q[2][1] + Q[3][1])/4];
+  const shrink = k => Q.map(p => [c[0] + (p[0] - c[0])*k, c[1] + (p[1] - c[1])*k]);
+  const P = L => "M" + L.map(p => `${gf(p[0])} ${gf(p[1])}`).join("L") + "Z";
+  const edge = `stroke="${G.edge}" stroke-opacity=".3" stroke-width=".01"`;
+  const out = [`<path d="${P(Q)}" fill="${G.deep}"/>`], rings = [1, .84, .69, .56];
+  for(let k = 0; k < rings.length - 1; k++){
+    const A = shrink(rings[k]), B = shrink(rings[k + 1]);
+    for(let j = 0; j < 4; j++){
+      const p0 = A[j], p1 = A[(j + 1)%4], q1 = B[(j + 1)%4], q0 = B[j];
+      const mx = (p0[0] + p1[0])/2 - c[0], my = (p0[1] + p1[1])/2 - c[1], ml = Math.hypot(mx, my) || 1, dot = (mx*lx + my*ly)/ml;
+      /* step cuts flash: a facet is now bright, now dark, more than its
+         turn to the light alone would say */
+      let t = .48 + .36*dot - .07*k + (gemHash(seed, k*4 + j) - .5)*.40;
+      if(k%2 === 1) t -= .20*(1 - Math.abs(dot));
+      out.push(`<path d="${P([p0, p1, q1, q0])}" fill="${gemRamp(G, t)}" ${edge}/>`);
+    }
+  }
+  const T = shrink(rings[rings.length - 1]);
+  out.push(`<path d="${P(T)}" fill="${gemRamp(G, .62 + (gemHash(seed, 40) - .5)*.12)}" ${edge}/>`);
+  const k1 = shrink(.30);
+  out.push(`<path d="M${gf((k1[0][0] + k1[1][0])/2)} ${gf((k1[0][1] + k1[1][1])/2)}L${gf((k1[2][0] + k1[3][0])/2)} ${gf((k1[2][1] + k1[3][1])/2)}" stroke="${G.deep}" stroke-opacity=".3" stroke-width=".07"/>`);
+  if(sparkle > 0 && gemHash(seed, 41) < .15 + .4*sparkle){
+    const g = T[gemHash(seed, 42) < .5 ? 1 : 2];
+    out.push(gemGlint(c[0] + (g[0] - c[0])*.6, c[1] + (g[1] - c[1])*.6, .9*(0.6 + sparkle*.5), 8 + 30*gemHash(seed, 43)));
+  }
+  out.push(`<path d="${P(Q)}" fill="none" stroke="${G.deep}" stroke-width=".02"/>`);
+  return out.join("");
+}
+/* The bezel drawn on a ring: its gold, a seat channel, then the stones.
+   Lit from la (radians, the dial's frame); cx carries the drawing's ids. */
+function gemBezelSVG(B, ring, la, cx, sparkle){
+  const MT = METALS[B.metal] || METALS["white gold"], sp = sparkle === undefined ? 0.6 : sparkle, out = [];
+  const e = GEM_BEZEL_EDGE/B.w, n = B.n;
+  out.push(`<path d="${ringPath(ring, 0, 1)}" fill="${gemMetal(cx, MT, la)}" fill-rule="evenodd"/>`);
+  /* The ring is rounded across: its two bevels face opposite ways, so
+     the crystal-side one is lit where the rim-side one is dark, as on a
+     polished bezel. A thin lit line runs along the top of each. */
+  out.push(`<path d="${ringPath(ring, 0, e*.75)}" fill="${gemMetal(cx, MT, la, true)}" fill-rule="evenodd"/>`);
+  out.push(`<path d="${ringPath(ring, 1 - e*.75, 1)}" fill="${gemMetal(cx, MT, la, true)}" fill-opacity=".8" fill-rule="evenodd"/>`);
+  out.push(`<path d="${ringPath(ring, e*.70, e*.80)}" fill="${MT.hi}" fill-opacity=".55" fill-rule="evenodd"/>`);
+  out.push(`<path d="${ringPath(ring, 1 - e*.80, 1 - e*.70)}" fill="${MT.hi}" fill-opacity=".35" fill-rule="evenodd"/>`);
+  /* baguettes sit edge to edge in a channel, its floor showing in the joins */
+  if(B.cut !== "round") out.push(`<path d="${ringPath(ring, e*.9, 1 - e*.9)}" fill="${shade(MT.lo, .35)}" fill-rule="evenodd"/>`);
+  /* A few stones are drawn once and repeated: a brilliant looks the same
+     turned any way, so eight round ones serve the whole row; a baguette is
+     drawn upright for eight directions of the light and turned into place.
+     Each is scaled to the ring's width where it sits. */
+  const lx = Math.cos(la), ly = Math.sin(la), V = 8, at = deg => { const a = ringPt(ring, 0, deg), b = ringPt(ring, 1, deg); return Math.hypot(b[0] - a[0], b[1] - a[1])/B.w; };
+  if(B.cut === "round"){
+    const t = .5, sc0 = B.d/B.w, ids = [];
+    for(let v = 0; v < V; v++){ const gid = cx.id("gbs"); ids.push(gid);
+      cx.defs.push(`<g id="${gid}"><circle r="${gf(B.d/2 + .06)}" fill="${shade(MT.lo, .25)}"/>${gemRound(0, 0, B.d, B.stone, la, 900 + v*13, sp)}</g>`); }
+    for(let k = 0; k < n; k++){
+      const deg = (k + .5)*360/n, p = ringPt(ring, t, deg);
+      out.push(`<use href="#${ids[k%V]}" transform="translate(${gf(p[0])} ${gf(p[1])}) scale(${gf(at(deg), 4)})"/>`);
+    }
+    /* a bead of gold in the gap between each pair of stones, on both sides
+       of the row, where the gap opens out */
+    const beads = [];
+    for(let k = 0; k < n; k++){
+      const deg = (k + 1)*360/n;
+      for(const tt of [.5 - sc0*.43, .5 + sc0*.43]){ const q = ringPt(ring, tt, deg); beads.push(`M${gf(q[0] + .19)} ${gf(q[1])}a.19 .19 0 1 0 -.38 0a.19 .19 0 1 0 .38 0Z`); }
+    }
+    out.push(`<path d="${beads.join("")}" fill="${shade(MT.lo, .2)}" transform="translate(${gf(-lx*.04)} ${gf(-ly*.04)})" opacity=".5"/>`);
+    out.push(`<path d="${beads.join("")}" fill="${MT.base}" stroke="${MT.lo}" stroke-width=".015"/>`);
+  }else{
+    /* upright at 12: inner edge below, outer edge above, centred on the row */
+    const rc = (B.id/2 + B.od/2)/2, r0 = B.id/2 + GEM_BEZEL_EDGE, r1 = B.od/2 - GEM_BEZEL_EDGE, half = Math.PI/n - B.gap/2/rc;
+    const Q = [[-r0*Math.sin(half), rc - r0*Math.cos(half)], [r0*Math.sin(half), rc - r0*Math.cos(half)],
+               [r1*Math.sin(half), rc - r1*Math.cos(half)], [-r1*Math.sin(half), rc - r1*Math.cos(half)]];
+    const ids = {};
+    for(let k = 0; k < n; k++){
+      const deg = k*360/n, dir = ((Math.round(((la - deg*Math.PI/180)/(2*Math.PI))*V)%V) + V)%V, v = dir + V*(k%3);
+      if(!ids[v]){ ids[v] = cx.id("gbt"); cx.defs.push(`<g id="${ids[v]}">${gemTaper(Q, B.stone, dir*2*Math.PI/V, 700 + v*11, sp)}</g>`); }
+      const p = ringPt(ring, .5, deg), sc = at(deg);
+      out.push(`<use href="#${ids[v]}" transform="translate(${gf(p[0])} ${gf(p[1])}) rotate(${gf(deg, 2)}) scale(${gf(sc, 4)})"/>`);
+    }
+  }
+  /* the edges of the ring, so it sits in the case rather than on it */
+  out.push(`<path d="${ringPath(ring, 0, .012)}" fill="${shade(MT.lo, .3)}" fill-opacity=".7" fill-rule="evenodd"/>`);
+  out.push(`<path d="${ringPath(ring, .988, 1)}" fill="${shade(MT.lo, .4)}" fill-opacity=".8" fill-rule="evenodd"/>`);
+  return out.join("");
+}
+
+/* ---- the pavé dial ----
+   The dial set with small brilliants, as a grain-set gold dial is: a row of
+   stones along each edge of the set area and a packed hexagonal field
+   between, cleared round the windows, the hands' centre, a sub-dial and
+   the lettering, and under the markers, which stand on the stones. */
+const PAVE_ZONES = ["full", "centre", "ring"];
+const paveDialOn = st => !!(st && st.dial && PAVE_ZONES.indexOf(st.dial.pave) >= 0);
+const paveDialD = st => { const v = +(st.dial && st.dial.paveD); return Number.isFinite(v) ? Math.max(0.7, Math.min(1.5, v)) : 1.0; };
+/* the inner edge of the markers, where a centre field stops and a ring starts */
+function paveMarkerInner(st){
+  let r = Infinity;
+  const nm = st.numerals || {}, ix = st.indices || {};
+  if(numeralsShown(st)) r = Math.min(r, nm.radius - nm.size/2);
+  if(ix.on) r = Math.min(r, ix.radius - (ix.length || 0)/2);
+  for(const p of gemPlacements(st)) if(!p.drop) r = Math.min(r, p.r - p.size.l/2);
+  return r;
+}
+/* The set area as radii: the hands' centre is kept clear, the stones stop
+   short of the minute track and the opening. */
+function paveDialZone(st){
+  if(!paveDialOn(st)) return null;
+  const open = gemOpenR(st), mi = gemMinuteInner(st), rc = 1.45;
+  const r1 = Math.min(open - 0.30, mi - 0.20);
+  let mk = paveMarkerInner(st); if(!Number.isFinite(mk)) mk = (rc + r1)/2;
+  const z = st.dial.pave;
+  return z === "centre" ? {r0:rc, r1:Math.max(rc + 1, mk - 0.35), zone:z}
+    : z === "ring" ? {r0:Math.min(r1 - 1, mk - 0.35), r1, zone:z} : {r0:rc, r1, zone:z};
+}
+/* What the stones keep clear of: the framed windows, a sub-dial, the
+   markers and the lines of text (given by the renderer, which knows how
+   wide the lettering runs: [{t:"rect", cx, cy, hu, hv, a}] or sectors). */
+function paveKeepOut(st, text){
+  const out = [], DW = dayWindow(st);
+  if(DW){ const rm = (DW.rin + DW.rout)/2; out.push({t:"sector", r0:DW.rin - DW.edge, r1:DW.rout + DW.edge, half:DW.half + DW.edge/rm*180/Math.PI, m:0.15}); }
+  const dt = st.date;
+  if(dt && dt.on){ const A = (dt.at || 3)*30, c = pt(dt.dist || 9.95, A), fw = dt.frameW || 0; out.push({t:"rect", cx:c[0], cy:c[1], hu:dt.w/2 + fw, hv:dt.h/2 + fw, a:A, m:0.15}); }
+  const sub = st.sub;
+  if(sub && sub.on) for(const sd of [sub].concat(Array.isArray(sub.extra) ? sub.extra : [])){ if(sd.on === false) continue;
+    const c = pt(sd.dist, sd.at*30); out.push({t:"disc", cx:c[0], cy:c[1], r:sd.diameter/2, m:0.15}); }
+  /* Printed figures and indices need the gold to print on; applied ones
+     and gem markers stand on the stones, as on a set dial they do. */
+  const plan = hourPlan(st), nm = st.numerals || {}, ix = st.indices || {}, cov = coveredHours(st);
+  if(numeralsShown(st) && nm.tech !== "applied") for(let i = 0; i < 12; i++){
+    if(plan[i].kind !== "numeral" || cov.has(i || 12)) continue;
+    const c = pt(nm.radius, i*30); out.push({t:"disc", cx:c[0], cy:c[1], r:nm.size*0.42, m:0.05});
+  }
+  if(ix.on && ix.applied === false){
+    const n = Math.round(ix.count || 12), w = ix.style === "double" ? ix.width*2.2 : ix.width;
+    for(let i = 0; i < n; i++){
+      const a = i*360/n, hr = n === 12 ? i : (i*12/n);
+      if(n === 12 && (plan[i].kind !== "index" && plan[i].kind !== "indexAlt")) continue;
+      if(Number.isInteger(hr) && cov.has(hr || 12)) continue;
+      const c = pt(ix.radius, a); out.push({t:"rect", cx:c[0], cy:c[1], hu:(ix.length || 0)/2, hv:w/2, a, m:0.05});
+    }
+  }
+  return out.concat(text || []);
+}
+const paveKeepDist = (k, x, y) => k.t === "disc" ? Math.hypot(x - k.cx, y - k.cy) - k.r
+  : k.t === "rect" ? distToRect(x, y, k.cx, k.cy, k.hu, k.hv, k.a)
+  /* a sector is measured about 12; one at 6 is the same turned over */
+  : k.flip ? distToSector(-x, -y, k.r0, k.r1, k.half) : distToSector(x, y, k.r0, k.r1, k.half);
+/* The stone centres: a row along each edge of the zone, then the packed
+   field, each stone a pitch (stone plus 0.12 mm of bead wall) from its
+   neighbours, every one clear of the keep-outs by its radius and their
+   margin. */
+function paveDialCentres(st, text){
+  const Z = paveDialZone(st); if(!Z || Z.r1 - Z.r0 < 0.8) return [];
+  const d = paveDialD(st), p = d + 0.12, keep = paveKeepOut(st, text), out = [];
+  const clear = (x, y) => keep.every(k => paveKeepDist(k, x, y) >= d/2 + (k.m || 0) - 1e-9);
+  const rows = [], row = r => { const n = Math.floor(2*Math.PI*r/p); for(let k = 0; k < n; k++){ const q = pt(r, (k + .5)*360/n); rows.push(q); if(clear(q[0], q[1])) out.push(q); } };
+  const ro = Z.r1 - d/2, ri = Z.r0 + d/2;
+  if(ro - ri < p*0.9){ row((ro + ri)/2); return out; }
+  row(ro); row(ri);
+  /* the field runs up to the edge rows: a stone near one is kept when it
+     is a pitch from every stone of that row */
+  const dy = p*Math.sqrt(3)/2, J = Math.ceil(ro/dy);
+  for(let j = -J; j <= J; j++){
+    const y = j*dy, off = (j & 1) ? p/2 : 0, I = Math.ceil(ro/p) + 1;
+    for(let i = -I; i <= I; i++){
+      const x = i*p + off, r = Math.hypot(x, y);
+      if(r < ri + p*0.5 || r > ro - p*0.5) continue;
+      if((r < ri + p || r > ro - p) && rows.some(q => Math.hypot(q[0] - x, q[1] - y) < p - 0.01)) continue;
+      if(clear(x, y)) out.push([x, y]);
+    }
+  }
+  return out;
+}
+/* The set field drawn: the gold dial over the whole zone (what shows
+   where the stones are cleared, and what the printing sits on), a seat
+   for each stone, the stones (a few drawn once and repeated, each placed
+   by <use>), and a grain bead in each gap between three stones. */
+function paveDialSVG(cs, d, stone, MT, la, cx, sparkle, Z){
+  if(!cs.length) return "";
+  const seat = [], beads = [], rs = (d + .06)/2;
+  const circ = (x, y, r) => `M${gf(x + r)} ${gf(y)}a${gf(r)} ${gf(r)} 0 1 0 ${gf(-2*r)} 0a${gf(r)} ${gf(r)} 0 1 0 ${gf(2*r)} 0Z`;
+  for(const [x, y] of cs) seat.push(circ(x, y, rs));
+  const ro = Z ? Z.r1 + .08 : Math.max(...cs.map(c => Math.hypot(c[0], c[1]))) + d/2 + .1, ri = Z && Z.zone !== "full" ? Math.max(0, Z.r0 - .08) : 0;
+  /* neighbours through a grid of cells a pitch wide */
+  const p = d + .12, lim = p*1.18, cell = new Map(), key = (i, j) => i + "," + j;
+  cs.forEach((c, k) => { const K = key(Math.floor(c[0]/p), Math.floor(c[1]/p)); if(!cell.has(K)) cell.set(K, []); cell.get(K).push(k); });
+  const near = k => { const c = cs[k], i0 = Math.floor(c[0]/p), j0 = Math.floor(c[1]/p), o = [];
+    for(let i = i0 - 1; i <= i0 + 1; i++) for(let j = j0 - 1; j <= j0 + 1; j++) for(const m of cell.get(key(i, j)) || [])
+      if(m > k && Math.hypot(cs[m][0] - c[0], cs[m][1] - c[1]) <= lim) o.push(m);
+    return o; };
+  const nb = cs.map((_, k) => near(k));
+  for(let a = 0; a < cs.length; a++) for(const b of nb[a]) for(const c of nb[b]) if(nb[a].indexOf(c) >= 0){
+    const x = (cs[a][0] + cs[b][0] + cs[c][0])/3, y = (cs[a][1] + cs[b][1] + cs[c][1])/3;
+    beads.push(circ(x, y, Math.min(.09, d*.09)));
+  }
+  const V = 8, ids = [];
+  for(let v = 0; v < V; v++){ const gid = cx.id("pvs"); ids.push(gid); cx.defs.push(`<g id="${gid}">${gemRound(0, 0, d, stone, la, 500 + v*37, sparkle)}</g>`); }
+  let s = `<path d="${circ(0, 0, ro)}${ri > 0 ? circ(0, 0, ri) : ""}" fill="${gemMetal(cx, MT, la)}" fill-rule="evenodd"/>`
+    + `<circle r="${gf(ro)}" fill="none" stroke="${shade(MT.lo, .2)}" stroke-opacity=".5" stroke-width=".04"/>`
+    + `<path d="${seat.join("")}" fill="${shade(MT.lo, .15)}" fill-opacity=".55"/>`;
+  s += cs.map((c, k) => `<use href="#${ids[Math.floor(gemHash(c[0], c[1])*V)%V]}" x="${gf(c[0])}" y="${gf(c[1])}"/>`).join("");
+  if(beads.length) s += `<path d="${beads.join("")}" fill="${MT.hi}" stroke="${MT.lo}" stroke-width=".012"/>`;
+  return s;
+}
+/* what the stone count of a pavé dial depends on */
+const paveDialSig = st => JSON.stringify([st.dial && st.dial.pave, paveDialD(st), st.case && st.case.model, st.minute && [st.minute.on, st.minute.diameter, st.minute.thickness],
+  st.numerals && [st.numerals.on, st.numerals.radius, st.numerals.size, st.numerals.set], st.indices && [st.indices.on, st.indices.radius, st.indices.length, st.indices.count],
+  st.markers, st.day && [st.day.on, st.day.arc], st.date && [st.date.on, st.date.at], st.sub && st.sub.on, st.text && [st.text.on, st.text.logo, st.text.logoY, st.text.logoSize, st.text.line2, st.text.foot]]);
+
+/* ---- ombré ----
+   The colour deepens from the centre to the edge, as a sprayed gradient
+   lacquer over a sunburst does: a touch lighter at the middle, near black
+   in the dial's own hue at the rim. amount 0 to 1. */
+function ombreStops(color, amount){
+  const a = Math.max(0, Math.min(1, +amount || 0));
+  return [[0, tint(color, .30), .30*a], [.30, color, 0], [.62, shade(color, .55), .38*a], [.86, shade(color, .82), .74*a], [1, shade(color, .90), .92*a]];
+}
+
+/* ---- the checks ---- */
+function luxChecks(st, pv){
+  const out = [], add = (ok, title, detail, layer) => out.push({ok, title, detail, layer}), mm = v => Number(v).toFixed(2);
+  const K = typeof caseOf === "function" ? caseOf(st) : {};
+  const B = gemBezelSpec(st);
+  if(B){
+    const what = B.cut === "round" ? `${B.n} round brilliants of Ø${mm(B.d)} mm` : `${B.n} tapered baguettes of ${mm(B.L)} × ${mm(B.W)} mm`;
+    add(false, "Gem-set bezel", `${what}, ${B.stone === "diamond" ? "diamonds" : B.stone + "s"}, about ${gf(B.ct, 2)} ct, in 18k ${B.metal}. `
+      + `The ring is ${mm(B.w)} mm wide (Ø${mm(B.od)} outside, Ø${mm(B.id)} inside, from the case drawing), so ${mm(GEM_BEZEL_EDGE)} mm of gold is kept each side. `
+      + (B.cut === "round" && B.want > B.d + 1e-9 ? `Ø${mm(B.want)} mm stones do not fit the ring, so Ø${mm(B.d)} is drawn. ` : "")
+      + `${K.model || "This case"} is drawn with a fluted steel bezel: Blue Creations must make a gem-set bezel (its seats, height over the crystal and the bezel fixing) and quote it.`, "case");
+  }
+  if(paveDialOn(st)){
+    const d = paveDialD(st), n = pv && pv.n, dialT = gemDialT(st), mat = (K.dialMat || "brass");
+    add(false, "Pavé dial", `${n ? n + " stones" : "Stones"} of Ø${mm(d)} mm${n ? `, about ${gf(n*0.0037*Math.pow(d, 3), 2)} ct,` : ""} grain-set over the ${st.dial.pave === "centre" ? "centre field" : st.dial.pave === "ring" ? "outer ring" : "whole dial"}. `
+      + `The dial blank is ${mat} Ø${mm(K.dialD || 0)} × ${mm(dialT)} mm; a pavé dial is normally an 18k gold base about 0.8–1.0 mm thick, so the stones can be seated. `
+      + `Blue Creations must confirm the stack height (hands, day and date discs, crystal) before a pavé dial is offered.`, "dial");
+  }
+  const two = twoToneOf(st);
+  if(two) add(false, "Two-tone parts", `Bezel, crown and bracelet centre links in ${two} on a steel case: separate parts, solid 18k or gold-plated steel. Confirm the material, plating thickness and cost with Blue Creations.`, "case");
+  return out;
+}
 /* GEMS-PURE-END */
 /* An applied baton is a small bar of metal with its top cut flat and its
    four edges bevelled and polished. Each bevel faces a different way round
@@ -8445,9 +8890,53 @@ function seedBuiltins(){
   if(!S.dial.slab){ const f = slabsOf(S.dial.stone)[0]; if(f) S.dial.slab = f.id; }
 }
 
+/* The case photograph with gold laid on (photoPlan, photoTintPixels): its
+   pixels are read once, and each look is made once and kept, so a gold
+   case costs one pass over the picture and then nothing. Until the pixels
+   are in, the drawn case stands in, as it does before the photograph
+   itself arrives. */
+const PHOTO_PIX = new Map(), PHOTO_TINT = new Map();
+function photoPixels(K){
+  if(PHOTO_PIX.has(K.photoFile)) return PHOTO_PIX.get(K.photoFile);
+  const src = casePhoto(K);
+  if(!src || typeof Image === "undefined" || typeof document === "undefined") return null;
+  PHOTO_PIX.set(K.photoFile, null);
+  const im = new Image();
+  im.onload = () => {
+    try{
+      const cv = document.createElement("canvas"); cv.width = im.naturalWidth; cv.height = im.naturalHeight;
+      const g = cv.getContext("2d"); g.drawImage(im, 0, 0);
+      PHOTO_PIX.set(K.photoFile, g.getImageData(0, 0, cv.width, cv.height));
+      if(typeof paintAll === "function") paintAll();
+    }catch(e){}
+  };
+  im.src = src;
+  return null;
+}
+function tintedPhoto(K, plan){
+  const key = K.photoFile + "|" + (plan.full || "") + "|" + (plan.two || "");
+  if(PHOTO_TINT.has(key)) return PHOTO_TINT.get(key);
+  const px = photoPixels(K); if(!px) return null;
+  const C = K.photoCal, w = px.width, h = px.height;
+  const cal = {cx:w*C.cx/100, cy:h*C.cy/100, s:w*C.dia/100/K.opening};
+  const cv = document.createElement("canvas"); cv.width = w; cv.height = h;
+  const g = cv.getContext("2d"), out = g.createImageData(w, h);
+  out.data.set(photoTintPixels(px.data, w, h, cal, K.photoParts, plan));
+  g.putImageData(out, 0, 0);
+  const url = cv.toDataURL("image/jpeg", 0.92);
+  if(PHOTO_TINT.size > 5) PHOTO_TINT.clear();
+  PHOTO_TINT.set(key, url);
+  return url;
+}
+
 function buildTemplate(st, o){
   o = o || {};
-  const K = caseOf(st), own = K.photoFile ? casePhoto(K) : null;
+  const K = caseOf(st);
+  /* gold the photograph cannot show: the drawn case instead */
+  const plan = K.photoFile ? photoPlan(st, K) : (twoToneOf(st) || gemBezelOn(st) ? false : null);
+  if(plan === false) return buildSVG(st, {scope:"full"});
+  let own = K.photoFile ? casePhoto(K) : null;
+  if(own && plan && (plan.full || plan.two)){ own = tintedPhoto(K, plan); if(!own) return buildSVG(st, {scope:"full"}); }
   const IMG = own || tplImage, IW = own ? K.photoCal.w : tplW, IH = own ? K.photoCal.h : tplH;
   if(!IMG) return buildSVG(st, {scope:"full"});
   const T = own ? Object.assign({}, st.tpl, {cx:K.photoCal.cx, cy:K.photoCal.cy, dia:K.photoCal.dia, rot:0}) : st.tpl;
@@ -8462,6 +8951,15 @@ function buildTemplate(st, o){
   });
   const clip = `tplclip${o.tag||""}`, sh = `tplsh${o.tag||""}`;
   const rec = Math.max(0, T.recess);
+  /* A gem-set bezel is drawn over the photographed one, on the ring the
+     photograph shows (K.photoParts), in millimetres placed as the dial is. */
+  let gemOver = "";
+  if(own && plan && plan.gem){
+    const GB = gemBezelSpec(st), s = dPx/openMM, gdefs = [], P = K.photoParts.bezel;
+    let n = 0; const gid = p => `${p}${++n}gb${o.tag||""}`;
+    const g = gemBezelSVG(GB, {inner:P.inner, outer:P.outer}, ((st.render && st.render.az) || 135)*Math.PI/180, {id:gid, defs:gdefs, grads:new Map()});
+    gemOver = `<g transform="translate(${f(cx,2)} ${f(cy,2)}) scale(${f(s,4)})" pointer-events="none"><defs>${gdefs.join("")}</defs>${g}</g>`;
+  }
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${IW} ${IH}"
     width="${o.px || IW}" height="${f((o.px || IW)*IH/IW,0)}" preserveAspectRatio="xMidYMid meet">
     <defs>
@@ -8474,7 +8972,7 @@ function buildTemplate(st, o){
     <g clip-path="url(#${clip})" transform="rotate(${f(T.rot,2)} ${f(cx,2)} ${f(cy,2)})">
       ${inner}
       <circle cx="${f(cx,2)}" cy="${f(cy,2)}" r="${f(dPx/2,2)}" fill="url(#${sh})" pointer-events="none"/>
-    </g>
+    </g>${gemOver}
     ${o.guide ? `<circle cx="${f(cx,2)}" cy="${f(cy,2)}" r="${f(dPx/2,2)}" fill="none" stroke="#C9A227" stroke-width="${f(IW*0.003,2)}" stroke-dasharray="${f(IW*0.012,2)} ${f(IW*0.008,2)}"/>
        <line x1="${f(cx-dPx*0.6,2)}" y1="${f(cy,2)}" x2="${f(cx+dPx*0.6,2)}" y2="${f(cy,2)}" stroke="#C9A227" stroke-width="${f(IW*0.002,2)}" stroke-opacity="0.6"/>
        <line x1="${f(cx,2)}" y1="${f(cy-dPx*0.6,2)}" x2="${f(cx,2)}" y2="${f(cy+dPx*0.6,2)}" stroke="#C9A227" stroke-width="${f(IW*0.002,2)}" stroke-opacity="0.6"/>` : ""}
@@ -8900,6 +9398,10 @@ const SCHEMA = {
     fields:()=>[
     SEL("case.model","Case",CASE_MODELS),
     C("case.material","Case colour (render)"),
+    SEL("case.twoTone","Two-tone: gold bezel, crown and centre links",["none",...TWO_TONES]),
+    ...(CASE_SPEC.shape === "round" ? [SEL("case.gemBezel","Gem-set bezel",["none","round","baguette"]),
+      ...(S.case.gemBezel === "round" || S.case.gemBezel === "baguette" ? [SEL("case.gemStone","Bezel stones",Object.keys(GEM_STONES)),
+        ...(S.case.gemBezel === "round" ? [N("case.gemD","Bezel stone size",1.2,2.7,.05)] : [])] : [])] : []),
     SEL("case.finish","Case finish (render)",["polished","brushed","satin"]),
     ...(CASE_SPEC.cabochon ? [C("case.cab","Cabochon colour")] : []),
     CK("case.strap", CASE_SPEC.bracelet ? "Show bracelet" : "Show strap"),
@@ -8911,7 +9413,11 @@ const SCHEMA = {
       C("dial.color","Dial colour"),
       N("dial.dome","Doming (− dished, + domed)",-0.60,0.60,.01,""),
     N("dial.satin","Satin overlay",0,1,.02,""),
-    SEL("dial.finish","Finish",["matte","gloss","sunburst","guilloche","brushed","grained","sandblasted","enamel","lacquer","stone","metallic","circular","mop"])];
+    SEL("dial.finish","Finish",["matte","gloss","sunburst","guilloche","brushed","grained","sandblasted","enamel","lacquer","stone","metallic","circular","mop"]),
+    N("dial.ombre","Ombré (darker toward the edge)",0,1,.02,""),
+    SEL("dial.pave","Pavé (set with diamonds)",["none",...PAVE_ZONES]),
+    ...(PAVE_ZONES.indexOf(S.dial.pave) >= 0 ? [SEL("dial.paveStone","Pavé stones",Object.keys(GEM_STONES)),
+      N("dial.paveD","Pavé stone size",0.7,1.5,.05), SEL("dial.paveMetal","Pavé bed metal",["white gold","yellow gold","rose gold"])] : [])];
     if(S.dial.finish === "guilloche") return base.concat([
       SEL("dial.pattern","Guilloché pattern",GUIL_PATTERNS),
       ...(S.dial.pattern === "clous"
@@ -10102,7 +10608,10 @@ document.addEventListener("click", e=>{
   if(row && !own("lock") && !own("addcmp")){
     sel = row.dataset.k; paintLayers(); paintProps(); paintView(); if(stacked()) tab("props"); }
   const sw = own("sw");
-  if(sw){ if(isLocked(sw.dataset.sw)) return lockedSay(); set(S,sw.dataset.sw,sw.dataset.v); commit(); paintProps(); paintView(); }
+  if(sw){ if(isLocked(sw.dataset.sw)) return lockedSay(); set(S,sw.dataset.sw,sw.dataset.v);
+    /* the classic colours named ombré are ombré */
+    if(sw.dataset.sw === "dial.color"){ const cl = classicOf(sw.dataset.v); if(cl && /ombré/.test(cl[0]) && !(S.dial.ombre > 0)) S.dial.ombre = 0.7; }
+    commit(); paintProps(); paintView(); }
   const slab = own("slab");
   if(slab && isLocked("dial.slab")) return lockedSay();
   if(slab){ S.dial.slab = slab.dataset.slab; commit(); paintProps(); paintView(); return; }
@@ -12161,6 +12670,11 @@ refineBootRender();
       const pv=(typeof PAVE_STATS!=='undefined'&&PAVE_STATS&&typeof paveSig==='function'&&PAVE_STATS.sig===paveSig(st))?PAVE_STATS:null;
       for(const g of gemChecks(st,pv))add(g.ok,g.title,g.detail,g.layer);
     }
+    /* A gem-set bezel, a pavé dial and two-tone parts are the maker's to confirm. */
+    if(typeof luxChecks==='function'){
+      const pd=(typeof PAVE_DIAL_STATS!=='undefined'&&PAVE_DIAL_STATS&&PAVE_DIAL_STATS.sig===paveDialSig(st))?PAVE_DIAL_STATS:null;
+      for(const g of luxChecks(st,pd))add(g.ok,g.title,g.detail,g.layer);
+    }
     add(false,'Movement and production review','Confirm hand stack, dial feet, tolerances, printing minimums and complication compatibility with your manufacturer.','case');
     return out;
   }
@@ -12576,6 +13090,8 @@ body.guided .stage.gPhoto{ background:#fff }
   color:var(--g-gold-ink); font:500 13.5px var(--sans); cursor:pointer }
 /* the gems: rows whose buttons keep a 44 px target, a stone's colour dot,
    and the small dial of the "Each hour" picker */
+.gSw.g44 button{ width:68px }
+.gSw.g44 span{ max-width:68px }
 .gChips.g44 button{ min-height:44px; min-width:44px; justify-content:center; display:inline-flex; align-items:center; gap:6px }
 .gDot{ display:inline-block; width:14px; height:14px; border-radius:50%; border:1px solid; flex:none }
 .gHourDial{ position:relative; width:264px; height:264px; border-radius:50%; margin:10px auto 8px; box-shadow:inset 0 0 0 1px rgba(0,0,0,.18) }
@@ -12864,7 +13380,12 @@ const GSTR = {en:{
   "day.bothNote":"Both names in every position of the disc, the Arabic on the right. Sellita must confirm a bilingual SW240-1 day disc.",
   "day.altNote":"The disc carries the week in Arabic and in English, one after the other, and setting the day picks which shows. Sellita must confirm a bilingual SW240-1 day disc.",
   "fin.openCheck":"Open the design check →",
-  "toast.drawnCase":"Showing the drawn case: the photograph is steel only."
+  "toast.drawnCase":"Showing the drawn case: the photograph cannot show this.",
+  "case.photoGold":"Blue Creations' photograph of the steel watch: gold is laid onto it. A finish or a strap shows the drawing instead.",
+  "case.gemNote": (n, ct, metal) => `${n} stones · ≈ ${ct} ct · set in 18k ${metal}. Blue Creations would have to make this bezel.`,
+  "case.gemRound":"Round brilliants are drawn on the round NOREL case only.",
+  "dial.paveNote": (n, ct) => `${n} stones · ≈ ${ct} ct. A pavé dial is 18k gold about 0.8–1.0 mm thick, not the 0.40 mm brass blank: Blue Creations to confirm.`,
+  "dial.ombreNote":"Darkens the colour toward the edge, as a sprayed gradient does over a sunburst."
 }};
 let GLANG = "en";
 const gT = (k, ...a) => { const L = GSTR[GLANG] || GSTR.en; let s = L[k]; if(s == null) s = GSTR.en[k]; if(s == null) return k;
@@ -12880,10 +13401,10 @@ const gT = (k, ...a) => { const L = GSTR[GLANG] || GSTR.en; let s = L[k]; if(s =
    they are printed. */
 const arCount = (n, one, two, few, many) => n === 1 ? one : n === 2 ? two : `${n} ${n >= 3 && n <= 10 ? few : many}`;
 GSTR.ar = {
-  "step.start":"البداية", "step.case":"الهيكل", "step.dial":"الميناء", "step.markers":"المؤشرات", "step.hands":"العقارب",
+  "step.start":"البداية", "step.case":"القالب", "step.dial":"الميناء", "step.markers":"المؤشرات", "step.hands":"العقارب",
   "step.text":"الكتابة", "step.calendar":"التاريخ", "step.finish":"المراجعة",
   "lead.start":"اختر نقطة بداية، وتستطيع تغيير كل شيء بعدها.",
-  "lead.case":"الهيكل، والسوار أو الحزام.",
+  "lead.case":"القالب، والسوار أو الحزام.",
   "lead.dial":"اللون والسطح ومسار الدقائق.",
   "lead.markers":"كيف تظهر الساعات على الميناء.",
   "lead.hands":"شكل العقارب ومعدنها.",
@@ -12916,9 +13437,9 @@ GSTR.ar = {
   "case.norel":"NOREL", "case.norelSub":"دائرية 41 ملم · الرسم الحالي", "case.vernoy":"Vernoy وسادية", "case.vernoySub":"36 ملم · حزام",
   "case.r3":"NOREL R3", "case.r3Sub":"رسم سابق", "case.d":"NOREL Concept D", "case.dSub":"مقترح سابق",
   "case.earlier":"رسومات NOREL السابقة", "case.metal":"المعدن", "case.finish":"التشطيب",
-  "case.photoNote":"الصورة تُظهر الهيكل الستيل. اختيار معدن أو تشطيب يعرض الرسم بدلاً منها.",
+  "case.photoNote":"الصورة تُظهر القالب الستيل. اختيار معدن أو تشطيب يعرض الرسم بدلاً منها.",
   "frame.whole":"الساعة كاملة", "frame.back": part => `العودة إلى ${part}`,
-  "part.case":"الهيكل", "part.dial":"الميناء", "part.day":"نافذة اليوم", "part.date":"نافذة التاريخ", "part.centre":"المركز",
+  "part.case":"القالب", "part.dial":"الميناء", "part.day":"نافذة اليوم", "part.date":"نافذة التاريخ", "part.centre":"المركز",
   "ink.title":"لون الطباعة", "ink.uses": list => `يُطبع به ${list}.`,
   "ink.part.minute":"مسار الدقائق", "ink.part.numerals":"الأرقام", "ink.part.indices":"المؤشرات", "ink.part.text":"الشعار والكتابة",
   "ink.own": part => `لون ${part}`,
@@ -12958,7 +13479,7 @@ GSTR.ar = {
   "gem.emerald":"الزمرد هش وغالباً معالج بالزيت: التسافوريت (العقيق الأخضر) أو الزمرد المصنّع مخبرياً هو الأخضر العملي، والترصيع بإطار يحفظه أكثر.",
   "gem.summary": (n, size, ct, h, clear, lab) => `${arCount(n, "حجر واحد", "حجران", "أحجار", "حجراً")} · ${size} · ≈ ${ct} قيراط · ارتفاعه ${h} ملم`
     + (clear != null ? ` · ${clear} ملم تحت عقرب الدقائق` : "") + (lab ? " · مصنّع مخبرياً" : ""),
-  "gem.unknown":"⚠ ارتفاعات العقارب غير معروفة لهذه الماكينة: اسأل المصنّع كم تترك العقارب من مسافة.",
+  "gem.unknown":"⚠ ارتفاعات العقارب غير معروفة لهذا المحرك: اسأل المصنّع كم تترك العقارب من مسافة.",
   "gem.tight": (c, hand, fh, next) => `⚠ ${c} ملم تحت عقرب ${hand === "minute" ? "الدقائق" : "الساعات"} عند ${fh === 4 ? "ارتفاع العقارب القياسي" : "ارتفاع العقارب " + fh}. اختر حجراً أصغر${next ? " أو ارتفاع العقارب " + next : ""}، واسأل Blue Creations.`,
   "gem.handNote":"تحدده العقارب التي تركّبها Blue Creations. العقارب الأعلى تحتاج فحص الزجاج.",
   "hr.oclock": h => `الساعة ${h}`, "hr.tap":"اضغط على ساعة لتختار ما يوضع عندها.",
@@ -12971,11 +13492,16 @@ GSTR.ar = {
   "day.off":"شغّل نافذة اليوم من تبويب نافذة اليوم.",
   "day.edgeFrame":"إطار معدني مصقول منفصل حول النافذة.",
   "day.edgeBevel":"الفتحة مقطوعة في الميناء بحافة مشطوفة مصقولة حتى القرص، بلا إطار، كما في Day-Date.",
-  "day.noCal":"نافذة اليوم تحتاج ماكينة يوم وتاريخ: اختر هيكل NOREL في خطوة الهيكل.",
-  "day.bothNote":"الاسمان معاً في كل موضع من القرص، والعربي على اليمين. على Sellita أن تؤكد توفر قرص يوم بلغتين لماكينة SW240-1 قبل طلب الميناء.",
-  "day.altNote":"القرص يحمل أيام الأسبوع بالعربي وبالإنجليزي واحداً بعد الآخر، وضبط اليوم يحدد أيهما يظهر. على Sellita أن تؤكد توفر قرص يوم بلغتين لماكينة SW240-1 قبل طلب الميناء.",
+  "day.noCal":"نافذة اليوم تحتاج محرك يوم وتاريخ: اختر قالب NOREL في خطوة القالب.",
+  "day.bothNote":"الاسمان معاً في كل موضع من القرص، والعربي على اليمين. على Sellita أن تؤكد توفر قرص يوم بلغتين لمحرك SW240-1 قبل طلب الميناء.",
+  "day.altNote":"القرص يحمل أيام الأسبوع بالعربي وبالإنجليزي واحداً بعد الآخر، وضبط اليوم يحدد أيهما يظهر. على Sellita أن تؤكد توفر قرص يوم بلغتين لمحرك SW240-1 قبل طلب الميناء.",
   "fin.openCheck":"افتح فحص التصميم ←",
-  "toast.drawnCase":"يظهر الرسم الآن: الصورة للعلبة الستيل فقط."
+  "toast.drawnCase":"يظهر الرسم الآن: الصورة لا تستطيع إظهار هذا الاختيار.",
+  "case.photoGold":"صورة Blue Creations للساعة الستيل، والذهب يُضاف عليها. اختيار تشطيب أو حزام يعرض الرسم بدلاً منها.",
+  "case.gemNote": (n, ct, metal) => `${arCount(n, "حجر واحد", "حجران", "أحجار", "حجراً")} · ≈ ${ct} قيراط · مرصّعة في ${({"yellow gold":"ذهب أصفر", "rose gold":"ذهب وردي", "white gold":"ذهب أبيض"})[metal] || metal} عيار 18. على Blue Creations أن تصنع هذا الإطار.`,
+  "case.gemRound":"الإطار المرصّع يُرسم على قالب NOREL الدائري فقط.",
+  "dial.paveNote": (n, ct) => `${arCount(n, "حجر واحد", "حجران", "أحجار", "حجراً")} · ≈ ${ct} قيراط. الميناء المرصّع بالكامل من ذهب عيار 18 بسماكة 0.8–1.0 ملم تقريباً، لا من النحاس بسماكة 0.40 ملم: على Blue Creations أن تؤكد ذلك.`,
+  "dial.ombreNote":"يُغمِّق اللون نحو الحافة، كما يفعل الطلاء المتدرّج فوق النقش الشمسي."
 };
 /* The short labels, by their English wording. A label that is not here is
    shown as it is (a font's name, a preset's name, a Pantone code). A label
@@ -12998,7 +13524,9 @@ const GWORD = {ar:{
   "Studio":"الاستوديو", "Watch classics":"كلاسيكيات الساعات", "Print colours":"ألوان الطباعة", "Find a code":"ابحث عن رمز",
   /* case */
   "Polished":"مصقول", "Brushed":"مصقول بالفرشاة", "Satin":"ساتان", "Show the bracelet":"إظهار السوار", "Show the strap":"إظهار الحزام",
-  "Strap colour":"لون الحزام", "Show as a photograph":"عرضها كصورة", "All case settings":"كل إعدادات الهيكل",
+  "Strap colour":"لون الحزام", "Steel and yellow gold":"ستيل وذهب أصفر", "Steel and rose gold":"ستيل وذهب وردي",
+  "Bezel":"الإطار", "Fluted":"مضلّع", "Round stones":"أحجار مستديرة", "Baguettes":"باغيت", "Bezel stones":"أحجار الإطار",
+  "Pavé":"ترصيع كامل (بافيه)", "Whole dial":"الميناء كله", "Centre":"الوسط", "Outer ring":"الحلقة الخارجية", "Ombré":"تدرّج اللون (أومبريه)", "Show as a photograph":"عرضها كصورة", "All case settings":"كل إعدادات القالب",
   /* dial */
   "Sunburst":"شمسي", "Matte":"مطفي", "Guilloché":"غيوشيه", "Enamel":"إينامل", "Lacquer":"لاكيه", "Gloss":"لامع", "Grained":"محبّب",
   "Stone":"حجر", "Mother of pearl":"صدف", "Pearl sheen":"لمعة الصدف", "Pattern":"النقشة", "All dial settings":"كل إعدادات الميناء",
@@ -13076,12 +13604,14 @@ const G_CHECK_AR = {
   "Setting and stone":"اسأل المرصّع عن هذا الحجر وطريقة ترصيعه.",
   "Diamond-set numerals":"الأرقام أصغر أو أرفع من أن تُرصّع بالأحجار.",
   "Date window envelope":"نافذة التاريخ تمتد تحت الإطار.",
-  "Date window size":"نافذة التاريخ أكبر من تاريخ الماكينة.",
-  "Date window position":"نافذة التاريخ ليست حيث تُظهر الماكينة التاريخ.",
+  "Date window size":"نافذة التاريخ أكبر من تاريخ المحرك.",
+  "Date window position":"نافذة التاريخ ليست حيث يُظهر المحرك التاريخ.",
   "Cyclops coverage":"المكبّر لا يغطي التاريخ كله.",
   "Day window arc":"نافذة اليوم أعرض من قرص اليوم.",
   "Day window clearance":"نافذة اليوم تمتد تحت الإطار.",
-  "Bilingual day disc":"على Sellita أن تؤكد توفر قرص يوم بلغتين لماكينة SW240-1 قبل طلب الميناء."
+  "Bilingual day disc":"على Sellita أن تؤكد توفر قرص يوم بلغتين لمحرك SW240-1 قبل طلب الميناء.",
+  "Gem-set bezel":"على Blue Creations أن تصنع إطاراً مرصّعاً بالأحجار.",
+  "Pavé dial":"الميناء المرصّع بالكامل يحتاج قاعدة ذهبية أسمك: على Blue Creations أن تؤكد ذلك."
 };
 
 /* One glossary for both modes. The words simple mode uses win, and the full
@@ -13210,9 +13740,11 @@ const G_CHECK_WORDS = {
   "Cyclops coverage":["calendar","The magnifier doesn't cover the whole date."],
   "Day window arc":["calendar","The day window is wider than the day disc."],
   "Day window clearance":["calendar","The day window runs under the bezel."],
-  "Bilingual day disc":["calendar","Sellita must confirm a bilingual SW240-1 day disc."]
+  "Bilingual day disc":["calendar","Sellita must confirm a bilingual SW240-1 day disc."],
+  "Gem-set bezel":["case","Blue Creations must make a gem-set bezel."],
+  "Pavé dial":["dial","A pavé dial needs a thicker gold dial: Blue Creations to confirm."]
 };
-const G_CHECK_QUIET = new Set(["Movement and production review","Gem setting production review","Case reference","Stone source"]);
+const G_CHECK_QUIET = new Set(["Movement and production review","Gem setting production review","Case reference","Stone source","Two-tone parts"]);
 const G_LAYER_STEP = {case:"case", tpl:"case", dial:"dial", minute:"dial", sector:"dial", chapter:"dial", borders:"dial",
   numerals:"markers", indices:"markers", markers:"markers", gems:"markers", hour:"markers",
   hands:"hands", text:"text", day:"calendar", date:"calendar"};
@@ -13503,6 +14035,19 @@ function gPlainCheck(row){
   const chips44 = (path, opts, cur) => chips(path, opts, cur).replace('<div class="gChips">', '<div class="gChips g44">');
   const stoneChips = (path, opts, cur) => `<div class="gChips g44">${opts.map(([v,l]) =>
     `<button type="button" data-gset="${path}" data-gv='${gv(v)}' class="${cur===v?"on":""}"><i class="gDot" style="background:${GEM_STONES[v].body};border-color:${GEM_STONES[v].deep}"></i>${esc2(l)}</button>`).join("")}</div>`;
+  /* The case metals, two-tone among them: a two-tone disc is split, steel
+     one side and the gold the other. Its value goes through gv like every
+     choice; "two:" + a gold names a two-tone. */
+  const METAL_MIX = [[LUX_STEEL,"Steel"],["two:yellow gold","Steel and yellow gold"],["two:rose gold","Steel and rose gold"],
+    [LUX_GOLD["yellow gold"],"Yellow gold"],[LUX_GOLD["rose gold"],"Rose gold"],[LUX_GOLD["white gold"],"White gold"],["#3B3D42","Black"]];
+  function metalRow(){
+    /* a steel a shade off the swatch's (the NOREL file's #C8CBCF) still reads as Steel */
+    const m = String(S.case.material).toUpperCase(), near = isHex(m) && [1, 3, 5].every(i => Math.abs(parseInt(m.slice(i, i + 2), 16) - parseInt(LUX_STEEL.slice(i, i + 2), 16)) <= 8);
+    const two = twoToneOf(S), cur = two ? "two:" + two : near ? LUX_STEEL : m;
+    return `<div class="gSw row g44">${METAL_MIX.map(([v, n]) => {
+      const bg = /^two:/.test(v) ? `linear-gradient(135deg, ${LUX_STEEL} 0 50%, ${LUX_GOLD[v.slice(4)]} 50% 100%)` : v;
+      return `<button type="button" title="${esc2(gW(n))}" aria-label="${esc2(gW(n))}" data-gset="ui.metal" data-gv='${gv(v)}' class="${cur === v.toUpperCase() || cur === v ? "on" : ""}"><i style="background:${bg}"></i><span>${esc2(gW(n))}</span></button>`; }).join("")}</div>`;
+  }
   /* a small picture of a gem marker, drawn by the same code as the dial */
   let gemPicSeq = 0;
   function gemPic(g, bg){
@@ -13611,7 +14156,8 @@ function gPlainCheck(row){
       /* the tab of the step it belongs to */
       if(w.step === "calendar") w.tab = /^Day|day disc/.test(w.title) ? "day" : "date";
       else if(w.step === "markers") w.tab = /^Diamond-set/.test(w.title) || (w.title === "Stone size" && S.numerals.pave) ? "made" : /^Gem|Stone|Setting/.test(w.title) ? "gems" : "size";
-      else if(w.step === "dial") w.tab = /Minute track/.test(w.title) ? "track" : /Surface/.test(w.title) ? "surface" : "colour";
+      else if(w.step === "dial") w.tab = /Minute track/.test(w.title) ? "track" : /Surface|Pavé/.test(w.title) ? "surface" : "colour";
+      else if(w.step === "case") w.tab = "metal";
       else if(w.step === "hands") w.tab = /Seconds/.test(w.title) ? "seconds" : "shape";
       add(w.step, w);
     }
@@ -13679,11 +14225,22 @@ function gPlainCheck(row){
         return `<div class="gCards">${now.map(card).join("")}</div>`
           + (earlier.length ? `<h3>${gT("case.earlier")}</h3><div class="gCards">${earlier.map(card).join("")}</div>` : "");
       }
-      let h = `<h3>${gT("case.metal")}</h3>` + swatches("case.material", CASE_METALS, S.case.material, {row:true, noAny:true});
+      let h = `<h3>${gT("case.metal")}</h3>` + metalRow();
       h += `<h3>${gT("case.finish")}</h3>` + chips("case.finish", [["polished","Polished"],["brushed","Brushed"],["satin","Satin"]], S.case.finish);
+      /* the bezel: fluted as drawn, or set with stones (round cases) */
+      if(K.shape === "round"){
+        const gb = gemBezelOn(S) ? S.case.gemBezel : "none";
+        h += `<h3>${gW("Bezel")}</h3>` + chips44("case.gemBezel", [["none","Fluted"],["round","Round stones"],["baguette","Baguettes"]], gb);
+        if(gb !== "none"){
+          const B = gemBezelSpec(S);
+          h += `<h3>${gW("Bezel stones")}</h3>` + stoneChips("case.gemStone", GEM_STONE_CHIPS, B.stone);
+          if(gb === "round") h += slider("case.gemD", "Stone size", 1.5, +(B.w - 2*GEM_BEZEL_EDGE).toFixed(2), 0.05, B.d);
+          h += `<p class="gNote">${gT("case.gemNote", B.n, B.ct.toFixed(2), B.metal)}</p>`;
+        }
+      }
       h += toggle("case.strap", K.bracelet ? "Show the bracelet" : "Show the strap", S.case.strap);
       if(!K.bracelet && S.case.strap) h += `<h3>${gW("Strap colour")}</h3>` + swatches("case.strapColor", [["#4E3629","Brown"],["#1E1E20","Black"],["#1E2B45","Navy"],["#A0744A","Tan"],["#2F3B2E","Green"],["#7A2433","Burgundy"]], S.case.strapColor, {row:true});
-      if(K.photoFile || K.photo){ h += toggle("tpl.on", "Show as a photograph", S.tpl.on); if(S.tpl.on) h += `<p class="gNote">${gT("case.photoNote")}</p>`; }
+      if(K.photoFile || K.photo){ h += toggle("tpl.on", "Show as a photograph", S.tpl.on); if(S.tpl.on) h += `<p class="gNote">${gT(K.photoParts ? "case.photoGold" : "case.photoNote")}</p>`; }
       return h + more("case", "All case settings");
     },
     dial(tab){
@@ -13712,6 +14269,18 @@ function gPlainCheck(row){
           h += `<h3>${gW("Stone")}</h3>` + chips("ui.stone", STONE_FAMILIES.filter(f => f !== "other" && f !== "mother of pearl" && BUILTIN_STONE[f]).map(f => [f, f[0].toUpperCase() + f.slice(1)]), d.stone);
         }
         if(d.finish === "guilloche") h += `<h3>${gW("Pattern")}</h3>` + chips("dial.pattern", GUIL_PATTERNS.map(p => [p, (GUIL_LABEL[p] || p).replace(/ \(.*/,"")]), d.pattern);
+        /* ombré over any surface, and a pavé of small diamonds over all or part of it */
+        h += slider("dial.ombre", "Ombré", 0, 1, 0.05, d.ombre || 0, "pct");
+        if(d.ombre > 0) h += `<p class="gNote">${gT("dial.ombreNote")}</p>`;
+        const pv = paveDialOn(S) ? d.pave : "none";
+        h += `<h3>${gW("Pavé")}</h3>` + chips44("dial.pave", [["none","None"],["full","Whole dial"],["centre","Centre"],["ring","Outer ring"]], pv);
+        if(pv !== "none"){
+          h += `<h3>${gW("Stone")}</h3>` + stoneChips("dial.paveStone", GEM_STONE_CHIPS, GEM_STONES[d.paveStone] ? d.paveStone : "diamond");
+          h += slider("dial.paveD", "Stone size", 0.8, 1.3, 0.05, paveDialD(S));
+          h += `<h3>${gW("Setting metal")}</h3>` + chips44("dial.paveMetal", [["white gold","White gold"],["yellow gold","Gold"],["rose gold","Rose gold"]], d.paveMetal || "white gold");
+          const ps = PAVE_DIAL_STATS && PAVE_DIAL_STATS.sig === paveDialSig(S) ? PAVE_DIAL_STATS.n : paveDialCentres(S).length, dd = paveDialD(S);
+          h += `<p class="gNote">${gT("dial.paveNote", ps, (ps*0.0037*Math.pow(dd, 3)).toFixed(2))}</p>`;
+        }
         return h + more("dial", "All dial settings");
       }
       let h = chips("minute.style", [["none","None"],["railroad","Railroad"],["ticks","Ticks"],["dots","Dots"],["beads","Beads"],["dashes","Dashes"]], S.minute.on ? S.minute.style : "none");
@@ -13986,8 +14555,16 @@ function gPlainCheck(row){
        it takes no metal, finish or strap. Chosen while it is on, they would
        change nothing on screen, so the drawn case takes over and says so. */
     let drawn = false;
-    if(/^case\.(material|finish|strap|strapColor)$/.test(path) && S.tpl.on && tplAvail(S) && get(S, path) !== v){ S.tpl.on = false; drawn = true; }
+    const photoOn = S.tpl.on && tplAvail(S);
+    /* Steel and the golds the photograph can take (it has its parts
+       measured); anything else it cannot show. */
+    const takes = m => !!caseOf(S).photoParts && (!!goldOf(m) || String(m).toUpperCase() === LUX_STEEL);
+    if(/^case\.(material|finish|strap|strapColor)$/.test(path) && photoOn && get(S, path) !== v && !(path === "case.material" && takes(v))){ S.tpl.on = false; drawn = true; }
+    if(path === "ui.metal" && photoOn && !/^two:/.test(v) && !takes(v) && String(v).toUpperCase() !== String(S.case.material).toUpperCase()){ S.tpl.on = false; drawn = true; }
     if(path === "hands.material"){ for(const k of ["hHand","mHand","sHand"]) if(S[k]) S[k].material = v; }
+    else if(path === "ui.metal"){ if(/^two:/.test(v)){ S.case.material = LUX_STEEL; S.case.twoTone = v.slice(4); } else { S.case.material = v; S.case.twoTone = "none"; } }
+    /* the classic colours named ombré are ombré */
+    else if(path === "dial.color"){ S.dial.color = v; const cl = classicOf(v); if(cl && /ombré/.test(cl[0]) && !(S.dial.ombre > 0)) S.dial.ombre = 0.7; }
     else if(path === "minute.style"){ if(v === "none") S.minute.on = false; else { S.minute.on = true; S.minute.style = v; } }
     else if(path === "case.model"){ const from = S.case.model; S.case.model = v; applyCaseModel(from, v); }
     else if(path === "num.make"){ const [t, m, pv] = v.split("|"); S.numerals.tech = t; S.numerals.material = m; if(m === "metal" && !S.numerals.metal) S.numerals.metal = "polished steel";
@@ -14015,6 +14592,8 @@ function gPlainCheck(row){
     else if(path === "text.foot"){ S.text.foot = v; S.text.footOn = !!v; }
     else put(path, v);
     if(/^hHand\./.test(path)) syncHands("hHand");
+    /* a two-tone case or a gem bezel the photograph has no parts for */
+    if(photoOn && S.tpl.on){ const K = caseOf(S); if(K.photoFile && photoPlan(S, K) === false){ S.tpl.on = false; drawn = true; } }
     commit(); paintAll();
     if(drawn) toast(gT("toast.drawnCase"));
   }
