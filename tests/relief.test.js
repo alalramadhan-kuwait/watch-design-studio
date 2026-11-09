@@ -77,3 +77,12 @@ test('a lift is clamped rather than allowed to swallow the case',()=>{
 test('zones are ignored entirely when the sector is off',()=>{
   assert.deepEqual(zoneStack({sector:{on:false,zones:[{outerD:30,innerD:0,lift:.5}]}},15.25),[]);
 });
+
+test('hours set one by one raise a marker at each gem and applied index hour, none under a window',()=>{
+  const at=['none','gem','gem','gem','index','gemAlt','indexAlt','numeral','none','gem','gem','gem'];
+  const state={indices:{on:true,applied:true,count:12},numerals:{on:true,set:'all'},markers:{perHour:true,at},day:{on:true},date:{on:true,at:3}};
+  assert.deepEqual(markerAngles(state),[30,60,120,150,180,270,300,330]);
+  state.indices.applied=false;
+  assert.deepEqual(markerAngles(state),[30,60,150,270,300,330],'printed indices are flat; gems still stand');
+  state.markers.perHour=false;assert.deepEqual(markerAngles(state),[],'off: today\'s rule');
+});

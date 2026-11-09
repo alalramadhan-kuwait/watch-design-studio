@@ -26,7 +26,18 @@ export function subdialLayout(state,radius){
 }
 export function handAngles(time){return [(time.h%12)*30+time.m*.5,time.m*6+(time.s||0)*.1,(time.s||0)*6];}
 export function markerAngles(state){
-  const i=state.indices;if(!i?.on||!i.applied)return [];
+  const i=state.indices;
+  /* Hours set one by one: a raised marker at every gem hour and every
+     applied index hour, none under a calendar window. A gem stands as a
+     metal boss of its footprint here; the stone itself is drawn in 2D. */
+  const m=state.markers;
+  if(m?.perHour&&Array.isArray(m.at)&&Math.round(i?.count||12)===12){
+    const cov=new Set();
+    if(state.day?.on)cov.add(12);
+    if(state.date?.on&&Number.isInteger(state.date.at))cov.add(state.date.at===0?12:state.date.at);
+    return m.at.map((k,n)=>({k,n})).filter(({k,n})=>!cov.has(n||12)&&(k==='gem'||k==='gemAlt'||((k==='index'||k==='indexAlt')&&i?.on&&i.applied))).map(({n})=>n*30);
+  }
+  if(!i?.on||!i.applied)return [];
   const sets={quarters:[12,3,6,9],even:[12,2,4,6,8,10],1212:[12,6],all:[12,1,2,3,4,5,6,7,8,9,10,11]};
   const occupied=state.numerals?.on?(sets[state.numerals.set]||sets.all):[];
   const count=Math.min(60,Math.max(4,Math.round(i.count||12)));

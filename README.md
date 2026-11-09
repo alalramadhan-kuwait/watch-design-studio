@@ -144,6 +144,42 @@ off, left touching, or replaced by **markers**: a short baton at 1 and at 11
 in the numerals' colour or metal, its outer end on the numerals' outer edge.
 Moved or made smaller, the two change together so the dial stays balanced.
 
+## Gems and diamond-set numerals
+
+**Markers → Gems** puts a gem at every hour; the **Layout** chips mix them
+with numerals or indices (gems at 6 & 9, numerals at 6 & 9, diamond at each
+hour, all baguettes, sapphire 6 & 9, special 6), and **Each hour…** opens a
+small dial where each hour is set to a numeral, index, accent index, gem,
+accent gem or nothing. On the NOREL, 12 and 3 sit under the day window and
+the date with its magnifier, so they are locked empty. **Same at every hour**
+goes back to the ordinary numerals and indices exactly as they were.
+
+- **Cuts:** round brilliant (one, or two or three stacked along the radius),
+  baguette (one, or two side by side) and princess, bezel-set, in prongs or
+  in a channel, in white, yellow or rose gold, steel or black.
+- **Stones:** diamond, black diamond, blue sapphire, ruby and emerald, natural
+  or lab-grown (the brief says "lab-grown"; the drawing does not change).
+- **Readout:** stones, size, carats, how high the gems stand, and the room
+  left under the minute hand at the SW240-1 hand height chosen (4 is
+  standard). Hand undersides are estimates from Sellita's fitting heights
+  until Blue Creations confirms the hands.
+- **Accent gem** is a second stone for the hours set to it (the sapphire at
+  6 & 9). Plain indices take a **Finish** too: colour, or a metal.
+- **Diamond-set numerals** (Made by → Diamond-set, applied metal figures in a
+  font) are drawn as one row of stones packed into each figure's own
+  strokes. At 3.3 mm most figures are too thin to hold a stone; the Thickness
+  slider and the Lalezar face show the idea (the NOREL · diamond-set
+  numerals example on the Start step). It is always flagged for review: the
+  maker would have to redraw the figures bold, and 4 mm sets more easily.
+
+The Design check gains rows for the hands, the day and date windows and
+magnifier, the minute track, marker spacing, the seat in the dial, the
+setting and stone, and a production review for the setter. The full
+editor has the same controls under **Hour by hour** and **Gems**. Gems and
+their shadows are plain shapes, never SVG filters, so they show in the
+photographed view on iPhone too; the 3D view raises each gem hour as a metal
+boss of the setting's outline.
+
 ## Stone and mother-of-pearl dials
 
 In simple mode, **Dial → Surface → Stone** lists the sixteen stones
