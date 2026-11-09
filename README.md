@@ -184,8 +184,9 @@ Since v3.0.0 simple mode moves differently:
 - **On its side**, a phone shows the watch on the left and the steps on the
   right.
 
-All the words simple mode adds are in one table (`GSTR` in `index.html`), so
-an Arabic interface can be added by translating it.
+All the words simple mode shows are in `index.html`: its sentences in one
+table (`GSTR`, English and Arabic under the same keys) and its short labels in
+another (`GWORD`, by their English wording).
 
 **One glossary.** Both modes use the same words: the full editor shows its
 drop-down values by name (Sunburst, Guilloché, Pearl sheen rather than
@@ -194,6 +195,58 @@ text component **Text**, and the ⋯ menu's save **Save version**. The values
 stored in a design file do not change. In the full editor at laptop widths
 the toolbar sits tighter, and on a narrower window it takes a second row
 rather than pushing Share and Export off the screen.
+
+## Simple mode in Arabic (v3.1.0)
+
+Simple mode can be used in Arabic. The switch is on the Start step
+(**English · عربي**), in the ⋯ menu on a phone, and beside **Full editor** in
+the top bar on a desktop; the choice is remembered on the device. Every step,
+tab, chip, note, warning, toast and button is in plain Modern Standard
+Arabic as it is written in the Gulf, with the words a watch buyer uses there:
+ميناء، عقارب، إطار، نافذة اليوم، نافذة التاريخ، مؤشرات. Millimetres and
+degrees keep Western digits ("3.30 ملم"), and brand and reference names
+(NOREL, Pantone, Day-Date, Sellita, Blue Creations) stay as printed.
+
+In Arabic the panel reads right to left: the step bar starts at the right, the
+rows of choices start at the right and fade at their left, a slider's minus
+is on the right and it fills from the right, and a switch is on with its knob
+at the left. The watch itself is never mirrored. The design check's rows read
+in Arabic on each step and on Finish.
+
+**The full editor stays in English**, as do the header above the watch and
+the ⋯ menu's export and version entries. The interface's Arabic is IBM Plex
+Sans Arabic (SIL Open Font License), carried inside `index.html` like the rest
+of the interface lettering, so it works offline under the service worker with
+nothing fetched.
+
+## Arabic on the dial
+
+The logo text, the line under the logo and the lower text can be set in
+Arabic, for example **أوتوماتيك** as the lower text. Text → Logo and Text →
+Lines show a face for each, as it will print: the dial's serif or sans, or
+one of five Arabic faces — **Naskh** (Noto Naskh Arabic), **Amiri**,
+**Cairo**, **El Messiri** and **Tajawal**, the same faces and names as the day
+and date discs, so a dial can be lettered and dated in one face. They carry
+the whole Arabic alphabet (the disc faces carry only the day names) and are
+embedded and written into exports. Reem Kufi is not offered: its joins broke.
+In the full editor they are in Text → Advanced → Logo font and beside each
+line's text.
+
+Arabic is never set along a curved path: Safari pulls the letters apart and
+runs them backwards. A curved Arabic line is set straight, joined by the
+font, and bent onto its arc in thin slices, as the day name and supplied
+artwork already are. Arabic is not letter-spaced. Lettering with no Arabic in
+it is drawn exactly as before.
+
+## Day disc in two languages
+
+Date → Day window → Day names offers **Arabic**, **English**, **Arabic and
+English** together (الجمعة and FRI in one window, the Arabic on the right) and
+**Alternating** (the week printed twice round the disc, Arabic and English in
+turn; setting the day picks which shows, and **In the window** chooses which
+the drawing shows). Each language has its own face. Neither is the stock
+SW240-1 disc, so the design check flags it until **Sellita confirms a
+bilingual SW240-1 day disc**.
 
 ## ١١ and ١ beside the day window
 
