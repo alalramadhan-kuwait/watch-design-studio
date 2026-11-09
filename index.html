@@ -2001,7 +2001,7 @@ const APP_BUILD = "__BUILD__";
 /* The version people see, raised with every change that reaches them:
    major for a new way of working, minor for something new to do, patch for
    a fix. Shown on the watch screen, so any screenshot says which it was. */
-const APP_VERSION = "3.4.0";
+const APP_VERSION = "3.4.1";
 const APP_DATE = "__DATE__";
 
 /* Every route that replaces S passes through one of these three, which is
@@ -12875,6 +12875,8 @@ window.WatchReliefBridge={
   /* the case's metals as the 3D view needs them: a two-tone gold, a whole
      gold case, and a gem-set bezel with its stones' colours */
   lux(st){const gem=gemBezelSpec(st);return {two:twoToneOf(st),full:goldOf(st.case&&st.case.material),gem:gem?{...gem,colors:GEM_STONES[gem.stone]||GEM_STONES.diamond}:null};},
+  /* a logo's vector outline (100 units tall, centred), for the 3D clasp */
+  logoPath(name){const L=LOGO_MARKS[name];return L&&L.d?{d:L.d,w:L.w}:null;},
   /* the stones of gem-set hours: where each sits and what it is */
   gems(st){try{return gemPlacements(st).filter(q=>!q.drop).map(q=>({a:q.a,r:q.r,cut:q.g.cut,n:q.g.n,d:q.g.d,L:q.g.L,W:q.g.W,s:q.g.s,colors:GEM_STONES[q.g.stone]||GEM_STONES.diamond,metal:(METALS[q.g.metal]||METALS['white gold']).base}));}catch(e){return [];}},
   /* applied metal numerals, drawn alone as white on nothing, for the 3D view

@@ -2,9 +2,9 @@ import * as THREE from 'three';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 import {SVGLoader} from 'three/addons/loaders/SVGLoader.js';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
-import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
+import {mergeGeometries,toCreasedNormals} from 'three/addons/utils/BufferGeometryUtils.js';
 import {reliefSettings,subdialLayout,handAngles,markerAngles,zoneBands,NOREL_R1,lugTopAt,norelStack,bezelProfile,gemBezelTop,
-  braceletPath,braceletRows,linkProfile,cyclopsLens,traceMask,simplifyLoop,nestLoops,loopArea,PBR_METAL} from './relief-model.js';
+  braceletPath,braceletRows,linkProfile,BRACELET,claspSpan,claspCoverOutline,cyclopsLens,traceMask,simplifyLoop,nestLoops,loopArea,PBR_METAL} from './relief-model.js';
 
 /* The 3D view. Two builds of the head share one studio:
    - a NOREL case (R3, Concept D, R4) is Blue Creations' own geometry: the
@@ -364,28 +364,74 @@ function cyclops(stack,K,dialMaterial,r){
   band(0,.09,new THREE.MeshBasicMaterial({color:'#20262c',transparent:true,opacity:.42,depthWrite:false}),.008);           // the refraction line at the edge
   band(.09,.2,new THREE.MeshBasicMaterial({color:'#ffffff',transparent:true,opacity:.22,depthWrite:false,blending:THREE.AdditiveBlending}),.009); // the rim's highlight
 }
-/* The bracelet, President-style: rows of three rounded links, brushed
-   outers and a polished centre, from end links that fill the lugs down
-   round a wrist-like curve to the clasp. Each finish is one merged mesh. */
-function bracelet(K,mats){
-  const thick=2.7,w0=(+K.lugWidth||21)-.1,w1=+K.clasp||16;
+/* The bracelet, President-style, to Blue Creations' sheet and renders
+   (BRACELET in relief-model.js says which number came from where): rows of
+   three rounded links, the outers brushed along the bracelet and the
+   centre polished, 21.0 at the lugs narrowing to the 16.0 clasp, from end
+   links that fill the lugs down round a wrist-like curve to the concealed
+   clasp under the watch on the 6 side. Each finish is one merged mesh. */
+function grainTexture(){
+  /* brushing: fine streaks running along the link (u), as a roughness and
+     bump map 4 mm square */
+  const cv=document.createElement('canvas');cv.width=cv.height=256;const g=cv.getContext('2d');
+  g.fillStyle='#d8d8d8';g.fillRect(0,0,256,256);
+  let seed=7;const rnd=()=>(seed=(seed*16807)%2147483647)/2147483647;
+  for(let i=0;i<900;i++){const y=rnd()*256,v=150+Math.floor(rnd()*105);g.fillStyle=`rgb(${v},${v},${v})`;g.fillRect(0,y,256,.6+rnd()*1.2);}
+  const t=texture(cv,false);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(.25,.25);return t;
+}
+async function claspCover(C,mat,logoMat){
+  const g=new THREE.Group(),W=C.width,w=W/2,L=W*C.longMid,Ls=W*C.longSide,len=x=>Ls+(L-Ls)*(1-(x/w)**2);
+  const crown=x=>.32*(1-(x/w)**2),flute=x=>-.055*(.5-.5*Math.cos(2*Math.PI*C.flutes*(x+w)/W));
+  /* the fluted top: columns across, rows along, each column as long as the
+     arched end lets it be */
+  const NX=C.flutes*4,NY=16,pos=[],idx=[];
+  for(let i=0;i<=NX;i++){const x=-w+W*i/NX;for(let j=0;j<=NY;j++){const y=len(x)*j/NY;pos.push(x,y,crown(x)+flute(x));}}
+  for(let i=0;i<NX;i++)for(let j=0;j<NY;j++){const a=i*(NY+1)+j,b=a+NY+1;idx.push(a,b,a+1,a+1,b,b+1);}
+  const top=new THREE.BufferGeometry();top.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));top.setIndex(idx);top.computeVertexNormals();
+  g.add(Object.assign(new THREE.Mesh(top,mat),{castShadow:true,receiveShadow:true}));
+  /* its edge and underside */
+  const outline=claspCoverOutline(C).map(([x,y])=>new THREE.Vector2(x,y));
+  const body=new THREE.ExtrudeGeometry(new THREE.Shape(outline),{depth:C.thick,bevelEnabled:true,bevelThickness:.12,bevelSize:.12,bevelOffset:-.12,bevelSegments:2,curveSegments:1});
+  body.translate(0,0,-C.thick-.02);g.add(new THREE.Mesh(body,mat));
+  /* the hinge knuckles either side */
+  for(const sx of [-1,1]){const k=new THREE.Mesh(new THREE.CylinderGeometry(.75,.75,1.0,20),mat);k.rotation.z=Math.PI/2;k.position.set(sx*(w+.35),Ls*.43,-.75);g.add(k);}
+  /* the shield over the wordmark, traced from the logo vector and the
+     lettering and stood up off the flutes */
+  const logo=bridge.logoPath?bridge.logoPath('NOREL shield'):null,ppm=90,x0=-C.wordmark/2-1,d0=1.5,cw=Math.round((C.wordmark+2)*ppm),ch=Math.round((C.baseAt*L+.6-d0)*ppm);
+  const cv=document.createElement('canvas');cv.width=cw;cv.height=ch;const c2=cv.getContext('2d');c2.fillStyle='#fff';
+  if(logo&&typeof Path2D==='function'){const sc=C.shieldH/100*ppm;c2.save();c2.translate(-x0*ppm,(C.shieldAt*L-d0)*ppm);c2.scale(sc,sc);c2.fill(new Path2D(logo.d),'evenodd');c2.restore();}
+  /* the wordmark is the lettering of the NOREL logo (its lower part, y 27
+     to 52 of its 100), scaled so it is 9.0 wide as the sheet says */
+  const mark=bridge.logoPath?bridge.logoPath('NOREL logo'):null;
+  if(mark&&typeof Path2D==='function'){const sc=C.wordmark/140.9*ppm;c2.save();c2.translate(-x0*ppm,(C.baseAt*L-d0)*ppm-49.7*sc);c2.scale(sc,sc);
+    c2.beginPath();c2.rect(-80,26,160,30);c2.clip();c2.fill(new Path2D(mark.d),'evenodd');c2.restore();}
+  const data=c2.getImageData(0,0,cw,ch).data,alpha=new Uint8Array(cw*ch);for(let i=0;i<cw*ch;i++)alpha[i]=data[i*4+3];
+  const shapes=nestLoops(traceMask(alpha,cw,ch,128).map(l=>simplifyLoop(l,.4)),6).map(({outer,holes})=>{
+    const toV=l=>{const v=l.map(([px,py])=>new THREE.Vector2(x0+px/ppm,L-(d0+py/ppm)));if(THREE.ShapeUtils.isClockWise(v))v.reverse();return v;};
+    const sh=new THREE.Shape(toV(outer));for(const h of holes)sh.holes.push(new THREE.Path(toV(h).reverse()));return sh;});
+  if(shapes.length){const lg=new THREE.ExtrudeGeometry(shapes,{depth:.1,bevelEnabled:true,bevelThickness:.06,bevelSize:.05,bevelOffset:-.05,bevelSegments:1,curveSegments:1});
+    const m=new THREE.Mesh(lg,logoMat);m.position.z=.24;g.add(m);}
+  return {group:g,length:L};
+}
+async function bracelet(K,mats){
+  const B=BRACELET,thick=B.thick,w0=Math.min(+K.lugWidth||B.lugWidth,B.lugWidth)-.1,w1=+K.clasp||B.clasp;
   /* the first row's top meets the lug tips; its underside is the path */
   const theta0=-25*Math.PI/180,yTop=23.0,zTop=lugTopAt(23.0)+.12,y0=yTop+Math.sin(theta0)*thick,z0=zTop-Math.cos(theta0)*thick;
-  const path=braceletPath({y0,z0,theta0,R:20}),rows=braceletRows(path,{pitch:5.3,gap:.42,w0,w1});
+  const path=braceletPath({y0,z0,theta0,R:20}),C={...B.cover,width:w1},span=claspSpan(path,C.width*C.longMid);
   const pieces={outer:[],centre:[],endOuter:[],endCentre:[]};
   const linkGeom=(len,width,th)=>{const bev=Math.min(.32,width*.08),depth=Math.max(.05,width-2*bev);
     const g=new THREE.ExtrudeGeometry(new THREE.Shape(linkProfile(len,th).map(([u,v])=>new THREE.Vector2(u,v))),{depth,bevelEnabled:true,bevelThickness:bev,bevelSize:bev*.7,bevelOffset:-bev*.7,bevelSegments:3,curveSegments:1,steps:1});
     g.translate(0,0,-depth/2);return g;};
   const frame=(sgn,y,z,th,x=0)=>{const T=new THREE.Vector3(0,sgn*Math.cos(th),Math.sin(th)),N=new THREE.Vector3(0,-sgn*Math.sin(th),Math.cos(th)),X=new THREE.Vector3(sgn,0,0);
     return new THREE.Matrix4().makeBasis(T,N,X).setPosition(x,sgn*y,z);};
-  for(const sgn of [-1,1])for(const row of rows){
-    const wc=row.width*.42,g=.24,wo=(row.width-wc-2*g)/2,base=frame(sgn,row.y,row.z,row.theta);
+  for(const sgn of [-1,1])for(const row of braceletRows(path,{w0,w1,end:(sgn>0?span.endPlus:span.endMinus)-.15})){
+    const wc=row.width*B.centreShare,g=B.centreGap,wo=(row.width-wc-2*g)/2,base=frame(sgn,row.y,row.z,row.theta);
     pieces.centre.push(linkGeom(row.length,wc,thick*1.06).applyMatrix4(base));
     for(const sx of [-1,1]){const off=new THREE.Matrix4().makeTranslation(0,0,sx*(wc/2+g+wo/2));pieces.outer.push(linkGeom(row.length,wo,thick).applyMatrix4(base.clone().multiply(off)));}
   }
   /* end links: solid between the lugs, their top following the lug tops
      down to the first row, with the centre stripe standing a little proud */
-  const ys=[],top=[];for(let y=NOREL_R1.caseWall+.05;y<=22.2;y+=.35){ys.push(y);top.push([y,lugTopAt(y)-.12]);}
+  const top=[];for(let y=NOREL_R1.caseWall+.05;y<=22.2;y+=.35)top.push([y,lugTopAt(y)-.12]);
   top.push([yTop,zTop]);
   const outline=[...top,[y0,z0],[NOREL_R1.caseWall+.6,z0+.4],[NOREL_R1.caseWall+.05,-4.0]];
   const capLine=[...top].reverse().map(([y,z])=>[y,z-1.1]);
@@ -394,12 +440,23 @@ function bracelet(K,mats){
   for(const sgn of [-1,1]){
     const m=new THREE.Matrix4().makeBasis(new THREE.Vector3(0,sgn,0),new THREE.Vector3(0,0,1),new THREE.Vector3(sgn,0,0));
     pieces.endOuter.push(endGeom(outline,w0).applyMatrix4(m));
-    pieces.endCentre.push(endGeom([...top,...capLine],w0*.42,.1).applyMatrix4(m));
+    pieces.endCentre.push(endGeom([...top,...capLine],w0*B.centreShare,.1).applyMatrix4(m));
   }
-  const merged=(list,mat)=>{const g=mergeGeometries(list.map(x=>x.index?x.toNonIndexed():x),false);list.forEach(x=>x.dispose());g.computeVertexNormals();return mesh(g,mat);};
+  /* smooth across the rounded tops and the bevels, sharp where a side meets a top */
+  const merged=(list,mat)=>{const g=mergeGeometries(list.map(x=>x.index?x.toNonIndexed():x),false);list.forEach(x=>x.dispose());const s=toCreasedNormals(g,35*Math.PI/180);g.dispose();return mesh(s,mat);};
   merged(pieces.outer.concat(pieces.endOuter),mats.outer);
   merged(pieces.centre.concat(pieces.endCentre),mats.centre);
-  return path;
+  /* the concealed clasp on the bottom run, its cover facing out (down),
+     between the two halves; a steel blade fills the band behind it */
+  const cover=await claspCover(C,mats.cover,mats.cover),bz=path.bottom;
+  cover.group.matrixAutoUpdate=false;
+  /* turned so that, seen from underneath with 12 up (as the view holds it),
+     the shield and the lettering read upright and unmirrored: the arched
+     end toward 12 */
+  cover.group.matrix.makeBasis(new THREE.Vector3(-1,0,0),new THREE.Vector3(0,1,0),new THREE.Vector3(0,0,-1)).setPosition(0,span.y0,bz-thick-.12);
+  model.add(cover.group);
+  const blade=mesh(new THREE.BoxGeometry(C.width-.6,span.y1-span.y0-.4,thick-.3),mats.outer);blade.position.set(0,(span.y0+span.y1)/2,bz-thick/2);
+  return {path,lowest:bz-thick-.12-.32-.06};
 }
 /* Applied metal numerals: the 2D renderer draws them alone, the outline
    is traced and stood up off the dial at the design's height and bevel. */
@@ -441,8 +498,10 @@ async function rebuild(){
       const bezelMetal=lux.gem?polished(PBR_METAL[lux.gem.metal]||accent,.08):polished(accent,.07);
       const stack=norelBezel(spec,lux,bezelMetal);
       if(state.case.strap){
-        const path=bracelet(spec,{outer:brushed(caseTone,.3),centre:polished(accent,.07)});
-        floorZ=path.bottom-.02;shadowBlobs=[[0,0,11,19,.55],[0,0,22,34,.28]];shadowSize=110;
+        const grain=grainTexture(),outer=brushed(caseTone,.4);outer.roughnessMap=grain;outer.bumpMap=grain;outer.bumpScale=.015;
+        const br=await bracelet(spec,{outer,centre:polished(accent,.07),cover:polished(accent,.08)});
+        if(token!==requestId||!dialog.open)return;
+        floorZ=br.lowest-.02;shadowBlobs=[[0,0,11,19,.55],[0,0,22,34,.28]];shadowSize=110;
       }else{floorZ=NOREL_R1.backBottom-.02;shadowBlobs=[[0,0,19,19,.55],[0,0,28,30,.25]];}
       model.userData.stack=stack;
     }else if(state.case.on){
@@ -546,7 +605,8 @@ export async function open(){
   opener=document.getElementById('open-relief');dialog.showModal();
   try{init();pose('angle');resize();await rebuild();}catch(error){status.textContent='Your browser could not start WebGL 3D. The 2D editor remains available. '+error.message;mount.dataset.ready='error';}
 }
-window.WatchRelief3D={open};
+/* view: a camera position and target, for tests and screenshots */
+window.WatchRelief3D={open,view(p,t){if(!controls)return;camera.position.set(...p);controls.target.set(...t);controls.update();render();}};
 document.querySelectorAll('[data-relief]').forEach(input=>input.addEventListener('change',commitSettings));
 document.getElementById('relief-close').onclick=()=>dialog.close();
 dialog.addEventListener('close',()=>{requestId++;rotation=false;renderer?.setAnimationLoop(null);document.getElementById('relief-rotate').setAttribute('aria-pressed','false');bridge.closed();opener?.focus();});

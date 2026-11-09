@@ -167,3 +167,36 @@ test('the case model ships, is compact and is cached for offline use',()=>{
   const src=readFileSync(new URL('../src/relief3d.js',import.meta.url),'utf8');
   assert.match(src,/CASE_GLB='\.\/app\/norel-case-r1\.glb'/);
 });
+
+/* ---- the bracelet to Blue Creations' sheet (v3.4.1) ---- */
+import {BRACELET,claspSpan,claspCoverOutline} from '../src/relief-model.js';
+test('the bracelet carries the sheet\'s numbers and the measured proportions',()=>{
+  assert.equal(BRACELET.lugWidth,21.0);assert.equal(BRACELET.clasp,16.0);assert.equal(BRACELET.lugToLug,48.0);
+  assert.equal(BRACELET.cover.wordmark,9.0,'9.0 is the wordmark on the clasp cover');
+  assert.ok(Math.abs(BRACELET.centreShare*21-9.1)<.1,'a 9.1 centre link at the lugs');
+  assert.ok(BRACELET.pitch>=4.65&&BRACELET.pitch<=5.15,'pitch between the two renders');
+});
+test('the links narrow from 21 at the lugs to 16 and stop short of the clasp',()=>{
+  const p=braceletPath({y0:21.86,z0:-6.95,theta0:-25*Math.PI/180,R:20}),C=BRACELET.cover,span=claspSpan(p,C.width*C.longMid);
+  assert.ok(span.y0<0&&span.y1>0&&span.y0+span.y1<0,'the clasp sits under the watch, toward 6');
+  assert.ok(Math.abs(span.y1-span.y0-C.width*C.longMid)<1e-9);
+  for(const end of [span.endPlus,span.endMinus]){
+    const rows=braceletRows(p,{end});
+    assert.ok(rows[rows.length-1].s+rows[rows.length-1].length/2<=end+1e-9,'no row runs under the clasp');
+    for(let i=1;i<rows.length;i++)assert.ok(rows[i].width<=rows[i-1].width);
+    assert.equal(rows[rows.length-1].width,16);
+    assert.ok(rows[0].width>20.3);
+    const p0=rows[1].s-rows[0].s;assert.ok(Math.abs(p0-BRACELET.pitch)<.6,'about the measured pitch');
+  }
+  // 0.14 narrower per mm: 16.0 is reached about 36 mm down the bracelet
+  const rows=braceletRows(p,{end:span.endPlus}),at=rows.find(r=>r.width===16);
+  assert.ok(at.s>30&&at.s<42);
+});
+test('the clasp cover is 16.0 wide with its arched end longer than its sides',()=>{
+  const o=claspCoverOutline();
+  const xs=o.map(p=>p[0]),ys=o.map(p=>p[1]);
+  assert.ok(Math.abs(Math.max(...xs)-Math.min(...xs)-16)<1e-9);
+  assert.ok(Math.abs(Math.max(...ys)-16*1.14)<.01);
+  assert.ok(Math.abs(o[2][1]-16*1.09)<1e-9);
+  assert.ok(loopArea(o)!==0);
+});

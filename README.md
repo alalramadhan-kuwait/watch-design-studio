@@ -197,6 +197,31 @@ stored in a design file do not change. In the full editor at laptop widths
 the toolbar sits tighter, and on a narrower window it takes a second row
 rather than pushing Share and Export off the screen.
 
+## The bracelet to the supplier's sheet (v3.4.1)
+
+The 3D bracelet now follows Blue Creations' variant sheet for the
+B6098G-A1 (R3, 29 Oct): **21.0 mm at the lugs narrowing to 16.0 at the
+clasp**, 48.0 lug to lug, outer links **brushed along the bracelet**
+("Vertical Brushed") and polished centre links ("Shiny"), closing on a
+**concealed clasp** under the watch on the 6 side. The clasp's cover is
+fluted lengthwise with the NOREL shield over the NOREL lettering, the
+lettering **9.0 mm wide**. On the sheet that dimension's lines stop at the N
+and the L, so it measures the lettering, not the cover. The cover takes the
+band's 16.0 width.
+
+What the sheet does not dimension was measured off the supplier's renders
+(the V1 watch on the sheet and the R4 photograph), scaled by the 21.0 band:
+- centre link: 9.1 mm wide (0.433 of the band);
+- link pitch: 4.9 mm (4.65 on the sheet, 5.15 on the photograph);
+- gap between rows: 0.35 mm;
+- taper: 0.14 mm per mm until the band reaches 16.0;
+- clasp cover proportions: 33 flutes, about 1.1 times as long as wide.
+
+`BRACELET` in `src/relief-model.js` lists each number and its source. Link
+thickness (2.7 mm) is still an estimate. The 3D view also has
+`WatchRelief3D.view(position, target)`, which the screenshots use to frame
+the clasp.
+
 ## The 3D view, rebuilt (v3.4.0)
 
 **3D view** now shows the NOREL as a product render rather than a sketch:

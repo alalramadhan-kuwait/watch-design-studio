@@ -178,22 +178,82 @@ export function braceletPath({y0 = 21.9, z0 = -6.6, theta0 = -25*Math.PI/180, R 
   };
   return {length:arc + run, at, bottom:cz - R};
 }
-/* The rows of links along that path: as many whole rows as fit at about
-   `pitch`, stretched a little so the last one meets its mirror at the
-   clasp, tapering from the lug width to the clasp's. */
-export function braceletRows(path, {pitch = 5.3, gap = .4, start = 0, w0 = 21, w1 = 16} = {}){
-  const len = path.length - start, n = Math.max(1, Math.round(len/pitch)), p = len/n, rows = [];
+/* What the bracelet is built to. From Blue Creations' variant sheet for the
+   B6098G-A1 (R3, 2026-10-29) where it says so; the rest measured off the
+   two renders they supplied, scaled by the 21.0 band at the lugs: the V1
+   watch on that sheet (60.2 px/mm at 150 dpi; its Ø41.0 bezel gives 59.0,
+   so the scale holds to 2%) and app/case-norel-r4-real.jpg (21.58 px/mm,
+   from the Ø31.40 opening; the band there measures 20.86 at the lugs).
+     sheet  BAND 21.0 x 16.0 MM: 21.0 at the lugs, 16.0 at the clasp
+     sheet  CASE SIZE 41.0 x 48.0 MM: 48.0 lug to lug
+     sheet  outer links "Vertical Brushed": the grain runs along the bracelet
+     sheet  centre links "Shiny": polished
+     sheet  concealed clasp, its cover drawn alone: vertical flutes, the NOREL
+            shield over the NOREL wordmark, and "9.0MM" — whose extension
+            lines stop on the outside of the N and the L, so 9.0 is the
+            wordmark's width, not the cover's
+     render centre link 9.09 wide on the sheet, 9.13 on the photograph:
+            0.433 of the band
+     render pitch at the lugs 4.65 on the sheet (the links further down are
+            foreshortened as the bracelet curves away), 5.15 on the
+            photograph: 4.90, between the two
+     render joint: the dark line between rows is 6-7% of the pitch, the
+            shaded valley about 12%: a 0.35 gap between rounded tops
+     render taper: 0.13 (photograph) to 0.145 (sheet) mm narrower per mm
+            along the bracelet near the lugs: 0.14 until it reaches 16.0,
+            then straight to the clasp
+     render clasp cover: 33 flutes across; 1.14 as long as wide at the
+            arched end's middle, 1.09 at its sides; the shield 0.41 and the
+            wordmark's cap height 0.14 of the wordmark's width, the shield's
+            middle 0.25 and the wordmark's baseline 0.45 of the cover's
+            length from the arched end
+   Not on either source, so still estimates: the links' thickness (2.70)
+   and the 0.24 gap between a centre link and its outers. The cover is
+   drawn about 18.3 wide against its 9.0 wordmark, wider than the 16.0
+   band it closes; here it takes the band's 16.0 and keeps the 9.0
+   wordmark, the two dimensioned numbers, and the drawing's proportions
+   for the rest. */
+export const BRACELET = Object.freeze({
+  lugWidth:21.0, clasp:16.0, lugToLug:48.0,                       // sheet
+  centreShare:.433, pitch:4.90, gap:.35, taper:.14,                  // measured
+  thick:2.70, centreGap:.24,                                         // estimated
+  cover:Object.freeze({width:16.0, wordmark:9.0, longMid:1.14, longSide:1.09, flutes:33,
+    shieldH:.41*9.0, capH:.14*9.0, shieldAt:.25, baseAt:.45, thick:1.3})
+});
+/* The rows of links along that path, from `start` to `end` (arc length):
+   as many whole rows as fit at about `pitch`, stretched a little so they
+   fill it exactly, narrowing by `taper` mm per mm from the lug width to the
+   clasp's and no further. */
+export function braceletRows(path, {pitch = BRACELET.pitch, gap = BRACELET.gap, start = 0, end, w0 = BRACELET.lugWidth, w1 = BRACELET.clasp, taper = BRACELET.taper} = {}){
+  const stop = Number.isFinite(end) ? Math.min(end, path.length) : path.length;
+  const len = stop - start, n = Math.max(1, Math.round(len/pitch)), p = len/n, rows = [];
   for(let k = 0; k < n; k++){
-    const s = start + (k + .5)*p, q = path.at(s), t = Math.min(1, (k + .5)/n/0.6);
-    rows.push({s, ...q, length:p - gap, width:w0 + (w1 - w0)*t});
+    const s = start + (k + .5)*p, q = path.at(s);
+    rows.push({s, ...q, length:p - gap, width:Math.max(w1, w0 - taper*(s - start))});
   }
   return rows;
+}
+/* Where along the bottom run the clasp sits: centred `toward` 6 of the
+   watch's axis (y < 0), its cover `length` long. Each side's rows stop at
+   its end. */
+export function claspSpan(path, length, toward = 4){
+  const y0 = -toward - length/2, y1 = -toward + length/2;
+  /* on the bottom run a point at y is at arc length length - |y| on the side
+     whose half it is in */
+  return {y0, y1, endPlus:path.length - Math.max(0, y1), endMinus:path.length - Math.max(0, -y0)};
+}
+/* The cover's outline in its own plane: x across, y along, the arched end
+   at +y. */
+export function claspCoverOutline(C = BRACELET.cover, n = 24){
+  const w = C.width/2, ls = C.width*C.longSide, lm = C.width*C.longMid, pts = [[-w, 0], [w, 0]];
+  for(let i = 0; i <= n; i++){ const x = w - 2*w*i/n, t = x/w; pts.push([x, ls + (lm - ls)*(1 - t*t)]); }
+  return pts;
 }
 /* A link in section along the bracelet: flat underneath, straight sides, a
    rounded top (half an ellipse), so a row of them reads as a run of
    rounded barrels with a dark gap between each. [u, v] with u along the
    bracelet and v outward. */
-export function linkProfile(length, thick, segs = 10){
+export function linkProfile(length, thick, segs = 16){
   const h = length/2, side = thick*.34, pts = [[-h, 0], [h, 0], [h, side]];
   for(let i = 1; i < segs; i++){ const a = Math.PI*i/segs; pts.push([h*Math.cos(a), side + (thick - side)*Math.sin(a)]); }
   pts.push([-h, side]);
