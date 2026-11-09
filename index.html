@@ -780,7 +780,7 @@ button svg, .lico svg, .gcar{ pointer-events:none }
 
 /* ---- saved versions, as the watches they are -----------------------
    A version was a line of text and two 12px buttons at the foot of a
-   sheet that also held export, the technical PDF and the defaults — so
+   sheet that also held export, the technical sheet and the defaults — so
    the one thing anybody recognises a design by, its face, was the one
    thing not shown. */
 .vgrid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(136px,1fr));
@@ -1248,7 +1248,7 @@ body{grid-template-rows:auto auto minmax(0,1fr)}
         </div>
         <button class="btn" data-x="svg">Artwork — SVG</button>
         <button class="btn" data-x="dial">Dial artwork — SVG</button>
-        <button class="btn" data-x="sheet">Technical PDF</button>
+        <button class="btn" data-x="sheet" title="A web page with the dimensions, parts, materials and colours. Open it and print it, or save it as a PDF from the print dialog.">Technical sheet (web page)</button>
         <button class="btn" data-x="json">Save design file (JSON)</button>
         <label class="btn" style="display:block;text-align:center;cursor:pointer">Open a design file
           <input type="file" id="openJson" accept=".json,application/json" style="display:none"></label>
@@ -1951,7 +1951,7 @@ const APP_BUILD = "__BUILD__";
 /* The version people see, raised with every change that reaches them:
    major for a new way of working, minor for something new to do, patch for
    a fix. Shown on the watch screen, so any screenshot says which it was. */
-const APP_VERSION = "2.10.0";
+const APP_VERSION = "2.10.1";
 const APP_DATE = "__DATE__";
 
 /* Every route that replaces S passes through one of these three, which is
@@ -6381,10 +6381,14 @@ function facetBar(xc, W, L, col, aDeg, la){
 }
 function indexShape(ix, a, id, defs, la){
   const r=ix.radius, L=ix.length, W=ix.width, col=ix.color;
-  const shid = id("ish");
-  if(ix.applied) defs.push(`<filter id="${shid}" x="-60%" y="-60%" width="220%" height="220%"><feDropShadow dx="0.06" dy="0.10" stdDeviation="0.05" flood-opacity="0.55"/></filter>`);
-  const fl = ix.applied?` filter="url(#${shid})"`:"";
-  const g = s => `<g transform="rotate(${a}) translate(0,${-r})"${fl}>${s}</g>`;
+  /* An applied marker casts its shadow as its own dark copy, offset down and
+     to the right, rather than through a filter: WebKit dropped the filter
+     reference in the photographed view and the baton vanished with it. This
+     is the same shadow the "Use markers" batons beside the day window use,
+     which every renderer keeps. */
+  const shadow = ix.applied
+    ? `<g transform="translate(0.06 0.10)" opacity="0.35">${indexShape(Object.assign({}, ix, {applied:false, color:"#000000", style:ix.style === "cone" ? "dot" : ix.style}), a, id, defs)}</g>` : "";
+  const g = s => `${shadow}<g transform="rotate(${a}) translate(0,${-r})">${s}</g>`;
   switch(ix.style){
     case "dot":     return g(`<circle r="${W}" fill="${col}"/>`);
     case "cone": {
@@ -6762,7 +6766,9 @@ const STYLE_ALIAS_HAND = {
 const handGeom = h => {
   const L=h.length, pr=Math.max(h.pommeD ?? h.width*2.1, L*0.17)/2;
   const pc=-L*((h.pommePos ?? 72)/100);
-  return {L, pr, pc, ring:Math.max(h.ringW ?? h.width*0.24, L*0.030),
+  /* the wall is kept inside the pomme: one wider than its radius drew a
+     circle with a negative radius, and the open pomme came out solid */
+  return {L, pr, pc, ring:Math.min(pr*0.8, Math.max(h.ringW ?? h.width*0.24, L*0.030)),
           tipW:h.tipW ?? Math.max(.12,h.width*0.26), taper:h.taper ?? 0.66,
           tipLen:Math.max(0, L - (Math.abs(pc)+pr))};
 };
@@ -6934,7 +6940,7 @@ function handPath(h, ctx){
   if(POMME[h.style]){
     const k = POMME[h.style], g = handGeom(h);
     const stemKind = k.stem || h.stem || "solid";
-    const ring = k.ring ? Math.max(g.ring, h.width*k.ring) : g.ring;
+    const ring = k.ring ? Math.min(g.pr*0.8, Math.max(g.ring, h.width*k.ring)) : g.ring;
     const stemTop = g.pc + g.pr*0.72, w0 = W, w1 = W*g.taper;
     const cy1 = T + (stemTop - T)*0.42, cy2 = T + (stemTop - T)*0.80;
     /* The waist. A Breguet stem is not one shape: some run almost straight
@@ -7880,6 +7886,9 @@ const SCHEMA = {
     }
     if(S.dial.finish === "sunburst" || S.dial.finish === "brushed" || S.dial.finish === "circular")
       return base.concat([N("dial.rays","Legacy ray count",12,120,1,"")]);
+    /* simple mode's "Mother of pearl" is the photographed nacre; this one is not */
+    if(S.dial.finish === "mop")
+      return base.concat([{t:"say", l:"A pearl sheen over the dial colour. For real nacre, choose the stone finish and the mother of pearl family."}]);
     return base;
   }},
   sector:{title:"Dial zones",
@@ -8202,6 +8211,14 @@ const EYE_OFF = '<svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="tr
 const LOCK_ON = '<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><rect x="3.5" y="7" width="9" height="6.4" rx="1.4" fill="currentColor"/><path d="M5.6 7V5.4a2.4 2.4 0 0 1 4.8 0V7" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>';
 const LOCK_OFF= '<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><rect x="3.5" y="7" width="9" height="6.4" rx="1.4" fill="none" stroke="currentColor" stroke-width="1.3" opacity=".7"/><path d="M5.6 7V5.4a2.4 2.4 0 0 1 4.4-1" fill="none" stroke="currentColor" stroke-width="1.3" opacity=".7"/></svg>';
 const lockedLayers = new Set();
+/* Whether a setting belongs to a locked component. The three hands and the
+   set that links them are one entry in the list, "hands", so their paths
+   answer to that lock. Every route that writes a setting asks this, not
+   only the inputs: a swatch, a Pantone code, a face tile, the hand on/off
+   buttons and the hand-set actions all used to slip past the padlock. */
+const layerOf = p => { const k = String(p).split(".")[0]; return /^(hHand|mHand|sHand|handSet)$/.test(k) ? "hands" : k; };
+const isLocked = p => lockedLayers.has(layerOf(p));
+const lockedSay = () => toast("This component is locked. Unlock it to change it.");
 const LINK_ON  = '<svg viewBox="0 0 18 18" width="17" height="17" aria-hidden="true"><path d="M7.2 10.8 10.8 7.2M6.4 11.6a2.6 2.6 0 0 1 0-3.7l1.3-1.3a2.6 2.6 0 0 1 3.7 3.7M11.6 6.4a2.6 2.6 0 0 1 0 3.7l-1.3 1.3a2.6 2.6 0 0 1-3.7-3.7" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>';
 const LINK_OFF = '<svg viewBox="0 0 18 18" width="17" height="17" aria-hidden="true"><path d="M6.6 11.4a2.6 2.6 0 0 1 0-3.7l.9-.9M11.4 6.6a2.6 2.6 0 0 1 0 3.7l-.9.9" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity=".75"/><path d="M3.5 3.5 14.5 14.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>';
 /* On a phone the component list ran to about 1050px inside a scroller a
@@ -8361,7 +8378,6 @@ const REBUILD_PROPS = new Set(["case.model","day.lang","date.digits","day.edge",
   "text.logoTech","text.nameMode","text.plateShape","text.logoMark","text.plateAuto",
   "text.resTech","text.resShape","text.embShape","text.stampSurface",
   "text.engFill","text.debFill","text.resAutoFit","text.embAuto","text.plateTintOn",
-  "sector.band","sector.arms","sector.pattern",
   "hHand.style","mHand.style","sHand.style","indices.style",
   /* Reach decides whether the next control is a share, a trim or a length in
      millimetres. Without a rebuild, choosing "free" left the trim slider on
@@ -8521,6 +8537,7 @@ function paintProps(){
     ${read?`<div class="pgroup"><h3 class="ptitle" style="font-size:12px;color:var(--muted);font-weight:500;margin-bottom:7px">Geometry</h3><div class="readout">${read}</div></div>`:""}`;
   wireFile();
   splitAdvanced(q("#props"));
+  shownShape = panelShape();
 
 }
 /* =====================================================================
@@ -8642,7 +8659,7 @@ function showLoupe(cx, cy, hit){
 }
 async function armPick(path){
   if(picking && picking.path === path) return endPick();
-  if(lockedLayers.has(path.split(".")[0])) return;
+  if(isLocked(path)) return;
   picking = {path};
   document.body.classList.add("picking");
   /* On a phone the sheet is over the watch, so there is nothing to point
@@ -8699,6 +8716,20 @@ document.addEventListener("pointerdown", e => {
   endPick();
 }, true);
 
+/* What the renderer falls back to when a number is missing, by the last part of its path. */
+const NUM_DEFAULT = {lay:0, facet:1, lift:0, reachTrim:0.97, weight:0, stamp:0, waveGrowth:0, wavePhase:0, radialPhase:0};
+const numDefault = fd => { const k = fd.p.split(".").pop();
+  return k in NUM_DEFAULT ? NUM_DEFAULT[k] : Math.min(fd.max, Math.max(fd.min, 0)); };
+/* The shape of the panel as the schema would build it now: which controls
+   exist, in order. A choice that changes it (ticking "Show the dial zones",
+   a clous pattern bringing in its lay angle, a zone's bead edge, a numeral
+   turned radial) rebuilds the panel; one that does not leaves it alone. */
+function panelShape(){
+  const sc = SCHEMA[sel]; if(!sc) return "";
+  const walk = list => list.map(fd => fd.t + ":" + (fd.p || fd.a || fd.l || "") + (fd.fields ? "[" + walk(fd.fields) + "]" : "")).join(",");
+  try{ return walk(typeof sc.fields === "function" ? sc.fields() : sc.fields); }catch(e){ return ""; }
+}
+let shownShape = "";
 function field(fd){
   if(fd.t==="act") return `<div class="f"><button class="btn" data-act="${fd.a}" style="width:100%">${fd.l}</button></div>`;
   if(fd.t==="hands"){
@@ -8816,7 +8847,7 @@ function field(fd){
     <input type="file" accept="image/*,.svg" data-logo-file style="font-size:12px"></div>`;
   if(fd.t==="file") return `<div class="f"><label>${fd.l}<span class="val">${esc(S.tpl.name||"none")}</span></label>
     <input type="file" accept="image/*" id="tplFile" style="font-size:12px"></div>`;
-  const v = get(S,fd.p);
+  let v = get(S,fd.p);
   /* A slider is the wrong instrument for the last tenth of a millimetre with
      a thumb on it, so each one is flanked by a step. The number box stays for
      anyone who knows the figure they want. */
@@ -8825,6 +8856,10 @@ function field(fd){
        still typable: the value at the right of the label is the way in, so
        the number box only takes room when it is wanted. */
     const dp = fd.step>=1?0:2;
+    /* A setting the file never had (a clous lay on a preset made before it
+       existed, a zone's lift, the trim of a hand on a landmark) is shown at
+       the value the drawing uses for it, not as "NaN". */
+    if(!Number.isFinite(parseFloat(v))) v = numDefault(fd);
     return `<div class="f"><label>${fd.l}<button type="button" class="val" data-edit="${fd.p}" title="Type an exact figure">${f(v,dp)}${fd.u?" "+fd.u:""}</button></label>
     <div class="row"><button type="button" class="stepr" data-step="-1" data-sp="${fd.p}" aria-label="Less ${esc(fd.l)}">−</button>
     <input type="range" data-p="${fd.p}" min="${fd.min}" max="${fd.max}" step="${fd.step}" value="${v}">
@@ -8941,16 +8976,20 @@ document.addEventListener("click", e=>{
      it: a tap that means "hide this" must not also select the row and, on a
      phone, swap the sheet over to Properties. */
   const eye = own("on");
-  if(eye){ const pth = eye.dataset.on; set(S,pth,!get(S,pth)); commit(); paintAll(); return; }
+  if(eye){ const pth = eye.dataset.on;
+    if(eye.closest("#props") && isLocked(pth)) return lockedSay();     // the list's own eye still hides a locked component
+    set(S,pth,!get(S,pth)); commit(); paintAll(); return; }
   /* and the row gets only what none of its own controls claimed */
   const row = own("k");
   if(row && !own("lock") && !own("addcmp")){
     sel = row.dataset.k; paintLayers(); paintProps(); paintView(); if(stacked()) tab("props"); }
   const sw = own("sw");
-  if(sw){ set(S,sw.dataset.sw,sw.dataset.v); commit(); paintProps(); paintView(); }
+  if(sw){ if(isLocked(sw.dataset.sw)) return lockedSay(); set(S,sw.dataset.sw,sw.dataset.v); commit(); paintProps(); paintView(); }
   const slab = own("slab");
+  if(slab && isLocked("dial.slab")) return lockedSay();
   if(slab){ S.dial.slab = slab.dataset.slab; commit(); paintProps(); paintView(); return; }
   if(t.closest && t.closest("[data-face]")){
+    if(isLocked("numerals.style")) return lockedSay();
     const i = +t.closest("[data-face]").dataset.face;
     const list = stylesFor(S.numerals.system || "western 0–9");
     if(list[i]){ S.numerals.style = list[i]; commit(); paintProps(); paintView(); }
@@ -8970,6 +9009,8 @@ document.addEventListener("click", e=>{
      of on top of one of them. */
   /* A new zone goes inside the innermost one, which is where a dial gains a
      zone: you divide the centre, you do not add a ring outside the chapter. */
+  /* every action button in the panel acts on the component on show */
+  if(t.dataset.act && t.closest("#props") && lockedLayers.has(sel)) return lockedSay();
   if(t.dataset.act === "zoneAdd"){
     const zs = S.sector.zones || (S.sector.zones = []);
     const inner = zs.filter(z=>Number(z.outerD)>0).sort((a,b)=>a.outerD-b.outerD)[0];
@@ -9087,6 +9128,7 @@ function requestPaint(live, settleMs){
 }
 document.addEventListener("click", e=>{
   if(e.target.closest && e.target.closest("[data-linktoggle]")){
+    if(isLocked("handSet.link")) return lockedSay();
     S.handSet.link = S.handSet.link === "off" ? "full set" : "off";
     if(S.handSet.link !== "off") syncHands("hHand");
     commit(); paintProps(); paintView();
@@ -9101,19 +9143,36 @@ document.addEventListener("click", e=>{
 /* a Pantone code typed into a colour field: the first match is applied */
 document.addEventListener("keydown", e=>{
   const t = e.target; if(!t || !t.dataset || !t.dataset.pfind || e.key !== "Enter") return;
+  if(isLocked(t.dataset.pfind)) return lockedSay();
   const m = pantoneFind(t.value)[0];
   if(m){ set(S, t.dataset.pfind, m[1]); commit(); swGroup = m[2]; paintProps(); paintView(); }
   else toast("No Pantone " + t.value + " in the library");
 });
+/* a number to the min and max its own box carries */
+const clampTo = (el, v) => { const lo = parseFloat(el.min), hi = parseFloat(el.max);
+  return Math.min(isNaN(hi) ? v : hi, Math.max(isNaN(lo) ? v : lo, v)); };
+/* a colour as the panel stores it, #RRGGBB, or null: #abc is read as #AABBCC */
+const hexOf = v => { const m = /^\s*#?([0-9a-f]{6}|[0-9a-f]{3})\s*$/i.exec(String(v));
+  if(!m) return null; const h = m[1].length === 3 ? m[1].replace(/./g, c => c + c) : m[1]; return "#" + h.toUpperCase(); };
+const isColourBox = el => !!(el.closest && el.closest(".f") && el.closest(".f").querySelector('input[type=color]'));
 let casePrev = null;
 document.addEventListener("input", e=>{
   if(e.target.dataset.pg) return;
   const p = e.target.dataset.p; if(!p) return;
   if(p === "case.model" && casePrev === null) casePrev = S.case.model;
-  if(lockedLayers.has(p.split(".")[0])) { e.target.blur && e.target.blur(); return; }
+  if(isLocked(p)) { e.target.blur && e.target.blur(); return; }
   const el = e.target;
   let v = el.type==="checkbox" ? el.checked : el.type==="number"||el.type==="range" ? parseFloat(el.value) : el.value;
   if(typeof v==="number" && isNaN(v)) return;
+  /* A typed figure keeps to the slider's range: 60 in a box whose slider
+     stops at 44 used to be written as it was, and a negative diameter drew
+     circles with a negative radius. */
+  if(el.type==="number") v = clampTo(el, v);
+  /* The text box beside a colour picker takes a colour and nothing else.
+     "blue-ish" used to be stored and drawn as whatever the renderer made of
+     it. While typing, a figure that is not yet a colour is simply not
+     applied; on leaving the box it goes back to the colour in use. */
+  if(el.type==="text" && isColourBox(el)){ v = hexOf(v); if(!v) return; }
   set(S,p,v);
   if(/^(hHand|mHand|sHand)\./.test(p)) syncHands(p.split(".")[0]);
   if(/^(hHand|mHand|sHand)\.style$/.test(p)) snapVectorLengths(p.split(".")[0]);
@@ -9129,6 +9188,15 @@ document.addEventListener("input", e=>{
 document.addEventListener("change", e=>{
   if(e.target.dataset.pg){ swGroup = e.target.value; paintProps(); return; }
   if(!e.target.dataset.p) return;
+  const el = e.target, p = el.dataset.p;
+  if(el.type==="number" && !isLocked(p)){ const n = parseFloat(el.value); if(!isNaN(n)) el.value = clampTo(el, n); }
+  if(el.type==="text" && isColourBox(el) && !hexOf(el.value)){
+    toast("That is not a colour. Type it as # and six figures, like #1F2D47.");
+    el.value = get(S, p); return;
+  }
+  /* ticking "set the plate colour myself" starts from the plate's own metal, not from an empty colour */
+  if(p === "text.plateTintOn" && S.text.plateTintOn && !hexOf(S.text.plateTint || ""))
+    S.text.plateTint = (METALS[S.text.plateMetal] || METALS["polished steel"]).base;
   commit();
   /* a colour picker may still be open: draw the colour, rebuild nothing */
   if(e.target.type === "color"){ paintLayers(); requestPaint(true, 600); return; }
@@ -9150,7 +9218,7 @@ document.addEventListener("change", e=>{
   }
   /* A choice that decides which other controls exist has to rebuild the
      panel, or the controls on screen stop belonging to the design. */
-  if(REBUILD_PROPS.has(e.target.dataset.p)) paintProps();
+  if(REBUILD_PROPS.has(e.target.dataset.p) || panelShape() !== shownShape) paintProps();
   paintLayers();
   paintView();          // the preview has to follow the choice, not the keystroke
 });
@@ -9164,9 +9232,12 @@ document.addEventListener("click", e=>{
   const dp = Math.max(0, (String(step).split(".")[1] || "").length);
   const next = Math.min(max, Math.max(min, +( (parseFloat(ctl.value) + dir*step).toFixed(dp) )));
   if(next === parseFloat(ctl.value)) return;
-  commit();
+  /* set first, then let change commit it, as a released slider does:
+     committing before the value moved pushed the old state, so undo went
+     back two steps and the last one could not be redone */
   ctl.value = next;
   ctl.dispatchEvent(new Event("input", {bubbles:true}));
+  ctl.dispatchEvent(new Event("change", {bubbles:true}));
 });
 /* The controls that are not an input — a state row, a segment, a colour chip,
    and the value that turns into a number box. Each sets exactly one path, so
@@ -9188,7 +9259,7 @@ document.addEventListener("click", e=>{
   }
   const one = (el, attr, val) => {
     const pth = el.dataset[attr];
-    if(lockedLayers.has(pth.split(".")[0])) return false;
+    if(isLocked(pth)) return false;
     if(get(S,pth) === val) return false;
     /* Set, then commit: commit pushes the state as it is, so committing
        first pushes the old one and the new value never reaches the stack —
@@ -9823,13 +9894,22 @@ async function diagnoseExport(){
    numerals and lettering stay vector and are unaffected. An explicit Export
    still renders the full raster. */
 const SHARE_MAT_PX = 420;
+/* The pixel size of a PNG. On the photographed view the picture is as wide
+   as the chosen size and as tall as the photograph's proportion makes it.
+   It used to be held to twice the photograph's own width, so Medium and
+   Large both came out 1640 wide while the toast promised 3000. Only the
+   largest canvas a phone will draw (about 16.7 million pixels) limits it. */
+function pngSize(side, big){
+  if(!big) return {W:side, H:side};
+  const ar = tplH/tplW || 1.5, W = Math.min(side, Math.floor(Math.sqrt(16.7e6/ar)));
+  return {W, H:Math.round(W*ar)};
+}
 function exportPlan(o){
   const v = currentView(), big = v.kind === "template";
   const side = S.exportPx || (isTouch ? 1600 : 3000);
   const matPx = Math.min((o && o.share) ? SHARE_MAT_PX : 1200, Math.round(side*0.55));
   const svg = currentSVG(big ? {matPx} : {px:side, matPx, measure:measureOn});
-  const W = big ? Math.min(tplW*2, side) : side;
-  const H = big ? Math.round(W*tplH/tplW) : side;
+  const {W, H} = pngSize(side, big);
   return {svg, W, H, name:`${slug()}-${v.kind}.png`};
 }
 /* iOS only opens the share sheet from a live tap, and rendering finishes long
@@ -9878,8 +9958,7 @@ async function doExport(kind){
     const side = S.exportPx || (isTouch ? 1600 : 3000);
     const matPx = Math.min(1200, Math.round(side*0.55));
     const svg = currentSVG(big ? {matPx} : {px:side, matPx, measure:measureOn});
-    const W = big ? Math.min(tplW*2, side) : side;
-    const H = big ? Math.round(W*tplH/tplW) : side;
+    const {W, H} = pngSize(side, big);
     q("#expWhat").textContent = "Rendering…";
     /* if the full drawing will not rasterise here, step down rather than fail */
     const ladder = [
@@ -9922,23 +10001,37 @@ function handSpec(h){
     ? base+`, pomme Ø${f(h.pommeD)} outer / Ø${f(h.pommeD-2*g.ring)} inner at ${f(h.pommePos,0)}% (R${f(Math.abs(g.pc))}), tip ${f(g.tipLen)} mm beyond pomme, stem taper ${f(h.width)}→${f(h.width*g.taper)}`
     : base;
 }
+/* The rows that describe the shape of the case. A round case has a diameter
+   and a bezel, not flats, corners and corner radii: the cushion rows used to
+   be printed for every case, so the round NOREL read "41.00 × 41.00 mm,
+   41.00 across corners". */
+function caseGeomRows(K){
+  if(K.shape === "round") return [
+    ["Case","round, Ø"+f(K.flat)+" mm"],
+    ["Bezel","Ø"+f(K.bezelOD)+" outside, Ø"+f(K.bezelID)+" inside"+(K.flutes ? ", "+K.flutes+" flutes" : "")],
+    ["Lug-to-lug",f(K.lugToLug)+" mm"],
+    K.bracelet ? ["Bracelet",f(K.lugWidth)+" mm at the lugs, "+f(K.clasp)+" mm at the clasp"]
+               : ["Strap width",f(K.lugWidth)+" mm, spring bar Ø"+f(K.springBar)+" × 20.00"]];
+  return [
+    ["Bezel / case top",f(K.flat)+" × "+f(K.flat)+" mm, "+f(K.diagonal)+" across corners"],
+    ["Case middle",f(K.midFlat)+" mm flats, "+f(K.midDiagonal)+" across corners"],
+    ["Profile radii","side R"+f(K.rSide)+", corner R"+f(K.rCorner)],
+    ["Lug-to-lug",f(K.lugToLug)+" mm"],
+    ["Strap width",f(K.lugWidth)+" mm, spring bar Ø"+f(K.springBar)+" × 20.00"]];
+}
 function specSheet(){
   const K=CASE_SPEC, vis=visR(S)*2, dialD=S.dial.lock?(S.case.locked?K.dialD:S.case.opening+0.8):S.dial.diameter;
   const caseRows = [
     ["Drawing reference",K.ref+" — case supplied to this drawing, not to be modified"],
     ["Material / water resistance",K.steel+" · "+K.wr],
     ["Movement","cal. "+K.movement+", holder Ø"+f(K.movHolder)+" mm"],
-    ["Bezel / case top",f(K.flat)+" × "+f(K.flat)+" mm, "+f(K.diagonal)+" across corners"],
-    ["Case middle",f(K.midFlat)+" mm flats, "+f(K.midDiagonal)+" across corners"],
-    ["Profile radii","side R"+f(K.rSide)+", corner R"+f(K.rCorner)],
-    ["Lug-to-lug",f(K.lugToLug)+" mm"],
-    ["Strap width",f(K.lugWidth)+" mm, spring bar Ø"+f(K.springBar)+" × 20.00"],
+    ...caseGeomRows(caseOf(S)),
     ["Total height",f(K.height)+" mm (bezel "+f(K.bezelH)+", middle "+f(K.midH)+")"],
     ["Visible dial opening","Ø"+f(K.opening)+" mm"],
     ["Glass","sapphire Ø"+f(K.glassD)+" × "+f(K.glassT)+" mm, "+K.glassBevel],
     ["Glass seat","Ø"+f(K.glassSeat)+" mm"],
     ["Dial blank","Ø"+f(K.dialD)+" × "+f(K.dialT)+" mm "+K.dialMat+", holder Ø"+f(K.dialHolder)],
-    ["Crown","Ø"+f(K.crownD)+" mm at 3H, cabochon Ø"+f(K.cabochon)+", tube Ø"+f(K.crownTube)],
+    ["Crown","Ø"+f(K.crownD)+" mm at 3H"+(K.cabochon ? ", cabochon Ø"+f(K.cabochon) : "")+", tube Ø"+f(K.crownTube)],
     ["General tolerance",K.tol]
   ];
   const dialRows = [
@@ -9950,7 +10043,8 @@ function specSheet(){
                                : "SYNTHETIC PREVIEW — placeholder, not a real stone")
       : S.dial.finish],
     ["Chapter ring",S.chapter.on?`Ø${f(S.chapter.outerD)} → Ø${f(S.chapter.innerD)} mm (width ${f((S.chapter.outerD-S.chapter.innerD)/2)} mm)`:"—"],
-    ["Sector",S.sector.on?`Ø${f(S.sector.outerD)} → Ø${f(S.sector.innerD)} mm (width ${f((S.sector.outerD-S.sector.innerD)/2)} mm)`:"—"],
+    /* the sector is a list of zones now: the old single-sector fields are gone from every migrated design */
+    ["Sector",S.sector.on&&zonesOf(S).length?zonesOf(S).map(z=>z.innerD>0?`Ø${f(z.outerD)} → Ø${f(z.innerD)} mm`:`Ø${f(z.outerD)} mm disc`).join("; "):"—"],
     ["Minute track",S.minute.on?`Ø${f(S.minute.diameter)} mm, ${S.minute.style}, ${f(S.minute.thickness)} mm`:"—"],
     ["Hour track",S.hour.on?`Ø${f(S.hour.diameter)} mm, ${S.hour.style}`:"—"],
     ["Indices",S.indices.on?`${S.indices.count}× ${S.indices.style}, ${f(S.indices.length)} × ${f(S.indices.width)} mm at R${f(S.indices.radius)} mm, ${S.indices.applied?"applied":"printed"}`:"—"],
@@ -9965,6 +10059,7 @@ function specSheet(){
     ["Centre boss","Ø"+f(Math.max(S.hHand.boss,S.mHand.boss))+" mm"]
   ];
   const swatch = hex => {
+    if(!hex) return "—";
     const n = nearestPantone(hex);
     const ref = (hex||"").toUpperCase()==="#FFFFFF" ? "Opaque white — no Pantone reference"
       : n ? (n.exact ? "PANTONE "+n.code : `nearest PANTONE ${n.code} (ΔE ${n.dE.toFixed(1)})`) : "custom";
@@ -9973,8 +10068,8 @@ function specSheet(){
   const colourRows = [
     ["Dial base",swatch(S.dial.color)],
     S.chapter.on?["Chapter ring",swatch(S.chapter.color)]:null,
-    S.sector.on?["Sector zone",swatch(S.sector.color)]:null,
-    S.sector.on?["Sector boundary",swatch(S.sector.ringColor)]:null,
+    ...(S.sector.on ? zonesOf(S).flatMap((z,i,all)=>{ const n = all.length > 1 ? " "+(i+1) : "";
+      return [["Sector zone"+n,swatch(z.color)]].concat(z.edge && z.edge !== "none" ? [["Sector boundary"+n,swatch(z.ringColor)]] : []); }) : []),
     S.minute.on?["Minute track",swatch(S.minute.color)]:null,
     S.hour.on?["Hour track",swatch(S.hour.color)]:null,
     S.indices.on?["Indices",swatch(S.indices.color)]:null,
@@ -10229,11 +10324,11 @@ refineBootRender();
         ()=>{ closeMore(); saveBtn && saveBtn.click(); }),
     act("Export image", "A high-resolution PNG for WhatsApp, email or print",
         ()=>{ closeMore(); fire("png"); }),
-    act("Technical PDF", "Dimensions, components, materials and colours for the maker",
+    act("Technical sheet", "A web page for the maker, to print or save as PDF: dimensions, parts, materials and colours",
         ()=>{ closeMore(); fire("sheet"); })
   );
   /* The same two buttons again on the toolbar, where they are one tap away.
-     More keeps its entries: those go straight to a PNG or the technical PDF,
+     More keeps its entries: those go straight to a PNG or the technical sheet,
      which the toolbar icon cannot do — it opens the sheet to let you choose. */
   if(saveBtn) top.insertBefore(
     icoSvg("Save version", `<path d="M6.5 3.5h11a1 1 0 0 1 1 1v16l-6.5-4.6L5.5 20.5v-16a1 1 0 0 1 1-1Z"/>`,
@@ -10625,19 +10720,22 @@ refineBootRender();
   /* The version, on the watch screen. */
   const fmtDate = d => { const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(d || ""); if(!m) return "";
     return `${+m[3]} ${["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][+m[2]-1]}`; };
+  /* an undeployed copy has no build stamped into it: say so, rather than show the placeholder */
+  const buildName = () => APP_BUILD === "__" + "BUILD__" ? "development build" : "build " + String(APP_BUILD).slice(0,7);
   const badge = document.createElement("button");
   badge.type = "button"; badge.id = "verBadge";
   const showVer = (state, latest) => {
     const here = `v${APP_VERSION}` + (fmtDate(APP_DATE) ? ` · ${fmtDate(APP_DATE)}` : "");
     badge.classList.toggle("old", state === "old");
     badge.textContent = state === "old" ? `${here} — update to v${latest}` : here;
-    badge.title = state === "old" ? "A newer version is published. Tap to update." : `Version ${APP_VERSION}, build ${String(APP_BUILD).slice(0,7)}`;
+    badge.title = state === "old" ? "A newer version is published. Tap to update." : `Version ${APP_VERSION}, ${buildName()}`;
   };
   showVer("ok");
   const stageEl = document.getElementById("stage"); if(stageEl) stageEl.appendChild(badge);
   let wantUpdate = false;
   badge.onclick = () => {
-    if(!badge.classList.contains("old")) return;
+    /* with nothing to update to, a tap still answers: which version this is */
+    if(!badge.classList.contains("old")){ toast(`You have version ${APP_VERSION}${fmtDate(APP_DATE) ? " of " + fmtDate(APP_DATE) : ""} (${buildName()}).`); return; }
     wantUpdate = true;
     if(reg && reg.waiting) takeUpdate();
     else { badge.textContent = "Updating…"; if(reg) reg.update().catch(()=>{}); setTimeout(()=>{ if(wantUpdate) location.reload(); }, 15000); }
@@ -11308,7 +11406,7 @@ body.guided .atelier-nav, body.guided #gHideInGuided, body.guided .bar .grp.tool
   const MODE_KEY = "wds:ui";
   let mode = "guided";
   try{ mode = localStorage.getItem(MODE_KEY) || "guided"; }catch(e){}
-  let step = 0, holdGuide = false, guideDirty = false, colorDirty = false, palette = "studio", pgroup = "Blues", pfind = "", mpal = "ink";
+  let step = 0, holdGuide = false, guideDirty = false, colorDirty = false, textHold = false, textTimer = 0, palette = "studio", pgroup = "Blues", pfind = "", mpal = "ink";
   /* The Pantone library is 2,131 colours: a search by code, or a family. */
   function pantoneGrid(path, cur){
     if(pfind.trim()){
@@ -11321,7 +11419,7 @@ body.guided .atelier-nav, body.guided #gHideInGuided, body.guided .bar .grp.tool
   }
   /* swatches with the code under each, so a Pantone is read, not guessed */
   const swatchesNamed = (path, list, cur) => `<div class="gPgrid">${list.map(x =>
-    `<button type="button" data-gset="${path}" data-gv='"${x[1]}"' class="${String(cur).toUpperCase()===x[1].toUpperCase()?"on":""}" title="PANTONE ${esc2(x[0])}"><i style="background:${x[1]}"></i><span>${esc2(x[0])}</span></button>`).join("")}</div>`;
+    `<button type="button" data-gset="${path}" data-gv='${gv(x[1])}' class="${String(cur).toUpperCase()===x[1].toUpperCase()?"on":""}" title="PANTONE ${esc2(x[0])}"><i style="background:${x[1]}"></i><span>${esc2(x[0])}</span></button>`).join("")}</div>`;
   const STEPS = [
     {k:"start",   t:"Start",   lead:"Pick a starting point. You can change everything after."},
     {k:"case",    t:"Case",    lead:"The case and what it is worn on."},
@@ -11335,10 +11433,14 @@ body.guided .atelier-nav, body.guided #gHideInGuided, body.guided .bar .grp.tool
 
   /* ---- building blocks ---- */
   const esc2 = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+  /* A choice's value travels as JSON in a single-quoted attribute, so a
+     quote in it has to be escaped: the apostrophe in "tiger's eye" closed
+     the attribute early, and tapping the chip threw instead of choosing. */
+  const gv = v => JSON.stringify(v).replace(/&/g, "&amp;").replace(/'/g, "&#39;");
   const chips = (path, opts, cur) => `<div class="gChips">${opts.map(([v,l]) =>
-    `<button type="button" data-gset="${path}" data-gv='${JSON.stringify(v)}' class="${JSON.stringify(cur)===JSON.stringify(v)?"on":""}">${esc2(l)}</button>`).join("")}</div>`;
+    `<button type="button" data-gset="${path}" data-gv='${gv(v)}' class="${JSON.stringify(cur)===JSON.stringify(v)?"on":""}">${esc2(l)}</button>`).join("")}</div>`;
   const swatches = (path, list, cur) => `<div class="gSw">${list.map(([c,n]) =>
-    `<button type="button" title="${esc2(n)}" aria-label="${esc2(n)}" data-gset="${path}" data-gv='"${c}"' class="${String(cur).toUpperCase()===c.toUpperCase()?"on":""}" style="background:${c}"></button>`).join("")}
+    `<button type="button" title="${esc2(n)}" aria-label="${esc2(n)}" data-gset="${path}" data-gv='${gv(c)}' class="${String(cur).toUpperCase()===c.toUpperCase()?"on":""}" style="background:${c}"></button>`).join("")}
     <label title="Any colour">+<input type="color" data-gcolor="${path}" value="${/^#[0-9a-f]{6}$/i.test(cur)?cur:"#888888"}"></label></div>`;
   const toggle = (path, label, on) => `<div class="gRow"><label>${label}</label><label class="gSwitch"><input type="checkbox" data-gtoggle="${path}" ${on?"checked":""}><span></span></label></div>`;
   const slider = (path, label, min, max, st, v) => `<div class="gRow"${label ? "" : ' style="margin-top:4px"'}>${label ? `<label>${label}</label>` : ""}<input type="range" data-grange="${path}" min="${min}" max="${max}" step="${st}" value="${v}"${label ? "" : ' style="max-width:none"'}></div>`;
@@ -11359,7 +11461,7 @@ body.guided .atelier-nav, body.guided #gHideInGuided, body.guided .bar .grp.tool
   }
   /* a row of faces, each showing the actual word or number it will print */
   const fontTiles = (path, list, cur, sample, ar) => `<div class="gCards gFaces">${list.map(k =>
-    `<button type="button" class="gCard gFace ${k===cur?"on":""}" data-gset="${path}" data-gv='${JSON.stringify(k)}'>
+    `<button type="button" class="gCard gFace ${k===cur?"on":""}" data-gset="${path}" data-gv='${gv(k)}'>
       <div class="gFaceArt" style="font-family:'${DAY_FONTS[k].family}';font-size:${ar ? 21 : 16}px;${ar ? "" : "letter-spacing:.06em;"}" ${ar ? 'dir="rtl"' : ""}>${esc2(sample)}</div>
       <div class="gName">${esc2(k)}</div></button>`).join("")}</div>`;
 
@@ -11380,6 +11482,28 @@ body.guided .atelier-nav, body.guided #gHideInGuided, body.guided .bar .grp.tool
   const relLum = hex => { const c = [1,3,5].map(i => parseInt(String(hex).slice(i,i+2),16)/255).map(v => v <= 0.03928 ? v/12.92 : Math.pow((v+0.055)/1.055, 2.4));
     return 0.2126*c[0] + 0.7152*c[1] + 0.0722*c[2]; };
   const contrastOf = (a,b) => { const x = relLum(a), y = relLum(b); return (Math.max(x,y)+0.05)/(Math.min(x,y)+0.05); };
+  const isHex = c => /^#[0-9a-f]{6}$/i.test(c || "");
+  /* Printing that will not read on this dial: a note, and one tap to white
+     or to navy. The dial's tone is its own colour, or for a stone the
+     average of its slab. Only what is printed counts: applied metal reads by
+     its relief whatever the dial. The lettering is the logo (when printed)
+     and the lines under it, which are drawn in their own colour. */
+  const printFix = () => {
+    const d = S.dial, tone = d.finish === "stone" ? STONE_TONE[d.stone] : d.color;
+    if(!isHex(tone)) return "";
+    const T = S.text, inks = [];
+    if(S.numerals.on && /printed/.test(S.numerals.tech || "")) inks.push(S.numerals.color);
+    if(S.indices.on && !S.indices.applied) inks.push(S.indices.color);
+    if(S.minute.on) inks.push(S.minute.color);
+    if(T.on){
+      if(!/applied|engraved|embossed|debossed|nameplate|cartouche/.test(T.logoTech || "")) inks.push(T.color);
+      if((T.line2On !== false && T.line2) || (T.footOn !== false && T.foot)) inks.push(T.lineColor || T.color);
+    }
+    if(!inks.some(c => isHex(c) && contrastOf(c, tone) < 3)) return "";
+    const white = "#F4F4F2", navy = "#1F2D47", toWhite = contrastOf(white, tone) >= contrastOf(navy, tone);
+    const where = d.finish === "stone" ? esc2(d.stone) : "this dial colour";
+    return `<p class="gNote" style="color:#B26A00">The printing is hard to read on ${where}.</p><button type="button" class="gMore" style="margin:0 0 8px" data-gset="ui.printOn" data-gv='${gv(toWhite ? white : navy)}'>Print in ${toWhite ? "white" : "navy"}</button>`;
+  };
   const useStone = fam => { const d = S.dial; d.finish = "stone"; d.stone = fam;
     const f = slabsOf(fam)[0]; d.slab = f ? f.id : ""; applyFamilyDefaults(fam); };
   /* Lettering colour: the printer's colours, or any Pantone by code or family. */
@@ -11454,18 +11578,17 @@ body.guided .atelier-nav, body.guided #gHideInGuided, body.guided .bar .grp.tool
       else h += swatches("dial.color", [["#0E1F55","Navy"],["#1D3FA0","Royal blue"],["#A9C3DD","Powder blue"],["#9ED3EC","Ice blue"],["#15171C","Black"],["#E9E7E1","Silver white"],["#F4F2EC","White"],["#D9C9A3","Champagne"],["#1F4A3A","Green"],["#8FB8A2","Mint"],["#E6B8A2","Salmon"],["#5E1E2C","Burgundy"],["#7B828A","Slate"]], d.color);
       const cl = classicOf(d.color), pn = nearestPantone(d.color);
       h += `<p class="gNote">${cl ? `<b>${esc2(cl[0])}</b> · measured from the dial of ref. ${cl[2]} · ` : ""}${d.color}${pn ? ` · ${pn.exact ? "PANTONE " + pn.code : "nearest PANTONE " + pn.code}` : ""}</p>`;
-      const isMop = d.finish === "mop" || (d.finish === "stone" && d.stone === "mother of pearl");
-      h += `<h3>Surface</h3>` + chips("dial.finish", [["sunburst","Sunburst"],["matte","Matte"],["guilloche","Guilloché"],["enamel","Enamel"],["lacquer","Lacquer"],["gloss","Gloss"],["grained","Grained"],["stone","Stone"],["mop","Mother of pearl"]], isMop ? "mop" : d.finish);
+      if(d.finish !== "stone") h += printFix();
+      /* "Mother of pearl" here is the photographed nacre (a stone slab). The
+         full editor's "mop" finish is something else, a pearl sheen over the
+         dial colour, so it gets its own chip rather than lighting this one. */
+      const isMop = d.finish === "stone" && d.stone === "mother of pearl";
+      h += `<h3>Surface</h3>` + chips("dial.finish", [["sunburst","Sunburst"],["matte","Matte"],["guilloche","Guilloché"],["enamel","Enamel"],["lacquer","Lacquer"],["gloss","Gloss"],["grained","Grained"],["stone","Stone"],["nacre","Mother of pearl"]]
+        .concat(d.finish === "mop" ? [["mop","Pearl sheen"]] : []), isMop ? "nacre" : d.finish);
       if(d.finish === "stone" && !isMop){
         h += `<h3>Stone</h3>` + chips("ui.stone", STONE_FAMILIES.filter(f => f !== "other" && f !== "mother of pearl" && BUILTIN_STONE[f]).map(f => [f, f[0].toUpperCase() + f.slice(1)]), d.stone);
       }
-      if(d.finish === "stone"){
-        /* printing that will not read on this stone: one tap to white, or to navy */
-        const tone = STONE_TONE[d.stone], prints = [["numerals", S.numerals.on && /printed/.test(S.numerals.tech || "")], ["text", S.text.on], ["minute", S.minute.on]].filter(x => x[1]).map(x => x[0]);
-        const lowC = tone && prints.some(k => contrastOf(S[k].color, tone) < 3);
-        if(lowC){ const toWhite = relLum(tone) < 0.25;
-          h += `<p class="gNote">The printing is hard to read on ${esc2(d.stone)}.</p><button type="button" class="gMore" style="margin:0 0 8px" data-gset="ui.printOn" data-gv='"${toWhite ? "#F4F4F2" : "#1F2D47"}"'>Print in ${toWhite ? "white" : "navy"}</button>`; }
-      }
+      if(d.finish === "stone") h += printFix();
       if(d.finish === "guilloche") h += `<h3>Pattern</h3>` + chips("dial.pattern", GUIL_PATTERNS.map(p => [p, (GUIL_LABEL[p] || p).replace(/ \(.*/,"")]), d.pattern);
       h += `<h3>Minute track</h3>` + chips("minute.style", [["none","None"],["railroad","Railroad"],["ticks","Ticks"],["dots","Dots"],["beads","Beads"],["dashes","Dashes"]], S.minute.on ? S.minute.style : "none");
       if(S.minute.on) h += `<h3>Track colour</h3>` + inkPicker("minute.color", S.minute.color);
@@ -11478,14 +11601,17 @@ body.guided .atelier-nav, body.guided #gHideInGuided, body.guided .bar .grp.tool
         .map(([k,l,s]) => `<button type="button" class="gCard ${k===cur?"on":""}" data-gmark="${k}"><div class="gName" style="font-size:15px">${l}</div><div class="gSub" style="font-size:14px;letter-spacing:.06em">${s}</div></button>`).join("")}</div>`;
       if(n.on){
         const sys = n.system || "western 0–9";
-        h += `<h3>Font</h3><div class="gCards gFaces">${stylesFor(sys).map(st => `<button type="button" class="gCard gFace ${st===n.style?"on":""}" data-gset="numerals.style" data-gv='${JSON.stringify(st).replace(/'/g,"&#39;")}'><div class="gFaceArt">${faceSample(st, sys)}</div><div class="gName">${esc2(st)}</div></button>`).join("")}</div>`;
+        /* a face set in a preset or the full editor that this system's list does not carry is still shown, chosen */
+        const faces = stylesFor(sys).indexOf(n.style) < 0 && n.style ? stylesFor(sys).concat([n.style]) : stylesFor(sys);
+        h += `<h3>Font</h3><div class="gCards gFaces">${faces.map(st => `<button type="button" class="gCard gFace ${st===n.style?"on":""}" data-gset="numerals.style" data-gv='${gv(st)}'><div class="gFaceArt">${faceSample(st, sys)}</div><div class="gName">${esc2(st)}</div></button>`).join("")}</div>`;
         const make = `${n.tech}|${n.material || ""}`;
         h += `<h3>Made by</h3>` + chips("num.make", [["printed|ink","Printed"],["double printed|ink","Raised print"],["applied|metal","Applied metal"],["engraved + filled|lacquer / enamel","Enamel-filled"],["printed|lume","Lume"]], make);
         if(n.tech === "applied" && n.material === "metal") h += `<h3>Metal</h3>` + chips("numerals.metal", [["polished steel","Steel"],["white gold","White gold"],["yellow gold","Gold"],["rose gold","Rose gold"],["blackened steel","Black"]], n.metal || "polished steel");
         else if(n.material !== "lume") h += `<h3>Colour</h3>` + inkPicker("numerals.color", n.color);
         h += slider("numerals.size", "Size", 1.6, 5.5, 0.05, n.size)
-          + slider("numerals.radius", "Distance from centre", 8, 14.5, 0.05, n.radius)
-          + slider("numerals.weight", "Thickness", -0.1, 0.45, 0.01, n.weight || 0);
+          + slider("numerals.radius", "Distance from centre", 8, 14.5, 0.05, n.radius);
+        /* thickness thickens a printed figure's ink; an applied piece is cut to its outline and ignores it */
+        if(n.tech !== "applied") h += slider("numerals.weight", "Thickness", -0.1, 0.45, 0.01, n.weight || 0);
         h += `<p class="gNote">Figures under the day and date windows are left off, as on a real dial.</p>`;
       }
       if(!n.on && ix.on){
@@ -11518,14 +11644,19 @@ body.guided .atelier-nav, body.guided #gHideInGuided, body.guided .bar .grp.tool
       const mine = T.logoMark === "Your logo" && T.logoImg;
       /* NOREL's own logo is built in, as the full lock-up or the shield alone */
       const brandMark = T.logoMark === "NOREL logo" ? "norel" : T.logoMark === "NOREL shield" ? "shield" : "";
-      const isMark = mine || !!brandMark;
-      let h = `<h3>Logo</h3>` + chips("logo.kind", [["text","Type it"],["norel","NOREL logo"],["shield","NOREL shield"]].concat(T.logoImg ? [["image","Your logo"]] : []), mine ? "image" : brandMark || "text");
+      /* one of the other built-in marks, chosen in the full editor or a preset: shown by name, so "Type it" is not lit for a logo nobody typed */
+      const otherMark = !mine && !brandMark && T.logoMark && T.logoMark !== "none" && T.logoMark !== "Your logo" && LOGO_MARKS[T.logoMark] ? T.logoMark : "";
+      const isMark = mine || !!brandMark || !!otherMark;
+      let h = `<h3>Logo</h3>` + chips("logo.kind", [["text","Type it"],["norel","NOREL logo"],["shield","NOREL shield"]].concat(T.logoImg ? [["image","Your logo"]] : [], otherMark ? [["other", otherMark]] : []), mine ? "image" : brandMark || (otherMark ? "other" : "text"));
       h += `<label class="gUpload"><input type="file" accept="image/*,.svg" data-logo-file>${T.logoImg ? "Replace your logo…" : "Upload your logo…"}<small>PNG, JPG or SVG. The background is removed and the logo takes the colour or metal you choose.</small></label>`;
       if(!isMark){
         h += textIn("text.logo", "Logo text", T.logo, "NOREL");
         h += `<h3>Logo font</h3>` + chips("text.logoFont", [["serif","Serif"],["sans","Sans"]], T.logoFont || "serif");
       }
-      h += `<h3>Logo made by</h3>` + chips("text.logoTech", [["printed","Printed"],["double printed","Raised print"],["applied metal","Applied metal"]], T.logoTech || "printed");
+      const techs = [["printed","Printed"],["double printed","Raised print"],["applied metal","Applied metal"]];
+      /* an engraved, embossed or nameplate logo from the full editor is shown as it is */
+      if(T.logoTech && !techs.some(x => x[0] === T.logoTech)) techs.push([T.logoTech, T.logoTech[0].toUpperCase() + T.logoTech.slice(1)]);
+      h += `<h3>Logo made by</h3>` + chips("text.logoTech", techs, T.logoTech || "printed");
       h += slider("text.logoSize", "Logo size", 0.8, isMark ? 8 : 3.5, 0.05, T.logoSize) + slider("text.logoY", "Logo position", -12, 12, 0.1, T.logoY);
       if(T.logoTech === "applied metal") h += `<h3>Logo metal</h3>` + chips("text.logoMetal", [["polished steel","Steel"],["white gold","White gold"],["yellow gold","Gold"],["rose gold","Rose gold"],["blackened steel","Black"]], T.logoMetal || "polished steel");
       h += `<h3>Second line</h3>` + textIn("text.line2", "Text", T.line2On === false ? "" : T.line2, "AUTOMATIC");
@@ -11627,7 +11758,19 @@ body.guided .atelier-nav, body.guided #gHideInGuided, body.guided .bar .grp.tool
   }
 
   /* ---- applying a choice ---- */
+  /* Text colour is the colour of all the lettering this step makes: the
+     logo, and the second line and lower text, which the renderer draws in
+     text.lineColor. Writing only text.color recoloured the logo alone. */
+  function put(path, v){
+    set(S, path, v);
+    if(path === "text.color") S.text.lineColor = v;
+  }
   function apply(path, v){
+    /* The photograph is the case as supplied, in steel on its bracelet, and
+       it takes no metal, finish or strap. Chosen while it is on, they would
+       change nothing on screen, so the drawn case takes over and says so. */
+    let drawn = false;
+    if(/^case\.(material|finish|strap|strapColor)$/.test(path) && S.tpl.on && tplAvail(S) && get(S, path) !== v){ S.tpl.on = false; drawn = true; }
     if(path === "hands.material"){ for(const k of ["hHand","mHand","sHand"]) if(S[k]) S[k].material = v; }
     else if(path === "minute.style"){ if(v === "none") S.minute.on = false; else { S.minute.on = true; S.minute.style = v; } }
     else if(path === "case.model"){ const from = S.case.model; S.case.model = v; applyCaseModel(from, v); }
@@ -11635,6 +11778,7 @@ body.guided .atelier-nav, body.guided #gHideInGuided, body.guided .bar .grp.tool
     else if(path === "hands.lume"){ for(const k of ["hHand","mHand"]) S[k].lume = v; }
     else if(path === "text.line2"){ S.text.line2 = v; S.text.line2On = !!v; }
     else if(path === "logo.kind"){
+      if(v === "other") return;                    // the mark already on the dial
       const was = S.text.logoMark;
       S.text.logoMark = v === "image" && S.text.logoImg ? "Your logo" : v === "norel" ? "NOREL logo" : v === "shield" ? "NOREL shield" : "none";
       /* a lettered name is about 1.7 mm high; the lock-up about 5.4 and the shield about 3.2 */
@@ -11642,12 +11786,15 @@ body.guided .atelier-nav, body.guided #gHideInGuided, body.guided .bar .grp.tool
         if(v === "norel") S.text.logoSize = 5.4;
         else if(v === "shield") S.text.logoSize = 3.2;
         else if(v === "text" && was !== "none") S.text.logoSize = 1.7;
+        /* back to an uploaded logo: the size it was fitted to on upload, not the size of the mark it replaces */
+        else if(v === "image" && S.text.logoImg) S.text.logoSize = +Math.min(4, 9/Math.max(0.5, S.text.logoImg.ar || 1)).toFixed(2);
       }
     }
     else if(path === "text.foot"){ S.text.foot = v; S.text.footOn = !!v; }
-    else set(S, path, v);
+    else put(path, v);
     if(/^hHand\./.test(path)) syncHands("hHand");
     commit(); paintAll();
+    if(drawn) toast("Showing the drawn case: the photograph is steel only.");
   }
   function setMarkers(k){
     const n = S.numerals, ix = S.indices;
@@ -11668,7 +11815,11 @@ body.guided .atelier-nav, body.guided #gHideInGuided, body.guided .bar .grp.tool
   const stepsEl = guide.querySelector(".gSteps"), body = guide.querySelector(".gBody");
   function paint(){
     if(mode !== "guided") return;
-    if(holdGuide){ guideDirty = true; return; }
+    if(holdGuide || textHold){ guideDirty = true; return; }
+    guideDirty = false;
+    /* a field being typed in keeps its focus and caret across the rebuild */
+    const fa = document.activeElement, fk = fa && body.contains(fa) && fa.dataset ? (fa.dataset.gtext || fa.dataset.gpfind) : null;
+    const fsel = fk && fa.selectionStart != null ? [fa.selectionStart, fa.selectionEnd] : null, fattr = fk && fa.dataset.gtext ? "data-gtext" : "data-gpfind";
     stepsEl.innerHTML = STEPS.map((s,i) => `<button type="button" role="tab" aria-selected="${i===step}" data-gstep="${i}" class="${i===step?"on":i<step?"done":""}"><b>${i+1}</b>${s.t}</button>`).join("");
     const s = STEPS[step], scroll = body.scrollTop, same = body.dataset.step === s.k;
     /* the rows that scroll sideways on a phone are rebuilt on every change,
@@ -11687,11 +11838,19 @@ body.guided .atelier-nav, body.guided #gHideInGuided, body.guided .bar .grp.tool
     const nx = guide.querySelector(".next"); nx.textContent = step === STEPS.length-1 ? "Save version" : `Next: ${STEPS[step+1].t}`;
     /* centre the current step in its row, without scrolling anything else (scrollIntoView moves the page on iOS) */
     const on = stepsEl.querySelector(".on"); if(on && !same) stepsEl.scrollLeft = on.offsetLeft - (stepsEl.clientWidth - on.offsetWidth)/2;
+    if(fk){ const el = body.querySelector(`[${fattr}="${fk}"]`); if(el){ el.focus({preventScroll:true}); if(fsel) try{ el.setSelectionRange(fsel[0], fsel[1]); }catch(e){} } }
   }
   const origPaintAll = paintAll;
   paintAll = function(){ origPaintAll.apply(this, arguments); thumbs.clear(); paint(); };
 
+  /* Typing, then tapping a choice: the field's change arrives on blur, in the
+     middle of the tap (touchend, mousedown, change, mouseup, click).
+     Rebuilding the panel then took the button away from under the finger and
+     the tap was lost. So the text is applied and drawn at once, and the panel
+     waits until the tap has landed, or a moment if nothing was tapped. */
+  const releaseText = () => { clearTimeout(textTimer); if(!textHold) return; textHold = false; if(guideDirty) paint(); };
   guide.addEventListener("click", e => {
+    if(textHold){ textHold = false; clearTimeout(textTimer); setTimeout(() => { if(guideDirty) paint(); }, 0); }
     if(holdGuide && !(e.target.closest && e.target.closest("input[type=color]"))){ holdGuide = false; if(colorDirty){ commit(); colorDirty = false; } }
     const t = e.target.closest("button, [data-gstart]"); if(!t) return;
     const d = t.dataset;
@@ -11702,10 +11861,11 @@ body.guided .atelier-nav, body.guided #gHideInGuided, body.guided .bar .grp.tool
     if(d.gset === "ui.stone"){ useStone(JSON.parse(d.gv)); commit(); paintAll(); paint(); return; }
     if(d.gset === "ui.printOn"){ const c = JSON.parse(d.gv);
       for(const k of ["numerals","indices","text","minute"]) if(S[k] && S[k].on && (k !== "numerals" || /printed/.test(S.numerals.tech || ""))) S[k].color = c;
+      if(S.text.on) S.text.lineColor = c;          // the second line and the lower text have their own colour
       commit(); paintAll(); paint(); return; }
-    if(d.gset === "dial.finish" && (JSON.parse(d.gv) === "mop" || JSON.parse(d.gv) === "stone")){
+    if(d.gset === "dial.finish" && (JSON.parse(d.gv) === "nacre" || JSON.parse(d.gv) === "stone")){
       const v = JSON.parse(d.gv);
-      if(v === "mop") useStone("mother of pearl");
+      if(v === "nacre") useStone("mother of pearl");
       else useStone(S.dial.stone && S.dial.stone !== "mother of pearl" && S.dial.stone !== "other" ? S.dial.stone : "lapis lazuli");
       commit(); paintAll(); paint(); return; }
     if(d.gset === "ui.mpal"){ mpal = JSON.parse(d.gv); paint(); return; }
@@ -11766,17 +11926,17 @@ body.guided .atelier-nav, body.guided #gHideInGuided, body.guided .bar .grp.tool
          So the colour is recorded and drawn, and the panel is rebuilt only
          once the picker has closed. */
       const v = t.value.toUpperCase();
-      if(get(S, d.gcolor) !== v || colorDirty){ set(S, d.gcolor, v); commit(); colorDirty = false; requestPaint(); }
+      if(get(S, d.gcolor) !== v || colorDirty){ put(d.gcolor, v); commit(); colorDirty = false; requestPaint(); }
       holdGuide = true; guideDirty = true;
       return;
     }
-    if(d.gtext){ apply(d.gtext, t.value); }
+    if(d.gtext){ textHold = true; clearTimeout(textTimer); textTimer = setTimeout(releaseText, 450); apply(d.gtext, t.value); }
     if(d.grange){ apply(d.grange, parseFloat(t.value)); }
   });
   guide.addEventListener("input", e => {
     const t = e.target, d = t.dataset;
     if(d.grange){ set(S, d.grange, parseFloat(t.value)); requestPaint(true); }
-    if(d.gcolor){ holdGuide = true; colorDirty = true; set(S, d.gcolor, t.value.toUpperCase()); requestPaint(true, 600); }
+    if(d.gcolor){ holdGuide = true; colorDirty = true; put(d.gcolor, t.value.toUpperCase()); requestPaint(true, 600); }
     if(d.gpfind){ pfind = t.value; const g = guide.querySelector(`.gPfound[data-path="${d.gpfind}"]`) || guide.querySelector(".gPfound"); if(g) g.innerHTML = pantoneGrid(d.gpfind, get(S, d.gpfind)); }
   });
   /* the picker has closed: commit what it left, and bring the panel up to date */

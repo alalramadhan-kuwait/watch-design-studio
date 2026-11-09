@@ -115,3 +115,113 @@ test('the NOREL design opens with NOREL\'s own logo, drawn from the built-in vec
   // added after "Your logo", so the numbered ids of the older marks do not move
   assert.ok(source.indexOf('LOGO_MARKS["Your logo"]') < source.indexOf('LOGO_MARKS["NOREL logo"]'));
 });
+
+// ---- Batch of fixes after the v2.10.0 audit ----
+// The drawing and editor helpers these touch are small and pure, so they are
+// run here from the real source; what needs a browser was checked in one.
+const drawCtx = vm.createContext({});
+vm.runInContext(chunk('const hex2rgb = h =>', 'function labOf(')+'const f = (n,d=2)=>Number(n).toFixed(d);\n'
+  +'const pt = (r,deg)=>{const a=(deg-90)*Math.PI/180;return [r*Math.cos(a), r*Math.sin(a)];};\n'
+  +chunk('function facetBar(', '/* ---------------------------------------------------------------\n   Breguet numerals')
+  +chunk('const handGeom = h =>', 'function handVec(')
+  +'\nthis.d={indexShape,handGeom};', drawCtx);
+test('an applied marker casts its shadow as an offset copy, not through a filter WebKit drops', () => {
+  for (const style of ['baton','double','dagger','triangle','dot','diamond','box','cone']) {
+    let n = 0; const defs = [];
+    const svg = drawCtx.d.indexShape({radius:12, length:2.4, width:0.6, color:'#C8C9C7', applied:true, style}, 30, k => k + (n++), defs, 2.3);
+    assert.ok(!/filter=/.test(svg) && !defs.some(d => /<filter/.test(d)), style + ' carries no filter');
+    assert.match(svg, /^<g transform="translate\(0\.06 0\.10\)" opacity="0\.35">/, style + ' has its shadow copy first');
+    assert.equal((svg.match(/rotate\(30\)/g) || []).length, 2, style + ': the shadow and the marker');
+  }
+  const printed = drawCtx.d.indexShape({radius:12, length:2.4, width:0.6, color:'#111111', applied:false, style:'baton'}, 0, k => k, []);
+  assert.ok(!/opacity="0\.35"/.test(printed), 'a printed marker casts no shadow');
+});
+test('a Breguet pomme wall never reaches past the pomme, so the circle radius stays positive', () => {
+  for (const ringW of [0.08, 0.3, 0.75, 1.2, 5]) {
+    const g = drawCtx.d.handGeom({length:12, width:0.4, pommeD:1.5, pommePos:86, ringW});
+    assert.ok(g.ring < g.pr && g.pr - g.ring > 0, 'wall ' + ringW + ' leaves a hole');
+  }
+  assert.equal(drawCtx.d.handGeom({length:12, width:0.4, pommeD:1.5, ringW:0.3}).ring, 0.36, 'a sane wall is unchanged (L*0.03 floor)');
+});
+// Simple mode's own helpers, out of its IIFE.
+const guideCtx = vm.createContext({S:null, set:(o,p,v)=>{const k=p.split('.');let t=o;while(k.length>1)t=t[k.shift()];t[k[0]]=v;}});
+vm.runInContext(chunk('  const esc2 = s =>', '  const chips = ')+chunk('  const STONE_TONE = {', '  const useStone')+chunk('  function put(', '  function apply(')
+  +'\nthis.g={gv,printFix,put,contrastOf};', guideCtx);
+test("a choice's value survives an apostrophe: Tiger's eye can be tapped", () => {
+  const attr = guideCtx.g.gv("tiger's eye");
+  assert.ok(!attr.includes("'"), 'no bare apostrophe left to close the attribute');
+  const back = attr.replace(/&#39;/g, "'").replace(/&amp;/g, '&');
+  assert.equal(JSON.parse(back), "tiger's eye");
+});
+const guideState = over => {
+  const s = {dial:{color:'#A9C3DD', finish:'sunburst', stone:''}, numerals:{on:true, tech:'printed', color:'#1F2D47'}, indices:{on:false},
+    minute:{on:true, color:'#1F2D47'}, text:{on:true, color:'#1F2D47', lineColor:'#1F2D47', logoTech:'printed', line2:'AUTOMATIC', foot:''}};
+  for (const k in over) Object.assign(s[k], over[k]);
+  return s;
+};
+test('the contrast warning covers every dial colour, not only stones, and reads the lines\' own colour', () => {
+  guideCtx.S = guideState({});
+  assert.equal(guideCtx.g.printFix(), '', 'navy on powder blue reads');
+  guideCtx.S = guideState({dial:{color:'#0E1F55'}});
+  assert.match(guideCtx.g.printFix(), /Print in white/, 'navy printing on a navy dial');
+  guideCtx.S = guideState({dial:{color:'#F4F2EC'}, numerals:{color:'#F4F4F2'}, minute:{color:'#F4F4F2'}, text:{color:'#F4F4F2', lineColor:'#F4F4F2'}});
+  assert.match(guideCtx.g.printFix(), /Print in navy/, 'white printing on a white dial');
+  guideCtx.S = guideState({dial:{finish:'stone', stone:'lapis lazuli'}});
+  assert.match(guideCtx.g.printFix(), /lapis lazuli[\s\S]*Print in white/, 'a stone is judged by its slab');
+  // only the second line is navy: the logo and the figures are already white
+  guideCtx.S = guideState({dial:{color:'#0E1F55'}, numerals:{color:'#F4F4F2'}, minute:{color:'#F4F4F2'}, text:{color:'#F4F4F2', lineColor:'#1F2D47'}});
+  assert.match(guideCtx.g.printFix(), /Print in white/, 'the lines are checked in lineColor');
+  guideCtx.S = guideState({dial:{color:'#0E1F55'}, numerals:{tech:'applied', color:'#1F2D47'}, minute:{color:'#F4F4F2'}, text:{color:'#1F2D47', lineColor:'#F4F4F2', logoTech:'applied metal'}});
+  assert.equal(guideCtx.g.printFix(), '', 'applied metal is not printing');
+});
+test('Text colour in simple mode colours the second line and lower text too', () => {
+  guideCtx.S = guideState({});
+  guideCtx.g.put('text.color', '#C8102E');
+  assert.equal(guideCtx.S.text.color, '#C8102E'); assert.equal(guideCtx.S.text.lineColor, '#C8102E');
+  guideCtx.g.put('minute.color', '#FFFFFF');
+  assert.equal(guideCtx.S.text.lineColor, '#C8102E', 'other colours leave the lines alone');
+});
+// The full editor's input rules.
+const edCtx = vm.createContext({});
+vm.runInContext(chunk('const clampTo = ', 'let casePrev')+chunk('const NUM_DEFAULT = ', 'let shownShape')+'\nthis.e={clampTo,hexOf,numDefault,panelShape};', edCtx);
+test('a typed number keeps to its range and a colour box takes only colours', () => {
+  const box = {min:'6', max:'44'};
+  assert.equal(edCtx.e.clampTo(box, 60), 44); assert.equal(edCtx.e.clampTo(box, -5), 6); assert.equal(edCtx.e.clampTo(box, 29.6), 29.6);
+  assert.equal(edCtx.e.clampTo({min:'', max:''}, 123), 123, 'no range, no clamp');
+  assert.equal(edCtx.e.hexOf('blue-ish'), null); assert.equal(edCtx.e.hexOf('#12345'), null); assert.equal(edCtx.e.hexOf('rgb(1,2,3)'), null);
+  assert.equal(edCtx.e.hexOf('#a9c3dd'), '#A9C3DD'); assert.equal(edCtx.e.hexOf('abc'), '#AABBCC'); assert.equal(edCtx.e.hexOf(' #1F2D47 '), '#1F2D47');
+});
+test('a missing number shows what the drawing uses, never NaN', () => {
+  const N = (p, min, max) => ({p, min, max});
+  assert.equal(edCtx.e.numDefault(N('dial.lay', 0, 90)), 0);
+  assert.equal(edCtx.e.numDefault(N('dial.facet', 0.2, 2)), 1);
+  assert.equal(edCtx.e.numDefault(N('sector.zones.0.lift', -1.2, 1.2)), 0);
+  assert.equal(edCtx.e.numDefault(N('hHand.reachTrim', 0.8, 1.05)), 0.97);
+  assert.equal(edCtx.e.numDefault(N('anything.else', 2, 9)), 2, 'otherwise the nearest end of the range');
+});
+test('the panel is rebuilt when a choice changes which controls exist', () => {
+  edCtx.SCHEMA = {dial:{fields:() => [{t:'sel', p:'dial.pattern'}].concat(edCtx.pat === 'clous' ? [{t:'num', p:'dial.lay'}] : [])}};
+  edCtx.sel = 'dial'; edCtx.pat = 'geneva';
+  vm.runInContext('var sel = this.sel; var SCHEMA = this.SCHEMA;', edCtx);
+  const a = edCtx.e.panelShape(); edCtx.pat = 'clous';
+  assert.notEqual(edCtx.e.panelShape(), a, 'clous brings in its lay angle');
+  edCtx.pat = 'geneva'; assert.equal(edCtx.e.panelShape(), a);
+});
+// The technical sheet and the PNG size.
+const sheetCtx = vm.createContext({});
+vm.runInContext(chunk('const VERNOY_CASE = {','const CASE_SPEC = new Proxy')+'const f = (n,d=2)=>Number(n).toFixed(d);\n'
+  +chunk('function caseGeomRows(', 'function specSheet(')+'let tplW = 1040, tplH = 1560;\n'+chunk('function pngSize(', 'function exportPlan(')
+  +'\nthis.s={caseGeomRows,pngSize,NOREL_R4,VERNOY_CASE,set:(w,h)=>{tplW=w;tplH=h;}};', sheetCtx);
+test('the technical sheet describes a round case as round', () => {
+  const round = sheetCtx.s.caseGeomRows(sheetCtx.s.NOREL_R4).map(r => r.join(': ')).join('\n');
+  assert.doesNotMatch(round, /corner|flats/i);
+  assert.match(round, /Case: round, Ø41\.00 mm/); assert.match(round, /Bezel: Ø41\.00 outside, Ø34\.20 inside, 72 flutes/); assert.match(round, /Bracelet: 21\.00/);
+  const cushion = sheetCtx.s.caseGeomRows(sheetCtx.s.VERNOY_CASE).map(r => r[0]);
+  assert.ok(cushion.includes('Profile radii') && cushion.includes('Strap width'), 'the cushion keeps its own rows');
+});
+test('a PNG of the photographed view is as large as the size chosen', () => {
+  for (const side of [1200, 2000, 3000]) assert.deepEqual({...sheetCtx.s.pngSize(side, true)}, {W:side, H:side*1.5});
+  assert.deepEqual({...sheetCtx.s.pngSize(3000, false)}, {W:3000, H:3000});
+  const big = sheetCtx.s.pngSize(6000, true);
+  assert.ok(big.W * big.H <= 16.7e6, 'never past the largest canvas a phone draws');
+});

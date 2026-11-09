@@ -151,9 +151,13 @@ In simple mode, **Dial → Surface → Stone** lists the sixteen stones
 rhodonite, sodalite, carnelian, jade, onyx, snowflake obsidian, opal, white
 onyx, pietersite, red jasper), each drawn from its photographed slab.
 **Mother of pearl** uses the photographed nacre slab. Where the printing
-(numerals, logo and text, minute track) would not read on the chosen stone,
-a button sets it to white, or to navy on a pale stone; the test is the
-contrast against the slab's measured average tone.
+(numerals, printed markers, logo and text, minute track) would not read on
+the dial, a note says so under the colours and a button sets it to white,
+or to navy on a pale dial. This works for every dial colour, not only
+stones: the test is the contrast against the dial colour, or for a stone
+against the slab's measured average tone. (The full editor's **mop** finish
+is a pearl sheen over the dial colour, not the nacre slab; simple mode shows
+it as **Pearl sheen**.)
 
 ## Numeral and lettering colours
 
@@ -162,7 +166,8 @@ In simple mode the numerals, hour markers, minute track and text each take
 vintage lume to teal, burgundy and rose gold) or **Pantone**, the full
 library searchable by code (for example 289 C). The nearest Pantone is
 named under the swatches for any colour picked. The **+** swatch still
-takes any colour.
+takes any colour. **Text colour** colours all the lettering: the logo,
+the second line and the lower text.
 
 ## The NOREL case photograph
 
@@ -171,6 +176,10 @@ its bracelet (`app/case-norel-r4-real.jpg`): their case, fluted bezel, crown
 and bracelet, with the designed dial drawn into the opening (Ø31.40 = 65.14%
 of the picture's width, centred). The supplier's dial, text and colour labels
 were removed from the picture first.
+
+The photograph is the steel case on its bracelet. Choosing another metal, a
+finish or the strap while **Show as a photograph** is on switches to the
+drawn case, which shows them, and a message says so.
 
 ## The NOREL logo
 
@@ -212,7 +221,8 @@ The app keeps an offline copy. On opening it asks the site for
 `version.json`; if a newer version is published, it installs straight away
 when nothing has been changed since the app opened, and otherwise the label
 turns orange (**update to vX**) and a tap installs it. The design is saved
-first and reopens.
+first and reopens. With nothing to install, a tap on the label says which
+version and build you have.
 
 ## Cases
 
