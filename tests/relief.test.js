@@ -86,3 +86,84 @@ test('hours set one by one raise a marker at each gem and applied index hour, no
   assert.deepEqual(markerAngles(state),[30,60,150,270,300,330],'printed indices are flat; gems still stand');
   state.markers.perHour=false;assert.deepEqual(markerAngles(state),[],'off: today\'s rule');
 });
+
+/* ---- the NOREL head (v3.4.0) ---- */
+import {NOREL_R1,lugTopAt,norelStack,bezelProfile,gemBezelTop,braceletPath,braceletRows,linkProfile,cyclopsLens,traceMask,simplifyLoop,nestLoops,loopArea,PBR_METAL} from '../src/relief-model.js';
+import {readFileSync} from 'node:fs';
+
+test('the head stacks to the R4 drawing: 11.20 over the crystal, bezel just below the glass',()=>{
+  const s=norelStack({});
+  assert.ok(Math.abs(s.glassTop-NOREL_R1.backBottom-11.2)<1e-9);
+  assert.ok(Math.abs(s.glassTop-s.glassBottom-1.5)<1e-9);
+  assert.ok(s.bezelTop<s.glassTop&&s.glassBottom>1.5,'the glass clears the hands');
+  assert.equal(s.flutes,72);
+});
+test('the R4 bezel profile runs from the Ø31.40 opening to Ø41.00 with a 45° fluted slope',()=>{
+  const {pts,slope}=bezelProfile({bezelOD:41,bezelID:34.2,glassD:33.5,opening:31.4,land:.5});
+  const rs=pts.map(p=>p[0]);
+  assert.ok(Math.abs(Math.min(...rs)-15.7)<1e-9);assert.ok(Math.abs(Math.max(...rs)-20.5)<1e-9);
+  const [r0,z0]=pts[slope],[r1,z1]=pts[slope+1];
+  assert.ok(Math.abs((z0-z1)/(r1-r0)-1)<1e-9,'45 degrees');
+  assert.ok(Math.abs(r0-(17.1+.5))<1e-9,'the polished land is 0.50 wide');
+  // a gem-set bezel has no flutes, and its top falls away from the crystal
+  const g=bezelProfile({},true);assert.equal(g.slope,-1);
+  assert.ok(gemBezelTop({},17.5)>gemBezelTop({},20));
+});
+test('the lug top falls toward the tips',()=>{
+  for(let y=16.5;y<23.5;y+=.5)assert.ok(lugTopAt(y+.5)<lugTopAt(y));
+});
+test('the bracelet curves down and away and meets its mirror at the clasp',()=>{
+  const p=braceletPath({y0:22,z0:-7,theta0:-25*Math.PI/180,R:20});
+  const end=p.at(p.length);
+  assert.ok(Math.abs(end.y)<1e-9,'the last point is on the centre line');
+  assert.ok(Math.abs(end.theta+Math.PI)<1e-9,'running back level under the watch');
+  assert.ok(p.bottom<-30,'well below the head');
+  let prev=p.at(0);
+  for(let s=.5;s<=p.length;s+=.5){const q=p.at(s);assert.ok(Math.abs(Math.hypot(q.y-prev.y,q.z-prev.z)-.5)<1e-3,'unit speed, and no jump where the arc meets the run');assert.ok(q.theta<=prev.theta+1e-12,'only ever turning down');prev=q;}
+  const rows=braceletRows(p,{pitch:5.3,gap:.4,w0:21,w1:16});
+  assert.ok(rows.length>=10);
+  assert.ok(Math.abs(rows[0].width-21)<1,'lug width at the case');
+  assert.equal(rows[rows.length-1].width,16,'clasp width at the bottom');
+  for(let i=1;i<rows.length;i++)assert.ok(rows[i].s-rows[i-1].s>rows[i].length,'a gap between rows');
+});
+test('a link is rounded on top and flat underneath',()=>{
+  const pr=linkProfile(5,2.7);
+  assert.equal(Math.min(...pr.map(p=>p[1])),0);
+  assert.ok(Math.abs(Math.max(...pr.map(p=>p[1]))-2.7)<.05);
+  assert.ok(loopArea(pr)!==0);
+});
+test('the cyclops is 1.10 high at the middle and meets the glass at its rim',()=>{
+  const l=cyclopsLens(7,5.5,1.1);
+  assert.ok(Math.abs(l.z(0,0)-1.1)<1e-9);assert.ok(Math.abs(l.z(3.5,0))<1e-9);
+  assert.equal(l.half,2.75);
+});
+test('tracing finds an outline and the hole inside it',()=>{
+  const w=40,h=40,a=new Uint8Array(w*h);
+  for(let y=0;y<h;y++)for(let x=0;x<w;x++){const r=Math.hypot(x-20,y-20);a[y*w+x]=r<14&&r>6?255:0;}
+  const loops=traceMask(a,w,h).map(l=>simplifyLoop(l,.3));
+  assert.equal(loops.length,2);
+  const shapes=nestLoops(loops);
+  assert.equal(shapes.length,1);assert.equal(shapes[0].holes.length,1);
+  const area=Math.abs(loopArea(shapes[0].outer))-Math.abs(loopArea(shapes[0].holes[0]));
+  assert.ok(Math.abs(area-Math.PI*(14*14-6*6))/(Math.PI*(14*14-6*6))<.06,'a ring of the right area');
+  // two separate figures, one with a counter (an 8 has two)
+  const b=new Uint8Array(w*h);for(let y=5;y<35;y++){for(let x=3;x<13;x++)b[y*w+x]=255;for(let x=20;x<36;x++)b[y*w+x]=(x>24&&x<31&&y>10&&y<29)?0:255;}
+  const s2=nestLoops(traceMask(b,w,h));
+  assert.equal(s2.length,2);assert.deepEqual(s2.map(s=>s.holes.length).sort(),[0,1]);
+});
+test('metals are reflectances, gold warmer than steel',()=>{
+  const rgb=h=>[1,3,5].map(i=>parseInt(h.slice(i,i+2),16));
+  const [r,g,b]=rgb(PBR_METAL['yellow gold']);assert.ok(r>g&&g>b);
+  const s=rgb(PBR_METAL.steel);assert.ok(Math.max(...s)-Math.min(...s)<12);
+});
+test('the case model ships, is compact and is cached for offline use',()=>{
+  const glb=readFileSync(new URL('../app/norel-case-r1.glb',import.meta.url));
+  assert.equal(glb.readUInt32LE(0),0x46546C67,'a GLB');
+  assert.ok(glb.length<1.5e6,'under 1.5 MB');
+  const json=JSON.parse(glb.subarray(20,20+glb.readUInt32LE(12)).toString());
+  assert.deepEqual(json.meshes.map(m=>m.name),['case','crown','caseback']);
+  const sw=readFileSync(new URL('../sw.js',import.meta.url),'utf8');
+  assert.match(sw,/"\.\/app\/norel-case-r1\.glb"/);
+  const src=readFileSync(new URL('../src/relief3d.js',import.meta.url),'utf8');
+  assert.match(src,/CASE_GLB='\.\/app\/norel-case-r1\.glb'/);
+});

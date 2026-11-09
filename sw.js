@@ -30,6 +30,9 @@ const SHELL = [
      navigation handler below answers every way in from this one copy. */
   "./index.html",
   "./vendor/relief3d.bundle.js",
+  /* the NOREL case for the 3D view (R1 STEP geometry, ~0.7 MB): fetched by
+     the page only when the 3D view first opens, and held here for offline */
+  "./app/norel-case-r1.glb",
   "./manifest.webmanifest",
   "./app/icon-192.png",
   "./app/icon-512.png",

@@ -94,3 +94,190 @@ export function zoneBands(state, radius, floor){
   const base = Number.isFinite(floor) ? floor : .4;
   return bands.map(b => ({...b, depth: b.lift + base, z: -base}));
 }
+
+/* ------------------------------------------------------------------
+   The NOREL B6098G-A1 in 3D. Two sources, kept apart on purpose:
+
+   R1 geometry — Blue Creations' STEP of the case assembly (R1), tessellated
+   by tools/norel-case-glb.py into app/norel-case-r1.glb: the case middle
+   with its lugs, the crown and the case back, exactly as drawn. The frame
+   is the 3D view's: millimetres, +X toward 3 (the crown), +Y toward 12, +Z
+   toward the viewer, the origin on the dial top at its centre. The lug and
+   case-wall numbers below were measured off that STEP in the same frame.
+
+   R4 dimensions — the 3 Nov assembly drawing, the case as approved: bezel
+   Ø41.00 flush with the case, its ring Ø34.20 inside, glass Ø33.50 x 1.50,
+   opening Ø31.40, dial Ø32.50, 11.20 over the crystal, and a Ø7.00 cyclops
+   cut to 5.50, 1.10 high, centred 10.00 mm out at 3. The bezel, crystal and
+   cyclops are built here from those numbers (72 flutes, as the drawn bezel),
+   because the STEP still carries the R1 parts for them.
+   ------------------------------------------------------------------ */
+export const NOREL_R1 = Object.freeze({
+  caseTop:.80,                 // the case middle's top face (STEP z 0), which the bezel sits on
+  backBottom:-7.10,            // the case back's lowest point
+  lugInner:10.50,              // half the 21.00 between the lugs
+  caseWall:20.00,              // the case middle's wall between the lugs, at 12 and 6
+  /* the top of a lug, [y, z], from the case top to its tip (STEP section at x 11.5) */
+  lugTop:Object.freeze([[16.5,.77],[17,.61],[18.5,-.04],[19.5,-.57],[21,-1.82],[21.5,-2.38],[22,-2.96],[22.5,-3.61],[23,-4.62],[23.5,-5.74]]),
+  springBar:Object.freeze([21.5,-5.2])
+});
+const lerpTable = (t, x) => { if(x <= t[0][0]) return t[0][1]; for(let i = 1; i < t.length; i++) if(x <= t[i][0]){ const [x0, y0] = t[i-1], [x1, y1] = t[i]; return y0 + (y1 - y0)*(x - x0)/(x1 - x0); } return t[t.length-1][1]; };
+export const lugTopAt = y => lerpTable(NOREL_R1.lugTop, y);
+
+/* How the head stacks up, from the case spec (R4 unless the spec says
+   otherwise): the crystal's top is the height over the case back. */
+export function norelStack(K = {}){
+  const height = +K.height || 11.20, glassT = +K.glassT || 1.50;
+  const glassTop = NOREL_R1.backBottom + height, glassBottom = glassTop - glassT;
+  return {caseTop:NOREL_R1.caseTop, glassTop, glassBottom, bezelTop:glassTop - .10,
+    bezelOD:+K.bezelOD || 41.00, bezelID:+K.bezelID || 34.20, glassD:+K.glassD || 33.50,
+    opening:+K.opening || 31.40, land:Number.isFinite(+K.land) ? +K.land : .50,
+    flutes:Math.round(+K.flutes || 72), fluteDepth:+K.fluteDepth || .41};
+}
+/* The bezel in section, [r, z], as one closed loop from the lip over the
+   dial round to its foot on the case. The fluted slope runs from point
+   `slope` to `slope + 1`; the gem-set bezel is rounded over instead. */
+export function bezelProfile(K = {}, gem = false){
+  const s = norelStack(K), ri = s.bezelID/2, ro = s.bezelOD/2, rg = s.glassD/2, rl = s.opening/2;
+  const top = s.bezelTop, land = Math.min(s.land, (ro - ri)/3), c = .08;
+  const pts = [[rl, .12], [rg, s.glassBottom], [ri, s.glassBottom], [ri, top - c], [ri + c, top]];
+  let slope = -1;
+  if(gem){
+    /* a flatter rounded ring that seats a row of stones */
+    const w = ro - ri;
+    for(let k = 0; k <= 8; k++){ const t = k/8; pts.push([ri + c + (w - c - .25)*t, top - .35*t*t - .45*t]); }
+    pts.push([ro, top - 1.1]);
+  }else{
+    pts.push([ri + land, top]); slope = pts.length - 1;
+    pts.push([ro, top - (ro - ri - land)]);           // 45°, as the drawn bezel
+  }
+  pts.push([ro, s.caseTop + .18], [ro - .18, s.caseTop], [rl + .5, s.caseTop], [rl + .2, .12]);
+  return {pts, slope, stack:s};
+}
+/* The ring's top at radius r on a gem-set bezel, for seating the stones. */
+export function gemBezelTop(K, r){
+  const {pts} = bezelProfile(K, true);
+  let best = pts[4][1];
+  for(let i = 4; i < pts.length - 1; i++){ const [r0, z0] = pts[i], [r1, z1] = pts[i+1]; if(r >= r0 && r <= r1 && r1 > r0) best = z0 + (z1 - z0)*(r - r0)/(r1 - r0); }
+  return best;
+}
+
+/* ---- the bracelet ----
+   A President-style bracelet hangs from the lugs and curves down and away
+   as it would round a wrist or a display: it leaves the end link at a
+   shallow angle, turns on an arc of radius R, and runs back level under the
+   watch to the clasp at the bottom. One side, +Y, in the YZ plane; the
+   other is its mirror. The path is the links' underside: their tops are
+   `thick` further out along the normal (-sin θ, cos θ). */
+export function braceletPath({y0 = 21.9, z0 = -6.6, theta0 = -25*Math.PI/180, R = 20} = {}){
+  const cy = y0 + R*Math.sin(theta0), cz = z0 - R*Math.cos(theta0);   // the arc's centre, right of the tangent
+  const arc = R*(theta0 + Math.PI), run = Math.max(0, cy);
+  const at = s => {
+    if(s <= arc){ const th = theta0 - s/R; return {y:cy - R*Math.sin(th), z:cz + R*Math.cos(th), theta:th}; }
+    return {y:cy - (s - arc), z:cz - R, theta:-Math.PI};
+  };
+  return {length:arc + run, at, bottom:cz - R};
+}
+/* The rows of links along that path: as many whole rows as fit at about
+   `pitch`, stretched a little so the last one meets its mirror at the
+   clasp, tapering from the lug width to the clasp's. */
+export function braceletRows(path, {pitch = 5.3, gap = .4, start = 0, w0 = 21, w1 = 16} = {}){
+  const len = path.length - start, n = Math.max(1, Math.round(len/pitch)), p = len/n, rows = [];
+  for(let k = 0; k < n; k++){
+    const s = start + (k + .5)*p, q = path.at(s), t = Math.min(1, (k + .5)/n/0.6);
+    rows.push({s, ...q, length:p - gap, width:w0 + (w1 - w0)*t});
+  }
+  return rows;
+}
+/* A link in section along the bracelet: flat underneath, straight sides, a
+   rounded top (half an ellipse), so a row of them reads as a run of
+   rounded barrels with a dark gap between each. [u, v] with u along the
+   bracelet and v outward. */
+export function linkProfile(length, thick, segs = 10){
+  const h = length/2, side = thick*.34, pts = [[-h, 0], [h, 0], [h, side]];
+  for(let i = 1; i < segs; i++){ const a = Math.PI*i/segs; pts.push([h*Math.cos(a), side + (thick - side)*Math.sin(a)]); }
+  pts.push([-h, side]);
+  return pts;
+}
+
+/* ---- the cyclops ----
+   A plano-convex lens on the crystal: a circle of diameter d cut flat to
+   `cut` across, `lift` high at the middle. x runs out along the radius it
+   sits on, y across it. */
+export function cyclopsLens(d = 7, cut = 5.5, lift = 1.1){
+  const r = d/2, R = (r*r + lift*lift)/(2*lift);
+  return {r, half:cut/2, R, lift, z:(x, y) => Math.max(0, Math.sqrt(Math.max(0, R*R - x*x - y*y)) - (R - lift))};
+}
+
+/* ---- tracing artwork into outlines ----
+   Applied numerals are set in fonts the 3D view cannot read, so the 2D
+   renderer draws them alone and their silhouette is traced: marching
+   squares at half coverage, then simplified, then sorted into outlines and
+   the holes inside them. Pixel units, y down. */
+export function traceMask(alpha, w, h, threshold = 128){
+  const on = (x, y) => x >= 0 && y >= 0 && x < w && y < h && alpha[y*w + x] >= threshold;
+  const val = (x, y) => (x >= 0 && y >= 0 && x < w && y < h) ? alpha[y*w + x] : 0;
+  const pt = (x0, y0, x1, y1) => { const a = val(x0, y0), b = val(x1, y1), t = a === b ? .5 : Math.min(1, Math.max(0, (threshold - a)/(b - a))); return [x0 + (x1 - x0)*t, y0 + (y1 - y0)*t]; };
+  /* edges of cell (x, y): 0 top, 1 right, 2 bottom, 3 left; keyed so
+     neighbouring cells share them */
+  const key = (x, y, e) => e === 0 ? `h${x},${y}` : e === 2 ? `h${x},${y+1}` : e === 3 ? `v${x},${y}` : `v${x+1},${y}`;
+  const edgePt = (x, y, e) => e === 0 ? pt(x, y, x+1, y) : e === 1 ? pt(x+1, y, x+1, y+1) : e === 2 ? pt(x, y+1, x+1, y+1) : pt(x, y, x, y+1);
+  /* segments run with the inside on their right in y-down pixels */
+  const TABLE = {1:[[3,2]], 2:[[2,1]], 3:[[3,1]], 4:[[1,0]], 5:[[3,0],[1,2]], 6:[[2,0]], 7:[[3,0]],
+                 8:[[0,3]], 9:[[0,2]], 10:[[0,1],[2,3]], 11:[[0,1]], 12:[[1,3]], 13:[[1,2]], 14:[[2,3]]};
+  const next = new Map(), pos = new Map();
+  for(let y = -1; y < h; y++) for(let x = -1; x < w; x++){
+    const c = (on(x, y) ? 8 : 0) | (on(x+1, y) ? 4 : 0) | (on(x+1, y+1) ? 2 : 0) | (on(x, y+1) ? 1 : 0);
+    const segs = TABLE[c]; if(!segs) continue;
+    for(const [a, b] of segs){ const ka = key(x, y, a), kb = key(x, y, b); next.set(ka, kb); if(!pos.has(ka)) pos.set(ka, edgePt(x, y, a)); if(!pos.has(kb)) pos.set(kb, edgePt(x, y, b)); }
+  }
+  const loops = [];
+  for(const startKey of next.keys()){
+    if(!next.has(startKey)) continue;
+    const loop = []; let k = startKey;
+    while(next.has(k)){ loop.push(pos.get(k)); const n = next.get(k); next.delete(k); k = n; }
+    if(loop.length >= 3) loops.push(loop);
+  }
+  return loops;
+}
+export function loopArea(loop){ let a = 0; for(let i = 0, j = loop.length - 1; i < loop.length; j = i++) a += (loop[j][0] - loop[i][0])*(loop[j][1] + loop[i][1]); return a/2; }
+/* Ramer–Douglas–Peucker on a closed loop. */
+export function simplifyLoop(loop, eps = .4){
+  if(loop.length < 8) return loop.slice();
+  let far = 0, fd = -1; for(let i = 1; i < loop.length; i++){ const d = Math.hypot(loop[i][0] - loop[0][0], loop[i][1] - loop[0][1]); if(d > fd){ fd = d; far = i; } }
+  const rdp = (pts) => {
+    if(pts.length < 3) return pts;
+    const [ax, ay] = pts[0], [bx, by] = pts[pts.length-1], L = Math.hypot(bx - ax, by - ay) || 1e-9;
+    let idx = 0, dm = 0;
+    for(let i = 1; i < pts.length - 1; i++){ const d = Math.abs((bx - ax)*(ay - pts[i][1]) - (ax - pts[i][0])*(by - ay))/L; if(d > dm){ dm = d; idx = i; } }
+    if(dm <= eps) return [pts[0], pts[pts.length-1]];
+    const l = rdp(pts.slice(0, idx + 1)), r = rdp(pts.slice(idx));
+    return l.slice(0, -1).concat(r);
+  };
+  const a = rdp(loop.slice(0, far + 1)), b = rdp(loop.slice(far).concat([loop[0]]));
+  return a.slice(0, -1).concat(b.slice(0, -1));
+}
+const inside = (p, loop) => { let c = false; for(let i = 0, j = loop.length - 1; i < loop.length; j = i++){ const [xi, yi] = loop[i], [xj, yj] = loop[j]; if((yi > p[1]) !== (yj > p[1]) && p[0] < (xj - xi)*(p[1] - yi)/(yj - yi) + xi) c = !c; } return c; };
+/* Outlines with the holes that sit directly inside them: a loop nested an
+   even number of times is an outline, an odd number a hole (the counter of
+   an 8, the bowl of a 6, a 0 inside the ring of a 10). */
+export function nestLoops(loops, minArea = 2){
+  const L = loops.filter(l => Math.abs(loopArea(l)) >= minArea);
+  const depth = L.map((l, i) => L.reduce((n, m, j) => n + (j !== i && Math.abs(loopArea(m)) > Math.abs(loopArea(l)) && inside(l[0], m) ? 1 : 0), 0));
+  const out = [];
+  L.forEach((l, i) => { if(depth[i]%2 === 0) out.push({outer:l, holes:[], i}); });
+  L.forEach((l, i) => {
+    if(depth[i]%2 === 0) return;
+    let best = null;
+    for(const o of out) if(depth[o.i] === depth[i] - 1 && inside(l[0], o.outer) && (!best || Math.abs(loopArea(o.outer)) < Math.abs(loopArea(best.outer)))) best = o;
+    if(best) best.holes.push(l);
+  });
+  return out.map(({outer, holes}) => ({outer, holes}));
+}
+
+/* ---- metal colours ----
+   The 2D studio paints gold as a flat hex chosen to read well in a drawing.
+   Lit by an environment, metal wants its reflectance instead (the base
+   colour of a physically based metal): these are measured F0 values for
+   18k yellow, rose and white gold and 316L steel, in sRGB. */
+export const PBR_METAL = Object.freeze({"yellow gold":"#F2CC86", "rose gold":"#EEC0A9", "white gold":"#E4E3DE", "steel":"#CDD0D3"});

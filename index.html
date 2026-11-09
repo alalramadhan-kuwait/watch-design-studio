@@ -2001,7 +2001,7 @@ const APP_BUILD = "__BUILD__";
 /* The version people see, raised with every change that reaches them:
    major for a new way of working, minor for something new to do, patch for
    a fix. Shown on the watch screen, so any screenshot says which it was. */
-const APP_VERSION = "3.3.0";
+const APP_VERSION = "3.4.0";
 const APP_DATE = "__DATE__";
 
 /* Every route that replaces S passes through one of these three, which is
@@ -12870,7 +12870,30 @@ window.WatchReliefBridge={
   snapshot:()=>clone(S), radius:visR, handColor:handCore,
   settings(value){S.relief3d=value;commit();},
   closed(){paintAll();}, undo(){undo();},
-  caseSpec(st){const K=caseOf(st);return {shape:K.shape,flat:K.flat,bezelOD:K.bezelOD,bezelID:K.bezelID,land:K.land,flutes:K.flutes,fluteDepth:K.fluteDepth,bracelet:!!K.bracelet,crownD:K.crownD};},
+  caseSpec(st){const K=caseOf(st);return {model:K.model,norel:/^NOREL/.test(K.model||''),shape:K.shape,flat:K.flat,bezelOD:K.bezelOD,bezelID:K.bezelID,land:K.land,flutes:K.flutes,fluteDepth:K.fluteDepth,bracelet:!!K.bracelet,crownD:K.crownD,
+    glassD:K.glassD,glassT:K.glassT,opening:K.opening,dialD:K.dialD,height:K.height,lugWidth:K.lugWidth,lugToLug:K.lugToLug,clasp:K.clasp,cyclops:K.cyclops?{...K.cyclops}:null};},
+  /* the case's metals as the 3D view needs them: a two-tone gold, a whole
+     gold case, and a gem-set bezel with its stones' colours */
+  lux(st){const gem=gemBezelSpec(st);return {two:twoToneOf(st),full:goldOf(st.case&&st.case.material),gem:gem?{...gem,colors:GEM_STONES[gem.stone]||GEM_STONES.diamond}:null};},
+  /* the stones of gem-set hours: where each sits and what it is */
+  gems(st){try{return gemPlacements(st).filter(q=>!q.drop).map(q=>({a:q.a,r:q.r,cut:q.g.cut,n:q.g.n,d:q.g.d,L:q.g.L,W:q.g.W,s:q.g.s,colors:GEM_STONES[q.g.stone]||GEM_STONES.diamond,metal:(METALS[q.g.metal]||METALS['white gold']).base}));}catch(e){return [];}},
+  /* applied metal numerals, drawn alone as white on nothing, for the 3D view
+     to trace and stand up off the dial; null when the numerals are printed */
+  numeralsSVG(st,px){
+    const nm=st.numerals;if(!nm||!nm.on||nm.tech!=='applied'||nm.material!=='metal')return null;
+    /* drawn with the rest of the dial as it is, so the figures sit and skip
+       exactly as printed ones would (round a day window, under a date),
+       then everything but the numerals layer is taken out */
+    const copy=clone(st),r=visR(st);copy.case.on=false;copy.tpl.on=false;copy.hHand.on=copy.mHand.on=copy.sHand.on=false;
+    Object.assign(copy.numerals,{tech:'printed',material:'ink',color:'#FFFFFF',pave:false});copy.render.mode='neutral';
+    let svg=buildSVG(copy,{scope:'surface',matPx:128,px});
+    svg=svg.replace(/viewBox="[^"]+"/,`viewBox="${-r} ${-r} ${r*2} ${r*2}"`);
+    const doc=new DOMParser().parseFromString(svg,'image/svg+xml'),keep=doc.querySelector('g[data-layer="numerals"]');if(!keep)return null;
+    for(let n=keep;n&&n.parentNode&&n!==doc.documentElement;n=n.parentNode)
+      for(const sib of [...n.parentNode.childNodes])if(sib!==n&&!(sib.nodeType===1&&/^(defs|style)$/i.test(sib.localName)))sib.remove();
+    svg=new XMLSerializer().serializeToString(doc);
+    return {svg:prepSVG(svg,px,px),height:+nm.height||.2,bevel:+nm.bevel||.05,metal:(METALS[nm.metal]||METALS['polished steel']).base,metalName:nm.metal||'polished steel'};
+  },
   caseOutline(st){
     const K=caseOf(st),half=(st.case.locked?K.flat:st.case.diameter)/2;
     const outer=K.shape==='round'?disc(half):cushion(half,half*38/18,half*10/18),r=visR(st);
@@ -12893,13 +12916,20 @@ window.WatchReliefBridge={
     const body=vec?`<path fill="#fff" fill-rule="evenodd" d="${vec.zone?stretchHand(vec.d,vec.zone,vec.tip,h.length):vec.d}"/>`:handPath(h);
     return `<svg xmlns="http://www.w3.org/2000/svg">${body}</svg>`;
   },
-  surfaceSVG(st,recessed){
+  /* raised: the 3D view stands applied metal numerals up itself, so they
+     are left off the printing; px: the artwork's size (1024 before 3.4.0);
+     lens: the 3D view has its own cyclops, so the date is printed plain
+     (the 2D drawing of the lens's view would otherwise be magnified twice) */
+  surfaceSVG(st,recessed,raised,px,lens){
+    px=px||1024;
     const copy=clone(st);copy.case.on=false;copy.tpl.on=false;copy.hHand.on=copy.mHand.on=copy.sHand.on=false;
     if(copy.indices.applied)copy.indices.on=false;if(recessed)copy.sub.on=false;
+    if(raised&&copy.numerals&&copy.numerals.tech==='applied'&&copy.numerals.material==='metal')copy.numerals.on=false;
+    if(lens&&copy.date)copy.date.cyclops='none';
     copy.render.mode='neutral';copy.render.quality=512;
-    const r=visR(st);let svg=buildSVG(copy,{scope:'surface',matPx:512,px:1024});
+    const r=visR(st);let svg=buildSVG(copy,{scope:'surface',matPx:Math.min(768,px/2),px});
     svg=svg.replace(/viewBox="[^"]+"/,`viewBox="${-r} ${-r} ${r*2} ${r*2}"`);
-    return prepSVG(svg,1024,1024);
+    return prepSVG(svg,px,px);
   },
   heightCanvas(st,px){
     const cv=document.createElement('canvas');cv.width=cv.height=px;const ctx=cv.getContext('2d'),img=ctx.createImageData(px,px),d=st.dial,r=visR(st);

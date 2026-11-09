@@ -197,6 +197,46 @@ stored in a design file do not change. In the full editor at laptop widths
 the toolbar sits tighter, and on a narrower window it takes a second row
 rather than pushing Share and Export off the screen.
 
+## The 3D view, rebuilt (v3.4.0)
+
+**3D view** now shows the NOREL as a product render rather than a sketch:
+
+- **The real case.** The case middle, lugs, crown and case back are Blue
+  Creations' own STEP of the B6098G-A1 assembly (R1), tessellated into
+  `app/norel-case-r1.glb` (0.7 MB, about 48,000 triangles) by
+  `tools/norel-case-glb.py`. It is fetched only the first time the 3D view
+  opens, and the offline copy keeps it. The bezel, crystal and cyclops are
+  built in code to the **R4** numbers (3 Nov drawing): bezel Ø41.00 with 72
+  flutes 0.41 deep, ring Ø34.20, glass Ø33.50 × 1.50, opening Ø31.40, 11.20
+  over the crystal, cyclops Ø7.00 cut to 5.50, 1.10 high, 10.00 mm out at 3.
+  `src/relief-model.js` says which numbers come from which source. R3 and
+  Concept D designs use the same case with their own bezel and glass sizes.
+- **The bracelet.** A President-style bracelet made in code: rounded links in
+  rows of three with gaps, brushed outers and a polished centre, end links
+  that follow the lug tops, tapering from 21 mm to the 16 mm clasp and
+  curving down and away as it would round a wrist.
+- **Light and metal.** A softbox studio built in code (no image is
+  downloaded), polished steel and gold as mirrors, brushed steel with a
+  directional grain, a soft contact shadow, a sapphire crystal that adds a
+  reflection without dimming the dial, and a clear cyclops that shows the
+  date window and the dial round it magnified 2.2× about the lens's centre,
+  clipped to the lens and carried with it as the view turns. (The 3D view
+  prints the date plain and does the magnifying itself; with the crystal
+  switched off the 2D drawing's view through the lens stays on the dial.)
+- **The design in relief.** The dial artwork is drawn at twice the size it
+  was. Hands are bevelled metal; applied markers stand at the marker height;
+  **applied metal numerals** (Numerals → applied, metal) are traced from the
+  font and stand up off the dial at their own height and bevel; gem hours
+  carry cut stones. Two-tone puts gold on the bezel, crown and centre links;
+  a gold case is gold throughout; a gem-set bezel is a ring of stones.
+- Other cases (the Vernoy cushion) keep the earlier build, in the new studio.
+
+About 80,000 triangles in all for the NOREL; it opens in two to three
+seconds on a laptop, most of which is drawing the dial artwork.
+To rebuild the case model after a new STEP arrives:
+`python3 tools/norel-case-glb.py <case_assembly.stp> app/norel-case-r1.glb`
+(needs CadQuery's OCP), then `npm run build`.
+
 ## More options (v3.3.0)
 
 Every step after Start has a **More** button: beside the tabs on a phone,
