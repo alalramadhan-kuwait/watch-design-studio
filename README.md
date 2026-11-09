@@ -127,8 +127,9 @@ position, or index shapes), **Hands** (shape, metal, lume, seconds hand),
 design check, saving and sharing). Figures and indices under a day or date
 window are left off, as a dial maker would.
 
-Nothing has been taken away. Each step has a link to all the settings
-for that part, which opens the **full editor** at it, and the **Full editor**
+Nothing has been taken away. Each step's **More options** sheet holds the
+rest of that part's settings (see below), with a link at its foot that opens
+the **full editor** at it, and the **Full editor**
 button in the top bar switches over entirely (**Simple mode** switches back).
 Both drive the same design, so undo, versions and exports see every change
 whichever one made it. The browser remembers which one you used last.
@@ -195,6 +196,73 @@ text component **Text**, and the ⋯ menu's save **Save version**. The values
 stored in a design file do not change. In the full editor at laptop widths
 the toolbar sits tighter, and on a narrower window it takes a second row
 rather than pushing Share and Export off the screen.
+
+## More options (v3.3.0)
+
+Every step after Start has a **More** button: beside the tabs on a phone,
+beside the step's name on a desktop, and as a row at the foot of a tab
+("More dial options ›" with what it holds). It opens a sheet with the rest
+of that part's settings, so simple mode now reaches every setting the full
+editor has. On a phone the sheet rises over the panel and the watch stays in
+view above it; on a wide screen (1100 px and up) it opens beside the panel,
+the steps stay where they are and the watch gives up the room. **Done**, or
+Escape, closes it. The sheet is in Arabic and reads right to left like the
+rest of simple mode, and everything on it is a 44 pt target.
+
+- **Case:** the crown stone's colour (Vernoy), keeping to the factory
+  drawing, the shadow round the dial on the photograph, and lining up a case
+  photograph added in the full editor.
+- **Dial:** four more finishes (brushed, sandblasted, metallic, circular
+  brushed), doming, satin, the ray count and the dial's own size; every
+  guilloché setting (cell, groove spacing and angle, stamped look, waves,
+  twist, grid angle, facets); the stone slab's size, turn and cut, a new cut
+  at a tap, and its light and shine controls; the minute track's size,
+  thickness, five-minute marks, raised print and break at the lettering;
+  and the parts a dial can add, each with its own switch: **chapter ring**,
+  **hour track**, **dial zones** (add, remove and set each zone: size, step
+  height, colour, finish, its own engine turning and its edge), **engraved
+  borders** (add, remove and set each band), **crosshair** and **sub-dial**.
+- **Markers:** the numeral layout (Persian numerals, which hours, size and
+  distance over the full range, spacing, upright or along the radius,
+  following the curve, slant for the drawn sets), all six ways of making
+  them with their materials, metal, height and bevel, the engraving's depth,
+  bevel, shadow, highlight and light, and the markers' count, distance, cone
+  shape and room for numerals.
+- **Hands:** each hand on its own (Hour, Minute, Seconds): all 25 shapes as
+  pictures, the length (to the minute track, the numerals, a share of the
+  minute hand, or millimetres), width, tail, centre boss, the Breguet ring's
+  size, place and wall, stem, taper and waist, metal, finish and lume; and
+  whether the hands move together, what they share, the minute hand's
+  slimness and matching the set to one hand.
+- **Text:** all nine ways of making the logo (printed, raised print,
+  engraved, embossed, debossed, applied metal, nameplate, embossed cartouche,
+  reserved cartouche) with every one of their settings, the cartouche or
+  plate's shape, size, border and inside, all seventeen pieces of artwork,
+  letter spacing, curving the logo and the line colour.
+- **Date:** the date window's size, position, magnifier (1.5× too), frame
+  colour and the date shown; the day window's width in degrees, bevel or
+  frame width, name size, frame colour and the day shown.
+- **Finish:** the preview time, the front, side or back view, and the light.
+
+The sheet is drawn from the full editor's own field definitions (`SCHEMA`),
+so the ranges, the choices and the controls a choice brings (a clous pattern's
+grid angle, a zone's bead size, a nameplate's metal) are the full editor's.
+`G_MORE` in `index.html` lists which of them each step offers and in what
+order, with plain names for each and their Arabic in `GWORD`. A value set on
+a sheet is written through the same rules as the full editor's panel
+(`fieldInput`, `fieldChosen`, and `runAct` for buttons such as Add a zone),
+so a numeral system keeps a face it has and a supplied hand takes its drawn
+length in either mode. Two settings show only where they act: slant for the
+drawn numeral sets, and letter spacing for a typed logo. On a sheet a linked
+set follows whichever hand is changed.
+
+In the full editor the minute track, date window and day window panels now
+show the controls a choice brings straight away (the frame width once the day
+window has a frame, the edge light once the track is raised print); before,
+they followed the design the page opened with.
+
+Existing designs draw exactly as before (checked byte for byte on every
+preset and reference design), and nothing on the sheets uses an SVG filter.
 
 ## Simple mode in Arabic (v3.1.0)
 

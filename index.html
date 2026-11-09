@@ -2001,7 +2001,7 @@ const APP_BUILD = "__BUILD__";
 /* The version people see, raised with every change that reaches them:
    major for a new way of working, minor for something new to do, patch for
    a fix. Shown on the watch screen, so any screenshot says which it was. */
-const APP_VERSION = "3.2.0";
+const APP_VERSION = "3.3.0";
 const APP_DATE = "__DATE__";
 
 /* Every route that replaces S passes through one of these three, which is
@@ -9579,7 +9579,7 @@ const SCHEMA = {
     N("chapter.outerD","Outer diameter",8,44), N("chapter.innerD","Inner diameter",4,42),
     C("chapter.color","Colour"), SEL("chapter.finish","Finish",["flat","matte","gloss","sunburst","grained","enamel"]),
     CK("chapter.separator","Separator lines"), C("chapter.sepColor","Separator colour")]},
-  minute:{title:"Minute track", hint:"60 divisions. Diameter is the centre line of the track.", fields:[
+  minute:{title:"Minute track", hint:"60 divisions. Diameter is the centre line of the track.", fields:()=>[
     N("minute.diameter","Track diameter",6,44), N("minute.thickness","Thickness",.08,1.2,.02),
     SEL("minute.style","Style",["dots","beads","ticks","railroad","dashes"]),
     C("minute.color","Colour"), CK("minute.fives","Emphasise 5-minute marks"), N("minute.fiveLen","5-min length",.2,3,.05),
@@ -9669,7 +9669,7 @@ const SCHEMA = {
     N("sub.diameter","Diameter",3,20), C("sub.color","Colour"), C("sub.ring","Track colour"), CK("sub.track","Show track")]},
   date:{title:"Date window", get hint(){ const K = CASE_SPEC.calendar;
       return K ? `The ${CASE_SPEC.movement} date ring shows through ${f(K.dateW)} × ${f(K.dateH)} mm, centred ${f(K.dateC)} mm from the centre at 3. A larger window shows the ring edge or the next date.` : ""; },
-    fields:[
+    fields:()=>[
     N("date.at","Position (hour)",1,12,1,"h"), N("date.dist","Distance from centre",2,18),
     N("date.w","Width",1.5,8,.05), N("date.h","Height",1.2,6,.05),
     N("date.frameW","Frame width",0,1.6,.05),
@@ -9680,7 +9680,7 @@ const SCHEMA = {
     C("date.bg","Disc colour"), C("date.text","Text colour"), C("date.frame","Frame colour")]},
   day:{title:"Day window", get hint(){ const K = CASE_SPEC.calendar || NOREL_R3.calendar;
       return `Cut over the ${CASE_SPEC.calendar ? CASE_SPEC.movement : "SW240-1"} day disc: the radius is fixed at R${f(K.dayRin)}–${f(K.dayRout)} mm and the disc shows through at most ${K.dayArcMax}°. Only the arc, the frame and the printing are choices.`; },
-    fields:[
+    fields:()=>[
     N("day.arc","Window arc",30,53,.5,"°"),
     SEL("day.edge","Window edge",["bevel","frame"]),
     ...(S.day.edge === "frame" ? [N("day.frame","Frame width",0,1.0,.05)] : [N("day.bevel","Bevel width",0.1,0.6,.02)]),
@@ -10581,6 +10581,90 @@ function syncPresetLabel(){
 }
 function paintAll(){ paintLayers(); paintProps(); paintView(); syncUndo(); syncPresetLabel(); }
 
+/* The panel's action buttons, by name. Simple mode's More options sheets
+   run the same ones, so adding a zone or matching the hands does the same
+   thing in both modes. Each changes the design and says what is left to do:
+   "paint" to commit and redraw, "view" to redraw the watch only, or nothing
+   when it has done all of it itself. tr puts the message in the reader's
+   language. */
+function runAct(a, tr){
+  const say = m => toast(tr ? tr(m) : m);
+  /* A new zone goes inside the innermost one, which is where a dial gains a
+     zone: you divide the centre, you do not add a ring outside the chapter. */
+  if(a === "zoneAdd"){
+    const zs = S.sector.zones || (S.sector.zones = []);
+    const inner = zs.filter(z=>Number(z.outerD)>0).sort((a,b)=>a.outerD-b.outerD)[0];
+    const dia = inner ? Math.max(4, Number(inner.outerD)*0.62) : 20;
+    zs.push(Object.assign({}, inner || {
+      color:"#E8E8E4", finish:"guilloche", pattern:"clous", cell:0.6, pitch:0.35,
+      rays:200, waveAmp:0.1, waveN:12, waveGrowth:0, wavePhase:0, radialPhase:0,
+      stamp:0.5, wall:22, ringColor:"#A89968", lineW:0.14, arms:false
+    }, {on:true, outerD:Math.round(dia*20)/20, innerD:0, edge:"none", beadD:0.14, beadGap:1.9}));
+    S.sector.on = true;
+    say("Zone added"); return "paint";
+  }
+  if(a.startsWith("zoneDel:")){
+    const i = +a.split(":")[1];
+    const zs = S.sector.zones || [];
+    if(!zs[i]) return "";
+    zs.splice(i,1); say("Zone removed"); return "paint";
+  }
+  /* A new band goes where a dial usually wants one: in the widest gap
+     between the bands already there, so it lands somewhere visible instead
+     of on top of one of them. */
+  if(a === "borderAdd"){
+    const bands = S.borders.bands || (S.borders.bands = []);
+    const sorted = [...bands].filter(b=>Number(b.dia)>0).sort((a,b2)=>a.dia-b2.dia);
+    let dia = 24;
+    if(sorted.length === 1) dia = Math.min(31, Number(sorted[0].dia) + 1.5);
+    else if(sorted.length > 1){
+      let best = 0, at = Number(sorted[0].dia) + 1.5;
+      for(let i=0;i<sorted.length-1;i++){
+        const gap = Number(sorted[i+1].dia) - Number(sorted[i].dia);
+        if(gap > best){ best = gap; at = Number(sorted[i].dia) + gap/2; }
+      }
+      /* No gap worth using — the bands sit on top of each other — so go
+         outside the widest instead of adding an invisible one. */
+      dia = best > 0.6 ? at : Math.min(31, Number(sorted[sorted.length-1].dia) + 1.5);
+    }
+    const from = sorted[sorted.length-1] || bands[0];
+    bands.push({...(from || {band:0.62, line:0.07, depth:0.05, spacing:0.42, angle:38,
+                           metal:"polished steel", color:"#9AA0A8"}),
+                on:true, dia:Math.round(Math.max(6, Math.min(31, dia))*20)/20});
+    say("Band added"); return "paint";
+  }
+  if(a.startsWith("borderDel:")){
+    const i = +a.split(":")[1];
+    const bands = S.borders.bands || [];
+    if(!bands[i]) return "";
+    bands.splice(i, 1); say("Band removed"); return "paint";
+  }
+  if(a === "stReset"){ applyFamilyDefaults(S.dial.stone); say("Optical response reset to the family defaults"); return "paint"; }
+  if(a === "slabCut"){
+    S.dial.stoneOffX = +(Math.random()*1.6-0.8).toFixed(2);
+    S.dial.stoneOffY = +(Math.random()*1.6-0.8).toFixed(2);
+    S.dial.stoneRot  = Math.floor(Math.random()*360);
+    return "paint";
+  }
+  if(a === "slabPaste"){ pasteImage("slab"); return ""; }
+  if(a === "tplPaste"){ pasteImage("template"); return ""; }
+  if(a === "tplBuiltin"){
+    tplImage = BUILTIN_CASE; tplW = BUILTIN_CASE_CAL.w; tplH = BUILTIN_CASE_CAL.h;
+    S.tpl.name = "built-in Vernoy case"; S.tpl.on = true;
+    S.tpl.cx = BUILTIN_CASE_CAL.cx; S.tpl.cy = BUILTIN_CASE_CAL.cy; S.tpl.dia = BUILTIN_CASE_CAL.dia;
+    return "paint";
+  }
+  if(a === "tplAuto"){ autoFitAperture(); return ""; }
+  if(a === "tplGuide"){ tplGuide = !tplGuide; return "view"; }
+  /* the rest match the set to one hand */
+  const was = S.handSet.link;
+  if(was === "off") S.handSet.link = "full set";
+  syncHands(a === "matchFromHour" ? "hHand" : "mHand");
+  S.handSet.link = was;
+  say(a === "matchFromHour" ? "Set matched to the hour hand" : "Set matched to the minute hand");
+  return "paint";
+}
+
 /* ---- events ---- */
 document.addEventListener("click", e=>{
   const t = e.target;
@@ -10631,85 +10715,13 @@ document.addEventListener("click", e=>{
       paintProps(); paintView(); }
     return;
   }
-  /* A new band goes where a dial usually wants one: in the widest gap
-     between the bands already there, so it lands somewhere visible instead
-     of on top of one of them. */
-  /* A new zone goes inside the innermost one, which is where a dial gains a
-     zone: you divide the centre, you do not add a ring outside the chapter. */
   /* every action button in the panel acts on the component on show */
   if(t.dataset.act && t.closest("#props") && lockedLayers.has(sel)) return lockedSay();
-  if(t.dataset.act === "zoneAdd"){
-    const zs = S.sector.zones || (S.sector.zones = []);
-    const inner = zs.filter(z=>Number(z.outerD)>0).sort((a,b)=>a.outerD-b.outerD)[0];
-    const dia = inner ? Math.max(4, Number(inner.outerD)*0.62) : 20;
-    zs.push(Object.assign({}, inner || {
-      color:"#E8E8E4", finish:"guilloche", pattern:"clous", cell:0.6, pitch:0.35,
-      rays:200, waveAmp:0.1, waveN:12, waveGrowth:0, wavePhase:0, radialPhase:0,
-      stamp:0.5, wall:22, ringColor:"#A89968", lineW:0.14, arms:false
-    }, {on:true, outerD:Math.round(dia*20)/20, innerD:0, edge:"none", beadD:0.14, beadGap:1.9}));
-    S.sector.on = true;
-    commit(); paintProps(); paintView();
-    toast("Zone added"); return;
-  }
-  if((t.dataset.act || "").startsWith("zoneDel:")){
-    const i = +t.dataset.act.split(":")[1];
-    const zs = S.sector.zones || [];
-    if(zs[i]){ zs.splice(i,1); commit(); paintProps(); paintView(); toast("Zone removed"); }
-    return;
-  }
-  if(t.dataset.act === "borderAdd"){
-    const bands = S.borders.bands || (S.borders.bands = []);
-    const sorted = [...bands].filter(b=>Number(b.dia)>0).sort((a,b2)=>a.dia-b2.dia);
-    let dia = 24;
-    if(sorted.length === 1) dia = Math.min(31, Number(sorted[0].dia) + 1.5);
-    else if(sorted.length > 1){
-      let best = 0, at = Number(sorted[0].dia) + 1.5;
-      for(let i=0;i<sorted.length-1;i++){
-        const gap = Number(sorted[i+1].dia) - Number(sorted[i].dia);
-        if(gap > best){ best = gap; at = Number(sorted[i].dia) + gap/2; }
-      }
-      /* No gap worth using — the bands sit on top of each other — so go
-         outside the widest instead of adding an invisible one. */
-      dia = best > 0.6 ? at : Math.min(31, Number(sorted[sorted.length-1].dia) + 1.5);
-    }
-    const from = sorted[sorted.length-1] || bands[0];
-    bands.push({...(from || {band:0.62, line:0.07, depth:0.05, spacing:0.42, angle:38,
-                           metal:"polished steel", color:"#9AA0A8"}),
-                on:true, dia:Math.round(Math.max(6, Math.min(31, dia))*20)/20});
-    commit(); paintProps(); paintView();
-    toast("Band added"); return;
-  }
-  if((t.dataset.act || "").startsWith("borderDel:")){
-    const i = +t.dataset.act.split(":")[1];
-    const bands = S.borders.bands || [];
-    if(bands[i]){ bands.splice(i, 1); commit(); paintProps(); paintView(); toast("Band removed"); }
-    return;
-  }
-  if(t.dataset.act === "stReset"){ applyFamilyDefaults(S.dial.stone); commit(); paintProps(); paintView();
-    toast("Optical response reset to the family defaults"); return; }
-  if(t.dataset.act === "slabCut"){
-    S.dial.stoneOffX = +(Math.random()*1.6-0.8).toFixed(2);
-    S.dial.stoneOffY = +(Math.random()*1.6-0.8).toFixed(2);
-    S.dial.stoneRot  = Math.floor(Math.random()*360);
-    commit(); paintProps(); paintView(); return;
-  }
-  if(t.dataset.act === "slabPaste"){ pasteImage("slab"); return; }
-  if(t.dataset.act === "tplPaste"){ pasteImage("template"); return; }
-  if(t.dataset.act === "tplBuiltin"){
-    tplImage = BUILTIN_CASE; tplW = BUILTIN_CASE_CAL.w; tplH = BUILTIN_CASE_CAL.h;
-    S.tpl.name = "built-in Vernoy case"; S.tpl.on = true;
-    S.tpl.cx = BUILTIN_CASE_CAL.cx; S.tpl.cy = BUILTIN_CASE_CAL.cy; S.tpl.dia = BUILTIN_CASE_CAL.dia;
-    commit(); paintProps(); paintView(); return;
-  }
-  if(t.dataset.act === "tplAuto"){ autoFitAperture(); return; }
-  if(t.dataset.act === "tplGuide"){ tplGuide = !tplGuide; paintView(); return; }
   if(t.dataset.act){
-    const was = S.handSet.link;
-    if(was === "off") S.handSet.link = "full set";
-    syncHands(t.dataset.act === "matchFromHour" ? "hHand" : "mHand");
-    S.handSet.link = was;
-    commit(); paintProps(); paintView();
-    toast(t.dataset.act === "matchFromHour" ? "Set matched to the hour hand" : "Set matched to the minute hand");
+    const r = runAct(t.dataset.act);
+    if(r === "paint"){ commit(); paintProps(); paintView(); }
+    else if(r === "view") paintView();
+    return;
   }
   if(t.dataset.load!==undefined && t.dataset.load!==""){ S=migrateHands(clone(versions[+t.dataset.load].state)); commit(); paintAll(); toast("Version loaded"); }
   if(t.dataset.del!==undefined && t.dataset.del!==""){
@@ -10756,8 +10768,7 @@ function requestPaint(live, settleMs){
 document.addEventListener("click", e=>{
   if(e.target.closest && e.target.closest("[data-linktoggle]")){
     if(isLocked("handSet.link")) return lockedSay();
-    S.handSet.link = S.handSet.link === "off" ? "full set" : "off";
-    if(S.handSet.link !== "off") syncHands("hHand");
+    setHandLink(S.handSet.link === "off");
     commit(); paintProps(); paintView();
     return;
   }
@@ -10782,6 +10793,42 @@ const clampTo = (el, v) => { const lo = parseFloat(el.min), hi = parseFloat(el.m
 const hexOf = v => { const m = /^\s*#?([0-9a-f]{6}|[0-9a-f]{3})\s*$/i.exec(String(v));
   if(!m) return null; const h = m[1].length === 3 ? m[1].replace(/./g, c => c + c) : m[1]; return "#" + h.toUpperCase(); };
 const isColourBox = el => !!(el.closest && el.closest(".f") && el.closest(".f").querySelector('input[type=color]'));
+/* What writing one setting brings with it, beyond the value itself. The
+   full editor's panel and simple mode's More options sheets both write
+   through these two, so a setting means the same thing in either mode.
+   fieldInput runs on every movement of a control; fieldChosen once the
+   choice is made, before it is committed to the history, so one undo takes
+   back the choice and what it brought together. */
+function fieldInput(p, v){
+  set(S,p,v);
+  if(/^markers\./.test(p)) syncMarkerFlags(S);
+  /* a cut that does not take the stone count or setting chosen falls back to one it does */
+  if(/^gem(Alt)?\.(cut|n)$/.test(p)){ const k = p.split(".")[0], g = gemNorm(S[k], k === "gemAlt"); S[k].n = g.n; S[k].setting = g.setting;
+    if(p.endsWith(".cut")) Object.assign(S[k], gemCutDefaults(g.cut, g.n)); }
+  if(/^(hHand|mHand|sHand)\.style$/.test(p)) snapVectorLengths(p.split(".")[0]);
+  if(/^handSet\./.test(p)) syncHands("hHand");
+}
+function fieldChosen(p){
+  /* ticking "set the plate colour myself" starts from the plate's own metal, not from an empty colour */
+  if(p === "text.plateTintOn" && S.text.plateTintOn && !hexOf(S.text.plateTint || ""))
+    S.text.plateTint = (METALS[S.text.plateMetal] || METALS["polished steel"]).base;
+  if(p === "numerals.system"){
+    const ok = stylesFor(S.numerals.system);
+    if(ok.indexOf(S.numerals.style) < 0)
+      S.numerals.style = ok[0] || "vernoy";        // keep a valid pairing
+  }
+  if(p === "dial.stone"){
+    applyFamilyDefaults(S.dial.stone);
+    const first = slabsOf(S.dial.stone)[0];
+    S.dial.slab = first ? first.id : "";
+  }
+}
+/* Linking the three hands, or setting them apart: linking makes the set
+   follow the hour hand. */
+function setHandLink(on){
+  S.handSet.link = on ? "full set" : "off";
+  if(on) syncHands("hHand");
+}
 let casePrev = null;
 document.addEventListener("input", e=>{
   if(e.target.dataset.pg) return;
@@ -10800,13 +10847,7 @@ document.addEventListener("input", e=>{
      it. While typing, a figure that is not yet a colour is simply not
      applied; on leaving the box it goes back to the colour in use. */
   if(el.type==="text" && isColourBox(el)){ v = hexOf(v); if(!v) return; }
-  set(S,p,v);
-  if(/^markers\./.test(p)) syncMarkerFlags(S);
-  /* a cut that does not take the stone count or setting chosen falls back to one it does */
-  if(/^gem(Alt)?\.(cut|n)$/.test(p)){ const k = p.split(".")[0], g = gemNorm(S[k], k === "gemAlt"); S[k].n = g.n; S[k].setting = g.setting;
-    if(p.endsWith(".cut")) Object.assign(S[k], gemCutDefaults(g.cut, g.n)); }
-  if(/^(hHand|mHand|sHand)\.style$/.test(p)) snapVectorLengths(p.split(".")[0]);
-  if(/^handSet\./.test(p)) syncHands("hHand");
+  fieldInput(p, v);
   // keep paired inputs in sync without a full repaint (keeps focus)
   qa(`[data-p="${p}"]`).forEach(o=>{ if(o!==el && o.type!=="checkbox") o.value = (o.type==="number"? (typeof v==="number"? f(v,2):v) : v); });
   if(macroOpen) drawMacro();
@@ -10824,27 +10865,15 @@ document.addEventListener("change", e=>{
     toast("That is not a colour. Type it as # and six figures, like #1F2D47.");
     el.value = get(S, p); return;
   }
-  /* ticking "set the plate colour myself" starts from the plate's own metal, not from an empty colour */
-  if(p === "text.plateTintOn" && S.text.plateTintOn && !hexOf(S.text.plateTint || ""))
-    S.text.plateTint = (METALS[S.text.plateMetal] || METALS["polished steel"]).base;
+  fieldChosen(p);
   commit();
   /* a colour picker may still be open: draw the colour, rebuild nothing */
   if(e.target.type === "color"){ paintLayers(); requestPaint(true, 600); return; }
-  if(e.target.dataset.p === "numerals.system"){
-    const ok = stylesFor(S.numerals.system);
-    if(ok.indexOf(S.numerals.style) < 0)
-      S.numerals.style = ok[0] || "vernoy";        // keep a valid pairing
-  }
   if(e.target.dataset.p === "case.model"){
     applyCaseModel(casePrev || VERNOY_CASE.model, S.case.model);
     casePrev = null;
     hist[hi] = clone(S);                     // one undo step: the case and the refit together
     paintProps();
-  }
-  if(e.target.dataset.p === "dial.stone"){
-    applyFamilyDefaults(S.dial.stone);
-    const first = slabsOf(S.dial.stone)[0];
-    S.dial.slab = first ? first.id : "";
   }
   /* A choice that decides which other controls exist has to rebuild the
      panel, or the controls on screen stop belonging to the design. */
@@ -13134,6 +13163,66 @@ body.guided .stage.gPhoto{ background:#fff }
 .gList li .on b{ background:var(--ds-text); color:var(--ds-panel) }
 .gList li small{ display:block; font-size:13px; color:var(--ds-text-2); font-weight:400 }
 .gList li small.w{ color:var(--g-warn-ink) }
+/* MORE OPTIONS. A pill beside the tabs and a row at the foot of a tab open
+   the step's other settings on a sheet: over the panel on a phone, rising
+   from the bottom, and on a wide screen beside the panel, which keeps the
+   steps in view. Each part of the sheet folds, and everything in it is a
+   44 px target. */
+.gTabRow{ display:flex; align-items:center; gap:8px; margin:2px 16px 8px; flex:none }
+.gTabRow[hidden]{ display:none }
+.gTabRow .gTabs{ margin:0; flex:1; min-width:0 }
+.gMoreTop{ flex:none; display:inline-flex; align-items:center; gap:6px; min-height:44px; padding:0 12px; margin-inline-start:auto;
+  border:1px solid var(--ds-border); border-radius:12px; background:var(--ds-panel); color:var(--ds-text); font:600 14px/1 var(--sans); cursor:pointer }
+.gMoreTop[hidden]{ display:none }
+.gMoreTop svg{ width:18px; height:18px; flex:none }
+.gH2{ display:flex; align-items:center; justify-content:space-between; gap:10px }
+@media (min-width:901px){ .gTabRow .gMoreTop{ display:none } }
+.gMoreTop[aria-expanded="true"]{ background:var(--ds-text); color:var(--ds-panel); border-color:var(--ds-text) }
+.gMoreRow{ display:flex; flex-direction:column; align-items:flex-start; gap:3px; width:100%; min-height:56px; margin:16px 0 4px; padding:10px 14px;
+  border:1px solid var(--ds-border); border-radius:12px; background:var(--ds-panel-2, #F7F7F5); color:var(--ds-text); text-align:start; cursor:pointer; font:inherit }
+.gMoreRow b{ font:600 15px/1.25 var(--sans) }
+.gMoreRow b::after{ content:" \203A"; color:var(--g-gold-ink) }
+.gMoreRow small{ font-size:12.5px; line-height:1.4; color:var(--ds-text-2) }
+.gSheet{ position:absolute; inset:0; z-index:13; display:flex; flex-direction:column; background:var(--ds-panel);
+  animation:gSheetUp .24s cubic-bezier(.2,.8,.2,1) }
+@keyframes gSheetUp{ from{ transform:translateY(40%); opacity:0 } }
+@keyframes gSheetIn{ from{ transform:translateX(-16px); opacity:0 } }
+.gSheet > header{ display:flex; align-items:center; gap:10px; padding-block:8px; padding-inline:16px 8px; border-bottom:1px solid var(--ds-border); flex:none }
+.gSheet > header > div{ flex:1; min-width:0 }
+.gSheet h2{ font:600 17px/1.2 var(--sans); margin:0; color:var(--ds-text) }
+.gSheet header p{ margin:2px 0 0; font-size:13px; color:var(--ds-text-2) }
+.gSheetDone{ min-height:44px; min-width:64px; border:0; border-radius:11px; padding:0 16px; background:var(--ds-text); color:var(--ds-panel);
+  font:600 15px/1 var(--sans); cursor:pointer }
+.gSheetBody{ flex:1; min-height:0; overflow-y:auto; padding:8px 16px 28px; overscroll-behavior:contain; -webkit-overflow-scrolling:touch }
+.gSheetBody > .gChips{ margin:4px 0 8px }
+.gSheet h4{ font:600 14px/1.3 var(--sans); margin:12px 0 6px; color:var(--ds-text) }
+.gSheet h4.gMhead{ font-size:12px; letter-spacing:.06em; text-transform:uppercase; color:var(--ds-text-2); margin-top:16px;
+  padding-top:10px; border-top:1px solid var(--ds-border) }
+.gMsec{ border:1px solid var(--ds-border); border-radius:12px; margin:8px 0; background:var(--ds-panel) }
+.gMsub{ border:1px solid var(--ds-border); border-radius:10px; margin:8px 0; background:var(--ds-panel) }
+.gMsec > summary, .gMsub > summary{ list-style:none; display:flex; align-items:center; gap:8px; min-height:48px; padding:0 14px; cursor:pointer;
+  font:600 15px/1.25 var(--sans); color:var(--ds-text); -webkit-user-select:none; user-select:none }
+.gMsub > summary{ min-height:44px; font-size:14px }
+.gMsec > summary::-webkit-details-marker, .gMsub > summary::-webkit-details-marker{ display:none }
+.gMsec > summary small, .gMsub > summary small{ font:400 13px/1.2 var(--sans); color:var(--ds-text-2); margin-inline-start:auto;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:52% }
+.gMsec > summary::after, .gMsub > summary::after{ content:""; flex:none; width:7px; height:7px; border:solid var(--ds-text-2);
+  border-width:0 2px 2px 0; transform:rotate(-45deg); margin-inline-start:4px }
+.gMsec[open] > summary::after, .gMsub[open] > summary::after{ transform:rotate(45deg) }
+.gMsecB, .gMsubB{ padding:0 14px 12px }
+.gMact{ display:flex; align-items:center; justify-content:center; width:100%; min-height:44px; margin:10px 0 4px; border:1px solid var(--ds-border);
+  border-radius:10px; background:var(--ds-panel); color:var(--ds-text); font:600 14px/1.2 var(--sans); cursor:pointer }
+.gMact.del{ color:#B3261E }
+.gMhands .gPic{ background:#E9E7E1 }
+.gSheet .gMore{ margin-top:14px }
+@media (prefers-reduced-motion: reduce){ .gSheet{ animation:none !important } }
+/* beside the panel on a wide screen: the watch gives up the room */
+@media (min-width:1100px){
+  body.guided.gSheetOpen .shell{ grid-template-columns:minmax(0,1fr) 780px }
+  body.guided.gSheetOpen #guide{ padding-left:380px }
+  body.guided.gSheetOpen #stamp{ visibility:hidden }
+  .gSheet{ right:auto; width:380px; border-right:1px solid var(--ds-border); animation-name:gSheetIn }
+}
 /* "Whole watch" and back, over the watch */
 #gFrameBtn{ display:none; position:absolute; top:8px; right:10px; z-index:7; min-height:36px; padding:0 12px; border-radius:999px;
   border:1px solid var(--ds-border-2); background:rgba(255,255,255,.86); color:var(--ds-text); font:500 13px/1 var(--ds-font, -apple-system, sans-serif);
@@ -13181,6 +13270,13 @@ body.guided #gFrameBtn{ display:block }
   .gProgBar button.on b{ background:var(--ds-text); color:var(--ds-panel) }
   .gProgBar button.warn::after{ top:6px; right:-2px; width:8px; height:8px }
   .gTabs{ margin:2px 14px 6px }
+  .gTabRow{ margin:2px 14px 6px; gap:6px }
+  .gH2 .gMoreTop{ display:none }
+  .gMoreTop{ padding:0 10px; gap:5px }
+  .gSheet > header{ padding-block:4px }
+  .gSheetBody{ padding:6px 14px 20px }
+  .gSheetBody .gCards, .gSheetBody .gChips, .gSheetBody .gSw.row{ margin:0 -14px; padding:2px 14px 6px }
+  .gMact:active, .gMoreRow:active, .gMoreTop:active, .gSheetDone:active{ transform:scale(.97) }
   .gBody{ padding:2px 14px 14px; -webkit-overflow-scrolling:touch; overscroll-behavior:contain }
   .gBody h2, .gBody .gLead{ display:none }
   .gBody h3{ font-size:15px; margin:12px 0 6px }
@@ -13257,6 +13353,9 @@ body:not(.guided) #gLangBtn{ display:none }
 #guide[dir=rtl] .gSlMark{ left:auto; right:calc(14px + var(--o) * (100% - 28px) - 1px) }
 #guide[dir=rtl] .gCheck ul{ padding-left:0; padding-right:18px }
 #guide[dir=rtl] .gList header{ padding:6px 16px 4px 6px }
+#guide[dir=rtl] .gMoreRow b::after{ content:" \2039" }
+#guide[dir=rtl] .gMsec > summary::after, #guide[dir=rtl] .gMsub > summary::after{ transform:rotate(135deg) }
+#guide[dir=rtl] .gMsec[open] > summary::after, #guide[dir=rtl] .gMsub[open] > summary::after{ transform:rotate(45deg) }
 /* Arabic sets taller than Latin at the same size; a little more leading keeps
    the dots of one line off the next */
 #guide[dir=rtl] .gNote, #guide[dir=rtl] .gLead, #guide[dir=rtl] .gWarn, #guide[dir=rtl] .gCheck{ line-height:1.55 }
@@ -13385,7 +13484,25 @@ const GSTR = {en:{
   "case.gemNote": (n, ct, metal) => `${n} stones · ≈ ${ct} ct · set in 18k ${metal}. Blue Creations would have to make this bezel.`,
   "case.gemRound":"Round brilliants are drawn on the round NOREL case only.",
   "dial.paveNote": (n, ct) => `${n} stones · ≈ ${ct} ct. A pavé dial is 18k gold about 0.8–1.0 mm thick, not the 0.40 mm brass blank: Blue Creations to confirm.`,
-  "dial.ombreNote":"Darkens the colour toward the edge, as a sprayed gradient does over a sunburst."
+  "dial.ombreNote":"Darkens the colour toward the edge, as a sprayed gradient does over a sunburst.",
+  /* More options: each step's other settings, on a sheet of their own */
+  "more.btn":"More", "more.aria": name => `More options: ${name}`, "more.title":"More options", "more.done":"Done",
+  "more.open.case":"More case options", "more.open.dial":"More dial options", "more.open.markers":"More marker options",
+  "more.open.hands":"More hand options", "more.open.text":"More text options", "more.open.calendar":"More window options",
+  "more.open.finish":"Preview time and view",
+  "more.sum.case":"The crown stone, the factory drawing, and lining the dial up in the photograph.",
+  "more.sum.dial":"Zones, engraved borders, chapter ring, hour track, crosshair, sub-dial, guilloché and stone settings, four more finishes, doming and satin.",
+  "more.sum.markers":"Numeral layout (upright, along the radius, slanted), which hours, more ways to make them, engraving, and how many markers.",
+  "more.sum.hands":"All 25 hand shapes, and each hand's length, width, tail and Breguet ring.",
+  "more.sum.text":"Engraved, embossed, nameplate and cartouche logos with their settings, more artwork, and letter spacing.",
+  "more.sum.calendar":"Window size and position, the frame colour, and the day and date shown.",
+  "more.sum.finish":"The time on the watch, a side or back view, and the light.",
+  "more.count": n => `${n} setting${n === 1 ? "" : "s"}`, "more.on":"On", "more.off":"Off",
+  "more.drawnAt": mm => `Drawn ${mm} mm from the centre`,
+  "more.zoneN": n => `Zone ${n}`, "more.bandN": n => `Band ${n}`,
+  "more.empty":"There is nothing more to set for this part of the design.",
+  "more.secOff":"The seconds hand is off. Turn it on to shape it.",
+  "u.x": v => `${v}×`, "u.px": v => `${v} px`
 }};
 let GLANG = "en";
 const gT = (k, ...a) => { const L = GSTR[GLANG] || GSTR.en; let s = L[k]; if(s == null) s = GSTR.en[k]; if(s == null) return k;
@@ -13501,7 +13618,24 @@ GSTR.ar = {
   "case.gemNote": (n, ct, metal) => `${arCount(n, "حجر واحد", "حجران", "أحجار", "حجراً")} · ≈ ${ct} قيراط · مرصّعة في ${({"yellow gold":"ذهب أصفر", "rose gold":"ذهب وردي", "white gold":"ذهب أبيض"})[metal] || metal} عيار 18. على Blue Creations أن تصنع هذا الإطار.`,
   "case.gemRound":"الإطار المرصّع يُرسم على قالب NOREL الدائري فقط.",
   "dial.paveNote": (n, ct) => `${arCount(n, "حجر واحد", "حجران", "أحجار", "حجراً")} · ≈ ${ct} قيراط. الميناء المرصّع بالكامل من ذهب عيار 18 بسماكة 0.8–1.0 ملم تقريباً، لا من النحاس بسماكة 0.40 ملم: على Blue Creations أن تؤكد ذلك.`,
-  "dial.ombreNote":"يُغمِّق اللون نحو الحافة، كما يفعل الطلاء المتدرّج فوق النقش الشمسي."
+  "dial.ombreNote":"يُغمِّق اللون نحو الحافة، كما يفعل الطلاء المتدرّج فوق النقش الشمسي.",
+  "more.btn":"المزيد", "more.aria": name => `خيارات أخرى: ${name}`, "more.title":"خيارات أخرى", "more.done":"تم",
+  "more.open.case":"خيارات أخرى للقالب", "more.open.dial":"خيارات أخرى للميناء", "more.open.markers":"خيارات أخرى للمؤشرات",
+  "more.open.hands":"خيارات أخرى للعقارب", "more.open.text":"خيارات أخرى للكتابة", "more.open.calendar":"خيارات أخرى للنوافذ",
+  "more.open.finish":"الوقت المعروض وزاوية العرض",
+  "more.sum.case":"حجر التاج، ورسم المصنع، وضبط موضع الميناء في الصورة.",
+  "more.sum.dial":"مناطق الميناء، والحواف المحفورة، والحلقة المدرّجة، ومسار الساعات، والخطان المتقاطعان، والميناء الفرعي، وإعدادات الغيوشيه والحجر، وأربعة تشطيبات أخرى، والتقبّب، ولمسة الساتان.",
+  "more.sum.markers":"توزيع الأرقام (قائمة، أو باتجاه المركز، أو مائلة)، وأي الساعات، وطرق صنع أخرى، والحفر، وعدد المؤشرات.",
+  "more.sum.hands":"أشكال العقارب الخمسة والعشرون كلها، وطول كل عقرب وعرضه وذيله وحلقة بريغيه.",
+  "more.sum.text":"الشعار المحفور والنافر ولوحة الاسم والإطار، مع إعداداتها، ورسومات أخرى، وتباعد الحروف.",
+  "more.sum.calendar":"مقاس النافذة وموضعها، ولون الإطار، واليوم والتاريخ المعروضان.",
+  "more.sum.finish":"الوقت الظاهر على الساعة، والعرض من الجانب أو الخلف، والإضاءة.",
+  "more.count": n => arCount(n, "إعداد واحد", "إعدادان", "إعدادات", "إعداداً"), "more.on":"ظاهر", "more.off":"مخفي",
+  "more.drawnAt": mm => `مرسوم على بعد ${mm} ملم من المركز`,
+  "more.zoneN": n => `المنطقة ${n}`, "more.bandN": n => `الشريط ${n}`,
+  "more.empty":"لا توجد إعدادات أخرى لهذا الجزء من التصميم.",
+  "more.secOff":"عقرب الثواني مخفي. أظهره لتختار شكله.",
+  "u.x": v => `⁦${v}×⁩`, "u.px": v => `${v} بكسل`
 };
 /* The short labels, by their English wording. A label that is not here is
    shown as it is (a font's name, a preset's name, a Pantone code). A label
@@ -13679,6 +13813,13 @@ function gReadout(v, kind, st){
     return gT(n < 0 ? "pos.above" : "pos.below", Math.abs(n).toFixed(d));
   }
   if(kind === "mm") return gT("u.mm", n.toFixed(d));
+  /* the kinds the full editor's sliders bring: a plain figure, a per cent
+     already in per cent, a multiple, an hour on the dial, pixels */
+  if(kind === "num") return n.toFixed(gDecimals(st || 1));
+  if(kind === "pcv") return gT("u.pct", n.toFixed(Math.min(1, gDecimals(st || 1))));
+  if(kind === "x") return gT("u.x", n.toFixed(d));
+  if(kind === "h") return gT("hr.oclock", Math.round(n));
+  if(kind === "px") return gT("u.px", Math.round(n));
   return n.toFixed(d);
 }
 
@@ -13754,6 +13895,294 @@ function gPlainCheck(row){
   if(w) return {step:w[0], text:(GLANG === "ar" && G_CHECK_AR[row.title]) || w[1], title:row.title};
   return {step:G_LAYER_STEP[row.layer] || "finish", text:row.title + ".", title:row.title};
 }
+/* MORE OPTIONS. What each step's "More options" sheet offers: the settings
+   the full editor has and the step itself does not show. A sheet is a list
+   of sections; each draws its fields from one of the full editor's schema
+   entries (src, or "@" for the hand being set) and keeps only the paths
+   listed, in the schema's own order, so the ranges, the choices and the
+   controls a choice brings with it are the full editor's. A path with # is
+   any zone or band, H. is the hand being set, act: is one of the panel's
+   action buttons, head a heading inside the schema. on is a show-or-hide
+   switch for a part of the dial that can be left off (with its own label),
+   show is a setting that must be on for the section to appear, need a fact
+   about the case (photo, calendar), opts narrows a list, cards draws a list
+   as pictures. The words are below, by path, and their Arabic in GWORD. */
+const G_MORE = {
+  case:[
+    {id:"case", t:"Case", src:"case", paths:["case.cab","case.locked"]},
+    {id:"photo", t:"Photograph", src:"tpl", need:"photo", paths:["tpl.recess"]},
+    /* a case's own photograph is lined up already; one added in the full editor is lined up here */
+    {id:"align", t:"Line up the photograph", src:"tpl", need:"upload", paths:["tpl.cx","tpl.cy","tpl.dia","tpl.rot"]}],
+  dial:[
+    {id:"surface", t:"Surface", src:"dial", paths:["dial.finish","dial.rays","dial.dome","dial.satin","dial.lock","dial.diameter"],
+      opts:{"dial.finish":["brushed","sandblasted","metallic","circular"]}},
+    {id:"guilloche", t:"Guilloché", src:"dial", paths:["dial.lay","dial.facet","dial.cell","dial.pitch","dial.wall","dial.stamp","dial.rays2",
+      "dial.twist","dial.waveAmp","dial.waveN","dial.waveGrowth","dial.wavePhase","dial.radialPhase"]},
+    {id:"stone", t:"Stone", src:"dial", paths:["dial.stoneScale","dial.stoneRot","dial.stoneOffX","dial.stoneOffY","dial.stoneBump","act:slabCut",
+      "dial.stAdv","head","act:stReset","dial.stEnv","dial.stRoughLo","dial.stRoughHi","dial.stCoat","dial.stMetal","dial.stSSS","dial.stIrid",
+      "dial.stAniso","dial.stFibre","dial.stFibreAngle","dial.stInclThr","dial.stSparkle","dial.stoneTint"]},
+    {id:"minute", t:"Minute track", src:"minute", show:"minute.on", paths:["minute.diameter","minute.thickness","minute.fives","minute.fiveLen",
+      "minute.tech","minute.edgeLight","minute.textBreak","minute.textGap"]},
+    {id:"chapter", t:"Chapter ring", src:"chapter", on:"chapter.on", onLabel:"Show the chapter ring",
+      paths:["chapter.outerD","chapter.innerD","chapter.color","chapter.finish","chapter.separator","chapter.sepColor"]},
+    {id:"hour", t:"Hour track", src:"hour", on:"hour.on", onLabel:"Show the hour track", paths:["hour.diameter","hour.thickness","hour.style","hour.color"]},
+    {id:"sector", t:"Dial zones", src:"sector", on:"sector.on", onLabel:"Show the dial zones",
+      paths:["sector.zones.#.on","sector.zones.#.outerD","sector.zones.#.innerD","sector.zones.#.lift","sector.zones.#.color","sector.zones.#.finish",
+        "sector.zones.#.pattern","sector.zones.#.cell","sector.zones.#.pitch","sector.zones.#.lay","sector.zones.#.facet","sector.zones.#.rays",
+        "sector.zones.#.waveAmp","sector.zones.#.waveN","sector.zones.#.waveGrowth","sector.zones.#.wavePhase","sector.zones.#.radialPhase",
+        "sector.zones.#.wall","sector.zones.#.stamp","sector.zones.#.edge","sector.zones.#.beadD","sector.zones.#.beadGap","sector.zones.#.arms",
+        "sector.zones.#.ringColor","sector.zones.#.lineW","act:zoneDel:#","act:zoneAdd"]},
+    {id:"borders", t:"Engraved borders", src:"borders", on:"borders.on", onLabel:"Show the engraved borders",
+      paths:["borders.bands.#.on","borders.bands.#.dia","borders.bands.#.band","borders.bands.#.line","borders.bands.#.depth","borders.bands.#.spacing",
+        "borders.bands.#.angle","borders.bands.#.metal","borders.bands.#.color","act:borderDel:#","act:borderAdd"]},
+    {id:"cross", t:"Crosshair", src:"cross", on:"cross.on", onLabel:"Show the crosshair", paths:["cross.length","cross.width","cross.color"]},
+    {id:"sub", t:"Sub-dial", src:"sub", on:"sub.on", onLabel:"Show the sub-dial", paths:["sub.at","sub.dist","sub.diameter","sub.color","sub.ring","sub.track"]}],
+  markers:[
+    {id:"layout", t:"Numeral layout", src:"numerals", show:"numerals.on", paths:["numerals.system","numerals.set","numerals.size","numerals.gap",
+      "numerals.radius","numerals.orient","numerals.align","numerals.arc","numerals.slant"]},
+    {id:"made", t:"How the numerals are made", src:"numerals", show:"numerals.on", paths:["numerals.tech","numerals.material","numerals.metal",
+      "numerals.metalTex","numerals.edgeLight","numerals.height","numerals.bevel"]},
+    {id:"engrave", t:"Engraving", src:"numerals", show:"numerals.on", paths:["numerals.engDepth","numerals.engBevel","numerals.engShadow",
+      "numerals.engHilite","numerals.engRecess","render.az","numerals.engSharp"]},
+    {id:"indices", t:"Index markers", src:"indices", show:"indices.on", paths:["indices.style","indices.count","indices.radius","indices.skipNumerals"]}],
+  hands:[
+    {id:"shape", t:"Shape", src:"@", paths:["H.style"], cards:["H.style"]},
+    {id:"length", t:"Length", src:"@", paths:["H.reach","H.hourShare","H.reachTrim","H.length","say"]},
+    {id:"detail", t:"Shape details", src:"@", paths:["H.stem","H.width","H.tail","H.boss","H.pommeD","H.pommePos","H.ringW","H.tipW","H.taper","H.waist"]},
+    {id:"metal", t:"Metal and finish", src:"@", paths:["H.material","H.finish","H.lume"]},
+    {id:"link", t:"Hands together", src:"@", paths:["linkbar","handSet.link","handSet.minuteScale","handSet.includeSeconds","act:matchFromHour","act:matchFromMinute"]}],
+  text:[
+    {id:"made", t:"How the logo is made", src:"text", paths:["text.logoTech","text.color","text.printThick","text.printFinish","text.dblBase","text.dblOff",
+      "text.dblThick","text.engDepth","text.engWidth","text.engFill","text.engColor","text.stampH","text.stampEdge","text.stampSurface","text.logoMetal",
+      "text.stampFinish","text.debDepth","text.debEdge","text.debFill","text.debColor","text.logoHeight","text.logoLift","text.logoFinish","text.logoEdge",
+      "text.plateMetal","text.nameMode","text.nameColor","text.embDepth","text.resDepth","text.resTech","text.nameHeight"]},
+    {id:"cart", t:"Cartouche", src:"text", paths:["text.resAutoFit","text.resShape","text.resW","text.resH","text.resCurve","text.resBorder","text.resPad",
+      "text.resTextScale","text.embAuto","text.embShape","text.embW","text.embH","text.embPad","text.embBorder","text.embInset","text.plateAuto",
+      "text.plateShape","text.platePad","text.plateW","text.plateH","text.plateTaper","text.logoBevel","text.plateTintOn","text.plateTint"]},
+    {id:"mark", t:"Logo artwork", src:"text", paths:["text.logoMark"]},
+    {id:"spacing", t:"Spacing and lines", src:"text", paths:["text.logoTrack","text.logoCurve","text.lineColor","text.nameShiftX","text.nameShiftY"]}],
+  calendar:[
+    {id:"date", t:"Date window", src:"date", show:"date.on", paths:["date.cyclops","date.w","date.h","date.at","date.dist","date.shown","date.frame"]},
+    {id:"day", t:"Day window", src:"day", show:"day.on", need:"calendar", paths:["day.arc","day.bevel","day.frame","day.textH","day.shown","day.frameColor"]}],
+  finish:[
+    {id:"time", t:"Preview time", src:"time", paths:["meta.time.h","meta.time.m","meta.time.s"]},
+    {id:"view", t:"View", src:"render", paths:["render.view","render.mode","render.az","render.el","render.quality"]}]
+};
+/* The words for each setting, by path. A path whose schema label differs
+   with the technique takes the label too ("text.logoMetal|Name metal"). */
+const G_MORE_LABEL = {
+  "case.cab":"Crown stone colour", "case.locked":"Keep to the factory drawing",
+  "tpl.cx":"Dial across the photo", "tpl.cy":"Dial up and down the photo", "tpl.dia":"Dial size in the photo", "tpl.rot":"Turn", "tpl.recess":"Shadow round the dial",
+  "dial.finish":"More finishes", "dial.rays":"Ray count", "dial.dome":"Doming", "dial.satin":"Satin overlay", "dial.lock":"Use the case's own dial",
+  "dial.diameter":"Dial size",
+  "dial.lay":"Grid angle", "dial.facet":"Facet contrast", "dial.cell":"Cell size", "dial.pitch":"Groove spacing", "dial.wall":"Groove angle",
+  "dial.stamp":"Stamped look", "dial.rays2":"Ray count", "dial.twist":"Twist", "dial.waveAmp":"Wave height", "dial.waveN":"Waves round the dial",
+  "dial.waveGrowth":"Wave growth", "dial.wavePhase":"Wave turn", "dial.radialPhase":"Ring offset",
+  "dial.stoneScale":"Slab size", "dial.stoneRot":"Turn the slab", "dial.stoneOffX":"Cut across", "dial.stoneOffY":"Cut up and down",
+  "dial.stoneBump":"Relief", "act:slabCut":"Try another cut", "dial.stAdv":"Light and shine controls",
+  "head|Optical response":"How it takes the light", "head|Chatoyancy":"Silky shimmer", "head|Inclusions":"Sparkles in the stone",
+  "act:stReset":"Back to the stone's own settings", "dial.stEnv":"Reflections", "dial.stRoughLo":"Polish of the stone",
+  "dial.stRoughHi":"Polish of the matrix", "dial.stCoat":"Clear coat", "dial.stMetal":"Metallic", "dial.stSSS":"Translucency",
+  "dial.stIrid":"Iridescence", "dial.stAniso":"Shimmer strength", "dial.stFibre":"Shimmer direction", "dial.stFibreAngle":"Shimmer angle",
+  "dial.stInclThr":"How many sparkles", "dial.stSparkle":"Sparkle strength", "dial.stoneTint":"Tint with the dial colour",
+  "minute.diameter":"Track diameter", "minute.thickness":"Thickness", "minute.fives":"Stronger five-minute marks",
+  "minute.fiveLen":"Five-minute mark length", "minute.tech":"Made by", "minute.edgeLight":"Edge light",
+  "minute.textBreak":"Break the track at the lettering", "minute.textGap":"Gap each side",
+  "chapter.outerD":"Outer diameter", "chapter.innerD":"Inner diameter", "chapter.color":"Colour", "chapter.finish":"Finish",
+  "chapter.separator":"Separator lines", "chapter.sepColor":"Separator colour",
+  "hour.diameter":"Track diameter", "hour.thickness":"Thickness", "hour.style":"Style", "hour.color":"Colour",
+  "sector.zones.#.on":"Show this zone", "sector.zones.#.outerD":"Outer diameter", "sector.zones.#.innerD":"Inner diameter (0 makes a disc)",
+  "sector.zones.#.lift":"Height above the dial (3D view)", "sector.zones.#.color":"Colour", "sector.zones.#.finish":"Finish",
+  "sector.zones.#.pattern":"Pattern", "sector.zones.#.cell":"Cell size", "sector.zones.#.pitch":"Groove spacing", "sector.zones.#.lay":"Grid angle",
+  "sector.zones.#.facet":"Facet contrast", "sector.zones.#.rays":"Ray count", "sector.zones.#.waveAmp":"Wave height",
+  "sector.zones.#.waveN":"Waves round the dial", "sector.zones.#.waveGrowth":"Wave growth", "sector.zones.#.wavePhase":"Wave turn",
+  "sector.zones.#.radialPhase":"Ring offset", "sector.zones.#.wall":"Groove angle", "sector.zones.#.stamp":"Stamped look",
+  "sector.zones.#.edge":"Edge", "sector.zones.#.beadD":"Bead size", "sector.zones.#.beadGap":"Bead spacing",
+  "sector.zones.#.arms":"Arms at the quarters", "sector.zones.#.ringColor":"Edge colour", "sector.zones.#.lineW":"Line width",
+  "act:zoneDel:#":"Remove this zone", "act:zoneAdd":"Add a zone",
+  "borders.bands.#.on":"Show this band", "borders.bands.#.dia":"Diameter", "borders.bands.#.band":"Band width",
+  "borders.bands.#.line":"Edge line width", "borders.bands.#.depth":"Engraving depth", "borders.bands.#.spacing":"Cut spacing",
+  "borders.bands.#.angle":"Cut angle", "borders.bands.#.metal":"Metal", "borders.bands.#.color":"Colour",
+  "act:borderDel:#":"Remove this band", "act:borderAdd":"Add a band",
+  "cross.length":"Arm length", "cross.width":"Line width", "cross.color":"Colour",
+  "sub.at":"Position", "sub.dist":"Distance from centre", "sub.diameter":"Diameter", "sub.color":"Colour", "sub.ring":"Track colour", "sub.track":"Show the track",
+  "numerals.system":"Numerals", "numerals.set":"Which hours", "numerals.size":"Size", "numerals.gap":"Spacing", "numerals.radius":"Distance from centre",
+  "numerals.orient":"Direction", "numerals.align":"Line up by", "numerals.arc":"Follow the curve", "numerals.slant":"Slant",
+  "numerals.tech":"Made by", "numerals.material":"Material", "numerals.metal":"Metal", "numerals.metalTex":"Use the loaded metal texture",
+  "numerals.edgeLight":"Edge light", "numerals.height":"Thickness of the piece", "numerals.bevel":"Bevel",
+  "numerals.engDepth":"Depth", "numerals.engBevel":"Bevel width", "numerals.engShadow":"Shadow", "numerals.engHilite":"Highlight",
+  "numerals.engRecess":"Darkness inside", "render.az":"Light from", "numerals.engSharp":"Edge sharpness",
+  "indices.style":"Shape", "indices.count":"How many", "indices.radius":"Distance from centre", "indices.skipNumerals":"Leave room for the numerals",
+  "linkbar":"Hands move together", "handSet.link":"What they share", "handSet.minuteScale":"Minute hand slimness",
+  "handSet.includeSeconds":"Include the seconds hand", "act:matchFromHour":"Match them to the hour hand", "act:matchFromMinute":"Match them to the minute hand",
+  "H.style":"Shape", "H.reach":"Length", "H.hourShare":"Share of the minute hand", "H.reachTrim":"Stop short", "H.length":"Length from centre",
+  "H.stem":"Stem", "H.width":"Width", "H.tail":"Tail", "H.boss":"Centre boss", "H.pommeD":"Ring size", "H.pommePos":"Ring position",
+  "H.ringW":"Ring wall", "H.tipW":"Tip width", "H.taper":"Taper", "H.waist":"Waist", "H.material":"Metal", "H.finish":"Finish", "H.lume":"Lume",
+  "text.logoMark":"Artwork", "text.logoTech":"Made by", "text.color":"Colour", "text.color|Ink colour":"Ink colour",
+  "text.color|Top print colour":"Top colour", "text.printThick":"Ink thickness", "text.printFinish":"Finish", "text.dblBase":"Base colour",
+  "text.dblOff":"Offset", "text.dblThick":"Thickness", "text.engDepth":"Depth", "text.engWidth":"Line width", "text.engFill":"Fill",
+  "text.engColor":"Fill colour", "text.stampH":"Height", "text.stampEdge":"Edge sharpness", "text.stampSurface":"Surface", "text.logoMetal":"Metal",
+  "text.logoMetal|Name metal":"Name metal", "text.stampFinish":"Finish", "text.debDepth":"Depth", "text.debEdge":"Edge softness",
+  "text.debFill":"Fill", "text.debColor":"Fill colour", "text.logoHeight":"Thickness", "text.logoLift":"Height off the dial",
+  "text.logoFinish":"Finish", "text.logoEdge":"Edge", "text.plateMetal":"Metal", "text.plateMetal|Name metal":"Name metal",
+  "text.nameMode":"The name is", "text.nameColor":"Name colour", "text.nameColor|Top print colour":"Top colour",
+  "text.nameColor|Fill colour":"Fill colour", "text.nameColor|Ink colour":"Ink colour", "text.embDepth":"Depth", "text.resDepth":"Step depth",
+  "text.resTech":"Logo inside", "text.nameHeight":"Name thickness",
+  "text.resAutoFit":"Fit to the logo", "text.resShape":"Shape", "text.resW":"Width", "text.resH":"Height", "text.resCurve":"Curve",
+  "text.resBorder":"Border", "text.resPad":"Space round the logo", "text.resTextScale":"Logo size inside", "text.embAuto":"Fit to the logo",
+  "text.embShape":"Shape", "text.embW":"Width", "text.embH":"Height", "text.embPad":"Space round the logo", "text.embBorder":"Border",
+  "text.embInset":"Inner inset", "text.plateAuto":"Fit to the logo", "text.plateShape":"Shape", "text.platePad":"Space round the logo",
+  "text.plateW":"Width", "text.plateH":"Height", "text.plateTaper":"Tip taper", "text.logoBevel":"Bevel",
+  "text.plateTintOn":"Choose the plate colour", "text.plateTint":"Plate colour",
+  "text.logoTrack":"Letter spacing", "text.logoCurve":"Curve the logo", "text.lineColor":"Line colour",
+  "text.nameShiftX":"Logo across", "text.nameShiftY":"Logo up or down",
+  "date.cyclops":"Magnifier", "date.w":"Width", "date.h":"Height", "date.at":"Position", "date.dist":"Distance from centre",
+  "date.shown":"Date shown", "date.frame":"Frame colour",
+  "day.arc":"Window width", "day.bevel":"Bevel width", "day.frame":"Frame width", "day.textH":"Name size", "day.shown":"Day shown",
+  "day.frameColor":"Frame colour",
+  "meta.time.h":"Hour", "meta.time.m":"Minute", "meta.time.s":"Second",
+  "render.view":"View", "render.mode":"Light", "render.az|Light direction":"Light from", "render.el":"Light height", "render.quality":"Detail"
+};
+/* A value's name where the shared glossary (glossOpt) has none, or where
+   the sheet means something more particular by it. By value, or by
+   "path=value" for one setting only. */
+const G_MORE_OPT = {
+  sandblasted:"Sandblasted", metallic:"Metallic", flat:"Flat", line:"Line", ring:"Ring",
+  "same as dial":"Same as the dial", clous:"Clous de Paris", orge:"Grain d'orge", soleil:"Soleil", cercles:"Circles", vagues:"Waves",
+  flamme:"Flammé", panier:"Basket", damier:"Checker", tapisserie:"Stepped squares", perlage:"Perlage", geneva:"Geneva waves",
+  ecaille:"Fish scales", chevron:"Chevron", linen:"Linen", hammered:"Hammered",
+  rhodium:"Rhodium", brass:"Brass", auto:"Automatic", manual:"Set by hand",
+  "persian ۰–۹":"Persian", "western 0–9":"Western", "arabic ٠–٩":"Arabic-Indic", "roman I–XII":"Roman",
+  all:"All hours", even:"Even hours", quarters:"12, 3, 6 and 9", "1212":"12 and 6",
+  upright:"Upright", radial:"Along the radius", "outer edge":"Outer edge", centre:"Centre",
+  "engraved + filled":"Engraved and filled", applied:"Applied", ink:"Ink", "lacquer / enamel":"Lacquer or enamel", "sapphire / glass":"Sapphire or glass",
+  cone:"Cone", "indices.style=diamond":"Diamond shape",
+  "full set":"Shape and size", "style only":"Shape only",
+  "pomme-pleine":"Breguet, filled", "pomme-facetee":"Breguet, faceted", english:"English style", "a-tact":"À tact", retrograde:"Retrograde",
+  counter:"Counter", cathedral:"Cathedral", stick:"Stick",
+  free:"Set in millimetres", "to the minute track":"To the minute track", "to the numerals":"To the numerals",
+  "to the centre field":"To the centre field", "to the dial edge":"To the dial edge", "share of the minute hand":"A share of the minute hand",
+  solid:"Solid", skeleton:"Skeleton",
+  "text.logoMark=none":"Typed name", "applied nameplate":"Nameplate", "embossed cartouche":"Embossed cartouche", "reserved cartouche":"Reserved cartouche",
+  paint:"Paint", "own colour":"Its own colour", soft:"Soft", medium:"Medium", sharp:"Sharp",
+  "match the dial":"Match the dial", "match the sector":"Match the zone", painted:"Painted", raised:"Raised",
+  arc:"Arc", rounded:"Rounded", oval:"Oval", rectangle:"Rectangle", "traced cartouche":"Traced cartouche",
+  front:"Front", profile:"Side", back:"Back", old:"Plain light", studio:"Studio light", neutral:"Neutral light",
+  plain:"Plain", hairline:"Hairline", bevelled:"Bevelled", "set by hand":"Set by hand", "follows the logo":"Follows the logo", custom:"Custom"
+};
+/* How a slider reads where its unit alone does not say. */
+const G_MORE_KIND = {"text.resTextScale":"x", "dial.twist":"num", "dial.radialPhase":"num", "sector.zones.#.radialPhase":"num"};
+/* The path as G_MORE names it: any zone or band as #, the hand being set as H. */
+function gMoreKey(fd, hand){
+  if(fd.t === "act") return "act:" + String(fd.a).replace(/:\d+$/, ":#");
+  if(!fd.p) return fd.t;
+  let p = fd.p.replace(/\.\d+\./g, ".#.");
+  if(hand && p.startsWith(hand + ".")) p = "H" + p.slice(hand.length);
+  return p;
+}
+const gMoreLabel = (fd, hand) => { const k = gMoreKey(fd, hand); return G_MORE_LABEL[k + "|" + fd.l] || G_MORE_LABEL[k] || fd.l; };
+/* a value's name, in English (gW puts it in the reader's language) */
+function gOptLabel(k, o){
+  if(typeof o !== "string") return String(o);
+  const v = /^vector · (.+)$/.exec(o); if(v) return v[1];
+  return G_MORE_OPT[k + "=" + o] || G_MORE_OPT[o] || glossOpt(o);
+}
+/* how a schema slider reads: by its unit, or a share when it runs 0 to 1 */
+const gMoreKind = fd => fd.u === "mm" ? "mm" : fd.u === "°" ? "deg" : fd.u === "%" ? "pcv" : fd.u === "×" ? "x" : fd.u === "h" ? "h"
+  : fd.u === "px" ? "px" : fd.min >= 0 && fd.max <= 1 ? "pct" : "num";
+/* the more options' words in Arabic: section names, settings, values, the
+   names of zones and bands, and what the panel's buttons say when done */
+Object.assign(GWORD.ar, {
+  /* sections */
+  "Case":"القالب", "Photograph":"الصورة", "Line up the photograph":"ضبط موضع الصورة", "Surface":"السطح", "Minute track":"مسار الدقائق", "Chapter ring":"الحلقة المدرّجة",
+  "Hour track":"مسار الساعات", "Dial zones":"مناطق الميناء", "Engraved borders":"الحواف المحفورة", "Crosshair":"الخطان المتقاطعان",
+  "Sub-dial":"الميناء الفرعي", "Numeral layout":"توزيع الأرقام", "How the numerals are made":"طريقة صنع الأرقام", "Engraving":"الحفر",
+  "Index markers":"المؤشرات", "Hands together":"العقارب معاً", "Shape":"الشكل", "Shape details":"تفاصيل الشكل", "Metal and finish":"المعدن والتشطيب",
+  "Logo artwork":"رسم الشعار", "How the logo is made":"طريقة صنع الشعار", "Cartouche":"إطار الشعار", "Spacing and lines":"التباعد والأسطر",
+  "Date window":"نافذة التاريخ", "Preview time":"الوقت المعروض", "View":"العرض",
+  "Show the chapter ring":"إظهار الحلقة المدرّجة", "Show the hour track":"إظهار مسار الساعات", "Show the dial zones":"إظهار مناطق الميناء",
+  "Show the engraved borders":"إظهار الحواف المحفورة", "Show the crosshair":"إظهار الخطين المتقاطعين", "Show the sub-dial":"إظهار الميناء الفرعي",
+  "Hour hand":"عقرب الساعات", "Minute hand":"عقرب الدقائق", "Automatic":"تلقائي",
+  /* settings */
+  "Crown stone colour":"لون حجر التاج", "Keep to the factory drawing":"الالتزام برسم المصنع",
+  "Dial across the photo":"موضع الميناء أفقياً في الصورة", "Dial up and down the photo":"موضع الميناء عمودياً في الصورة",
+  "Dial size in the photo":"مقاس الميناء في الصورة", "Turn":"التدوير", "Shadow round the dial":"الظل حول الميناء",
+  "More finishes":"تشطيبات أخرى", "Ray count":"عدد الأشعة", "Doming":"التقبّب", "Satin overlay":"لمسة ساتان", "Use the case's own dial":"استخدام ميناء القالب الأصلي",
+  "Dial size":"مقاس الميناء", "Grid angle":"زاوية الشبكة", "Facet contrast":"تباين الأوجه", "Cell size":"مقاس الخلية", "Groove spacing":"تباعد الحزوز",
+  "Groove angle":"زاوية الحزوز", "Stamped look":"مظهر مضغوط", "Twist":"الالتواء", "Wave height":"ارتفاع الموجة", "Waves round the dial":"عدد الموجات",
+  "Wave growth":"نمو الموجة", "Wave turn":"دوران الموجة", "Ring offset":"إزاحة الحلقات",
+  "Slab size":"مقاس لوح الحجر", "Turn the slab":"تدوير اللوح", "Cut across":"موضع القطع أفقياً", "Cut up and down":"موضع القطع عمودياً",
+  "Relief":"البروز", "Try another cut":"جرّب قطعاً آخر", "Light and shine controls":"إعدادات الضوء واللمعة",
+  "How it takes the light":"كيف يعكس الضوء", "Silky shimmer":"البريق الحريري", "Sparkles in the stone":"اللمعات داخل الحجر",
+  "Back to the stone's own settings":"العودة إلى إعدادات الحجر الأصلية", "Reflections":"الانعكاسات", "Polish of the stone":"صقل الحجر",
+  "Polish of the matrix":"صقل الصخر الحاضن", "Clear coat":"طبقة شفافة", "Metallic":"معدني", "Translucency":"الشفافية", "Iridescence":"تقزّح الألوان",
+  "Shimmer strength":"قوة البريق", "Shimmer direction":"اتجاه البريق", "Shimmer angle":"زاوية البريق", "How many sparkles":"عدد اللمعات",
+  "Sparkle strength":"قوة اللمعات", "Tint with the dial colour":"صبغة بلون الميناء",
+  "Track diameter":"قطر المسار", "Stronger five-minute marks":"إبراز علامات الدقائق الخمس", "Five-minute mark length":"طول علامات الدقائق الخمس",
+  "Made by":"طريقة الصنع", "Edge light":"ضوء الحافة", "Break the track at the lettering":"قطع المسار عند الكتابة", "Gap each side":"الفراغ على كل جانب",
+  "Outer diameter":"القطر الخارجي", "Inner diameter":"القطر الداخلي", "Finish":"التشطيب", "Separator lines":"خطوط فاصلة", "Separator colour":"لون الخطوط الفاصلة",
+  "Style":"النمط", "Show this zone":"إظهار هذه المنطقة", "Inner diameter (0 makes a disc)":"القطر الداخلي (الصفر يجعلها قرصاً)",
+  "Height above the dial (3D view)":"الارتفاع فوق الميناء (العرض ثلاثي الأبعاد)", "Edge":"الحافة", "Bead size":"مقاس الحبيبات",
+  "Bead spacing":"تباعد الحبيبات", "Arms at the quarters":"أذرع عند الأرباع", "Edge colour":"لون الحافة", "Line width":"عرض الخط",
+  "Remove this zone":"حذف هذه المنطقة", "Add a zone":"إضافة منطقة",
+  "Show this band":"إظهار هذا الشريط", "Diameter":"القطر", "Band width":"عرض الشريط", "Edge line width":"عرض خط الحافة",
+  "Engraving depth":"عمق الحفر", "Cut spacing":"تباعد الحزوز", "Cut angle":"زاوية الحزوز", "Remove this band":"حذف هذا الشريط", "Add a band":"إضافة شريط",
+  "Arm length":"طول الذراع", "Track colour":"لون المسار", "Show the track":"إظهار المسار",
+  "Which hours":"أي الساعات", "Spacing":"التباعد", "Direction":"الاتجاه", "Line up by":"المحاذاة حسب", "Slant":"الميل",
+  "Material":"المادة", "Use the loaded metal texture":"استخدام نقشة المعدن المحمّلة", "Thickness of the piece":"سماكة القطعة", "Bevel":"الشطف",
+  "Depth":"العمق", "Bevel width":"عرض الشطف", "Shadow":"الظل", "Highlight":"اللمعة", "Darkness inside":"العتمة في الداخل", "Light from":"اتجاه الضوء",
+  "Edge sharpness":"حدّة الحافة", "How many":"العدد", "Leave room for the numerals":"ترك مكان للأرقام",
+  "Hands move together":"العقارب تتغير معاً", "What they share":"ما تشترك فيه", "Minute hand slimness":"نحافة عقرب الدقائق",
+  "Include the seconds hand":"يشمل عقرب الثواني", "Match them to the hour hand":"مطابقتها مع عقرب الساعات", "Match them to the minute hand":"مطابقتها مع عقرب الدقائق",
+  "Share of the minute hand":"نسبة من عقرب الدقائق", "Stop short":"التوقف قبله بقليل", "Length from centre":"الطول من المركز", "Stem":"الساق",
+  "Tail":"الذيل", "Centre boss":"قرص المركز", "Ring size":"مقاس الحلقة", "Ring position":"موضع الحلقة", "Ring wall":"سماكة الحلقة",
+  "Tip width":"عرض الطرف", "Taper":"الاستدقاق", "Waist":"الخصر",
+  "Artwork":"الرسم", "Ink colour":"لون الحبر", "Top colour":"لون الطبقة العليا", "Ink thickness":"سماكة الحبر", "Base colour":"لون الطبقة السفلى",
+  "Offset":"الإزاحة", "Fill":"الحشو", "Fill colour":"لون الحشو", "Height":"الارتفاع", "Name metal":"معدن الاسم", "Edge softness":"نعومة الحافة",
+  "Height off the dial":"الارتفاع عن الميناء", "The name is":"الاسم", "Name colour":"لون الاسم", "Step depth":"عمق الدرجة", "Logo inside":"الشعار داخله",
+  "Name thickness":"سماكة الاسم", "Fit to the logo":"على مقاس الشعار", "Curve":"الانحناء", "Border":"الحدّ", "Space round the logo":"المسافة حول الشعار",
+  "Logo size inside":"مقاس الشعار في الداخل", "Inner inset":"الهامش الداخلي", "Tip taper":"استدقاق الطرفين", "Choose the plate colour":"اختيار لون اللوحة",
+  "Plate colour":"لون اللوحة", "Letter spacing":"تباعد الحروف", "Curve the logo":"تقويس الشعار", "Line colour":"لون الأسطر",
+  "Logo across":"الشعار أفقياً", "Logo up or down":"الشعار عمودياً",
+  "Date shown":"التاريخ المعروض", "Frame colour":"لون الإطار", "Frame width":"عرض الإطار", "Name size":"مقاس الاسم", "Day shown":"اليوم المعروض",
+  "Hour":"الساعة", "Minute":"الدقيقة", "Second":"الثانية", "Light":"الإضاءة", "Light height":"ارتفاع الضوء", "Detail":"الدقة",
+  /* values */
+  "Sandblasted":"مرمّل", "Circular brushed":"مصقول دائرياً", "Flat":"مسطّح", "Line":"خط", "Same as the dial":"مثل الميناء",
+  "Clous de Paris":"مسامير باريس", "Grain d'orge":"حبّة الشعير", "Soleil":"أشعة الشمس", "Circles":"دوائر", "Waves":"أمواج", "Flammé":"لهب",
+  "Basket":"سلّة", "Checker":"رقعة شطرنج", "Stepped squares":"مربعات متدرّجة", "Perlage":"دوائر متداخلة", "Geneva waves":"أمواج جنيف",
+  "Fish scales":"قشور السمك", "Chevron":"شيفرون", "Linen":"نسيج الكتان", "Hammered":"مطروق",
+  "Rhodium":"روديوم", "Brass":"نحاس", "Set by hand":"يدوي", "Persian":"فارسية",
+  "All hours":"كل الساعات", "Even hours":"الساعات الزوجية", "12, 3, 6 and 9":"12 و3 و6 و9", "12 and 6":"12 و6",
+  "Upright":"قائمة", "Along the radius":"باتجاه المركز", "Outer edge":"الحافة الخارجية", "Engraved and filled":"محفورة ومحشوّة",
+  "Applied":"مركّبة", "Ink":"حبر", "Lacquer or enamel":"لاكيه أو إينامل", "Sapphire or glass":"ياقوت أو زجاج",
+  "Cone":"مخروط", "Diamond shape":"معيّن", "Shape and size":"الشكل والمقاس", "Shape only":"الشكل فقط",
+  "Breguet, filled":"بريغيه مملوء", "Breguet, faceted":"بريغيه مضلّع", "English style":"الطراز الإنجليزي", "À tact":"آ تاكت",
+  "Retrograde":"ارتدادي", "Counter":"عدّاد", "Cathedral":"كاتدرائية", "Stick":"عصا", "Long needle":"إبرة طويلة",
+  "Vernoy spindle 100%":"مغزل Vernoy ⁦100%⁩", "Vernoy spindle 90%":"مغزل Vernoy ⁦90%⁩", "Vernoy spindle 80%":"مغزل Vernoy ⁦80%⁩",
+  "Vernoy spindle 70%":"مغزل Vernoy ⁦70%⁩",
+  "Set in millimetres":"بالمليمتر", "To the minute track":"حتى مسار الدقائق", "To the numerals":"حتى الأرقام", "To the centre field":"حتى المنطقة الوسطى",
+  "To the dial edge":"حتى حافة الميناء", "A share of the minute hand":"نسبة من عقرب الدقائق", "Solid":"مصمتة", "Skeleton":"مفرّغة",
+  "Typed name":"الاسم مكتوباً", "Nameplate":"لوحة اسم", "Embossed cartouche":"إطار نافر", "Reserved cartouche":"مساحة محجوزة للشعار",
+  "Paint":"طلاء", "Its own colour":"لون خاص", "Soft":"ناعمة", "Medium":"متوسطة", "Sharp":"حادّة", "Match the dial":"يطابق الميناء",
+  "Match the zone":"يطابق المنطقة", "Painted":"مطلي", "Raised":"بارز", "Arc":"قوس", "Rounded":"مستدير الزوايا", "Oval":"بيضاوي",
+  "Rectangle":"مستطيل", "Traced cartouche":"إطار مرسوم", "Front":"الأمام", "Side":"الجانب", "Back":"الخلف",
+  "Plain light":"إضاءة بسيطة", "Studio light":"إضاءة الاستوديو", "Neutral light":"إضاءة محايدة",
+  "Plain":"بلا", "Hairline":"رفيع", "Bevelled":"مشطوف", "Follows the logo":"يتبع الشعار", "Custom":"مخصص", "hidden":"مخفي",
+  "Monday":"الإثنين", "Tuesday":"الثلاثاء", "Wednesday":"الأربعاء", "Thursday":"الخميس", "Friday":"الجمعة", "Saturday":"السبت", "Sunday":"الأحد",
+  "1 · high-contrast serif":"1 · كلاسيكي عالي التباين", "2 · wide sans":"2 · حديث عريض", "3 · deco inline":"3 · آرت ديكو بخط داخلي",
+  "4 · serif ligature":"4 · كلاسيكي بحروف متصلة", "5 · tall condensed":"5 · طويل متقارب", "6 · bold serif":"6 · كلاسيكي عريض",
+  "7 · hairline serif":"7 · كلاسيكي رفيع جداً", "8 · classic serif":"8 · كلاسيكي تقليدي", "9 · heavy serif":"9 · كلاسيكي ثقيل",
+  "10 · swash tail":"10 · بذيل مزخرف", "11 · light serif":"11 · كلاسيكي خفيف", "12 · compact ligature":"12 · حروف متصلة متقاربة",
+  "Vernoy wordmark (traced)":"اسم Vernoy (مرسوم)", "NOREL wordmark":"اسم NOREL",
+  /* the zones and bands, and the parts of a cartouche */
+  "Zone":"المنطقة", "Outer zone":"المنطقة الخارجية", "Centre field":"المنطقة الوسطى", "Engine turning":"النقش الآلي", "Boundary":"الحد الفاصل",
+  "Band":"الشريط", "Innermost band":"الشريط الأقرب إلى المركز", "Outermost band":"الشريط الخارجي", "Interior":"الداخل",
+  "Decorative lines":"الأسطر الإضافية",
+  /* what the panel's buttons say when they are done */
+  "Zone added":"أُضيفت منطقة", "Zone removed":"حُذفت المنطقة", "Band added":"أُضيف شريط", "Band removed":"حُذف الشريط",
+  "Optical response reset to the family defaults":"عادت إعدادات الضوء إلى إعدادات الحجر الأصلية",
+  "Set matched to the hour hand":"طوبقت العقارب مع عقرب الساعات", "Set matched to the minute hand":"طوبقت العقارب مع عقرب الدقائق"
+});
 /* GUIDE-PURE-END */
 </script>
 <script>
@@ -13826,23 +14255,28 @@ function gPlainCheck(row){
   const toggle = (path, label, on) => `<label class="gRow gTog"><span>${gW(label)}</span><span class="gSwitch"><input type="checkbox" data-gtoggle="${path}" ${on?"checked":""}><span></span></span></label>`;
   /* A slider with its value written out, a step either side, a mark at the
      value the design was opened with, and the way back to it once moved.
-     kind says how the value reads (see gReadout). */
-  function slider(path, label, min, max, st, v, kind){
-    kind = kind || "mm"; label = gW(label);
+     kind says how the value reads (see gReadout). idp keeps the ids apart
+     when the same setting is on the step and on its More options sheet. */
+  function slider(path, label, min, max, st, v, kind, idp){
+    kind = kind || "mm"; label = gW(label); const id = (idp || "gsl") + "-" + path;
     const o0 = (() => { try{ return get(origState(), path); }catch(e){ return undefined; } })();
     const o = typeof o0 === "number" && o0 >= min && o0 <= max ? o0 : null;
     const p = (v - min)/(max - min), op = o == null ? null : (o - min)/(max - min);
     const moved = o != null && Math.abs(v - o) > st/2;
     const less = kind === "pos" ? gT("sl.up") : gT("sl.less"), more = kind === "pos" ? gT("sl.down") : gT("sl.more");
     return `<div class="gSl" data-gsl="${path}" data-kind="${kind}" data-o="${o == null ? "" : o}">
-      <div class="gSlHead"><label for="gsl-${path}">${label}</label><output>${gReadout(v, kind, st)}</output></div>
+      <div class="gSlHead"><label for="${id}">${label}</label><output>${gReadout(v, kind, st)}</output></div>
       <div class="gSlRow"><button type="button" class="gStep" data-gnudge="${path}" data-dir="-1" aria-label="${label}: ${less}">${kind === "pos" ? "↑" : "−"}</button>
-        <div class="gSlTrack"><input type="range" id="gsl-${path}" data-grange="${path}" min="${min}" max="${max}" step="${st}" value="${v}" style="--p:${p.toFixed(4)}">${op == null ? "" : `<i class="gSlMark" style="--o:${op.toFixed(4)}"></i>`}</div>
+        <div class="gSlTrack"><input type="range" id="${id}" data-grange="${path}" min="${min}" max="${max}" step="${st}" value="${v}" style="--p:${p.toFixed(4)}">${op == null ? "" : `<i class="gSlMark" style="--o:${op.toFixed(4)}"></i>`}</div>
         <button type="button" class="gStep" data-gnudge="${path}" data-dir="1" aria-label="${label}: ${more}">${kind === "pos" ? "↓" : "+"}</button></div>
       ${moved ? `<button type="button" class="gReset" data-greset="${path}">${gT("sl.back", gReadout(o, kind, st))}</button>` : ""}</div>`;
   }
   const textIn = (path, label, v, ph, clear) => (label = gW(label), `<div class="gRow"><label>${label}</label><span class="gField"><input type="text" dir="auto" data-gtext="${path}" value="${esc2(v||"")}" placeholder="${esc2(ph||"")}">${v && clear ? `<button type="button" class="gClear" data-gclear="${path}" aria-label="${gT("text.clear")} ${esc2(label)}">✕</button>` : ""}</span></div>`);
-  const more = (layer, label) => `<button type="button" class="gMore" data-gfull="${layer}">${gT("more", gW(label))}</button>`;
+  /* The way on from a step's tab: its More options sheet, named and
+     summed up, which also carries the link to the full editor. */
+  const more = (layer, label) => hasSheet(STEPS[step].k)
+    ? `<button type="button" class="gMoreRow" data-gsheet="1"><b>${gT("more.open." + STEPS[step].k)}</b><small>${gT("more.sum." + STEPS[step].k)}</small></button>`
+    : `<button type="button" class="gMore" data-gfull="${layer}">${gT("more", gW(label))}</button>`;
 
   /* thumbnails are cached by what they show, so a change elsewhere does not
      draw them again; a key leaves out long strings (an uploaded logo) */
@@ -14176,6 +14610,167 @@ function gPlainCheck(row){
     return list.slice(0, 2).map(warnCard).join("");
   }
 
+  /* ---- More options ----
+     Each step's other settings, on a sheet of their own: it rises over the
+     panel on a phone and opens beside it on a wide screen. The fields come
+     from the full editor's schema, as G_MORE lists them, so their ranges and
+     the controls a choice brings are the full editor's, and each is written
+     through the same fieldInput and fieldChosen. Only the look is simple
+     mode's: sliders with steps, chips, swatches and pictures. */
+  let sheetOn = false, sheetHand = "hHand", timeSet = false;
+  const secOpen = new Set(), secShut = new Set(), subOpen = new Set(), subShut = new Set();
+  const MORE_NEED = {photo:() => !!(S.tpl.on && tplAvail(S)), upload:() => !!(S.tpl.on && tplAvail(S) && !caseOf(S).photoFile),
+    calendar:() => !!caseOf(S).calendar};
+  const hasSheet = k => !!(G_MORE[k] && G_MORE[k].length);
+  /* Two settings the full editor always shows that only some designs use:
+     the slant of the drawn numeral sets, and the spacing of a typed logo.
+     Elsewhere they would be controls that move nothing. */
+  const MORE_ONLY = {"numerals.slant":() => S.numerals.system === "western 0–9" && /^(vernoy|breguet)$/.test(S.numerals.style),
+    "text.logoTrack":() => !S.text.logoMark || S.text.logoMark === "none"};
+  /* where the full editor opens from a sheet, and what the link says */
+  const FULL_AT = {case:["case","All case settings"], dial:["dial","All dial settings"], markers:["numerals","All marker settings"],
+    hands:["hands","All hand settings"], text:["text","All text settings"], calendar:["date","All window settings"]};
+  const MORE_INK = INK.concat(STUDIO.filter(x => !INK.some(y => y[0].toUpperCase() === x[0].toUpperCase() || y[1] === x[1])));
+  const MORE_ICON = `<svg viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M3 6h7M14 6h3M3 14h2M9 14h8"/><circle cx="12" cy="6" r="2"/><circle cx="7" cy="14" r="2"/></svg>`;
+  function schemaFields(src){
+    const sc = SCHEMA[src === "@" ? sheetHand : src]; if(!sc) return [];
+    try{ return typeof sc.fields === "function" ? sc.fields() : sc.fields; }catch(e){ return []; }
+  }
+  /* a zone's or a band's name, and the state shown beside a folded part */
+  const subName = l => { const z = /^Zone (\d+)$/.exec(l), b = /^Band (\d+)$/.exec(l);
+    return z ? gT("more.zoneN", z[1]) : b ? gT("more.bandN", b[1]) : gW(l); };
+  const subState = s => !s ? "" : /^Ø/.test(s) ? s.replace(/ · hidden$/, " · " + gW("hidden")) : gW(gOptLabel("", s));
+  /* one of the hands, alone and pointing at 12, in a shape */
+  function sheetHandPic(k, style){
+    const h = S[k], key = hashOf(JSON.stringify([k, style, h, S.handSet, caseOf(S).opening, S.minute.on, S.numerals.on]));
+    return memo("mh|" + key, () => {
+      try{
+        const st = clone(S);
+        for(const x of ["hHand","mHand","sHand"]) st[x] = {...st[x], on: x === k};
+        st[k].style = style;
+        const vv = typeof handVec === "function" ? handVec(st[k], k) : null;
+        if(vv){ st[k].reach = "free"; st[k].length = vv.tip; }
+        st.meta = {...st.meta, time:{h:0, m:0, s:0}};
+        const L = handLength(st[k], k, st), tail = Math.max(0, st[k].tail || 0), side = Math.max(6, L + tail + 1.4);
+        return buildSVG(st, {scope:"hands", tag:"mh" + (++thumbSeq), material:false})
+          .replace(/viewBox="[^"]*"/, `viewBox="${f(-side/2,3)} ${f(-L-0.7,3)} ${f(side,3)} ${f(side,3)}"`);
+      }catch(e){ return ""; }
+    });
+  }
+  function moreField(fd, key, sec){
+    const p = fd.p, lab = gMoreLabel(fd, sheetHand);
+    if(fd.t === "num"){
+      let v = parseFloat(get(S, p)); if(!Number.isFinite(v)) v = numDefault(fd);
+      return slider(p, lab, fd.min, fd.max, fd.step, v, G_MORE_KIND[key] || gMoreKind(fd), "gms");
+    }
+    if(fd.t === "chk" || fd.t === "toggle") return toggle(p, lab, !!get(S, p));
+    if(fd.t === "linkbar") return toggle("ui.link", lab, S.handSet.link !== "off");
+    if(fd.t === "col"){ const c = get(S, p); return `<h4>${esc2(gW(lab))}</h4>` + swatches(p, MORE_INK, c, {row:true}) + colourLine(c); }
+    /* a few named inks, and "Automatic" where the full editor offers it */
+    if(fd.t === "chips"){
+      const c = get(S, p) || "", auto = fd.presets.some(x => !x[1]);
+      return `<h4>${esc2(gW(lab))}</h4>` + (auto ? chips44(p, [["", "Automatic"]], c) : "") + swatches(p, MORE_INK, c, {row:true}) + colourLine(c);
+    }
+    if(fd.t === "sel" || fd.t === "seg"){
+      const cur = get(S, p), only = sec.opts && sec.opts[key];
+      let opts = fd.opts.map(o => { const v = Array.isArray(o) ? o[0] : o; return [v, gOptLabel(key, v)]; });
+      if(only) opts = opts.filter(o => only.indexOf(o[0]) >= 0);
+      if(sec.cards && sec.cards.indexOf(key) >= 0)
+        return `<div class="gCards gMhands">${opts.map(([v, l]) => `<button type="button" class="gCard ${v === cur ? "on" : ""}" data-gset="${p}" data-gv='${gv(v)}'><div class="gPic">${sheetHandPic(p.split(".")[0], v)}</div><div class="gName">${esc2(gW(l))}</div></button>`).join("")}</div>`;
+      return `<h4>${esc2(gW(lab))}</h4>` + chips44(p, opts, cur);
+    }
+    if(fd.t === "act") return `<button type="button" class="gMact${/Del:/.test(fd.a) ? " del" : ""}" data-gact="${esc2(fd.a)}">${esc2(gW(lab))}</button>`;
+    if(fd.t === "head") return `<h4 class="gMhead">${esc2(gW(lab))}</h4>`;
+    if(fd.t === "say"){ const m = /^Drawn at ([\d.]+) mm from the centre$/.exec(fd.l || ""); return m ? `<p class="gNote">${esc2(gT("more.drawnAt", m[1]))}</p>` : ""; }
+    return "";
+  }
+  /* One section: its fields from the schema, in the schema's order, the
+     parts that fold (a zone, a band, a cartouche's shape) folding here too.
+     A path already shown higher up the sheet is not shown twice. */
+  function moreSection(k, sec, used, first){
+    if(sec.show && !get(S, sec.show)) return "";
+    if(sec.need && !MORE_NEED[sec.need]()) return "";
+    const want = new Set(sec.paths), id = k + ":" + sec.id, on = sec.on ? !!get(S, sec.on) : true;
+    let n = 0;
+    const walk = (list, depth) => list.map(fd => {
+      if(fd.t === "group") return walk(fd.fields, depth);
+      if(fd.t === "sub"){
+        const inner = walk(fd.fields, depth + 1); if(!inner) return "";
+        const sk = id + "|" + fd.l, open = depth === 0 ? !subShut.has(sk) : subOpen.has(sk);
+        return `<details class="gMsub" data-gmsub="${esc2(sk)}"${open ? " open" : ""}><summary><span>${esc2(subName(fd.l))}</span><small>${esc2(subState(fd.state))}</small></summary><div class="gMsubB">${inner}</div></details>`;
+      }
+      const key = gMoreKey(fd, sheetHand);
+      if(!want.has(key) || (MORE_ONLY[key] && !MORE_ONLY[key]())) return "";
+      if(fd.p){ if(used.has(fd.p)) return ""; used.add(fd.p); }
+      const h = moreField(fd, key, sec);
+      if(h && fd.t !== "head" && fd.t !== "say") n++;
+      return h;
+    }).join("");
+    let inner = on ? walk(schemaFields(sec.src), 0) : "";
+    if(!sec.on && !n) return "";
+    if(sec.on) inner = toggle(sec.on, sec.onLabel, on) + inner;
+    const open = secOpen.has(id) || (first && !secShut.has(id));
+    const state = sec.on ? gT(on ? "more.on" : "more.off") : gT("more.count", n);
+    return `<details class="gMsec" data-gmsec="${id}"${open ? " open" : ""}><summary><span>${esc2(gW(sec.t))}</span><small>${esc2(state)}</small></summary><div class="gMsecB">${inner}</div></details>`;
+  }
+  function sheetHTML(){
+    const k = STEPS[step].k, used = new Set();
+    let h = "", shown = 0;
+    if(k === "hands"){
+      h += chips44("ui.mhand", [["hHand","Hour hand"],["mHand","Minute hand"],["sHand","Seconds hand"]], sheetHand);
+      if(sheetHand === "sHand" && !S.sHand.on) return h + `<p class="gNote">${gT("more.secOff")}</p>` + toggle("sHand.on", "Seconds hand", false);
+    }
+    for(const sec of G_MORE[k]){ const s = moreSection(k, sec, used, shown === 0); if(s){ h += s; shown++; } }
+    if(!shown) h += `<p class="gNote">${gT("more.empty")}</p>`;
+    const fa = FULL_AT[k];
+    h += fa ? `<button type="button" class="gMore" data-gfull="${fa[0]}">${gT("more", gW(fa[1]))}</button>`
+            : `<button type="button" class="gMore" data-gfull="render">${gT("more", gT("mode.full"))}</button>`;
+    return h;
+  }
+  /* the sheet, kept in step with the design on every paint */
+  function paintSheet(){
+    const k = STEPS[step].k, want = sheetOn && hasSheet(k) && mode === "guided";
+    let el = guide.querySelector(".gSheet");
+    const wasOpen = document.body.classList.contains("gSheetOpen");
+    document.body.classList.toggle("gSheetOpen", want);
+    if(!want){ if(el) el.remove(); if(wasOpen) setTimeout(() => reframe(true), 40); return; }
+    const fresh = !el;
+    if(fresh){
+      el = document.createElement("div"); el.className = "gSheet"; el.setAttribute("role", "dialog");
+      guide.appendChild(el);
+      el.addEventListener("scroll", e => { const r = e.target; if(r.classList && (r.classList.contains("gCards") || r.classList.contains("gChips") || r.classList.contains("gSw"))) edge(r); }, true);
+    }
+    el.setAttribute("aria-label", gT("more.open." + k));
+    const sb0 = el.querySelector(".gSheetBody"), same = el.dataset.gsk === k + "|" + sheetHand, scroll = sb0 ? sb0.scrollTop : 0;
+    const rowsX = sb0 ? [...sb0.querySelectorAll(".gCards, .gChips, .gSw.row")].map(r => r.scrollLeft) : [];
+    el.innerHTML = `<header><div><h2>${gT("more.title")}</h2><p>${esc2(STEPS[step].t)}</p></div><button type="button" class="gSheetDone" data-gsheet="0">${gT("more.done")}</button></header>`
+      + `<div class="gSheetBody">${sheetHTML()}</div>`;
+    el.dataset.gsk = k + "|" + sheetHand;   /* not data-k, which the full editor reads as a component row */
+    const sb = el.querySelector(".gSheetBody");
+    if(same) sb.scrollTop = scroll;
+    sb.querySelectorAll(".gCards, .gChips, .gSw.row").forEach((r, i) => {
+      if(r.scrollWidth <= r.clientWidth + 2) return;
+      if(same && rowsX[i] != null) r.scrollLeft = rowsX[i];
+      edge(r);
+    });
+    if(fresh){ if(!wasOpen) setTimeout(() => reframe(true), 40); const dn = el.querySelector(".gSheetDone"); if(dn) dn.focus({preventScroll:true}); }
+  }
+  /* the pill beside the tabs that opens and closes the sheet */
+  /* It sits beside the tabs on a phone, where the step's name is not
+     shown, and beside the step's name on a wide screen, where the tabs need
+     the room. */
+  const pillHere = () => guide.querySelector(NARROW() ? ".gTabRow .gMoreTop" : ".gH2 .gMoreTop") || moreTop;
+  function paintMoreTop(){
+    const k = STEPS[step].k, on = hasSheet(k);
+    moreTop.hidden = !on;
+    tabRow.hidden = tabsEl.hidden && (!on || !NARROW());
+    if(!on) return;
+    guide.querySelectorAll(".gMoreTop").forEach(b => {
+      b.innerHTML = `${MORE_ICON}<span>${gT("more.btn")}</span>`;
+      b.setAttribute("aria-label", gT("more.aria", STEPS[step].t));
+      b.setAttribute("aria-expanded", String(sheetOn));
+    });
+  }
   /* ---- the steps ---- */
   const when = t => { if(!t) return gT("start.today"); const d = new Date(t), n = new Date();
     const day = x => Math.floor((new Date(x.getFullYear(), x.getMonth(), x.getDate())).getTime()/864e5);
@@ -14547,10 +15142,15 @@ function gPlainCheck(row){
      text.lineColor. Writing only text.color recoloured the logo alone. */
   function put(path, v){
     if(/^ink(Own)?:/.test(path)){ setInk(path, v); return; }
-    set(S, path, v);
+    fieldInput(path, v);
     if(path === "text.color") S.text.lineColor = v;
   }
-  function apply(path, v){
+  /* A lettered name is about 1.7 mm high; the NOREL lock-up about 5.4 and
+     the shield about 3.2; an uploaded logo goes back to the size it was
+     fitted to on upload, not the size of the mark it replaces. */
+  const logoSizeFor = m => m === "NOREL logo" ? 5.4 : m === "NOREL shield" ? 3.2
+    : m === "Your logo" && S.text.logoImg ? +Math.min(4, 9/Math.max(0.5, S.text.logoImg.ar || 1)).toFixed(2) : 1.7;
+  function apply(path, v, sheet){
     /* The photograph is the case as supplied, in steel on its bracelet, and
        it takes no metal, finish or strap. Chosen while it is on, they would
        change nothing on screen, so the drawn case takes over and says so. */
@@ -14580,18 +15180,21 @@ function gPlainCheck(row){
       if(v === "other") return;                    // the mark already on the dial
       const was = S.text.logoMark;
       S.text.logoMark = v === "image" && S.text.logoImg ? "Your logo" : v === "norel" ? "NOREL logo" : v === "shield" ? "NOREL shield" : "none";
-      /* a lettered name is about 1.7 mm high; the lock-up about 5.4 and the shield about 3.2 */
-      if(S.text.logoMark !== was){
-        if(v === "norel") S.text.logoSize = 5.4;
-        else if(v === "shield") S.text.logoSize = 3.2;
-        else if(v === "text" && was !== "none") S.text.logoSize = 1.7;
-        /* back to an uploaded logo: the size it was fitted to on upload, not the size of the mark it replaces */
-        else if(v === "image" && S.text.logoImg) S.text.logoSize = +Math.min(4, 9/Math.max(0.5, S.text.logoImg.ar || 1)).toFixed(2);
-      }
+      if(S.text.logoMark !== was) S.text.logoSize = logoSizeFor(S.text.logoMark);
+    }
+    /* any artwork from the sheet: sized as above when it is a different kind of mark */
+    else if(path === "text.logoMark"){
+      const was = S.text.logoMark, kind = m => /^(NOREL logo|NOREL shield|Your logo)$/.test(m) ? m : "letters";
+      S.text.logoMark = v; if(kind(v) !== kind(was)) S.text.logoSize = logoSizeFor(v);
     }
     else if(path === "text.foot"){ S.text.foot = v; S.text.footOn = !!v; }
+    else if(path === "ui.link") setHandLink(!!v);
     else put(path, v);
+    fieldChosen(path);
     if(/^hHand\./.test(path)) syncHands("hHand");
+    /* on the sheet any hand can be set, and a linked set follows it */
+    else if(sheet && /^(mHand|sHand)\./.test(path)) syncHands(path.split(".")[0]);
+    if(/^meta\.time\./.test(path)) timeSet = true;
     /* a two-tone case or a gem bezel the photograph has no parts for */
     if(photoOn && S.tpl.on){ const K = caseOf(S); if(K.photoFile && photoPlan(S, K) === false){ S.tpl.on = false; drawn = true; } }
     commit(); paintAll();
@@ -14654,14 +15257,23 @@ function gPlainCheck(row){
     if(mode !== "guided" || !S.sHand || !S.sHand.on || !S.meta || !S.meta.time) return null;
     if(STEPS[step].k === "text") return {hideSeconds:true};
     const s = S.meta.time.s || 0;
-    return s >= 25 && s <= 35 ? {s:37} : null;
+    return !timeSet && s >= 25 && s <= 35 ? {s:37} : null;
   };
 
   /* ---- painting ---- */
   const guide = document.createElement("section"); guide.id = "guide";
-  guide.innerHTML = `<nav class="gSteps" role="tablist"></nav><div class="gProg"></div><div class="gTabs" role="tablist" hidden></div><div class="gBody"></div>
+  guide.innerHTML = `<nav class="gSteps" role="tablist"></nav><div class="gProg"></div>
+    <div class="gTabRow"><div class="gTabs" role="tablist" hidden></div><button type="button" class="gMoreTop" data-gsheet="1" aria-expanded="false" hidden></button></div><div class="gBody"></div>
     <div class="gFoot"><button type="button" class="back"></button><button type="button" class="next">Next</button></div>`;
   const stepsEl = guide.querySelector(".gSteps"), progEl = guide.querySelector(".gProg"), tabsEl = guide.querySelector(".gTabs"), body = guide.querySelector(".gBody");
+  const tabRow = guide.querySelector(".gTabRow"), moreTop = guide.querySelector(".gMoreTop");
+  /* the sheet's own folds stay as they were left */
+  guide.addEventListener("toggle", e => {
+    const d = e.target; if(!d || !d.dataset) return;
+    if(d.dataset.gmsec){ const id = d.dataset.gmsec; if(d.open){ secOpen.add(id); secShut.delete(id); } else { secShut.add(id); secOpen.delete(id); } }
+    if(d.dataset.gmsub){ const id = d.dataset.gmsub; if(d.open){ subOpen.add(id); subShut.delete(id); } else { subShut.add(id); subOpen.delete(id); } }
+  }, true);
+  addEventListener("keydown", e => { if(e.key === "Escape" && sheetOn && mode === "guided"){ sheetOn = false; paint(); pillHere().focus({preventScroll:true}); } });
   /* the panel reads in the chosen language and direction; the stage, the
      header and the full editor are not inside it, so they keep theirs */
   function langAttrs(){
@@ -14683,6 +15295,7 @@ function gPlainCheck(row){
     if(step > 0 && !seen(step)) rec.seen.push(step);
     const pv = JSON.stringify(window.WatchGuidePreview());
     step = Math.max(0, Math.min(STEPS.length-1, i)); frameWhole = false; listOpen = false; savedAs = "";
+    if(!hasSheet(STEPS[step].k)) sheetOn = false;
     if(step > 0) rec.step = step;
     rec.t = Date.now(); saveRec(); paint(); body.scrollTop = 0;
     /* the preview leaves the seconds hand out on the Text step */
@@ -14710,7 +15323,7 @@ function gPlainCheck(row){
        so they would snap back to their start and hide what was just tapped:
        keep each where it was, and on a new step bring the choice into view */
     const rowsX = [...body.querySelectorAll(".gCards, .gChips, .gSw.row")].map(r => r.scrollLeft);
-    body.innerHTML = `<h2>${s.t}</h2><p class="gLead">${s.lead}</p>` + stepWarnings(s.k) + VIEW[s.k](tab);
+    body.innerHTML = `<div class="gH2"><h2>${s.t}</h2>${hasSheet(s.k) ? `<button type="button" class="gMoreTop" data-gsheet="1"></button>` : ""}</div><p class="gLead">${s.lead}</p>` + stepWarnings(s.k) + VIEW[s.k](tab);
     body.dataset.view = view; if(same) body.scrollTop = scroll;
     body.querySelectorAll(".gCards, .gChips, .gSw.row").forEach((r, i) => {
       if(r.scrollWidth <= r.clientWidth + 2) return;
@@ -14729,6 +15342,7 @@ function gPlainCheck(row){
     if(listOpen) paintList(); else { const l = guide.querySelector(".gList"); if(l) l.remove(); }
     if(fk){ const el = body.querySelector(`[${fattr}="${fk}"]`); if(el){ el.focus({preventScroll:true}); if(fsel) try{ el.setSelectionRange(fsel[0], fsel[1]); }catch(e){} } }
     const stg = document.getElementById("stage"); if(stg) stg.classList.toggle("gPhoto", !!(S.tpl.on && tplAvail(S)));
+    paintMoreTop(); paintSheet();
     reframe();
   }
   /* a sideways row with more to its right fades at that edge */
@@ -14808,6 +15422,9 @@ function gPlainCheck(row){
         commit(); paintAll(); return; }
       return;
     }
+    if(d.gsheet){ sheetOn = t.classList.contains("gMoreTop") ? !sheetOn : d.gsheet === "1"; paint(); if(!sheetOn) pillHere().focus({preventScroll:true}); return; }
+    if(d.gact){ const a = d.gact; soon(null, () => { const r = runAct(a, gW); if(r === "paint"){ commit(); paintAll(); } else if(r === "view") requestPaint(); }); return; }
+    if(d.gset === "ui.mhand"){ sheetHand = JSON.parse(d.gv); paint(); return; }
     if(d.gset === "ui.palette"){ palette = JSON.parse(d.gv); paint(); return; }
     if(d.gset === "ui.stone"){ const v = JSON.parse(d.gv); soon(t, () => { useStone(v); commit(); paintAll(); }); return; }
     if(d.gset === "dial.finish" && (JSON.parse(d.gv) === "nacre" || JSON.parse(d.gv) === "stone")){
@@ -14829,7 +15446,7 @@ function gPlainCheck(row){
         if(GEM_CUTS[c].settings[n].indexOf(g.setting) < 0) g.setting = GEM_CUTS[c].settings[n][0];
         commit(); paintAll(); });
       return; }
-    if(d.gset){ const p = d.gset, v = JSON.parse(d.gv); soon(t, () => apply(p, v)); return; }
+    if(d.gset){ const p = d.gset, v = JSON.parse(d.gv), sh = !!t.closest(".gSheet"); soon(t, () => apply(p, v, sh)); return; }
     if(d.gcase){ const m = d.gcase; soon(t, () => apply("case.model", m)); return; }
     if(d.gsec){
       const tip = d.gsec;
@@ -14913,19 +15530,19 @@ function gPlainCheck(row){
     const box = b.closest(".gSl"), r = box && box.querySelector("input[type=range]"); if(!r) return;
     const st = parseFloat(r.step), min = parseFloat(r.min), max = parseFloat(r.max);
     const v = Math.min(max, Math.max(min, +(parseFloat(r.value) + (+b.dataset.dir)*st).toFixed(gDecimals(st) + 1)));
-    r.value = v; set(S, b.dataset.gnudge, v); readSl(box, v); requestPaint(true);
+    r.value = v; if(b.closest(".gSheet")) fieldInput(b.dataset.gnudge, v); else set(S, b.dataset.gnudge, v); readSl(box, v); requestPaint(true);
   }
   function endNudge(){
     if(rep){ clearTimeout(rep.t); }
-    const path = rep ? rep.path : null, was = rep ? rep.was : null; rep = null;
-    if(path != null && get(S, path) !== was) apply(path, get(S, path));
+    const path = rep ? rep.path : null, was = rep ? rep.was : null, sh = rep ? rep.sheet : false; rep = null;
+    if(path != null && get(S, path) !== was) apply(path, get(S, path), sh);
     else if(path != null) paintAll();
   }
   guide.addEventListener("pointerdown", e => {
     const b = e.target.closest && e.target.closest(".gStep"); if(!b || b.disabled) return;
     e.preventDefault();
     if(rep) clearTimeout(rep.t);
-    rep = {path:b.dataset.gnudge, was:get(S, b.dataset.gnudge), t:0};
+    rep = {path:b.dataset.gnudge, was:get(S, b.dataset.gnudge), t:0, sheet:!!b.closest(".gSheet")};
     nudge(b);
     const again = () => { nudge(b); rep.t = setTimeout(again, 80); };
     rep.t = setTimeout(again, 420);
@@ -14934,7 +15551,7 @@ function gPlainCheck(row){
   guide.addEventListener("pointerleave", e => { if(rep && e.target === guide) endNudge(); });
   guide.addEventListener("change", e => {
     const t = e.target, d = t.dataset;
-    if(d.gtoggle){ apply(d.gtoggle, t.checked); }
+    if(d.gtoggle){ apply(d.gtoggle, t.checked, !!t.closest(".gSheet")); }
     if(d.gcolor){
       /* The phone's colour picker stays open over the page and keeps sending
          changes. Rebuilding the panel here removed the input the picker
@@ -14947,11 +15564,11 @@ function gPlainCheck(row){
       return;
     }
     if(d.gtext){ textHold = true; clearTimeout(textTimer); textTimer = setTimeout(releaseText, 450); apply(d.gtext, t.value); }
-    if(d.grange){ apply(d.grange, parseFloat(t.value)); }
+    if(d.grange){ apply(d.grange, parseFloat(t.value), !!t.closest(".gSheet")); }
   });
   guide.addEventListener("input", e => {
     const t = e.target, d = t.dataset;
-    if(d.grange){ const v = parseFloat(t.value); set(S, d.grange, v); const box = t.closest(".gSl"); if(box) readSl(box, v); requestPaint(true); }
+    if(d.grange){ const v = parseFloat(t.value); if(t.closest(".gSheet")) fieldInput(d.grange, v); else set(S, d.grange, v); const box = t.closest(".gSl"); if(box) readSl(box, v); requestPaint(true); }
     if(d.gcolor){ holdGuide = true; colorDirty = true; put(d.gcolor, t.value.toUpperCase()); requestPaint(true, 600); }
     if(d.gpfind){ pfind = t.value; const g = guide.querySelector(`.gPfound[data-path="${d.gpfind}"]`) || guide.querySelector(".gPfound"); if(g) g.innerHTML = pantoneGrid(d.gpfind, curOf(d.gpfind)); }
   });
@@ -15003,6 +15620,7 @@ function gPlainCheck(row){
   function setMode(m){
     mode = m; try{ localStorage.setItem(MODE_KEY, m); }catch(e){}
     document.body.classList.toggle("guided", m === "guided");
+    if(m !== "guided"){ sheetOn = false; paintSheet(); }
     modeLabels();
     if(m === "guided") paint();
     if(typeof requestPaint === "function") requestPaint();
@@ -15017,7 +15635,8 @@ function gPlainCheck(row){
   }
   modeBtn.onclick = () => setMode(mode === "guided" ? "full" : "guided");
   mobileMode.onclick = () => { const mm = document.getElementById("mMore"); if(mm){ mm.classList.remove("open"); mm.style.display = "none"; } setMode(mode === "guided" ? "full" : "guided"); };
-  window.WatchGuide = {setMode, setLang, get lang(){ return GLANG; }, get mode(){ return mode; }, get step(){ return step; }, get tab(){ return curTab(); }, go, tab(t){ subTab[STEPS[step].k] = t; paint(); }, warnings:() => warnings()};
+  window.WatchGuide = {setMode, setLang, get lang(){ return GLANG; }, get mode(){ return mode; }, get step(){ return step; }, get tab(){ return curTab(); }, go, tab(t){ subTab[STEPS[step].k] = t; paint(); }, warnings:() => warnings(),
+    more(on){ sheetOn = on !== false && hasSheet(STEPS[step].k); paint(); }, get sheet(){ return sheetOn; }, hand(k){ sheetHand = k; paint(); }};
   setMode(mode);
   /* the mobile shell frames the case once the page has settled; frame the
      step's part after it */

@@ -30,7 +30,7 @@ test('every sentence simple mode shows has its Arabic, of the same kind', () => 
       const args = Array.from({length: Math.max(1, en[k].length)}, (_, i) => i === 0 ? (k === 'list' ? ['أ', 'ب', 'ج'] : 3) : 2);
       const s = ar[k](...args);
       assert.equal(typeof s, 'string', k);
-      if (!/^(col\.pantone|day\.custom|u\.deg|u\.pct|eg\.|more$)/.test(k)) assert.match(s, AR, k + ' reads in Arabic');
+      if (!/^(col\.pantone|day\.custom|u\.deg|u\.pct|u\.x|eg\.|more$)/.test(k)) assert.match(s, AR, k + ' reads in Arabic');
     } else if (en[k] && !/^(card\.norel|card\.vernoy|case\.(norel|r3|d)|lang\.more)$|^eg\./.test(k)) assert.match(ar[k], AR, k + ' reads in Arabic');
   }
   assert.equal(ar['lang.more'], 'English', 'the switch is written in the language it switches to');

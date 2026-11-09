@@ -147,6 +147,8 @@ test('a Breguet pomme wall never reaches past the pomme, so the circle radius st
 const guideCtx = vm.createContext({S:null, set:(o,p,v)=>{const k=p.split('.');let t=o;while(k.length>1)t=t[k.shift()];t[k[0]]=v;}});
 vm.runInContext(chunk('/* GUIDE-PURE-BEGIN', '/* GUIDE-PURE-END */')+chunk('  const esc2 = s =>', '  const chips = ')+chunk('  const isHex = ', '  const pale = ')
   +chunk('  const STONE_TONE = {', '  const useStone')+chunk('  function put(', '  function apply(')
+  // put writes through the full editor's fieldInput; here that is only the write itself
+  +'\nfunction fieldInput(p, v){ set(S, p, v); }'
   +'\nthis.g={gv,printClash,put,contrastOf};', guideCtx);
 test("a choice's value survives an apostrophe: Tiger's eye can be tapped", () => {
   const attr = guideCtx.g.gv("tiger's eye");
