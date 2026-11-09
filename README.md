@@ -118,8 +118,8 @@ Designs that sync by themselves would need accounts and a backend.
 ## Simple mode and the full editor
 
 The studio opens in **simple mode**: one panel that walks through a watch in
-eight steps — **Start** (a fresh standard dial, a preset, a reference design
-or a saved version), **Case**, **Dial** (colour, surface, minute track),
+eight steps — **Start** (continue the design you were on, or begin from a
+plain dial, a preset, a reference design or a saved version), **Case**, **Dial** (colour, surface, minute track),
 **Markers** (numeral system and font, how they are made, colour, size and
 position, or index shapes), **Hands** (shape, metal, lume, seconds hand),
 **Text** (the built-in NOREL logo or its shield alone, your own logo uploaded as a PNG, JPG or SVG, or a name typed in a font; two lines of lettering and where they sit), **Date**
@@ -127,15 +127,73 @@ position, or index shapes), **Hands** (shape, metal, lume, seconds hand),
 design check, saving and sharing). Figures and indices under a day or date
 window are left off, as a dial maker would.
 
-Nothing has been taken away. Every step ends with a link to all the settings
+Nothing has been taken away. Each step has a link to all the settings
 for that part, which opens the **full editor** at it, and the **Full editor**
 button in the top bar switches over entirely (**Simple mode** switches back).
 Both drive the same design, so undo, versions and exports see every change
 whichever one made it. The browser remembers which one you used last.
 
-On a phone the watch keeps the top of the screen and the steps the bottom.
-Each row of choices scrolls sideways, and the full editor is under **⋯**.
-A first visit opens on the standard dial.
+Since v3.0.0 simple mode moves differently:
+
+- **Where you are.** On a phone the panel opens with "Dial · step 3 of 8"
+  and a numbered bar: finished steps are gold, the current one black. Tap a
+  number to jump, or the label for a list of all eight steps with what each
+  still needs. On a desktop the step pills carry the same ticks and dots.
+- **Short tabs.** Long steps are cut into tabs that each fit about one
+  screen: Case (Shape · Metal and strap), Dial (Colour · Surface · Minute
+  track), Markers (Style · Font or Shape · Made by · Size, plus Gems when
+  the dial has them), Hands (Shape · Seconds), Text (Logo · Lines · Colour)
+  and Date (Day window · Day lettering · Date window). The day window's
+  width is Narrow, Standard or Wide (the degree slider that repeated it is
+  in the full editor), and a design with another width shows it as a chip.
+- **The watch is framed on the part you edit:** the case on Start, Case and
+  Finish, the whole dial for Dial, Markers, Hands and Text, the centre for
+  the seconds hand, and a close-up of the day or date window on Date.
+  **Whole watch** (top right of the watch) shows everything and switches
+  back. Choosing a design or a case frames it again, so a 41 mm NOREL is no
+  longer shown at the 36 mm Vernoy's framing.
+- **Start** shows the design you are working on first, with **Continue
+  designing** (it returns to the step you were on), then other starting
+  points (**See all** shows them as a grid) and your saved versions. A first
+  visit opens on the NOREL B6098G-A1, the watch being made. A reload within
+  half an hour goes straight back to the step you were on.
+- **Choices name themselves.** Every swatch has its name under it, and the
+  chosen colour reads "Powder blue · nearest Pantone 651 C" (the hex code is
+  in the full editor). Everything you tap is at least 44 pt, and a toggle's
+  words switch it as well as the switch.
+- **Sliders** show their value in millimetres (a position reads "6.6 mm
+  below the centre"), have − and + (↑ and ↓ for positions) for fine steps,
+  holding repeats, a mark where the design started and **↺ Back to …** once
+  moved. One press, or one hold, is one undo step.
+- **Warnings** sit on the step that can fix them, in plain words with the fix
+  beside them where there is one: "The printing won't show on this dial ·
+  Print in white", "The numerals run under the bezel · Make them fit", "The
+  day window reaches the 11 and 1 · Narrow to 33.5°", "The magnifier doesn't
+  cover the whole date". The step's number in the bar and its tab carry an
+  amber dot. Finish lists them all the same way.
+- **A tap lights at once**; the watch is drawn a frame later, with a slow
+  shimmer if it takes a while. Thumbnails are kept until something they show
+  changes.
+- **Finish** ends with **Done ✓**: it saves a version under the design's
+  name and offers Share, Export or Keep refining. Messages appear over the
+  foot of the watch, never over Next.
+- **Preview time.** While you edit, the seconds hand rests at 37 s rather
+  than across the lettering at 6, and on the Text step it is left out. Only
+  the picture on screen changes: the design, its exports and every saved
+  file keep the time they were saved with.
+- **On its side**, a phone shows the watch on the left and the steps on the
+  right.
+
+All the words simple mode adds are in one table (`GSTR` in `index.html`), so
+an Arabic interface can be added by translating it.
+
+**One glossary.** Both modes use the same words: the full editor shows its
+drop-down values by name (Sunburst, Guilloché, Pearl sheen rather than
+`sunburst`, `guilloche`, `mop`), calls the date lens the **Magnifier**, the
+text component **Text**, and the ⋯ menu's save **Save version**. The values
+stored in a design file do not change. In the full editor at laptop widths
+the toolbar sits tighter, and on a narrower window it takes a second row
+rather than pushing Share and Export off the screen.
 
 ## ١١ and ١ beside the day window
 
@@ -188,8 +246,8 @@ rhodonite, sodalite, carnelian, jade, onyx, snowflake obsidian, opal, white
 onyx, pietersite, red jasper), each drawn from its photographed slab.
 **Mother of pearl** uses the photographed nacre slab. Where the printing
 (numerals, printed markers, logo and text, minute track) would not read on
-the dial, a note says so under the colours and a button sets it to white,
-or to navy on a pale dial. This works for every dial colour, not only
+the dial, a warning says so at the top of the Dial, Markers and Text steps
+and a button sets it to white, or to navy on a pale dial. This works for every dial colour, not only
 stones: the test is the contrast against the dial colour, or for a stone
 against the slab's measured average tone. (The full editor's **mop** finish
 is a pearl sheen over the dial colour, not the nacre slab; simple mode shows
@@ -197,13 +255,18 @@ it as **Pearl sheen**.)
 
 ## Numeral and lettering colours
 
-In simple mode the numerals, hour markers, minute track and text each take
-**Print colours** (28 inks a dial printer is asked for, from cream and
-vintage lume to teal, burgundy and rose gold) or **Pantone**, the full
-library searchable by code (for example 289 C). The nearest Pantone is
-named under the swatches for any colour picked. The **+** swatch still
-takes any colour. **Text colour** colours all the lettering: the logo,
-the second line and the lower text.
+A dial is usually printed in one ink, so simple mode has one **Printing
+colour**. It is offered wherever something printed is edited (Dial → Minute
+track, Markers → Made by, Text → Colour), and choosing it there recolours
+everything printed in it: the logo and lettering, printed numerals or
+markers, and the minute track. Applied metal is not printing and keeps its
+metal. **Set the … separately** gives one part a colour of its own; **Use the
+printing colour** puts it back. The row shows seven inks (white, silver,
+navy, royal blue, black, gold, red) and the last colours you used; **More
+colours** opens the 28 print colours a dial printer is asked for and
+**Pantone**, the full library searchable by code (for example 289 C). The
+**Any** swatch still takes any colour. The day and date discs and their
+lettering are parts of the movement and keep their own colours.
 
 ## The NOREL case photograph
 

@@ -145,8 +145,9 @@ test('a Breguet pomme wall never reaches past the pomme, so the circle radius st
 });
 // Simple mode's own helpers, out of its IIFE.
 const guideCtx = vm.createContext({S:null, set:(o,p,v)=>{const k=p.split('.');let t=o;while(k.length>1)t=t[k.shift()];t[k[0]]=v;}});
-vm.runInContext(chunk('  const esc2 = s =>', '  const chips = ')+chunk('  const STONE_TONE = {', '  const useStone')+chunk('  function put(', '  function apply(')
-  +'\nthis.g={gv,printFix,put,contrastOf};', guideCtx);
+vm.runInContext(chunk('/* GUIDE-PURE-BEGIN', '/* GUIDE-PURE-END */')+chunk('  const esc2 = s =>', '  const chips = ')+chunk('  const isHex = ', '  const pale = ')
+  +chunk('  const STONE_TONE = {', '  const useStone')+chunk('  function put(', '  function apply(')
+  +'\nthis.g={gv,printClash,put,contrastOf};', guideCtx);
 test("a choice's value survives an apostrophe: Tiger's eye can be tapped", () => {
   const attr = guideCtx.g.gv("tiger's eye");
   assert.ok(!attr.includes("'"), 'no bare apostrophe left to close the attribute');
@@ -160,19 +161,20 @@ const guideState = over => {
   return s;
 };
 test('the contrast warning covers every dial colour, not only stones, and reads the lines\' own colour', () => {
+  const fix = () => { const c = guideCtx.g.printClash(); return c ? c.label : ''; };
   guideCtx.S = guideState({});
-  assert.equal(guideCtx.g.printFix(), '', 'navy on powder blue reads');
+  assert.equal(fix(), '', 'navy on powder blue reads');
   guideCtx.S = guideState({dial:{color:'#0E1F55'}});
-  assert.match(guideCtx.g.printFix(), /Print in white/, 'navy printing on a navy dial');
+  assert.equal(fix(), 'Print in white', 'navy printing on a navy dial');
   guideCtx.S = guideState({dial:{color:'#F4F2EC'}, numerals:{color:'#F4F4F2'}, minute:{color:'#F4F4F2'}, text:{color:'#F4F4F2', lineColor:'#F4F4F2'}});
-  assert.match(guideCtx.g.printFix(), /Print in navy/, 'white printing on a white dial');
+  assert.equal(fix(), 'Print in navy', 'white printing on a white dial');
   guideCtx.S = guideState({dial:{finish:'stone', stone:'lapis lazuli'}});
-  assert.match(guideCtx.g.printFix(), /lapis lazuli[\s\S]*Print in white/, 'a stone is judged by its slab');
+  assert.equal(fix(), 'Print in white', 'a stone is judged by its slab');
   // only the second line is navy: the logo and the figures are already white
   guideCtx.S = guideState({dial:{color:'#0E1F55'}, numerals:{color:'#F4F4F2'}, minute:{color:'#F4F4F2'}, text:{color:'#F4F4F2', lineColor:'#1F2D47'}});
-  assert.match(guideCtx.g.printFix(), /Print in white/, 'the lines are checked in lineColor');
-  guideCtx.S = guideState({dial:{color:'#0E1F55'}, numerals:{tech:'applied', color:'#1F2D47'}, minute:{color:'#F4F4F2'}, text:{color:'#1F2D47', lineColor:'#F4F4F2', logoTech:'applied metal'}});
-  assert.equal(guideCtx.g.printFix(), '', 'applied metal is not printing');
+  assert.equal(fix(), 'Print in white', 'the lines are checked in lineColor');
+  guideCtx.S = guideState({dial:{color:'#0E1F55'}, numerals:{tech:'applied', material:'metal', color:'#1F2D47'}, minute:{color:'#F4F4F2'}, text:{color:'#1F2D47', lineColor:'#F4F4F2', logoTech:'applied metal'}});
+  assert.equal(fix(), '', 'applied metal is not printing');
 });
 test('Text colour in simple mode colours the second line and lower text too', () => {
   guideCtx.S = guideState({});
