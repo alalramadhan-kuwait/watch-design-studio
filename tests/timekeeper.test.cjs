@@ -1,4 +1,5 @@
-// The second watch, the Time Keeper × Nivada (v3.5.0), run from the real
+// The second watch, the Time Keeper × Nivada (v3.5.0, its logo and split
+// SWISS MADE from v3.6.0), run from the real
 // source: its case, the photograph the dial is drawn into, the design its
 // Start card opens, and that it has no calendar. The page itself (the Start
 // row, opening the design, the photograph view) was checked with Playwright.
@@ -82,7 +83,8 @@ test('the design opens on that case with the dial of the reference render', () =
   assert.ok(design.sHand.tail >= 3, 'a long seconds tail');
   assert.equal(design.text.logo, 'Nivada'); assert.equal(design.text.logoMetal, 'rose gold');
   assert.equal(design.text.line2, 'GRENCHEN'); assert.equal(design.text.foot, 'TIME KEEPER');
-  assert.equal(design.minute.on, true);
+  // the reference dial has no minute track and no hour ticks: only the numerals
+  assert.equal(design.minute.on, false); assert.equal(design.hour.on, false); assert.equal(design.indices.on, false);
   // every radial figure fits the Ø27.50 opening
   assert.ok(n.radius + n.size / 2 < K.opening / 2);
   assert.ok(design.sHand.length < K.opening / 2);
@@ -117,4 +119,111 @@ test('simple mode is chosen before the page draws, so the full editor never show
   const headCss = source.slice(0, head);
   assert.match(headCss, /body\.guided \.shell > \.rail, body\.guided \.shell > \.props\{ display:none \}/);
   assert.match(headCss, /body\.guided #mBody > \.rail, body\.guided #mBody > \.props\{ display:none !important \}/);
+});
+
+// ---- v3.6.0: Nivada's shield and script, and text split either side of 6 ----
+const NIVADA = ['Nivada shield + script', 'Nivada shield', 'Nivada script'];
+test('the Nivada marks are built-in vector marks: defined, closed, and inside their own box', () => {
+  for (const k of NIVADA) {
+    const m = source.match(new RegExp('LOGO_MARKS\\["' + k.replace(/[+]/g, '\\+') + '"\\] = \\{w:([\\d.]+), d:"(M[^"]+)"\\}'));
+    assert.ok(m, k + ' is defined');
+    const w = +m[1], d = m[2];
+    assert.ok(w > 0 && d.endsWith('Z'), k + ' has a width and ends closed');
+    // every outline that is started is closed, and nothing but absolute moves, lines and curves is used
+    assert.equal((d.match(/M/g) || []).length, (d.match(/Z/g) || []).length, k + ': each outline is closed');
+    assert.doesNotMatch(d, /[a-yA-BD-KN-PR-Y]/, k + ': only M, L, C, Q and Z');
+    // the end points sit in the mark's box: 100 units high, w wide, centred on the origin
+    const ends = [...d.matchAll(/([MLCQ])([^MLCQZ]+)/g)].map(x => x[2].trim().split(/[\s,]+|(?=-)/).filter(Boolean).map(Number).slice(-2));
+    for (const [x, y] of ends) {
+      assert.ok(Math.abs(y) <= 50.5, `${k}: y ${y} inside the 100-unit height`);
+      assert.ok(Math.abs(x) <= w / 2 + 0.5, `${k}: x ${x} inside the ${w} width`);
+    }
+  }
+  // the shield has its rim, groove, field, the W's groove and the W: five outlines
+  const sh = source.match(/LOGO_MARKS\["Nivada shield"\] = \{w:[\d.]+, d:"([^"]+)"/)[1];
+  assert.equal((sh.match(/M/g) || []).length, 5);
+  // added after the NOREL marks, so no older mark moves in the list
+  assert.ok(source.indexOf('LOGO_MARKS["NOREL wordmark"]') < source.indexOf('LOGO_MARKS["Nivada shield + script"]'));
+  assert.ok(source.indexOf('LOGO_MARKS["Nivada script"]') < source.indexOf('const LOGO_MARK_IDS'));
+});
+
+const splitCtx = vm.createContext({});
+vm.runInContext(chunk('const AR_CHARS = ', 'const arText')
+  + 'const letterFam = () => "sans";\n'
+  + chunk('const runWidth = (() => {', 'const pt = (r,deg)')
+  + '\nthis.s={splitWords,splitPlace,splitLine};', splitCtx);
+const { splitWords, splitPlace, splitLine } = splitCtx.s;
+const near = (a, b, msg) => assert.ok(Math.abs(a - b) < 1e-9, `${msg}: ${a} vs ${b}`);
+
+test('the split line breaks at a bar, a middle dot or the middle space, and Arabic reads from the right', () => {
+  assert.deepEqual([...splitWords('SWISS MADE')], ['SWISS', 'MADE']);
+  assert.deepEqual([...splitWords('SWISS · MADE')], ['SWISS', 'MADE']);
+  assert.deepEqual([...splitWords('MADE IN | SWITZERLAND')], ['MADE IN', 'SWITZERLAND']);
+  assert.deepEqual([...splitWords('SWISS MADE QUARTZ MOVT')], ['SWISS MADE', 'QUARTZ MOVT']);
+  assert.deepEqual([...splitWords('AUTOMATIC')], ['AUTOMATIC', '']);
+  assert.deepEqual([...splitWords('  ')], ['', '']);
+  // the first word of an Arabic line is the one on the right of the 6
+  assert.deepEqual([...splitWords('صنع سويسري')], ['سويسري', 'صنع']);
+});
+
+test('split text sits symmetric about 6: mirrored places, the same radius, and the same gap to the 6', () => {
+  for (const [r, gap] of [[12.85, 2.0], [10, 0.5], [13.5, 4]]) {
+    // equal words mirror exactly
+    const [L, R] = splitPlace([2, 2], r, gap);
+    near(L.x, -R.x, 'x mirrored'); near(L.y, R.y, 'same height'); near(L.rot, -R.rot, 'turned opposite ways');
+    near(L.deg + R.deg, 360, 'clock angles mirror about 6'); assert.ok(L.x < 0 && R.x > 0 && L.y > 0, 'left and right of the 6, below centre');
+    near(Math.hypot(L.x, L.y), r, 'on the chosen circle'); near(Math.hypot(R.x, R.y), r, 'on the chosen circle');
+    assert.ok(L.deg > 180 && R.deg < 180, 'SWISS toward 7, MADE toward 5');
+    // unequal words keep the same clear space either side of the 6
+    const w = [2.4, 1.6], [A, B] = splitPlace(w, r, gap);
+    near((A.deg - 180) * Math.PI / 180 * r - w[0] / 2, gap, 'gap on the left');
+    near((180 - B.deg) * Math.PI / 180 * r - w[1] / 2, gap, 'gap on the right');
+    // laid along the circle, each word is turned by its own angle from the 6
+    near(A.rot, A.deg - 180, 'left word leans with the circle'); near(B.rot, B.deg - 180, 'right word leans with the circle');
+  }
+  // off, empty or switched off as a whole, it draws nothing
+  assert.equal(splitLine({ on: true, splitOn: false, split: 'SWISS MADE', splitSize: 0.6 }).length, 0);
+  assert.equal(splitLine({ on: true, splitOn: true, split: '', splitSize: 0.6 }).length, 0);
+  assert.equal(splitLine({ on: false, splitOn: true, split: 'SWISS MADE', splitSize: 0.6 }).length, 0);
+  const two = splitLine({ on: true, splitOn: true, split: 'SWISS MADE', splitSize: 0.6, splitR: 12.85, splitGap: 2 });
+  assert.deepEqual([...two].map(p => p.t), ['SWISS', 'MADE']);
+  assert.ok(two.every(p => p.r === 12.85 && p.size === 0.6));
+});
+
+test('the split line is drawn without a filter, and is offered in the full editor and simple mode in both languages', () => {
+  const draw = chunk('const split = splitLine(tx);', '\n    }\n');
+  assert.doesNotMatch(draw, /filter/);
+  assert.match(draw, /rotate\(/); assert.match(draw, /splitCurve === false/);
+  // the track and the pavé both leave room for it
+  assert.match(source, /for\(const p of splitLine\(tx\)\) out\.push\(\{deg: p\.deg/);
+  assert.match(source, /for\(const p of splitLine\(tx\)\)\{\n\s+const hh/);
+  // the full editor
+  const schema = chunk('const SCHEMA = {', '\nlet swGroup');
+  for (const k of ['text.splitOn', 'text.split"', 'text.splitFont', 'text.splitSize', 'text.splitR', 'text.splitGap', 'text.splitCurve'])
+    assert.ok(schema.includes('"' + k.replace(/"$/, '') + '"'), k + ' in the schema');
+  // simple mode's Text step, with its words in English and Arabic
+  const guide = chunk('/* GUIDED MODE — see the stylesheet note above.', '</script>');
+  assert.match(guide, /textIn\("text\.split", gT\("text\.field"\)/);
+  assert.match(guide, /else if\(path === "text\.split"\)\{ S\.text\.split = v; S\.text\.splitOn = !!v; \}/);
+  const strings = chunk('const GSTR = {en:{', 'const GWORD = {ar:{');
+  assert.match(strings, /"text\.split6":"Split either side of 6"/);
+  assert.match(strings, /"text\.split6":"مقسوم حول ٦"/);
+  const words = chunk('const GWORD = {ar:{', 'const gW = ');
+  for (const w of ['Space either side of 6', 'Lean with the curve', 'Distance from centre', ...NIVADA]) assert.match(words, new RegExp('"' + w.replace(/[+]/g, '\\+') + '":"[^"]*[؀-ۿ]'), w + ' has its Arabic');
+  // off by default, so no other design changes
+  assert.match(source, /splitOn:false, split:"SWISS MADE"/);
+});
+
+test('the Time Keeper × Nivada uses all three: the shield over the script, GRENCHEN under it, SWISS MADE split round the 6', () => {
+  const t = design.text;
+  assert.equal(t.logoMark, 'Nivada shield + script');
+  assert.equal(t.logoTech, 'applied metal'); assert.equal(t.logoMetal, 'rose gold');
+  assert.equal(t.line2, 'GRENCHEN'); assert.ok(t.line2Y > t.logoY, 'GRENCHEN under the lock-up');
+  assert.ok(t.logoY + t.logoSize / 2 < t.line2Y - t.line2Size / 2, 'the lock-up clears GRENCHEN');
+  assert.equal(t.splitOn, true); assert.equal(t.split, 'SWISS MADE'); assert.equal(t.splitCurve, true);
+  const [L, R] = splitLine(t);
+  assert.equal(L.t, 'SWISS'); assert.equal(R.t, 'MADE');
+  // near the edge, outside the numerals and inside the opening
+  assert.ok(t.splitR > design.numerals.radius && t.splitR + t.splitSize / 2 < K.opening / 2);
+  assert.ok(t.splitR > t.footY, 'below TIME KEEPER');
 });

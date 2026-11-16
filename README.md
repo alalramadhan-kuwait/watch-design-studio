@@ -197,6 +197,42 @@ stored in a design file do not change. In the full editor at laptop widths
 the toolbar sits tighter, and on a narrower window it takes a second row
 rather than pushing Share and Export off the screen.
 
+## Nivada's logo and SWISS MADE either side of 6 (v3.6.0)
+
+The Time Keeper × Nivada dial now carries what 3.5.0 could not show.
+
+- **Three built-in marks** under **Text → Logo → Artwork**: *Nivada shield +
+  script* (the lock-up the dial uses: the shield above the name), *Nivada
+  shield* and *Nivada script*. The shield is drawn as clean vector geometry
+  from the reference picture: a heater shield with a wider band along the
+  top, a fine groove inside the rim and a serif W standing in a groove of its
+  own, so in applied metal every edge catches the light. The script is
+  Gelasio SemiBold Italic (SIL Open Font Licence), set as outlines and widened
+  a tenth to the wordmark's proportions; it was the closest of about fifty
+  serif italics compared against the picture, and cleaner than a trace of a
+  wordmark only 25 pixels high. Like every mark, they take any technique and
+  metal; the design has them in applied rose gold with GRENCHEN printed under
+  them as the second line.
+- **Split either side of 6** (مقسوم حول ٦), a line of its own, so a dial
+  can carry it and a footer above the 6. Type the two words as one line: it
+  breaks at a `|`, else at a middle dot, else at the middle space (Arabic
+  puts its first word on the right). Both words are the same size and sit on
+  one circle, set by **Distance from centre**, with the same clear space
+  either side of the 6 (**Space either side of 6**) whatever their lengths;
+  **Lean with the curve** turns each along the circle, as on the reference,
+  or leaves them upright. The minute track breaks for them and a pavé dial
+  keeps clear of them. It is in simple mode's **Text → Lines** and in the
+  full editor's Text panel; off by default, so no other design changes.
+- **The design** now uses all three, and the fine minute track is gone: the
+  reference has no track and no hour ticks, only the numerals. The logo,
+  GRENCHEN, TIME KEEPER and SWISS MADE are placed and sized to the reference
+  to within about 0.1 mm.
+
+Remaining differences from the reference: the reference's GRENCHEN, TIME
+KEEPER and SWISS MADE are a heavier, tighter sans than the studio's line
+font; its script is the brand's own drawing, which Gelasio follows closely
+but not letter for letter; and its dial is vertically brushed.
+
 ## The Time Keeper × Nivada (v3.5.0)
 
 A second watch beside the NOREL: a Time Keeper (@timekeeperkw, Kuwait) edition
