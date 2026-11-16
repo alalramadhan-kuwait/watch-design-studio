@@ -1378,6 +1378,8 @@ const NOREL_R3 = {
   /* A rendered photograph of the head on its bracelet, from the STEP: 20 px/mm,
      dial centre in the middle, the opening Ø32.50 = 650 px of the 1040 width. */
   photoFile:"./app/case-norel-r3.jpg", photoCal:{w:1040, h:1560, cx:50, cy:50, dia:62.5},
+  /* what the photographs of the NOREL show: polished steel on its bracelet */
+  photoOwn:{finish:"polished"},
   calendar:{dayRin:11.27, dayRout:13.17, dayArcMax:53, dateC:9.95, dateRin:8.75, dateRout:11.15, dateW:2.40, dateH:2.00},
   back:["SELLITA SW240-1", "ALL STAINLESS STEEL", "10 ATM WATER RESISTANT"]
 };
@@ -1427,8 +1429,8 @@ const NOREL_R4 = Object.assign({}, NOREL_D, {
    its polished inner bevel meets the crystal), the 21.0 strap and 26.0 over
    the lug blocks, the 6.0 crown, the glass, the dial blank and the steel.
    They are to be replaced by Nivada's figures when a drawing arrives. The
-   drawn case (when the photograph is off) is the round case with a plain
-   bezel and a strap, an approximation of the octagon. */
+   drawn case (when the photograph is off) is the F77's own shape, drawn by
+   f77Case from the figures in f77 below. */
 const TK_NIVADA = {
   model:"Time Keeper × Nivada · F77", shape:"round", photo:false,
   ref:"Nivada Grenchen F77 · Time Keeper edition", steel:"S.S 316L (estimate)", wr:"10 ATM",
@@ -1449,6 +1451,32 @@ const TK_NIVADA = {
      centred at (556.5, 670.75), which lands at 50.00 / 47.84 % and spans
      58.63 % of the width here. The flange and the crystal's edge are kept. */
   photoFile:"./app/case-timekeeper-nivada.jpg", photoCal:{w:1040, h:1560, cx:50.00, cy:47.84, dia:58.63},
+  /* What the photograph itself shows, so a choice that matches it can stay
+     on the photograph: steel, brushed, on the black rubber strap. */
+  photoOwn:{finish:"brushed", strapColor:"#1E1E20"},
+  /* The drawn F77, measured off that photograph at 22.17 px/mm (the Ø27.50
+     opening is 609.8 px), in mm from the dial centre, so the drawing and
+     the photograph line up when the view is switched. The render sits the
+     case about 0.25 mm left of the dial; the drawing is centred. The bezel
+     is an octagon: its top and bottom flats 18.40 from the centre, its
+     sides 18.05 (the Ø36.0 across the flats), its four short diagonals
+     17.95, the corners rounded to 2.0, with a polished chamfer 0.60 wide
+     round its edge and the brushed top running in to Ø30.6, where a
+     polished bevel steps down to the crystal at Ø28.8. Its eight screws sit
+     two to each long flat, 6.45 mm either side of the axis and 2.95 mm in
+     from the edge (2.90 on the sides), heads Ø1.45. The case middle runs
+     straight flanks out from the lug ends (12.13 mm either side of the axis
+     at 22.30) to 17.58 at 7.50, and a shallow curve (R25.67) between them
+     that is 18.70 out at 3 and 9; its edge is a polished bevel 0.75 wide.
+     The lug blocks stand from 7.50 out to the flank, between the case's
+     top edge at 18.60 and their ends at 22.30. The crown is 18.10 to 21.20
+     out at 3, Ø6.0, and the strap is 23.9 wide at the lugs, narrowing to
+     19.4 at 32 mm from the centre. */
+  outline:"f77",
+  f77:{bezel:{v:18.40, h:18.05, d:17.95, r:2.0, chamfer:0.60, flat:30.60},
+       body:{top:18.60, lugEnd:22.30, flankX:12.13, sideX:17.58, sideY:7.50, bulge:18.70, sideR:25.67, bevel:0.75},
+       lugIn:7.50, screws:{along:6.45, inTop:2.95, inSide:2.90, d:1.45},
+       crown:{x0:18.10, x1:21.20}, strap:{w0:11.95, w1:9.70, y1:32.0}},
   back:["NIVADA GRENCHEN · TIME KEEPER", "ALL STAINLESS STEEL", "10 ATM WATER RESISTANT"]
 };
 const CASES = {[VERNOY_CASE.model]:VERNOY_CASE, [NOREL_R3.model]:NOREL_R3, [NOREL_D.model]:NOREL_D, [NOREL_R4.model]:NOREL_R4, [TK_NIVADA.model]:TK_NIVADA};
@@ -2064,7 +2092,7 @@ const APP_BUILD = "__BUILD__";
 /* The version people see, raised with every change that reaches them:
    major for a new way of working, minor for something new to do, patch for
    a fix. Shown on the watch screen, so any screenshot says which it was. */
-const APP_VERSION = "3.6.0";
+const APP_VERSION = "4.0.0";
 const APP_DATE = "__DATE__";
 
 /* Every route that replaces S passes through one of these three, which is
@@ -4627,12 +4655,138 @@ function buildSVG(st, o={}){
     body.push(`<circle r="${f(opening/2+0.30,3)}" fill="none" stroke="${shade(d.color,0.80)}" stroke-opacity="0.8" stroke-width="0.60"/>`);
     body.push(`<circle r="${f(opening/2+0.04,3)}" fill="none" stroke="${shade(M0,0.70)}" stroke-opacity="0.55" stroke-width="0.09"/>`);
   };
+  /* ---------------- CASE + STRAP (Nivada F77 top view) ----------------
+     The Time Keeper × Nivada drawn as the F77 it is, from the figures in
+     K.f77 (measured off its photograph): the rubber strap, the crown, the
+     case middle with its straight flanks and curved sides edged in a
+     polished bevel, the lug blocks, then the octagonal bezel, brushed with a
+     polished chamfer round it and eight screws, and the bevel and flange
+     falling to the crystal. Two-tone puts the bezel and crown in gold. */
+  const f77Case = () => {
+    const la = ((st.render && st.render.az) || 135);
+    const M0 = c.material, two = twoToneOf(st), MG = two ? LUX_GOLD[two] : M0;
+    const lgr = (stops, ang) => { const gid = id("fg"), a = (ang === undefined ? la : ang)*Math.PI/180;
+      defs.push(`<linearGradient id="${gid}" x1="${f(0.5-Math.cos(a)*0.5,3)}" y1="${f(0.5-Math.sin(a)*0.5,3)}" x2="${f(0.5+Math.cos(a)*0.5,3)}" y2="${f(0.5+Math.sin(a)*0.5,3)}">${stops}</linearGradient>`);
+      return gid; };
+    const st3 = (a_,b_,c_) => `<stop offset="0" stop-color="${a_}"/><stop offset="0.5" stop-color="${b_}"/><stop offset="1" stop-color="${c_}"/>`;
+    const F = K.f77, B = F.body, Z = F.bezel, k = (c.locked ? K.flat : c.diameter)/K.flat;
+    const P = (x, y) => `${f(x*k,3)} ${f(y*k,3)}`;
+    /* The case middle's edge, x at height y: the side curve between the
+       flanks, the straight flank beyond them (they meet at sideY), drawn in
+       by `inset` for the bevel's inner edge. */
+    const sl = (B.sideX - B.flankX)/(B.lugEnd - B.sideY), sec = Math.hypot(1, sl);
+    const xAt = (y, inset) => { const R = B.sideR - inset, ay = Math.abs(y);
+      return ay <= B.sideY ? B.bulge - inset - (R - Math.sqrt(Math.max(0, R*R - ay*ay))) : B.flankX + sl*(B.lugEnd - ay) - inset*sec; };
+    const edge = (sx, y0, y1, inset) => { let s = ""; for(let i = 0; i <= 48; i++){ const y = y0 + (y1 - y0)*i/48; s += `L${P(sx*xAt(y, inset), y)}`; } return s; };
+    /* the middle alone, from the top edge round to the top edge */
+    const middle = inset => `M${P(-xAt(-B.top, inset), -B.top)}` + edge(1, -B.top, B.top, inset) + edge(-1, B.top, -B.top, inset) + "Z";
+    /* the outline with the lug blocks, which stand on the flanks up to the lug ends */
+    const L = F.lugIn, E = B.lugEnd, q = 0.55;
+    const outline = `M${P(L, -B.top)}L${P(L, -E + q)}Q${P(L, -E)} ${P(L + q, -E)}` + edge(1, -E, E, 0)
+      + `L${P(L + q, E)}Q${P(L, E)} ${P(L, E - q)}L${P(L, B.top)}L${P(-L, B.top)}L${P(-L, E - q)}Q${P(-L, E)} ${P(-L - q, E)}`
+      + edge(-1, E, -E, 0) + `L${P(-L - q, -E)}Q${P(-L, -E)} ${P(-L, -E + q)}L${P(-L, -B.top)}Z`;
+    /* --- the rubber strap: tapering away from the lugs, with its tongue
+       between the lug blocks down to the case --- */
+    if(c.strap){
+      const sc = c.strapColor || "#1E1E20", W = F.strap, top = K.lugToLug/2 + 13;
+      const wAt = y => W.w0 + (W.w1 - W.w0)*(y - E)/(W.y1 - E);
+      for(const sy of [-1, 1]){
+        const band = `M${P(-L, sy*(B.top - 0.4))}L${P(-L, sy*(E - 0.4))}L${P(-W.w0, sy*(E - 0.4))}L${P(-wAt(top), sy*top)}L${P(wAt(top), sy*top)}L${P(W.w0, sy*(E - 0.4))}L${P(L, sy*(E - 0.4))}L${P(L, sy*(B.top - 0.4))}Z`;
+        body.push(`<path d="${band}" fill="${shade(sc,0.10)}"/>
+          <path d="M${P(-W.w0 + 0.9, sy*E)}L${P(-wAt(top) + 0.9, sy*top)}M${P(W.w0 - 0.9, sy*E)}L${P(wAt(top) - 0.9, sy*top)}" stroke="${tint(sc,0.18)}" stroke-opacity=".5" stroke-width="0.10" fill="none"/>`);
+      }
+    }
+    /* --- the crown at 3, its knurled barrel seen from above; the case covers its root --- */
+    {
+      const x0 = F.crown.x0*k, x1 = F.crown.x1*k, ch = K.crownD*k;
+      const cg = lgr(st3(shade(MG,0.42), tint(MG,0.6), shade(MG,0.34)), 90);
+      let fl = "";
+      for(let i = 1; i < 14; i++){ const fy = -ch/2 + ch*i/14;
+        fl += `<line x1="${f(x0+0.5,3)}" y1="${f(fy,3)}" x2="${f(x1-0.2,3)}" y2="${f(fy,3)}" stroke="${i%2?tint(MG,0.6):shade(MG,0.45)}" stroke-opacity=".85" stroke-width="0.12"/>`; }
+      body.push(`<rect x="${f(x0-0.4,3)}" y="${f(-K.crownTube/2,3)}" width="1.0" height="${f(K.crownTube,3)}" fill="${shade(MG,0.3)}"/>
+        <rect x="${f(x0,3)}" y="${f(-ch/2,3)}" width="${f(x1-x0,3)}" height="${f(ch,3)}" rx="0.7" fill="url(#${cg})" stroke="${shade(MG,0.62)}" stroke-opacity=".7" stroke-width="0.08"/>${fl}`);
+    }
+    /* --- the case: the polished bevel all round, then the brushed top --- */
+    const gEdge = lgr(`<stop offset="0" stop-color="${tint(M0,0.85)}"/><stop offset="0.45" stop-color="${tint(M0,0.35)}"/><stop offset="0.6" stop-color="${shade(M0,0.30)}"/><stop offset="1" stop-color="${tint(M0,0.55)}"/>`);
+    body.push(`<path d="${outline}" fill="url(#${gEdge})" stroke="${shade(M0,0.6)}" stroke-opacity=".7" stroke-width="0.09"/>`);
+    const gTop = lgr(st3(tint(M0,0.10), shade(M0,0.10), shade(M0,0.26)));
+    const topCase = middle(B.bevel);
+    body.push(`<path d="${topCase}" fill="url(#${gTop})"/>`);
+    /* the lug blocks, brushed, rounded over at their ends, standing on the case's top edge */
+    const gLug = lgr(st3(tint(M0,0.50), shade(M0,0.02), shade(M0,0.18)), 90);
+    for(const sy of [-1, 1]) for(const sx of [-1, 1]){
+      const xo = xAt(E, B.bevel), xi = L, y0 = sy*B.top, y1 = sy*(E - 0.25);
+      const xm = sx*Math.max(xi + 0.5, xAt(B.top, B.bevel));
+      body.push(`<path d="M${P(sx*xi, y0)}L${P(sx*xi, y1)}L${P(sx*xo, y1)}L${P(xm, y0)}Z" fill="url(#${gLug})" stroke="${shade(M0,0.5)}" stroke-opacity=".45" stroke-width="0.07"/>
+        <path d="M${P(sx*xi, y1)}L${P(sx*xo, y1)}" stroke="${tint(M0,0.9)}" stroke-opacity=".8" stroke-width="0.22"/>`);
+    }
+    body.push(`<path d="M${P(-xAt(B.top, B.bevel), -B.top)}L${P(xAt(B.top, B.bevel), -B.top)}M${P(-xAt(B.top, B.bevel), B.top)}L${P(xAt(B.top, B.bevel), B.top)}" stroke="${shade(M0,0.45)}" stroke-opacity=".55" stroke-width="0.08"/>`);
+    /* --- the bezel: an octagon with rounded corners --- */
+    const octa = (v, h, d, r) => {
+      const kk = d*Math.SQRT2, C = [[-(kk-v), -v], [kk-v, -v], [h, -(kk-h)], [h, kk-h], [kk-v, v], [-(kk-v), v], [-h, kk-h], [-h, -(kk-h)]];
+      const t = r*Math.tan(Math.PI/8), u = (a, b) => { const dx = b[0]-a[0], dy = b[1]-a[1], n = Math.hypot(dx, dy); return [dx/n, dy/n]; };
+      let s = "";
+      for(let i = 0; i < 8; i++){
+        const p = C[i], up = u(C[(i+7)%8], p), un = u(p, C[(i+1)%8]);
+        const a = [p[0] - up[0]*t, p[1] - up[1]*t], b = [p[0] + un[0]*t, p[1] + un[1]*t];
+        s += `${i ? "L" : "M"}${P(a[0], a[1])}A${f(r*k,3)} ${f(r*k,3)} 0 0 1 ${P(b[0], b[1])}`;
+      }
+      return s + "Z";
+    };
+    const rbi = Math.max(opening/2 + 0.6, K.bezelID/2*k), rf = Z.flat/2*k, ch = Z.chamfer;
+    const hole = r => ` M0 ${f(-r,3)}A${f(r,3)} ${f(r,3)} 0 1 0 0 ${f(r,3)}A${f(r,3)} ${f(r,3)} 0 1 0 0 ${f(-r,3)}Z`;
+    const outer = octa(Z.v, Z.h, Z.d, Z.r), inner = octa(Z.v - ch, Z.h - ch, Z.d - ch, Z.r - ch);
+    const gCh = lgr(`<stop offset="0" stop-color="${tint(MG,0.98)}"/><stop offset="0.3" stop-color="${tint(MG,0.75)}"/><stop offset="0.6" stop-color="${shade(MG,0.45)}"/><stop offset="0.8" stop-color="${shade(MG,0.2)}"/><stop offset="1" stop-color="${tint(MG,0.6)}"/>`);
+    body.push(`<path d="${outer}" fill="url(#${gCh})" stroke="${shade(MG,0.62)}" stroke-opacity=".7" stroke-width="0.08"/>`);
+    const GB = gemBezelSpec(st);
+    const gBz = lgr(st3(tint(MG,0.28), tint(MG,0.04), shade(MG,0.14)));
+    body.push(`<path d="${inner}${hole(rf)}" fill="url(#${gBz})" fill-rule="evenodd" stroke="${shade(MG,0.45)}" stroke-opacity=".35" stroke-width="0.05"/>`);
+    /* brushed straight across, as the photograph shows: fine lines a quarter of a millimetre apart */
+    {
+      const cid = id("fb"), lim = Z.v*k;
+      defs.push(`<clipPath id="${cid}"><path d="${inner}${hole(rf)}" clip-rule="evenodd"/></clipPath>`);
+      let a = "", b = "";
+      for(let i = 0, x = -Z.h*k; x < Z.h*k; x += 0.24, i++){ const sg = `M${f(x,2)} ${f(-lim,2)}V${f(lim,2)}`; if(i % 2) a += sg; else b += sg; }
+      body.push(`<g clip-path="url(#${cid})"><path d="${a}" stroke="${tint(MG,0.7)}" stroke-opacity=".16" stroke-width="0.07"/><path d="${b}" stroke="${shade(MG,0.3)}" stroke-opacity=".08" stroke-width="0.06"/></g>`);
+    }
+    /* a gem-set bezel is a ring of gold and stones over the brushed top */
+    if(GB) body.push(gemBezelSVG(GB, {inner:[0, 0, rbi, rbi], outer:[0, 0, K.bezelOD/2*k, K.bezelOD/2*k]}, la*Math.PI/180, {id, defs, grads:new Map()}));
+    /* --- the eight screws, two on each long flat, their slots turned a little --- */
+    if(!GB){
+      const S8 = F.screws, sd = S8.d*k, sp = [];
+      for(const sy of [-1, 1]) for(const sx of [-1, 1]){
+        sp.push([sx*S8.along, sy*(Z.v - S8.inTop), sx*sy > 0 ? 160 : 20]);
+        sp.push([sx*(Z.h - S8.inSide), sy*S8.along, sx*sy > 0 ? 125 : 55]);
+      }
+      const gS = lgr(st3(tint(MG,0.85), tint(MG,0.25), shade(MG,0.35)));
+      for(const [x, y, a] of sp){
+        const cx = x*k, cy = y*k, ra = a*Math.PI/180, dx = Math.cos(ra)*sd*0.40, dy = Math.sin(ra)*sd*0.40;
+        body.push(`<circle cx="${f(cx,3)}" cy="${f(cy,3)}" r="${f(sd/2 + 0.08,3)}" fill="${shade(MG,0.45)}" fill-opacity=".55"/>
+          <circle cx="${f(cx,3)}" cy="${f(cy,3)}" r="${f(sd/2,3)}" fill="url(#${gS})" stroke="${shade(MG,0.6)}" stroke-width="0.06"/>
+          <line x1="${f(cx-dx,3)}" y1="${f(cy-dy,3)}" x2="${f(cx+dx,3)}" y2="${f(cy+dy,3)}" stroke="${shade(MG,0.62)}" stroke-width="0.20" stroke-linecap="round"/>`);
+      }
+    }
+    /* --- the polished bevel down from the brushed top, then the flange to the opening --- */
+    if(!GB){
+      const gLand = lgr(`<stop offset="0" stop-color="${tint(MG,0.95)}"/><stop offset="0.4" stop-color="${tint(MG,0.45)}"/>
+      <stop offset="0.6" stop-color="${shade(MG,0.25)}"/><stop offset="1" stop-color="${tint(MG,0.7)}"/>`);
+      body.push(`<path d="${annulus(rf, rbi)}" fill="url(#${gLand})" fill-rule="evenodd"/>`);
+      body.push(`<circle r="${f(rf,3)}" fill="none" stroke="${shade(MG,0.5)}" stroke-opacity=".55" stroke-width="0.07"/>`);
+    }
+    /* the flange is a light steel ring in the photograph, with fine rings where the crystal sits */
+    const gF = lgr(`<stop offset="0" stop-color="${tint(M0,0.60)}"/><stop offset="0.5" stop-color="${tint(M0,0.10)}"/><stop offset="1" stop-color="${shade(M0,0.22)}"/>`);
+    body.push(`<path d="${annulus(rbi, opening/2)}" fill="url(#${gF})" fill-rule="evenodd"/>`);
+    body.push(`<circle r="${f(rbi,3)}" fill="none" stroke="${shade(M0,0.55)}" stroke-opacity=".6" stroke-width="0.08"/>`);
+    body.push(`<circle r="${f((rbi + opening/2)/2,3)}" fill="none" stroke="${shade(M0,0.35)}" stroke-opacity=".4" stroke-width="0.05"/>`);
+    body.push(`<circle r="${f(opening/2+0.12,3)}" fill="none" stroke="${shade(d.color,0.55)}" stroke-opacity="0.45" stroke-width="0.24"/>`);
+    body.push(`<circle r="${f(opening/2+0.02,3)}" fill="none" stroke="${shade(M0,0.70)}" stroke-opacity="0.55" stroke-width="0.06"/>`);
+  };
   /* ---------------- CASE + STRAP (RD26-0172 top view) ----------------
      The bezel is a rolled dome, not a flat ring: an outer flank, a broad
      bright crown, then a circular chamfer falling into the dial opening.
      Every gradient runs along the scene light rather than a fixed
      decorative diagonal. */
-  if(scope==="full" && c.on && K.shape === "round") roundCase();
+  if(scope==="full" && c.on && K.shape === "round") (K.outline === "f77" ? f77Case : roundCase)();
   else if(scope==="full" && c.on){
     const la = ((st.render && st.render.az) || 135)*Math.PI/180;
     const lx = Math.cos(la), ly = Math.sin(la);
@@ -9112,7 +9266,9 @@ function buildTemplate(st, o){
   const cx = IW*T.cx/100, cy = IH*T.cy/100;
   const dPx = IW*T.dia/100;                 // the O30.50 opening, in image px
   const openMM = K.opening;
-  const insert = buildSVG(st, {scope:"insert", tag:"ins", matPx:o.matPx});
+  /* insTag keeps the dial's ids apart when several photographs share a page
+     (simple mode's cards); material:false leaves out the surface raster */
+  const insert = buildSVG(st, {scope:"insert", tag:o.insTag || "ins", matPx:o.matPx, material:o.material});
   const inner = insert.replace(/^<svg[^>]*viewBox="([^"]+)"/, (m,vb)=>{
     const [vx,vy,vw] = vb.split(/\s+/).map(Number);
     const side = dPx*vw/openMM;               // map the mm viewBox onto the aperture
@@ -13197,7 +13353,7 @@ body.guided .stage.gPhoto{ background:#fff }
 .gSteps button.done b{ background:var(--ds-brand); color:#15181C }
 .gSteps button.warn::after, .gProgBar button.warn::after{ content:""; position:absolute; top:1px; right:1px; width:9px; height:9px; border-radius:50%;
   background:#F29A0E; box-shadow:0 0 0 2px var(--ds-panel) }
-/* where you are, on a phone: "Dial · step 3 of 8" and a numbered bar */
+/* where you are, on a phone: "Dial · step 2 of 7" and a numbered bar */
 .gProg{ display:none }
 .gTabs[hidden]{ display:none !important }
 .gTabs{ display:flex; margin:2px 16px 8px; border-radius:12px; background:var(--ds-fill, rgba(120,120,128,.12)); flex:none; position:relative }
@@ -13345,7 +13501,7 @@ body.guided .stage.gPhoto{ background:#fff }
 .gCheck.warn{ border-color:var(--g-warn-line); background:var(--g-warn-bg) }
 .gCheck ul{ margin:6px 0 0; padding-left:18px } .gCheck li{ margin:3px 0 }
 #gModeBtn{ white-space:nowrap }
-/* the Start step: the design you are on first, then other places to begin */
+/* the top of the Case step: the design you were on, your watches, then "Start from…" */
 .gHero{ display:flex; gap:12px; align-items:center; border:1.5px solid var(--ds-brand); background:#FBF8F1; border-radius:14px; padding:10px; margin:4px 0 6px }
 .gHero .gPic{ flex:0 0 96px; width:96px; height:96px; border-radius:10px; background:#F3F2EE; overflow:hidden }
 .gHero .gPic svg{ width:100%; height:100%; display:block }
@@ -13356,7 +13512,7 @@ body.guided .stage.gPhoto{ background:#fff }
 .gWelcome{ font:600 21px/1.2 var(--sans); margin:4px 0 2px; letter-spacing:-.015em; color:var(--ds-text) }
 .gCards.all{ display:grid !important; grid-template-columns:repeat(auto-fill,minmax(96px,1fr)); overflow:visible !important; margin:0 !important; padding:2px 0 6px !important }
 .gCards.all .gCard{ flex:none }
-/* the list of all eight steps, over the panel */
+/* the list of all seven steps, over the panel */
 .gList{ position:absolute; inset:0; z-index:12; background:var(--ds-panel); display:flex; flex-direction:column }
 .gList header{ display:flex; align-items:center; justify-content:space-between; padding:6px 6px 4px 16px; flex:none; font:600 17px var(--sans); color:var(--ds-text) }
 .gList header button{ width:44px; height:44px; border:0; background:none; font-size:17px; color:var(--ds-text-2); cursor:pointer }
@@ -13436,6 +13592,22 @@ body.guided .stage.gPhoto{ background:#fff }
 /* its touch target is 44 px tall, drawn 36 */
 #gFrameBtn::before{ content:""; position:absolute; left:0; right:0; top:-4px; bottom:-4px }
 body.guided #gFrameBtn{ display:block }
+/* "Show the real photo", over the top of the watch (messages take its foot)
+   whenever the drawing stands in for a case that has a photograph: dark and
+   plain to see */
+#gPhotoBtn{ display:none; position:absolute; left:50%; top:58px; transform:translateX(-50%); z-index:7; min-height:44px; padding:0 18px 0 14px;
+  border-radius:999px; border:0; background:var(--ds-text, #1d1d1f); color:var(--ds-panel, #fff); font:600 15px/1 var(--ds-font, -apple-system, sans-serif);
+  align-items:center; gap:8px; white-space:nowrap; cursor:pointer; box-shadow:0 4px 14px rgba(0,0,0,.22) }
+#gPhotoBtn svg{ width:20px; height:20px; flex:none }
+body.guided #gPhotoBtn:not([hidden]){ display:inline-flex }
+body:not(.guided) #gStartMore{ display:none }
+/* the "Start from…" row on the Case step: a plain dial, a style, a saved version */
+.gStartRow{ display:flex; width:100%; align-items:center; justify-content:space-between; gap:10px; min-height:52px; margin:12px 0 4px; padding:8px 14px;
+  border:1px solid var(--ds-border); border-radius:12px; background:var(--ds-panel); color:var(--ds-text); cursor:pointer; text-align:start; font:inherit }
+.gStartRow b{ display:block; font:600 15px/1.25 var(--sans) }
+.gStartRow small{ display:block; font-size:13px; color:var(--ds-text-2); margin-top:2px; line-height:1.3 }
+.gStartRow i{ font-style:normal; font-size:20px; color:var(--ds-text-2) }
+.gStartRow.on{ border-color:var(--ds-brand) }
 /* while a choice is being drawn, a slow shimmer on the watch if it takes a while */
 #stage.gBusy::after{ content:""; position:absolute; inset:0; pointer-events:none; z-index:5;
   background:linear-gradient(100deg, transparent 30%, rgba(255,255,255,.28) 50%, transparent 70%) -100% 0/200% 100% no-repeat;
@@ -13530,7 +13702,7 @@ body.guided #gFrameBtn{ display:block }
   .gFoot button{ height:44px; font-size:15px }
   .gHero .gPic{ flex-basis:72px; width:72px; height:72px }
 }
-/* English or Arabic, on the Start step: two chips, each in its own language */
+/* English or Arabic, at the top of the Case step: two chips, each in its own language */
 .gWelcomeRow{ display:flex; align-items:center; justify-content:space-between; gap:10px }
 .gLang{ display:flex; gap:6px; flex:none }
 .gLang button{ min-height:44px; min-width:64px; border:1px solid var(--ds-border); background:var(--ds-panel); color:var(--ds-text);
@@ -13590,10 +13762,9 @@ body:not(.guided) #gLangBtn{ display:none }
    headings are in GWORD below, by their English wording, because one word
    ("Gold", "None") turns up in many lists. */
 const GSTR = {en:{
-  "step.start":"Start", "step.case":"Case", "step.dial":"Dial", "step.markers":"Markers", "step.hands":"Hands",
+  "step.case":"Case", "step.dial":"Dial", "step.markers":"Markers", "step.hands":"Hands",
   "step.text":"Text", "step.calendar":"Date", "step.finish":"Finish",
-  "lead.start":"Pick a starting point. You can change everything after.",
-  "lead.case":"The case and what it is worn on.",
+  "lead.case":"Your watch, its case, and what it is worn on.",
   "lead.dial":"The colour, surface and minute track.",
   "lead.markers":"How the hours are shown.",
   "lead.hands":"The shape and metal of the hands.",
@@ -13604,19 +13775,19 @@ const GSTR = {en:{
   "prog.aria": (name, n, total) => `${name}, step ${n} of ${total}. Show all steps`,
   "steps.all":"All steps", "steps.close":"Close", "steps.done":"Done", "steps.todo":"Not visited yet", "steps.here":"You are here",
   "next": name => `Next: ${name}`, "back":"Back", "done":"Done ✓",
-  "tab.case.shape":"Shape", "tab.case.metal":"Metal and strap",
+  "tab.case.shape":"Watch", "tab.case.metal":"Metal and strap",
   "tab.dial.colour":"Colour", "tab.dial.surface":"Surface", "tab.dial.track":"Minute track",
   "tab.markers.style":"Style", "tab.markers.font":"Font", "tab.markers.shape":"Shape", "tab.markers.made":"Made by", "tab.markers.size":"Size", "tab.markers.gems":"Gems",
   "tab.hands.shape":"Shape", "tab.hands.seconds":"Seconds",
   "tab.text.logo":"Logo", "tab.text.lines":"Lines", "tab.text.colour":"Colour",
   "tab.calendar.day":"Day window", "tab.calendar.daylook":"Day lettering", "tab.calendar.date":"Date window",
-  "start.welcome":"Welcome back", "start.welcomeSub":"Pick up where you stopped, or start something new.",
-  "start.first":"Your watch", "start.firstSub":"The NOREL B6098G-A1 is the watch being made. Start from it, or pick another starting point.",
-  "start.continue":"Continue designing", "start.begin":"Start designing",
+  "start.welcome":"Welcome back",
+  "start.first":"Your watch", "start.firstSub":"The NOREL B6098G-A1 is the watch being made. Pick one of your watches, then its case below.",
+  "start.continue":"Continue designing",
   "start.edited": (when, stepName) => stepName ? `Edited ${when} · you were on ${stepName}` : `Edited ${when}`,
   "start.today":"today", "start.yesterday":"yesterday",
-  "start.new":"Start something new", "start.other":"Or start from",
-  "start.seeAll": n => `See all ${n} ›`, "start.fewer":"Show fewer",
+  "start.from":"Start from…", "start.fromSub": n => `Start something new: a plain dial, a style or a saved version (${n})`,
+  "start.fromHint":"A plain dial, a style or a saved version",
   "start.versions": n => `Your versions (${n})`, "start.version":"Saved version",
   "start.loaded":"Loaded. Undo brings back the design before.", "start.fresh":"A plain dial. Undo brings back the design before.",
   "card.plain":"Plain dial", "card.plainSub":"Blank start", "card.norel":"NOREL B6098G-A1", "card.norelSub":"Powder blue",
@@ -13624,11 +13795,11 @@ const GSTR = {en:{
   "card.pave":"NOREL · diamond-set numerals", "card.paveSub":"Line-set figures, to review",
   "card.vernoy":"Vernoy", "card.study":"Style study",
   "start.yours":"Your watches", "card.tk":"Time Keeper × Nivada", "card.tkSub":"Silver and rose gold",
-  "case.tk":"Time Keeper × Nivada", "case.tkSub":"37 mm · rubber strap",
+  "case.tk":"Nivada F77 · Time Keeper", "case.tkSub":"37 mm · rubber strap",
   "case.norel":"NOREL", "case.norelSub":"41 mm round · current drawing", "case.vernoy":"Vernoy cushion", "case.vernoySub":"36 mm · strap",
   "case.r3":"NOREL R3", "case.r3Sub":"Earlier drawing", "case.d":"NOREL Concept D", "case.dSub":"Earlier proposal",
-  "case.earlier":"Earlier NOREL drawings", "case.metal":"Metal", "case.finish":"Finish",
-  "case.photoNote":"The photograph shows the steel case. Choosing a metal or finish shows the drawing instead.",
+  "case.cases":"Case", "case.earlier":"Earlier NOREL drawings", "case.metal":"Metal", "case.finish":"Finish",
+  "case.photoNote":"The photograph is the real watch in steel. Steel stays on it; a metal, finish or strap it cannot show switches to the drawing, and “Show the real photo” brings it back.",
   "frame.whole":"Whole watch", "frame.back": part => `Back to the ${part}`,
   "part.case":"case", "part.dial":"dial", "part.day":"day window", "part.date":"date window", "part.centre":"centre",
   "ink.title":"Printing colour", "ink.uses": list => `Used for the ${list}.`,
@@ -13688,8 +13859,12 @@ const GSTR = {en:{
   "day.bothNote":"Both names in every position of the disc, the Arabic on the right. Sellita must confirm a bilingual SW240-1 day disc.",
   "day.altNote":"The disc carries the week in Arabic and in English, one after the other, and setting the day picks which shows. Sellita must confirm a bilingual SW240-1 day disc.",
   "fin.openCheck":"Open the design check →",
-  "toast.drawnCase":"Showing the drawn case: the photograph cannot show this.",
-  "case.photoGold":"Blue Creations' photograph of the steel watch: gold is laid onto it. A finish or a strap shows the drawing instead.",
+  "toast.drawnCase":"Showing the drawing: the photograph cannot show this. “Show the real photo” goes back to it.",
+  "case.photoGold":"Blue Creations' photograph of the steel watch: gold and two-tone are laid onto it. A finish or a strap it cannot show switches to the drawing.",
+  "photo.show":"Show the real photo", "photo.on":"Showing the real photo.", "photo.again":"Back on the real photo.",
+  "photo.changed": list => `Showing the real photo: ${list}, as photographed.`,
+  "photo.steel":"steel", "photo.plainBezel":"the plain bezel", "photo.finish": f => `${f.toLowerCase()} finish`,
+  "photo.strap":"the strap shown", "photo.bracelet":"the bracelet shown", "photo.blackStrap":"the black strap",
   "case.gemNote": (n, ct, metal) => `${n} stones · ≈ ${ct} ct · set in 18k ${metal}. Blue Creations would have to make this bezel.`,
   "case.gemRound":"Round brilliants are drawn on the round NOREL case only.",
   "dial.paveNote": (n, ct) => `${n} stones · ≈ ${ct} ct. A pavé dial is 18k gold about 0.8–1.0 mm thick, not the 0.40 mm brass blank: Blue Creations to confirm.`,
@@ -13727,10 +13902,9 @@ const gT = (k, ...a) => { const L = GSTR[GLANG] || GSTR.en; let s = L[k]; if(s =
    they are printed. */
 const arCount = (n, one, two, few, many) => n === 1 ? one : n === 2 ? two : `${n} ${n >= 3 && n <= 10 ? few : many}`;
 GSTR.ar = {
-  "step.start":"البداية", "step.case":"القالب", "step.dial":"الميناء", "step.markers":"المؤشرات", "step.hands":"العقارب",
+  "step.case":"القالب", "step.dial":"الميناء", "step.markers":"المؤشرات", "step.hands":"العقارب",
   "step.text":"الكتابة", "step.calendar":"التاريخ", "step.finish":"المراجعة",
-  "lead.start":"اختر نقطة بداية، وتستطيع تغيير كل شيء بعدها.",
-  "lead.case":"القالب، والسوار أو الحزام.",
+  "lead.case":"ساعتك، وقالبها، والسوار أو الحزام.",
   "lead.dial":"اللون والسطح ومسار الدقائق.",
   "lead.markers":"كيف تظهر الساعات على الميناء.",
   "lead.hands":"شكل العقارب ومعدنها.",
@@ -13741,19 +13915,19 @@ GSTR.ar = {
   "prog.aria": (name, n, total) => `${name}، الخطوة ${n} من ${total}. عرض كل الخطوات`,
   "steps.all":"كل الخطوات", "steps.close":"إغلاق", "steps.done":"تمّت", "steps.todo":"لم تُفتح بعد", "steps.here":"أنت هنا",
   "next": name => `التالي: ${name}`, "back":"رجوع", "done":"تم ✓",
-  "tab.case.shape":"الشكل", "tab.case.metal":"المعدن والحزام",
+  "tab.case.shape":"الساعة", "tab.case.metal":"المعدن والحزام",
   "tab.dial.colour":"اللون", "tab.dial.surface":"السطح", "tab.dial.track":"مسار الدقائق",
   "tab.markers.style":"النوع", "tab.markers.font":"الخط", "tab.markers.shape":"الشكل", "tab.markers.made":"الصنع", "tab.markers.size":"المقاس", "tab.markers.gems":"الأحجار",
   "tab.hands.shape":"الشكل", "tab.hands.seconds":"الثواني",
   "tab.text.logo":"الشعار", "tab.text.lines":"الأسطر", "tab.text.colour":"اللون",
   "tab.calendar.day":"نافذة اليوم", "tab.calendar.daylook":"كتابة اليوم", "tab.calendar.date":"نافذة التاريخ",
-  "start.welcome":"أهلاً بعودتك", "start.welcomeSub":"تابع من حيث توقفت، أو ابدأ تصميماً جديداً.",
-  "start.first":"ساعتك", "start.firstSub":"ساعة NOREL B6098G-A1 هي التي تُصنع الآن. ابدأ منها، أو اختر نقطة بداية أخرى.",
-  "start.continue":"تابع التصميم", "start.begin":"ابدأ التصميم",
+  "start.welcome":"أهلاً بعودتك",
+  "start.first":"ساعتك", "start.firstSub":"ساعة NOREL B6098G-A1 هي التي تُصنع الآن. اختر إحدى ساعاتك، ثم قالبها في الأسفل.",
+  "start.continue":"تابع التصميم",
   "start.edited": (when, stepName) => stepName ? `عُدِّلت ${when} · كنت في ${stepName}` : `عُدِّلت ${when}`,
   "start.today":"اليوم", "start.yesterday":"أمس",
-  "start.new":"ابدأ تصميماً جديداً", "start.other":"أو ابدأ من",
-  "start.seeAll": n => `عرض الكل (${n}) ‹`, "start.fewer":"عرض أقل",
+  "start.from":"ابدأ من…", "start.fromSub": n => `ابدأ تصميماً جديداً: ميناء بسيط، أو طراز جاهز، أو نسخة محفوظة (${n})`,
+  "start.fromHint":"ميناء بسيط، أو طراز جاهز، أو نسخة محفوظة",
   "start.versions": n => `نسخك (${n})`, "start.version":"نسخة محفوظة",
   "start.loaded":"فُتح التصميم. زر التراجع يعيد التصميم السابق.", "start.fresh":"ميناء بسيط. زر التراجع يعيد التصميم السابق.",
   "card.plain":"ميناء بسيط", "card.plainSub":"بداية فارغة", "card.norel":"NOREL B6098G-A1", "card.norelSub":"أزرق بودرة",
@@ -13761,11 +13935,11 @@ GSTR.ar = {
   "card.pave":"NOREL · أرقام مرصّعة بالألماس", "card.paveSub":"أرقام مرصوفة بالأحجار، للمراجعة",
   "card.vernoy":"Vernoy", "card.study":"دراسة تصميم",
   "start.yours":"ساعاتك", "card.tk":"تايم كيبر × نيفادا", "card.tkSub":"فضي وذهبي وردي",
-  "case.tk":"تايم كيبر × نيفادا", "case.tkSub":"37 ملم · حزام مطاطي",
+  "case.tk":"نيفادا F77 · تايم كيبر", "case.tkSub":"37 ملم · حزام مطاطي",
   "case.norel":"NOREL", "case.norelSub":"دائرية 41 ملم · الرسم الحالي", "case.vernoy":"Vernoy وسادية", "case.vernoySub":"36 ملم · حزام",
   "case.r3":"NOREL R3", "case.r3Sub":"رسم سابق", "case.d":"NOREL Concept D", "case.dSub":"مقترح سابق",
-  "case.earlier":"رسومات NOREL السابقة", "case.metal":"المعدن", "case.finish":"التشطيب",
-  "case.photoNote":"الصورة تُظهر القالب الستيل. اختيار معدن أو تشطيب يعرض الرسم بدلاً منها.",
+  "case.cases":"القالب", "case.earlier":"رسومات NOREL السابقة", "case.metal":"المعدن", "case.finish":"التشطيب",
+  "case.photoNote":"الصورة هي الساعة الحقيقية من الستيل. الستيل يبقى عليها، أما المعدن أو التشطيب أو الحزام الذي لا تُظهره فيعرض الرسم، وزر «اعرض الصورة الحقيقية» يعيدها.",
   "frame.whole":"الساعة كاملة", "frame.back": part => `العودة إلى ${part}`,
   "part.case":"القالب", "part.dial":"الميناء", "part.day":"نافذة اليوم", "part.date":"نافذة التاريخ", "part.centre":"المركز",
   "ink.title":"لون الطباعة", "ink.uses": list => `يُطبع به ${list}.`,
@@ -13825,8 +13999,12 @@ GSTR.ar = {
   "day.bothNote":"الاسمان معاً في كل موضع من القرص، والعربي على اليمين. على Sellita أن تؤكد توفر قرص يوم بلغتين لمحرك SW240-1 قبل طلب الميناء.",
   "day.altNote":"القرص يحمل أيام الأسبوع بالعربي وبالإنجليزي واحداً بعد الآخر، وضبط اليوم يحدد أيهما يظهر. على Sellita أن تؤكد توفر قرص يوم بلغتين لمحرك SW240-1 قبل طلب الميناء.",
   "fin.openCheck":"افتح فحص التصميم ←",
-  "toast.drawnCase":"يظهر الرسم الآن: الصورة لا تستطيع إظهار هذا الاختيار.",
-  "case.photoGold":"صورة Blue Creations للساعة الستيل، والذهب يُضاف عليها. اختيار تشطيب أو حزام يعرض الرسم بدلاً منها.",
+  "toast.drawnCase":"يظهر الرسم الآن: الصورة لا تستطيع إظهار هذا الاختيار. زر «اعرض الصورة الحقيقية» يعيدها.",
+  "case.photoGold":"صورة Blue Creations للساعة الستيل، والذهب واللونان يُضافان عليها. التشطيب أو الحزام الذي لا تُظهره يعرض الرسم.",
+  "photo.show":"اعرض الصورة الحقيقية", "photo.on":"تظهر الصورة الحقيقية.", "photo.again":"عادت الصورة الحقيقية.",
+  "photo.changed": list => `تظهر الصورة الحقيقية: ${list}، كما في الصورة.`,
+  "photo.steel":"الستيل", "photo.plainBezel":"الإطار السادة", "photo.finish": f => `التشطيب ${f}`,
+  "photo.strap":"إظهار الحزام", "photo.bracelet":"إظهار السوار", "photo.blackStrap":"الحزام الأسود",
   "case.gemNote": (n, ct, metal) => `${arCount(n, "حجر واحد", "حجران", "أحجار", "حجراً")} · ≈ ${ct} قيراط · مرصّعة في ${({"yellow gold":"ذهب أصفر", "rose gold":"ذهب وردي", "white gold":"ذهب أبيض"})[metal] || metal} عيار 18. على Blue Creations أن تصنع هذا الإطار.`,
   "case.gemRound":"الإطار المرصّع يُرسم على قالب NOREL الدائري فقط.",
   "dial.paveNote": (n, ct) => `${arCount(n, "حجر واحد", "حجران", "أحجار", "حجراً")} · ≈ ${ct} قيراط. الميناء المرصّع بالكامل من ذهب عيار 18 بسماكة 0.8–1.0 ملم تقريباً، لا من النحاس بسماكة 0.40 ملم: على Blue Creations أن تؤكد ذلك.`,
@@ -13977,9 +14155,9 @@ const GLOSS_OPT = {matte:"Matte", gloss:"Gloss", sunburst:"Sunburst", guilloche:
 const glossOpt = o => typeof o !== "string" ? o : (GLOSS_OPT[o] || (/^[a-z]/.test(o) ? o[0].toUpperCase() + o.slice(1) : o));
 
 /* Where to pick up after a reload. Back within half an hour, the step you
-   were on; after longer, the Start step, which offers to continue. */
+   were on; after longer, the first step, the Case, which offers to continue. */
 const G_RESUME_MS = 30*60*1000;
-const gResumeStep = (rec, now, steps) => (rec && rec.step > 0 && rec.step < (steps || 8) && now - (rec.t || rec.at || 0) < G_RESUME_MS) ? rec.step : 0;
+const gResumeStep = (rec, now, steps) => (rec && rec.step > 0 && rec.step < (steps || 7) && now - (rec.t || rec.at || 0) < G_RESUME_MS) ? rec.step : 0;
 
 /* The tabs a step is cut into, given what the design has on. A tab that
    would be empty is left out. */
@@ -14003,7 +14181,7 @@ function gTabsFor(k, o){
    or one of the two whole framings. g is the case geometry: the opening,
    the day window's centre and size, and the date window's centre. */
 function gFrameBox(k, tab, g){
-  if(k === "start" || k === "case" || k === "finish" || !g || !(g.opening > 0)) return "case";
+  if(k === "case" || k === "finish" || !g || !(g.opening > 0)) return "case";
   const O = g.opening, sq = (x, y, w) => ({x:+x.toFixed(3), y:+y.toFixed(3), w:+w.toFixed(3), h:+w.toFixed(3)});
   if(k === "calendar"){
     if((tab === "day" || tab === "daylook") && g.day) return sq(0, g.day.y, Math.max(g.day.w*1.7, O*0.4));
@@ -14015,7 +14193,7 @@ function gFrameBox(k, tab, g){
 }
 /* the part a framing shows, for the "Back to the …" pill */
 const gFramePart = (k, tab) => k === "calendar" ? (tab === "date" ? "date" : tab ? "day" : "dial")
-  : k === "hands" && tab === "seconds" ? "centre" : (k === "start" || k === "case" || k === "finish") ? "case" : "dial";
+  : k === "hands" && tab === "seconds" ? "centre" : (k === "case" || k === "finish") ? "case" : "dial";
 
 /* A slider's readout. kind is "mm", "deg", "pct", or "pos" for a position
    on the vertical line through the centre, where minus is towards 12. */
@@ -14421,11 +14599,14 @@ Object.assign(GWORD.ar, {
      visited, and when. Nothing here is part of the design. */
   let rec = null;
   try{ rec = JSON.parse(localStorage.getItem(GUIDE_KEY) || "null"); }catch(e){}
-  if(!rec) rec = {step:0, at:0, t:0, seen:[]};
+  if(!rec) rec = {step:0, at:0, t:0, seen:[], v:4};
   if(!Array.isArray(rec.seen)) rec.seen = [];
-  let step = gResumeStep(rec, Date.now(), 8);
+  /* Before 4.0 the steps began with Start, so every step kept here was one
+     further on than it is now. */
+  if(rec.v !== 4){ rec.step = Math.max(0, (+rec.step || 0) - 1); rec.seen = rec.seen.map(i => i - 1).filter(i => i >= 0); rec.v = 4; }
+  let step = gResumeStep(rec, Date.now(), 7);
   let holdGuide = false, guideDirty = false, colorDirty = false, textHold = false, textTimer = 0, palette = "studio", pgroup = "Blues", pfind = "", mpal = "ink";
-  /* which tab each step is on; whether the list of steps, the start cards or the wider ink choice is open */
+  /* which tab each step is on; whether the list of steps, the "Start from…" cards or the wider ink choice is open */
   const subTab = {}; let listOpen = false, startAll = false, inkMore = false, savedAs = "", frameWhole = false;
   /* parts whose printing colour is chosen on its own */
   const inkSep = new Set();
@@ -14449,7 +14630,10 @@ Object.assign(GWORD.ar, {
   /* swatches with the code under each, so a Pantone is read, not guessed */
   const swatchesNamed = (path, list, cur) => `<div class="gPgrid">${list.map(x =>
     `<button type="button" data-gset="${path}" data-gv='${gv(x[1])}' class="${String(cur).toUpperCase()===x[1].toUpperCase()?"on":""}" title="Pantone ${esc2(x[0])}"><i style="background:${x[1]}"></i><span>${esc2(x[0])}</span></button>`).join("")}</div>`;
-  const STEPS = ["start","case","dial","markers","hands","text","calendar","finish"].map(k => ({k, get t(){ return gT("step." + k); }, get lead(){ return gT("lead." + k); }}));
+  /* Seven steps, the case first: it is where the watch is chosen, so what
+     the Start step used to offer (your watches, continuing, starting from
+     something else) is at the top of it. */
+  const STEPS = ["case","dial","markers","hands","text","calendar","finish"].map(k => ({k, get t(){ return gT("step." + k); }, get lead(){ return gT("lead." + k); }}));
 
   /* ---- building blocks ---- */
   const esc2 = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -14647,21 +14831,54 @@ Object.assign(GWORD.ar, {
   }
   const DIAL_PRINT_PARTS = ["text","numerals","indices","minute"];
 
-  /* small pictures of a design, cropped to the case */
+  /* Small pictures of a design, cropped to the case. A case that has a
+     photograph, shown as one, is pictured in it as the screen shows it: the
+     real watch, not the drawing. */
   let thumbSeq = 0;
+  /* The photograph goes into the cards by a blob URL made once for each
+     picture, so a row of cards does not carry a copy of it apiece. */
+  const BLOB = new Map();
+  function blobOf(u){
+    if(BLOB.has(u)) return BLOB.get(u);
+    let b = u;
+    try{
+      const i = u.indexOf(","), bin = atob(u.slice(i + 1)), a = new Uint8Array(bin.length);
+      for(let j = 0; j < bin.length; j++) a[j] = bin.charCodeAt(j);
+      b = URL.createObjectURL(new Blob([a], {type:u.slice(5, u.indexOf(";"))}));
+    }catch(e){ b = u; }
+    BLOB.set(u, b);
+    return b;
+  }
+  /* the photograph view of a design, cropped as the drawn cards are; null
+     while the photograph, or its gold look, is still being made */
+  function photoThumb(st){
+    const K = caseOf(st);
+    if(!K.photoFile || !st.tpl || !st.tpl.on || !casePhoto(K) || photoPlan(st, K) === false) return null;
+    const n = ++thumbSeq, C = K.photoCal;
+    const svg = buildTemplate(st, {tag:"pt" + n, insTag:"pi" + n, material:false});
+    if(svg.indexOf(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${C.w} ${C.h}"`) !== 0) return null;
+    const px = C.w*C.dia/100/K.opening, side = K.flat*1.12*px, x = C.w*C.cx/100 - side/2, y = C.h*C.cy/100 - side/2;
+    return svg.replace(/^<svg[^>]*>/, `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${f(x,1)} ${f(y,1)} ${f(side,1)} ${f(side,1)}" preserveAspectRatio="xMidYMid slice">`)
+      .replace(/href="(data:image\/[a-z+]+;base64,[^"]{4000,})"/g, (m, u) => `href="${blobOf(u)}"`);
+  }
   function thumb(st, key){
-    return memo("t|" + key + "|" + keyOf(st), () => {
-      try{
-        const side = caseOf(st).flat*1.12;
-        return buildSVG(st, {tag:"g"+(++thumbSeq), material:false})
-          .replace(/viewBox="[^"]*"/, `viewBox="${-side/2} ${-side/2} ${side} ${side}"`);
-      }catch(e){ return ""; }
-    });
+    const ph = !!(caseOf(st).photoFile && st.tpl && st.tpl.on), k = "t|" + key + "|" + keyOf(st) + (ph ? "|photo" : "");
+    if(pics.has(k)) return pics.get(k);
+    if(ph){ try{ const p = photoThumb(st); if(p) return memo(k, () => p); }catch(e){} }
+    /* the drawing; while the photograph is on its way it stands in, and is
+       not kept, so the next paint tries the photograph again */
+    let svg = "";
+    try{
+      const side = caseOf(st).flat*1.12;
+      svg = buildSVG(st, {tag:"g"+(++thumbSeq), material:false})
+        .replace(/viewBox="[^"]*"/, `viewBox="${-side/2} ${-side/2} ${side} ${side}"`);
+    }catch(e){ return ""; }
+    return ph ? svg : memo(k, () => svg);
   }
   let noreRef = null, tkRef = null;
   /* the second watch, the Time Keeper × Nivada; a first visit still opens on the NOREL */
-  fetch("./designs/timekeeper-nivada.json").then(r => r.ok ? r.json() : null).then(j => { if(j){ tkRef = j; if(STEPS[step].k === "start") paint(); } }).catch(()=>{});
-  fetch("./designs/norel-concept-d-powder-blue.json").then(r => r.ok ? r.json() : null).then(j => { if(j){ noreRef = j; firstOpen(); if(STEPS[step].k === "start") paint(); } }).catch(()=>{});
+  fetch("./designs/timekeeper-nivada.json").then(r => r.ok ? r.json() : null).then(j => { if(j){ tkRef = j; casePhoto(caseOf(j)); if(STEPS[step].k === "case") paint(); } }).catch(()=>{});
+  fetch("./designs/norel-concept-d-powder-blue.json").then(r => r.ok ? r.json() : null).then(j => { if(j){ noreRef = j; casePhoto(caseOf(j)); firstOpen(); if(STEPS[step].k === "case") paint(); } }).catch(()=>{});
   /* On a first visit the studio opens on the watch being made, the NOREL,
      rather than on a generic dial: once nothing is stored on this device,
      neither work in progress nor a chosen default, and nothing has been
@@ -14669,7 +14886,7 @@ Object.assign(GWORD.ar, {
   let storedWork = null;
   /* (the store answers a missing key by refusing, so a refusal is "nothing stored") */
   const has = k => KV.get(k).then(v => !!v, () => false);
-  if(typeof KV !== "undefined") Promise.all([has(AUTOKEY), has("wds:default")]).then(r => { storedWork = r[0] || r[1]; firstOpen(); if(STEPS[step].k === "start") paint(); }).catch(() => { storedWork = true; });
+  if(typeof KV !== "undefined") Promise.all([has(AUTOKEY), has("wds:default")]).then(r => { storedWork = r[0] || r[1]; firstOpen(); if(STEPS[step].k === "case") paint(); }).catch(() => { storedWork = true; });
   /* a first visit: nothing stored and nothing yet changed here */
   const isFirst = () => !rec.at && storedWork !== true;
   function firstOpen(){
@@ -14768,7 +14985,7 @@ Object.assign(GWORD.ar, {
     h += `<p class="gNote">${gT("hr.covered")}</p>`;
     return h;
   }
-  /* the two NOREL examples on the Start step */
+  /* the two NOREL examples under "Start from…" */
   function gemExample(kind){
     const st = migrateHands(deep(BASE, noreRef));
     if(kind === "gems"){ applyMarkerPreset(st, "allDiamond"); st.meta.name = "NOREL — diamond hours"; return st; }
@@ -14994,44 +15211,49 @@ Object.assign(GWORD.ar, {
     const day = x => Math.floor((new Date(x.getFullYear(), x.getMonth(), x.getDate())).getTime()/864e5);
     const diff = day(n) - day(d);
     return diff <= 0 ? gT("start.today") : diff === 1 ? gT("start.yesterday") : d.toLocaleDateString(GLANG === "ar" ? "ar-u-nu-latn" : [], {day:"numeric", month:"short"}); };
+  /* The top of the Case step, where the watch is chosen: the watches being
+     made, the way back to the design last worked on, and "Start from…" for
+     a plain dial, a style or a saved version. */
+  function watchesBlock(){
+    const first = isFirst();
+    const ours = [], cards = [];
+    if(noreRef) ours.push({id:"norel", name:gT("card.norel"), sub:gT("card.norelSub"), st:migrateHands(deep(BASE, noreRef))});
+    if(tkRef) ours.push({id:"tk-nivada", name:gT("card.tk"), sub:gT("card.tkSub"), st:migrateHands(deep(BASE, tkRef))});
+    const card = c => `<button type="button" class="gCard" data-gstart="${esc2(c.id)}"><div class="gPic">${thumb(c.st, c.id)}</div><div class="gName">${esc2(c.name)}</div><div class="gSub">${esc2(c.sub)}</div></button>`;
+    /* English or Arabic, each written in its own language */
+    const langs = `<div class="gLang" role="group" aria-label="Language · اللغة">`
+      + [["en","English"],["ar","عربي"]].map(([l, w]) => `<button type="button" data-glang="${l}" lang="${l}" dir="${G_DIR[l]}" class="${GLANG === l ? "on" : ""}" aria-pressed="${GLANG === l}">${w}</button>`).join("")
+      + `</div>`;
+    const note = gT("lang.fullNote") ? ` <span class="gLangNote">${gT("lang.fullNote")}</span>` : "";
+    /* back after a while on a design left further on: the way back to it */
+    const back = !first && rec.step > 0 && rec.step < STEPS.length ? rec.step : 0;
+    let h = `<div class="gWelcomeRow"><p class="gWelcome">${first ? gT("start.first") : back ? gT("start.welcome") : gT("start.yours")}</p>${langs}</div>`;
+    if(first) h += `<p class="gNote" style="margin:0 0 6px">${gT("start.firstSub")}${note}</p>`;
+    else if(note) h += `<p class="gNote" style="margin:0 0 6px">${note}</p>`;
+    if(back) h += `<div class="gHero"><div class="gPic">${thumb(S, "cur")}</div><div><div class="gName">${esc2(S.meta.name)}</div>`
+      + `<div class="gSub">${rec.at ? esc2(gT("start.edited", when(rec.at), STEPS[back].t)) : ""}</div>`
+      + `<button type="button" class="gGo" data-gcontinue="${back}">${gT("start.continue")}</button></div></div>`;
+    if(ours.length) h += (back || first ? `<h3>${gT("start.yours")}</h3>` : "") + `<div class="gCards">${ours.map(card).join("")}</div>`;
+    /* everything else to start from, folded away until asked for */
+    if(noreRef) cards.push({id:"norel-gems", name:gT("card.gems"), sub:gT("card.gemsSub"), st:gemExample("gems")},
+                           {id:"norel-pave", name:gT("card.pave"), sub:gT("card.paveSub"), st:gemExample("pave")});
+    for(const n of Object.keys(PRESETS)) if(n !== "Standard") cards.push({id:"p:"+n, name:n.replace(/^Vernoy — /,""), sub:n.startsWith("Vernoy") ? gT("card.vernoy") : gT("card.study"), st:migrateHands(deep(BASE, PRESETS[n]))});
+    const vers = (versions || []).map((v,i) => ({id:"v:"+i, name:v.name, sub:gT("start.version"), st:v.state ? migrateHands(deep(BASE, v.state)) : null})).filter(c => c.st);
+    h += `<button type="button" class="gStartRow${startAll ? " on" : ""}" id="gStartFrom" data-gdo="startAll" aria-expanded="${startAll}"><span><b>${gT("start.from")}</b><small>${gT("start.fromSub", cards.length + 1 + vers.length)}</small></span><i aria-hidden="true">${startAll ? "⌃" : "›"}</i></button>`;
+    if(startAll){
+      h += `<div class="gCards all">${[{id:"fresh", name:gT("card.plain"), sub:gT("card.plainSub"), st:freshState()}].concat(cards).map(card).join("")}</div>`;
+      if(vers.length) h += `<h3>${gT("start.versions", vers.length)}</h3><div class="gCards all">${vers.map(card).join("")}</div>`;
+    }
+    return h;
+  }
   const VIEW = {
-    start(){
-      const cards = [];
-      const first = isFirst();
-      cards.push({id:"fresh", name:gT("card.plain"), sub:gT("card.plainSub"), st:freshState()});
-      /* the watches being made, NOREL and the Time Keeper × Nivada, in a row of their own */
-      const ours = [];
-      if(noreRef) ours.push({id:"norel", name:gT("card.norel"), sub:gT("card.norelSub"), st:migrateHands(deep(BASE, noreRef))});
-      if(tkRef) ours.push({id:"tk-nivada", name:gT("card.tk"), sub:gT("card.tkSub"), st:migrateHands(deep(BASE, tkRef))});
-      if(noreRef) cards.push({id:"norel-gems", name:gT("card.gems"), sub:gT("card.gemsSub"), st:gemExample("gems")},
-                             {id:"norel-pave", name:gT("card.pave"), sub:gT("card.paveSub"), st:gemExample("pave")});
-      for(const n of Object.keys(PRESETS)) if(n !== "Standard") cards.push({id:"p:"+n, name:n.replace(/^Vernoy — /,""), sub:n.startsWith("Vernoy") ? gT("card.vernoy") : gT("card.study"), st:migrateHands(deep(BASE, PRESETS[n]))});
-      const vers = (versions || []).map((v,i) => ({id:"v:"+i, name:v.name, sub:gT("start.version"), st:v.state ? migrateHands(deep(BASE, v.state)) : null})).filter(c => c.st);
-      const card = c => `<button type="button" class="gCard" data-gstart="${esc2(c.id)}"><div class="gPic">${thumb(c.st, c.id)}</div><div class="gName">${esc2(c.name)}</div><div class="gSub">${esc2(c.sub)}</div></button>`;
-      const back = rec.step > 0 ? rec.step : 1;
-      /* English or Arabic, each written in its own language */
-      const langs = `<div class="gLang" role="group" aria-label="Language · اللغة">`
-        + [["en","English"],["ar","عربي"]].map(([l, w]) => `<button type="button" data-glang="${l}" lang="${l}" dir="${G_DIR[l]}" class="${GLANG === l ? "on" : ""}" aria-pressed="${GLANG === l}">${w}</button>`).join("")
-        + `</div>`;
-      const note = gT("lang.fullNote") ? ` <span class="gLangNote">${gT("lang.fullNote")}</span>` : "";
-      let h = first
-        ? `<div class="gWelcomeRow"><p class="gWelcome">${gT("start.first")}</p>${langs}</div><p class="gNote" style="margin:0 0 6px">${gT("start.firstSub")}${note}</p>`
-        : `<div class="gWelcomeRow"><p class="gWelcome">${gT("start.welcome")}</p>${langs}</div><p class="gNote" style="margin:0 0 6px">${gT("start.welcomeSub")}${note}</p>`;
-      h += `<div class="gHero"><div class="gPic">${thumb(S, "cur")}</div><div><div class="gName">${esc2(S.meta.name)}</div>`
-        + `<div class="gSub">${first ? "" : rec.at ? esc2(gT("start.edited", when(rec.at), rec.step > 0 ? STEPS[back].t : "")) : ""}</div>`
-        + `<button type="button" class="gGo" data-gcontinue="${back}">${first ? gT("start.begin") : gT("start.continue")}</button></div></div>`;
-      if(ours.length) h += `<h3>${gT("start.yours")}</h3><div class="gCards">${ours.map(card).join("")}</div>`;
-      h += `<div class="gH3"><h3>${first ? gT("start.other") : gT("start.new")}</h3><button type="button" class="gMore gSeeAll" data-gdo="startAll">${startAll ? gT("start.fewer") : gT("start.seeAll", cards.length)}</button></div>`
-        + `<div class="gCards${startAll ? " all" : ""}">${cards.map(card).join("")}</div>`;
-      if(vers.length) h += `<h3>${gT("start.versions", vers.length)}</h3><div class="gCards">${vers.map(card).join("")}</div>`;
-      return h;
-    },
     case(tab){
       const K = caseOf(S);
       if(tab === "shape"){
         /* each case is shown wearing this dial, the way picking it would leave it */
         const pic = m => {
-          if(m === K.model) return thumb(S, "case:" + m);
+          /* a case with a photograph is pictured in it, even while the screen shows the drawing */
+          if(m === K.model){ if(!K.photoFile || S.tpl.on) return thumb(S, "case:" + m); const st = clone(S); st.tpl.on = true; return thumb(st, "case:" + m); }
           const keep = S; let st;
           try{ S = clone(keep); applyCaseModel(K.model, m); st = S; }finally{ S = keep; }
           return thumb(st, "case:" + m);
@@ -15039,7 +15261,7 @@ Object.assign(GWORD.ar, {
         const name = {[VERNOY_CASE.model]:["case.vernoy","case.vernoySub"], [NOREL_R3.model]:["case.r3","case.r3Sub"], [NOREL_D.model]:["case.d","case.dSub"], [NOREL_R4.model]:["case.norel","case.norelSub"], [TK_NIVADA.model]:["case.tk","case.tkSub"]};
         const card = m => `<button type="button" class="gCard ${m===K.model?"on":""}" data-gcase="${esc2(m)}" title="${esc2(m)}"><div class="gPic">${pic(m)}</div><div class="gName">${esc2(name[m] ? gT(name[m][0]) : m)}</div><div class="gSub">${esc2(name[m] ? gT(name[m][1]) : "")}</div></button>`;
         const now = [NOREL_R4.model, TK_NIVADA.model, VERNOY_CASE.model].filter(m => CASE_MODELS.indexOf(m) >= 0), earlier = CASE_MODELS.filter(m => now.indexOf(m) < 0);
-        return `<div class="gCards">${now.map(card).join("")}</div>`
+        return watchesBlock() + `<h3>${gT("case.cases")}</h3><div class="gCards">${now.map(card).join("")}</div>`
           + (earlier.length ? `<h3>${gT("case.earlier")}</h3><div class="gCards">${earlier.map(card).join("")}</div>` : "");
       }
       let h = `<h3>${gT("case.metal")}</h3>` + metalRow();
@@ -15376,17 +15598,60 @@ Object.assign(GWORD.ar, {
      fitted to on upload, not the size of the mark it replaces. */
   const logoSizeFor = m => m === "NOREL logo" ? 5.4 : m === "NOREL shield" ? 3.2
     : m === "Your logo" && S.text.logoImg ? +Math.min(4, 9/Math.max(0.5, S.text.logoImg.ar || 1)).toFixed(2) : 1.7;
+  /* ---- the photograph and the drawing ----
+     A case's photograph is the real watch, and it is what simple mode shows
+     whenever it can. It shows its own steel, finish and strap; on the NOREL,
+     whose parts are measured off it, gold and two-tone too (photoPlan). A
+     choice it can show leaves it on screen; one it cannot switches to the
+     drawing, and "Show the real photo" on the preview goes back to it. */
+  const steelish = m => { const u = String(m || "").toUpperCase(); return isHex(u) && [1, 3, 5].every(i => Math.abs(parseInt(u.slice(i, i + 2), 16) - parseInt(LUX_STEEL.slice(i, i + 2), 16)) <= 8); };
+  const metalShows = (K, m) => steelish(m) || (!!K.photoParts && !!goldOf(m));
+  function photoShows(K, path, v){
+    const own = K.photoOwn || {};
+    if(path === "ui.metal") return /^two:/.test(v) ? !!K.photoParts : metalShows(K, v);
+    if(path === "case.material") return metalShows(K, v);
+    if(path === "case.finish") return v === own.finish;
+    if(path === "case.strap") return !!v;
+    if(path === "case.strapColor") return !!K.bracelet || String(v).toUpperCase() === String(own.strapColor || "").toUpperCase();
+    return true;
+  }
+  /* the whole design as its photograph can show it */
+  function photoFits(st){
+    const K = caseOf(st), c = st.case, own = K.photoOwn || {};
+    if(!K.photoFile) return false;
+    return (twoToneOf(st) ? !!K.photoParts : metalShows(K, c.material)) && (!own.finish || c.finish === own.finish) && c.strap !== false
+      && (!!K.bracelet || !own.strapColor || String(c.strapColor).toUpperCase() === own.strapColor.toUpperCase()) && photoPlan(st, K) !== false;
+  }
+  /* true while the drawing is on screen because of a choice, not because the
+     person turned the photograph off: a later choice that fits brings it back */
+  let photoAuto = false;
+  /* Back to the photograph, with whatever it cannot show set to what it
+     shows, and a word on what changed. */
+  function showPhoto(){
+    const K = caseOf(S), c = S.case, own = K.photoOwn || {}, done = [];
+    if(!K.photoFile) return;
+    if(twoToneOf(S) ? !K.photoParts : !metalShows(K, c.material)){ c.material = LUX_STEEL; c.twoTone = "none"; done.push(gT("photo.steel")); }
+    if(gemBezelOn(S) && !K.photoParts){ c.gemBezel = "none"; done.push(gT("photo.plainBezel")); }
+    if(own.finish && c.finish !== own.finish){ c.finish = own.finish; done.push(gT("photo.finish", gW(GLOSS_OPT[own.finish] || own.finish))); }
+    if(c.strap === false){ c.strap = true; done.push(gT(K.bracelet ? "photo.bracelet" : "photo.strap")); }
+    if(!K.bracelet && own.strapColor && String(c.strapColor).toUpperCase() !== own.strapColor.toUpperCase()){ c.strapColor = own.strapColor; done.push(gT("photo.blackStrap")); }
+    S.tpl.on = true; photoAuto = false;
+    commit(); paintAll();
+    toast(done.length ? gT("photo.changed", gT("list", done)) : gT("photo.on"));
+  }
   function apply(path, v, sheet){
-    /* The photograph is the case as supplied, in steel on its bracelet, and
-       it takes no metal, finish or strap. Chosen while it is on, they would
-       change nothing on screen, so the drawn case takes over and says so. */
-    let drawn = false;
-    const photoOn = S.tpl.on && tplAvail(S);
-    /* Steel and the golds the photograph can take (it has its parts
-       measured); anything else it cannot show. */
-    const takes = m => !!caseOf(S).photoParts && (!!goldOf(m) || String(m).toUpperCase() === LUX_STEEL);
-    if(/^case\.(material|finish|strap|strapColor)$/.test(path) && photoOn && get(S, path) !== v && !(path === "case.material" && takes(v))){ S.tpl.on = false; drawn = true; }
-    if(path === "ui.metal" && photoOn && !/^two:/.test(v) && !takes(v) && String(v).toUpperCase() !== String(S.case.material).toUpperCase()){ S.tpl.on = false; drawn = true; }
+    /* A case with no photograph of its own (the Vernoy's built-in picture)
+       takes no metal, finish or strap, so any of them shows the drawing. */
+    let drawn = false, back = false;
+    const K0 = caseOf(S), photoOn = S.tpl.on && tplAvail(S);
+    if(K0.photoFile){
+      if(photoOn && /^(case\.(material|finish|strap|strapColor)|ui\.metal)$/.test(path) && !photoShows(K0, path, v)){ S.tpl.on = false; drawn = true; photoAuto = true; }
+    } else {
+      const takes = m => !!K0.photoParts && (!!goldOf(m) || String(m).toUpperCase() === LUX_STEEL);
+      if(/^case\.(material|finish|strap|strapColor)$/.test(path) && photoOn && get(S, path) !== v && !(path === "case.material" && takes(v))){ S.tpl.on = false; drawn = true; }
+      if(path === "ui.metal" && photoOn && !/^two:/.test(v) && !takes(v) && String(v).toUpperCase() !== String(S.case.material).toUpperCase()){ S.tpl.on = false; drawn = true; }
+    }
+    if(path === "tpl.on") photoAuto = false;
     if(path === "hands.material"){ for(const k of ["hHand","mHand","sHand"]) if(S[k]) S[k].material = v; }
     else if(path === "ui.metal"){ if(/^two:/.test(v)){ S.case.material = LUX_STEEL; S.case.twoTone = v.slice(4); } else { S.case.material = v; S.case.twoTone = "none"; } }
     /* the classic colours named ombré are ombré */
@@ -15422,10 +15687,15 @@ Object.assign(GWORD.ar, {
     /* on the sheet any hand can be set, and a linked set follows it */
     else if(sheet && /^(mHand|sHand)\./.test(path)) syncHands(path.split(".")[0]);
     if(/^meta\.time\./.test(path)) timeSet = true;
-    /* a two-tone case or a gem bezel the photograph has no parts for */
-    if(photoOn && S.tpl.on){ const K = caseOf(S); if(K.photoFile && photoPlan(S, K) === false){ S.tpl.on = false; drawn = true; } }
+    /* a two-tone case or a gem bezel the photograph has no parts for,
+       whichever case it was chosen on */
+    const K = caseOf(S);
+    if(S.tpl.on && K.photoFile && photoPlan(S, K) === false){ S.tpl.on = false; drawn = true; photoAuto = true; }
+    /* the drawing came up for an earlier choice, and the design fits the photograph again */
+    else if(!S.tpl.on && photoAuto && path !== "tpl.on" && K === K0 && photoFits(S)){ S.tpl.on = true; photoAuto = false; back = true; }
     commit(); paintAll();
     if(drawn) toast(gT("toast.drawnCase"));
+    else if(back) toast(gT("photo.again"));
   }
   function setMarkers(k){
     const n = S.numerals, ix = S.indices;
@@ -15471,6 +15741,21 @@ Object.assign(GWORD.ar, {
   /* the pill sits on the stage, whose own taps select a part and pan */
   frameBtn.addEventListener("pointerdown", e => e.stopPropagation());
   frameBtn.onclick = e => { e.stopPropagation(); frameWhole = !frameWhole; frame(); };
+  /* "Show the real photo": on the watch itself, for as long as a case that
+     has a photograph is shown as the drawing, whether a choice did that or
+     the design was saved that way. */
+  const photoBtn = document.createElement("button");
+  photoBtn.type = "button"; photoBtn.id = "gPhotoBtn"; photoBtn.hidden = true;
+  photoBtn.addEventListener("pointerdown", e => e.stopPropagation());
+  photoBtn.onclick = e => { e.stopPropagation(); soon(null, showPhoto); };
+  function syncPhotoBtn(){
+    const K = caseOf(S), want = mode === "guided" && !!K.photoFile && (!S.render || S.render.view === "front") && (!S.tpl.on || photoPlan(S, K) === false);
+    photoBtn.hidden = !want;
+    if(want){
+      photoBtn.dir = G_DIR[GLANG] || "ltr";
+      photoBtn.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h3l2-2.5h6L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="12" cy="13" r="3.6" fill="none" stroke="currentColor" stroke-width="1.8"/></svg><span>${gT("photo.show")}</span>`;
+    }
+  }
   /* framed again whenever the step, its tab or the shape of the design changes */
   let frameKey = "";
   const frameKeyNow = () => JSON.stringify([step, curTab(), S.case.model, S.tpl.on, S.render.view, S.day.on, S.date.on, S.date.at, S.day.arc, frameWhole]);
@@ -15519,11 +15804,11 @@ Object.assign(GWORD.ar, {
   const seen = i => rec.seen.indexOf(i) >= 0;
   function go(i){
     if(i === step){ if(listOpen){ listOpen = false; paint(); } return; }
-    if(step > 0 && !seen(step)) rec.seen.push(step);
+    if(!seen(step)) rec.seen.push(step);
     const pv = JSON.stringify(window.WatchGuidePreview());
     step = Math.max(0, Math.min(STEPS.length-1, i)); frameWhole = false; listOpen = false; savedAs = "";
     if(!hasSheet(STEPS[step].k)) sheetOn = false;
-    if(step > 0) rec.step = step;
+    rec.step = step;
     rec.t = Date.now(); saveRec(); paint(); body.scrollTop = 0;
     /* the preview leaves the seconds hand out on the Text step */
     if(JSON.stringify(window.WatchGuidePreview()) !== pv) requestPaint();
@@ -15569,13 +15854,14 @@ Object.assign(GWORD.ar, {
     if(listOpen) paintList(); else { const l = guide.querySelector(".gList"); if(l) l.remove(); }
     if(fk){ const el = body.querySelector(`[${fattr}="${fk}"]`); if(el){ el.focus({preventScroll:true}); if(fsel) try{ el.setSelectionRange(fsel[0], fsel[1]); }catch(e){} } }
     const stg = document.getElementById("stage"); if(stg) stg.classList.toggle("gPhoto", !!(S.tpl.on && tplAvail(S)));
+    syncPhotoBtn();
     paintMoreTop(); paintSheet();
     reframe();
   }
   /* a sideways row with more to its right fades at that edge */
   const edge = r => r.classList.toggle("more", Math.abs(r.scrollLeft) + r.clientWidth < r.scrollWidth - 4);
   body.addEventListener("scroll", e => { const r = e.target; if(r.classList && (r.classList.contains("gCards") || r.classList.contains("gChips") || r.classList.contains("gSw"))) edge(r); }, true);
-  /* the eight steps as a list, with what is done and what needs a look */
+  /* the seven steps as a list, with what is done and what needs a look */
   function paintList(){
     let l = guide.querySelector(".gList");
     if(!l){ l = document.createElement("div"); l.className = "gList"; l.setAttribute("role", "dialog"); l.setAttribute("aria-label", gT("steps.all")); guide.appendChild(l); }
@@ -15586,13 +15872,13 @@ Object.assign(GWORD.ar, {
   }
   const origPaintAll = paintAll;
   /* Every change is remembered as "worked on now", so a reload goes back to
-     this step, and the Start step can say when the design was last touched. */
+     this step, and the Case step can say when the design was last touched. */
   let lastSnap = null;
   paintAll = function(){ origPaintAll.apply(this, arguments);
     const cur = typeof hist !== "undefined" ? hist[hi] : null;
     if(cur !== lastSnap){
       /* a history of one is a design just opened, not a change */
-      if(lastSnap && hist.length > 1){ rec.at = rec.t = Date.now(); if(step > 0) rec.step = step; saveRec(); }
+      if(lastSnap && hist.length > 1){ rec.at = rec.t = Date.now(); rec.step = step; saveRec(); }
       lastSnap = cur;
     }
     paint(); };
@@ -15619,8 +15905,8 @@ Object.assign(GWORD.ar, {
   }
   /* loading a whole design: remembered as the design's starting point */
   function openDesign(st, msg){
-    S = st; orig = clone(S); rec.seen = []; inkSep.clear(); frameWhole = false;
-    commit(); rec.at = rec.t = Date.now(); step = 1; rec.step = 1; saveRec(); paintAll(); body.scrollTop = 0; toast(msg);
+    S = st; orig = clone(S); rec.seen = []; inkSep.clear(); frameWhole = false; photoAuto = false; startAll = false;
+    commit(); rec.at = rec.t = Date.now(); step = 0; rec.step = 0; saveRec(); paintAll(); body.scrollTop = 0; toast(msg);
   }
   guide.addEventListener("click", e => {
     if(textHold){ textHold = false; clearTimeout(textTimer); setTimeout(() => { if(guideDirty) paint(); }, 0); }
@@ -15634,7 +15920,7 @@ Object.assign(GWORD.ar, {
     if(d.gsub){ subTab[STEPS[step].k] = d.gsub; frameWhole = false; paint(); body.scrollTop = 0; return; }
     if(t.classList.contains("back")){ if(step > 0) go(step - 1); return; }
     if(t.classList.contains("next")){ if(step < STEPS.length-1) go(step + 1); else finishSave(); return; }
-    if(d.gcontinue){ go(+d.gcontinue || 1); return; }
+    if(d.gcontinue){ go(+d.gcontinue || 0); return; }
     if(d.greset){ const p = d.greset, o = get(origState(), p); if(typeof o === "number") apply(p, o); return; }
     if(d.gclear){ apply(d.gclear, ""); return; }
     if(d.ginksep){ inkSep.add(d.ginksep); paint(); return; }
@@ -15708,7 +15994,7 @@ Object.assign(GWORD.ar, {
       if(d.gdo === "gemMore"){ gemMore = true; paint(); return; }
       if(d.gdo === "inkMore"){ inkMore = !inkMore; paint(); return; }
       if(d.gdo === "startAll"){ startAll = !startAll; paint(); return; }
-      if(d.gdo === "refine"){ savedAs = ""; go(1); return; }
+      if(d.gdo === "refine"){ savedAs = ""; go(0); return; }
       if(d.gdo === "hourAll"){ if(pickHour === null) return; const k = S.markers.at[pickHour], cov = coveredHours(S);
         S.markers.at = S.markers.at.map((x, i) => cov.has(i || 12) ? x : k); syncMarkerFlags(S); commit(); paintAll(); return; }
       ({save:()=>click("#save"), export:()=>click("#exp"), share:()=>{ if(document.querySelector("#share")) click("#share"); else click("#exp"); }, "3d":()=>click("#open-relief"),
@@ -15812,7 +16098,7 @@ Object.assign(GWORD.ar, {
   /* ---- placing it, and the switch between the two modes ---- */
   const mBody = document.getElementById("mBody");
   if(mBody) mBody.appendChild(guide); else document.querySelector(".shell").appendChild(guide);
-  const stg0 = document.getElementById("stage"); if(stg0) stg0.appendChild(frameBtn);
+  const stg0 = document.getElementById("stage"); if(stg0){ stg0.appendChild(frameBtn); stg0.appendChild(photoBtn); }
   const modeBtn = document.createElement("button");
   modeBtn.type = "button"; modeBtn.className = "btn"; modeBtn.id = "gModeBtn";
   const bar = document.querySelector(".bar");
@@ -15823,10 +16109,12 @@ Object.assign(GWORD.ar, {
   const slots = document.getElementById("mMoreSlots");
   const mobileMode = document.createElement("button"); mobileMode.type = "button"; mobileMode.className = "btn mact";
   /* the language switch: in More on a phone, beside the mode button on a
-     desktop, and on the Start step */
+     desktop, and at the top of the Case step */
   const mobileLang = document.createElement("button"); mobileLang.type = "button"; mobileLang.className = "btn mact"; mobileLang.id = "gLangMore";
   const langBtn = document.createElement("button"); langBtn.type = "button"; langBtn.className = "btn"; langBtn.id = "gLangBtn";
-  if(slots){ slots.prepend(mobileLang); slots.prepend(mobileMode); }
+  /* "Start from…" in More, for a plain dial, a style or a saved version from any step */
+  const mobileStart = document.createElement("button"); mobileStart.type = "button"; mobileStart.className = "btn mact"; mobileStart.id = "gStartMore";
+  if(slots){ slots.prepend(mobileLang); slots.prepend(mobileMode); slots.prepend(mobileStart); }
   if(modeBtn.parentNode) modeBtn.after(langBtn);
   function modeLabels(){
     const m = mode, l = m === "guided" ? gT("mode.full") : gT("mode.simple"), hnt = m === "guided" ? gT("mode.fullHint") : gT("mode.simpleHint");
@@ -15835,7 +16123,8 @@ Object.assign(GWORD.ar, {
     const other = GLANG === "ar" ? "en" : "ar";
     mobileLang.innerHTML = `<span class="l" lang="${other}">${gT("lang.more")}</span><span class="h">${gT("lang.moreHint")}</span>`;
     langBtn.textContent = gT("lang.more"); langBtn.lang = other; langBtn.title = gT("lang.moreHint");
-    for(const b of [mobileMode, mobileLang, langBtn]) b.dir = G_DIR[GLANG];
+    mobileStart.innerHTML = `<span class="l">${gT("start.from")}</span><span class="h">${gT("start.fromHint")}</span>`;
+    for(const b of [mobileMode, mobileLang, langBtn, mobileStart]) b.dir = G_DIR[GLANG];
   }
   function setLang(l){
     if(!GSTR[l] || l === GLANG) return;
@@ -15845,10 +16134,17 @@ Object.assign(GWORD.ar, {
   }
   const flipLang = () => { const mm = document.getElementById("mMore"); if(mm){ mm.classList.remove("open"); mm.style.display = "none"; } setLang(GLANG === "ar" ? "en" : "ar"); };
   mobileLang.onclick = flipLang; langBtn.onclick = () => setLang(GLANG === "ar" ? "en" : "ar");
+  mobileStart.onclick = () => {
+    const mm = document.getElementById("mMore"); if(mm){ mm.classList.remove("open"); mm.style.display = "none"; }
+    if(mode !== "guided") setMode("guided");
+    subTab.case = "shape"; startAll = true;
+    if(step !== 0) go(0); else paint();
+    const row = document.getElementById("gStartFrom"); if(row) row.scrollIntoView({block:"start"});
+  };
   function setMode(m){
     mode = m; try{ localStorage.setItem(MODE_KEY, m); }catch(e){}
     document.body.classList.toggle("guided", m === "guided");
-    if(m !== "guided"){ sheetOn = false; paintSheet(); }
+    if(m !== "guided"){ sheetOn = false; paintSheet(); syncPhotoBtn(); }
     modeLabels();
     if(m === "guided") paint();
     if(typeof requestPaint === "function") requestPaint();

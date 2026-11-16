@@ -118,8 +118,9 @@ Designs that sync by themselves would need accounts and a backend.
 ## Simple mode and the full editor
 
 The studio opens in **simple mode**: one panel that walks through a watch in
-eight steps — **Start** (continue the design you were on, or begin from a
-plain dial, a preset, a reference design or a saved version), **Case**, **Dial** (colour, surface, minute track),
+seven steps — **Case** (your watch and its case: the watches being made,
+continuing the design you were on, **Start from…** a plain dial, a preset or
+a saved version, then the case, its metal and its strap), **Dial** (colour, surface, minute track),
 **Markers** (numeral system and font, how they are made, colour, size and
 position, or index shapes), **Hands** (shape, metal, lume, seconds hand),
 **Text** (the built-in NOREL logo or its shield alone, your own logo uploaded as a PNG, JPG or SVG, or a name typed in a font; two lines of lettering and where they sit), **Date**
@@ -136,28 +137,29 @@ whichever one made it. The browser remembers which one you used last.
 
 Since v3.0.0 simple mode moves differently:
 
-- **Where you are.** On a phone the panel opens with "Dial · step 3 of 8"
+- **Where you are.** On a phone the panel opens with "Case · step 1 of 7"
   and a numbered bar: finished steps are gold, the current one black. Tap a
-  number to jump, or the label for a list of all eight steps with what each
+  number to jump, or the label for a list of all seven steps with what each
   still needs. On a desktop the step pills carry the same ticks and dots.
 - **Short tabs.** Long steps are cut into tabs that each fit about one
-  screen: Case (Shape · Metal and strap), Dial (Colour · Surface · Minute
+  screen: Case (Watch · Metal and strap), Dial (Colour · Surface · Minute
   track), Markers (Style · Font or Shape · Made by · Size, plus Gems when
   the dial has them), Hands (Shape · Seconds), Text (Logo · Lines · Colour)
   and Date (Day window · Day lettering · Date window). The day window's
   width is Narrow, Standard or Wide (the degree slider that repeated it is
   in the full editor), and a design with another width shows it as a chip.
-- **The watch is framed on the part you edit:** the case on Start, Case and
+- **The watch is framed on the part you edit:** the case on Case and
   Finish, the whole dial for Dial, Markers, Hands and Text, the centre for
   the seconds hand, and a close-up of the day or date window on Date.
   **Whole watch** (top right of the watch) shows everything and switches
   back. Choosing a design or a case frames it again, so a 41 mm NOREL is no
   longer shown at the 36 mm Vernoy's framing.
-- **Start** shows the design you are working on first, with **Continue
-  designing** (it returns to the step you were on), then other starting
-  points (**See all** shows them as a grid) and your saved versions. A first
-  visit opens on the NOREL B6098G-A1, the watch being made. A reload within
-  half an hour goes straight back to the step you were on.
+- **The top of the Case step** (since v4.0.0; it was a Start step of its
+  own) shows your watches, and, after a while away, the design you were on
+  with **Continue designing** (it returns to the step you were on).
+  **Start from…** opens the other starting points and your saved versions.
+  A first visit opens on the NOREL B6098G-A1, the watch being made. A reload
+  within half an hour goes straight back to the step you were on.
 - **Choices name themselves.** Every swatch has its name under it, and the
   chosen colour reads "Powder blue · nearest Pantone 651 C" (the hex code is
   in the full editor). Everything you tap is at least 44 pt, and a toggle's
@@ -196,6 +198,48 @@ text component **Text**, and the ⋯ menu's save **Save version**. The values
 stored in a design file do not change. In the full editor at laptop widths
 the toolbar sits tighter, and on a narrower window it takes a second row
 rather than pushing Share and Export off the screen.
+
+## The case first, the real photographs, and the F77 drawn as itself (v4.0.0)
+
+From the owner's iPhone: "What is step 1? The first step should be the case.
+Why are all the fake ones? Where is the Nivada F77 case?"
+
+- **Step 1 is the Case.** Simple mode has seven steps, not eight: Case, Dial,
+  Markers, Hands, Text, Date, Finish ("Case · step 1 of 7"). The Start step is
+  gone and what it did is at the top of the Case step's **Watch** tab: the
+  English / عربي switch, **Your watches** (NOREL B6098G-A1 and Time Keeper ×
+  Nivada; tapping one opens its design), **Continue designing** when you come
+  back after a while to a design left on a later step, and a **Start from…**
+  row that opens a plain dial, the styles and your saved versions. Under them
+  are the case cards; **Metal and strap** is the second tab. **Start from…**
+  is also in the More menu on a phone, and the language switch stays there
+  too. A reload within half an hour still returns to the step you were on (a
+  step remembered by 3.x is moved down one, since Start no longer counts).
+- **Real photographs, not drawings.** The watch cards and the case cards
+  show a case that has a photograph (the NOREL's real photograph, the Time
+  Keeper × Nivada) in that photograph, with the dial drawn into it; only a
+  case without one (the Vernoy) is a drawing. Choosing such a case shows its
+  photograph. A metal, finish or strap the photograph can show keeps it on
+  screen: steel on either, and gold and two-tone on the NOREL, whose parts
+  are measured off its photograph (v3.2.0). One it cannot show (black, satin,
+  a gold F77, another strap colour, the strap hidden) switches to the
+  drawing, and a dark **Show the real photo** button sits on the watch for as
+  long as it stays drawn, including for a design saved that way. Tapping it
+  puts back what the photograph shows (steel, its own finish, its strap) and
+  says what changed. Going back to a choice it can show also brings the
+  photograph back on its own.
+- **The F77 drawn as itself.** With the photograph off, the Time Keeper ×
+  Nivada was a round case with screws. It is now drawn as the F77, measured
+  off its photograph so the two line up when switched: the octagonal bezel
+  (flats 18.40 mm from the centre top and bottom, 18.05 at the sides,
+  diagonals 17.95, corners rounded 2.0), brushed with a polished chamfer
+  round its edge and a polished bevel down to the crystal, eight screws two
+  to each long flat, the case middle with straight flanks and curved sides
+  edged in a polished bevel, short lug blocks, the crown at 3 and the rubber
+  strap narrowing away from the case. Its card reads **Nivada F77 · Time
+  Keeper** (نيفادا F77 · تايم كيبر). The figures and how they were measured
+  are in the case's note in `index.html`. Every other case, and every
+  design's photograph view, draws exactly as before.
 
 ## Nivada's logo and SWISS MADE either side of 6 (v3.6.0)
 
@@ -255,8 +299,8 @@ still opens on the NOREL.
   and is 1040 × 1560. The opening was found by edge-fitting the dark line
   where the dial meets the flange: centre 50.00 / 47.84 %, Ø58.63 % of the
   width. Gold and a gem-set bezel are not laid onto this photograph, so
-  those switch to the drawn case, which is the round case with a plain
-  screwed bezel and a strap.
+  those switch to the drawn case (since v4.0.0 the F77's own octagon; before
+  it, the round case with a plain screwed bezel and a strap).
 - **The design** (`designs/timekeeper-nivada.json`) is the render's dial as
   closely as the studio draws it: a grained silver-white dial, applied
   rose-gold Arabic-Indic numerals at all twelve hours (Noto Naskh Arabic),
@@ -340,7 +384,7 @@ To rebuild the case model after a new STEP arrives:
 
 ## More options (v3.3.0)
 
-Every step after Start has a **More** button: beside the tabs on a phone,
+Every step has a **More** button: beside the tabs on a phone,
 beside the step's name on a desktop, and as a row at the foot of a tab
 ("More dial options ›" with what it holds). It opens a sheet with the rest
 of that part's settings, so simple mode now reaches every setting the full
@@ -407,7 +451,7 @@ preset and reference design), and nothing on the sheets uses an SVG filter.
 
 ## Simple mode in Arabic (v3.1.0)
 
-Simple mode can be used in Arabic. The switch is on the Start step
+Simple mode can be used in Arabic. The switch is at the top of the Case step
 (**English · عربي**), in the ⋯ menu on a phone, and beside **Full editor** in
 the top bar on a desktop; the choice is remembered on the device. Every step,
 tab, chip, note, warning, toast and button is in plain Modern Standard

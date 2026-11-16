@@ -109,7 +109,7 @@ test('the panel turns right to left in Arabic; the watch does not', () => {
   assert.match(guide, /guide\.dir = G_DIR\[GLANG\]/);
   assert.match(guide, /const LANG_KEY = "wds:lang";/, 'the choice is kept on the device');
   assert.match(guide, /localStorage\.setItem\(LANG_KEY, l\)/);
-  // the switch is on the Start step and in More
+  // the switch is at the top of the Case step and in More
   assert.match(guide, /data-glang="\$\{l\}"/);
   assert.match(guide, /slots\.prepend\(mobileLang\)/);
   // the stage is never given a direction, and the mirrored rules are all scoped to the panel

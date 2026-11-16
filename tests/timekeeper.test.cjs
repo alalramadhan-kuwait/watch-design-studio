@@ -1,8 +1,9 @@
 // The second watch, the Time Keeper × Nivada (v3.5.0, its logo and split
 // SWISS MADE from v3.6.0), run from the real
 // source: its case, the photograph the dial is drawn into, the design its
-// Start card opens, and that it has no calendar. The page itself (the Start
-// row, opening the design, the photograph view) was checked with Playwright.
+// card opens, and that it has no calendar. The page itself (the "Your
+// watches" row on the Case step, opening the design, the photograph view)
+// was checked with Playwright. Its drawn F77 case is in casefirst.test.cjs.
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -90,7 +91,7 @@ test('the design opens on that case with the dial of the reference render', () =
   assert.ok(design.sHand.length < K.opening / 2);
 });
 
-test('Start lists both watches, in English and Arabic, and a first visit still opens the NOREL', () => {
+test('the Case step lists both watches, in English and Arabic, and a first visit still opens the NOREL', () => {
   const guide = chunk('/* GUIDED MODE — see the stylesheet note above.', '</script>');
   assert.match(guide, /fetch\("\.\/designs\/timekeeper-nivada\.json"\)/);
   assert.match(guide, /id === "tk-nivada" && tkRef/);

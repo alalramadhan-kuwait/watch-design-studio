@@ -16,7 +16,7 @@ vm.runInContext(chunk('/* GUIDE-PURE-BEGIN', '/* GUIDE-PURE-END */')
   + '\nthis.g={GSTR,gT,glossOpt,gResumeStep,gTabsFor,gFrameBox,gFramePart,gReadout,gPrintParts,gCommonInk,gPlainCheck,G_CHECK_WORDS,G_RESUME_MS};', ctx);
 const G = ctx.g;
 const guide = chunk('/* GUIDED MODE — see the stylesheet note above.', '</script>');
-const STEPS = ['start','case','dial','markers','hands','text','calendar','finish'];
+const STEPS = ['case','dial','markers','hands','text','calendar','finish'];
 
 test('every string simple mode asks for is in the strings table', () => {
   const used = new Set([...guide.matchAll(/gT\("([^"]+)"/g)].map(m => m[1]));
@@ -44,7 +44,7 @@ test('the glossary gives proper names, and leaves stored values alone', () => {
   assert.match(source, /SEL\("date\.cyclops","Magnifier"/, 'Magnifier in both modes');
 });
 
-test('a reload goes back to the step for half an hour, then to Start', () => {
+test('a reload goes back to the step for half an hour, then to the Case step', () => {
   const now = 1e12;
   assert.equal(G.gResumeStep(null, now), 0, 'first visit');
   assert.equal(G.gResumeStep({step:3, t:now - 60e3}, now), 3);
@@ -52,6 +52,8 @@ test('a reload goes back to the step for half an hour, then to Start', () => {
   assert.equal(G.gResumeStep({step:3, at:now - 1000}, now), 3, 'the last edit counts when nothing newer is known');
   assert.equal(G.gResumeStep({step:0, t:now}, now), 0);
   assert.equal(G.gResumeStep({step:12, t:now}, now), 0, 'a step that does not exist');
+  assert.equal(G.gResumeStep({step:7, t:now}, now), 0, 'seven steps, numbered from 0: there is no 7');
+  assert.equal(G.gResumeStep({step:6, t:now}, now), 6, 'Finish');
 });
 
 test('long steps split into tabs, and empty tabs are left out', () => {
@@ -63,12 +65,13 @@ test('long steps split into tabs, and empty tabs are left out', () => {
   assert.deepEqual([...G.gTabsFor('markers', {ix:true})], ['style','shape','made','size'], 'indices have a shape, not a font');
   assert.deepEqual([...G.gTabsFor('markers', {gems:true})], ['style','gems'], 'gems only');
   assert.deepEqual([...G.gTabsFor('markers', {})], ['style'], 'a clean dial');
-  assert.deepEqual([...G.gTabsFor('start')], []); assert.deepEqual([...G.gTabsFor('finish')], []);
+  assert.deepEqual([...G.gTabsFor('case')], ['shape','metal'], 'the Watch tab, then Metal and strap');
+  assert.deepEqual([...G.gTabsFor('finish')], []);
 });
 
 test('each step frames the part it edits', () => {
   const g = {opening:31.4, day:{y:-12.6, w:8.6}, date:{x:9.95, y:0}};
-  for (const k of ['start','case','finish']) assert.equal(G.gFrameBox(k, null, g), 'case');
+  for (const k of ['case','finish']) assert.equal(G.gFrameBox(k, null, g), 'case');
   const dial = G.gFrameBox('dial', 'colour', g);
   assert.equal(dial.x, 0); assert.equal(dial.y, 0); assert.ok(dial.w > 31.4 && dial.w < 34, 'the whole dial with a small margin');
   for (const k of ['markers','text']) assert.deepEqual({...G.gFrameBox(k, null, g)}, {...dial});
@@ -131,8 +134,8 @@ test('the design check is put in plain words, on the step that fixes it', () => 
   assert.deepEqual(unworded, []);
 });
 
-test('simple mode is version 3.6.0 and the drawing code is not touched by its preview', () => {
-  assert.match(source, /const APP_VERSION = "3\.6\.0";/);
+test('simple mode is version 4.0.0 and the drawing code is not touched by its preview', () => {
+  assert.match(source, /const APP_VERSION = "4\.0\.0";/);
   // the preview's seconds-hand change is undone whatever happens while drawing
   const v = chunk('function viewSVG(){', 'function viewSVGOf(){');
   assert.match(v, /finally\{ S\.meta\.time = t; S\.sHand\.on = on; \}/);
