@@ -40,7 +40,11 @@ const SHELL = [
   "./app/apple-touch-icon.png",
   "./app/case-norel-r3.jpg",
   "./app/case-norel-d.jpg",
-  "./app/case-norel-r4-real.jpg"
+  "./app/case-norel-r4-real.jpg",
+  /* the second watch: the Time Keeper × Nivada case photograph and the design
+     its Start card opens */
+  "./app/case-timekeeper-nivada.jpg",
+  "./designs/timekeeper-nivada.json"
 ];
 
 self.addEventListener("install", e => {

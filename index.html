@@ -1140,8 +1140,32 @@ body{grid-template-rows:auto auto minmax(0,1fr)}
 @media(max-width:900px){.atelier-nav{grid-template-columns:repeat(5,minmax(0,1fr))}#relief-dialog{width:100vw;height:100dvh;border:0;border-radius:0}.relief-head{height:100px;padding:18px}.relief-head h2{font-size:25px}.relief-layout{height:calc(100% - 100px);display:flex;flex-direction:column;overflow:auto}.relief-scene{flex:none;height:52dvh;min-height:310px}.relief-controls{overflow:visible;padding:20px;border-left:0;border-top:1px solid #c2c4b8}.relief-view-tools{top:10px}.relief-view-tools button{font-size:11px!important;padding:7px 9px}}
 </style>
 
+<!-- The parts of simple mode's stylesheet that hide the full editor, here as
+     well as in that stylesheet further down. The page is drawn in pieces
+     while it loads, and until that stylesheet is reached nothing hid the full
+     editor's panel and toolbar from a first frame. The rules are the same as
+     there, so the finished page looks exactly as before. -->
+<style>
+body.guided{ grid-template-rows:auto minmax(0,1fr) !important }
+body.guided .shell{ grid-template-columns:minmax(0,1fr) 400px }
+body.guided .shell > .rail, body.guided .shell > .props{ display:none }
+body.guided .atelier-nav, body.guided #gHideInGuided, body.guided .bar .grp.tools, body.guided #preset{ display:none }
+@media (max-width:900px){
+  body.guided #mBody > .rail, body.guided #mBody > .props{ display:none !important }
+  body.guided #mHead{ display:none !important }
+  body.guided #mSheet{ height:60% !important; padding-bottom:0 !important; transition:none !important }
+  body.guided .stage{ bottom:60% !important; transition:none !important }
+  body.guided #mModes, body.guided #mInfoBtn, body.guided #mMeasure, body.guided .zoomer, body.guided #gModeBtn,
+  body.guided #mTop .ico[aria-label="Back"], body.guided #mTop .ico[aria-label="Save version"],
+  body.guided #mTop .ico[aria-label="Export"]{ display:none !important }
+}
+</style>
 </head>
 <body>
+<!-- Simple mode is chosen before anything is drawn. The class used to be set
+     only when the simple-mode script finished, so a phone showed the full
+     editor for a moment first. The later setMode call still runs as before. -->
+<script>try{if((localStorage.getItem("wds:ui")||"guided")==="guided")document.body.classList.add("guided")}catch(e){document.body.classList.add("guided")}</script>
 
 <header class="bar">
   <div class="mark">Watch Design <span>Studio</span></div>
@@ -1392,7 +1416,42 @@ const NOREL_R4 = Object.assign({}, NOREL_D, {
   photoParts:{bezel:{inner:[0, 0, 16.80, 16.80], outer:[0, 0.35, 20.45, 20.15]},
               crown:{x0:20.45, x1:23.55, y0:-2.95, y1:3.83, r:0.9}, links:{half:4.50}}
 });
-const CASES = {[VERNOY_CASE.model]:VERNOY_CASE, [NOREL_R3.model]:NOREL_R3, [NOREL_D.model]:NOREL_D, [NOREL_R4.model]:NOREL_R4};
+/* Time Keeper × Nivada: a Time Keeper (Kuwait) edition of the Nivada Grenchen
+   F77, the integrated steel case with a flat bezel held by eight screws, on a
+   black rubber strap, with no calendar. There is no factory drawing for it
+   yet, so the numbers come from two places. Published for the F77 37 mm:
+   37.00 across the case, 45.00 lug to lug, 12.60 high, 10 ATM, a double-domed
+   sapphire. Everything else is an estimate measured off the owner's front
+   render, scaled so the case is 37.00 wide (19.93 px/mm in the original):
+   the Ø27.50 visible opening, the bezel (Ø36.0 across its flats, Ø28.8 where
+   its polished inner bevel meets the crystal), the 21.0 strap and 26.0 over
+   the lug blocks, the 6.0 crown, the glass, the dial blank and the steel.
+   They are to be replaced by Nivada's figures when a drawing arrives. The
+   drawn case (when the photograph is off) is the round case with a plain
+   bezel and a strap, an approximation of the octagon. */
+const TK_NIVADA = {
+  model:"Time Keeper × Nivada · F77", shape:"round", photo:false,
+  ref:"Nivada Grenchen F77 · Time Keeper edition", steel:"S.S 316L (estimate)", wr:"10 ATM",
+  movement:"automatic, calibre to confirm",
+  flat:37.00, diagonal:37.00, rSide:18.50, rCorner:18.50,                // published 37 mm
+  midFlat:37.00, midDiagonal:37.00, midRSide:18.50, midRCorner:18.50,
+  bezelOD:36.00, bezelID:28.80, land:0.50, flutes:0, screws:8,           // estimates: a plain bezel, 8 screws
+  lugToLug:45.00, lugWidth:21.00, lugOuter:26.00, springBar:1.80,        // 45.00 published; the rest estimates
+  height:12.60, bezelH:2.00, midH:6.00,                                  // 12.60 published; bezel and middle estimates
+  opening:27.50, glassSeat:30.00, glassD:29.80, glassT:1.50, glassBevel:"double-domed sapphire, anti-reflective (published); size an estimate",
+  dialD:28.50, dialT:0.40, dialHolder:28.50, dialMat:"brass (estimate)",
+  movHolder:26.00, crownD:6.00, crownTube:2.50, cabochon:0,
+  tol:"estimates from the front render, except 37.00, 45.00, 12.60 and 10 ATM (published for the F77 37 mm)",
+  bracelet:false,
+  /* The owner's front render with the dial artwork taken out: crop 2:3 centred
+     on the dial, 1040 × 1560. The opening was found by edge-fitting the dark
+     line where the dial meets the flange: Ø548 px of the original 1122 × 1402,
+     centred at (556.5, 670.75), which lands at 50.00 / 47.84 % and spans
+     58.63 % of the width here. The flange and the crystal's edge are kept. */
+  photoFile:"./app/case-timekeeper-nivada.jpg", photoCal:{w:1040, h:1560, cx:50.00, cy:47.84, dia:58.63},
+  back:["NIVADA GRENCHEN · TIME KEEPER", "ALL STAINLESS STEEL", "10 ATM WATER RESISTANT"]
+};
+const CASES = {[VERNOY_CASE.model]:VERNOY_CASE, [NOREL_R3.model]:NOREL_R3, [NOREL_D.model]:NOREL_D, [NOREL_R4.model]:NOREL_R4, [TK_NIVADA.model]:TK_NIVADA};
 const CASE_MODELS = Object.keys(CASES);
 const caseOf = st => (st && st.case && CASES[st.case.model]) || VERNOY_CASE;
 /* CASE_SPEC is the case of the design on screen. It reads through to that
@@ -2001,7 +2060,7 @@ const APP_BUILD = "__BUILD__";
 /* The version people see, raised with every change that reaches them:
    major for a new way of working, minor for something new to do, patch for
    a fix. Shown on the watch screen, so any screenshot says which it was. */
-const APP_VERSION = "3.4.1";
+const APP_VERSION = "3.5.0";
 const APP_DATE = "__DATE__";
 
 /* Every route that replaces S passes through one of these three, which is
@@ -4396,8 +4455,19 @@ function buildSVG(st, o={}){
     const rb = K.bezelOD/2*k, rbi = Math.max(opening/2 + 0.6, K.bezelID/2*k), land = K.land;
     const l2l = c.locked ? K.lugToLug : c.lugToLug, lw = c.locked ? K.lugWidth : c.lugWidth;
     const lo = c.locked ? K.lugOuter : lw + 5.4;
+    /* --- a strap, on a round case that has no bracelet (the Time Keeper
+       × Nivada's rubber strap): a plain band in the strap colour from under
+       the case out past the lugs, with a faint edge either side --- */
+    if(c.strap && !K.bracelet){
+      const sc = c.strapColor || "#1E1E20", top = l2l/2 + 13, inner = R - 2.0;
+      for(const sy of [-1,1]){
+        const y0 = sy > 0 ? inner : -top, h = top - inner;
+        body.push(`<rect x="${f(-lw/2,3)}" y="${f(y0,3)}" width="${f(lw,3)}" height="${f(h,3)}" rx="0.6" fill="${shade(sc,0.10)}"/>
+          <path d="M${f(-lw/2+0.9,3)} ${f(sy*inner,3)} V${f(sy*top,3)} M${f(lw/2-0.9,3)} ${f(sy*inner,3)} V${f(sy*top,3)}" stroke="${tint(sc,0.18)}" stroke-opacity=".5" stroke-width="0.10" fill="none"/>`);
+      }
+    }
     /* --- bracelet: President links, brushed outers and a polished centre --- */
-    if(c.strap){
+    if(c.strap && K.bracelet){
       const gB = lgr(st3(shade(M0,0.30), tint(M0,0.55), shade(M0,0.22)), 0);
       const gP = lgr(`<stop offset="0" stop-color="${tint(MG,0.95)}"/><stop offset="0.45" stop-color="${tint(MG,0.40)}"/>
         <stop offset="0.52" stop-color="${shade(MG,0.45)}"/><stop offset="0.62" stop-color="${tint(MG,0.80)}"/><stop offset="1" stop-color="${shade(MG,0.15)}"/>`, 90);
@@ -4438,7 +4508,8 @@ function buildSVG(st, o={}){
     const gC = lgr(st3(shade(M0,0.36), tint(M0,0.55), shade(M0,0.28)));
     body.push(`<circle r="${f(R,3)}" fill="url(#${gC})" stroke="${shade(M0,0.65)}" stroke-opacity=".7" stroke-width="0.09"/>`);
     body.push(`<circle r="${f(rb,3)}" fill="${shade(MG,0.30)}"/>`);
-    const n = K.flutes || 60, r0 = rbi + land, r1 = rb - 0.10;
+    /* flutes:0 is a plain bezel (no flutes at all); a case that names none gets 60 */
+    const n = K.flutes === 0 ? 0 : (K.flutes || 60), r0 = rbi + land, r1 = rb - 0.10;
     /* A gem-set bezel takes the place of the flutes and the land: a ring of
        gold from the crystal to the rim, set with its row of stones. */
     const GB = gemBezelSpec(st);
@@ -4465,8 +4536,20 @@ function buildSVG(st, o={}){
                +  `<path d="M${q(rm,b0)}L${q(r1,b0)}L${q(r1,b1)}L${q(rm,b1)}Z" fill="${col(t)}"/>`;
       flutes += `<path d="M${q(r0+0.08,a1)}L${q(r1-0.05,a1)}" stroke="${tint(MG,0.9)}" stroke-opacity=".55" stroke-width="0.05"/>`;
     }
+    if(!GB && n === 0){
+      /* A plain flat bezel, brushed across, with its screws (the Nivada's
+         eight) set on the middle of the band. */
+      const gBz = lgr(st3(shade(MG,0.18), tint(MG,0.50), shade(MG,0.14)), 90);
+      body.push(`<path d="${annulus(rb, r0)}" fill="url(#${gBz})" fill-rule="evenodd"/>`);
+      const ns = K.screws || 0, rs = (r0 + rb)/2, sd = Math.min(1.1, (rb - r0)*0.42);
+      for(let i = 0; i < ns; i++){
+        const a = (i + 0.5)*360/ns, p = pt(rs, a);
+        body.push(`<circle cx="${f(p[0],3)}" cy="${f(p[1],3)}" r="${f(sd/2,3)}" fill="${tint(MG,0.35)}" stroke="${shade(MG,0.55)}" stroke-width="0.07"/>
+          <line x1="${f(p[0]-sd*0.38,3)}" y1="${f(p[1]+sd*0.20,3)}" x2="${f(p[0]+sd*0.38,3)}" y2="${f(p[1]-sd*0.20,3)}" stroke="${shade(MG,0.55)}" stroke-width="0.10"/>`);
+      }
+    }
     if(!GB){
-      body.push(`<g>${flutes}</g>`);
+      if(n) body.push(`<g>${flutes}</g>`);
       body.push(`<circle r="${f(rb,3)}" fill="none" stroke="${shade(MG,0.7)}" stroke-opacity=".8" stroke-width="0.10"/>`);
       // polished land between the flutes and the crystal
       const gLand = lgr(`<stop offset="0" stop-color="${tint(MG,0.95)}"/><stop offset="0.4" stop-color="${tint(MG,0.45)}"/>
@@ -10060,17 +10143,17 @@ function caseSpecRows(){
   const K = CASE_SPEC;
   if(K.shape === "round") return `<div><span>Reference</span><b>${K.ref}</b></div>
       <div><span>Case diameter</span><b>Ø${f(K.flat)} mm</b></div>
-      <div><span>Bezel</span><b>Ø${f(K.bezelOD)} / Ø${f(K.bezelID)} · ${K.flutes} flutes</b></div>
+      <div><span>Bezel</span><b>Ø${f(K.bezelOD)} / Ø${f(K.bezelID)} · ${K.flutes ? K.flutes + " flutes" : "plain" + (K.screws ? ", " + K.screws + " screws" : "")}</b></div>
       <div><span>Bezel band</span><b>${f((K.bezelOD-K.bezelID)/2)} mm a side · ${f(K.land)} land</b></div>
       <div><span>Lug-to-lug</span><b>${f(K.lugToLug)} mm</b></div>
-      <div><span>Bracelet</span><b>${f(K.lugWidth)} → ${f(K.clasp)} mm</b></div>
+      ${K.bracelet ? `<div><span>Bracelet</span><b>${f(K.lugWidth)} → ${f(K.clasp)} mm</b></div>` : `<div><span>Strap</span><b>${f(K.lugWidth)} mm</b></div>`}
       <div><span>Total height</span><b>${f(K.height)} mm</b></div>
       <div><span>Visible opening</span><b>Ø${f(K.opening)} mm</b></div>
-      <div><span>Glass</span><b>Ø${f(K.glassD)} sapphire · cyclops ${f(K.cyclops.w,1)} × ${f(K.cyclops.h,1)}</b></div>
+      <div><span>Glass</span><b>Ø${f(K.glassD)} sapphire${K.cyclops ? ` · cyclops ${f(K.cyclops.w,1)} × ${f(K.cyclops.h,1)}` : ""}</b></div>
       <div><span>Dial blank</span><b>Ø${f(K.dialD)} × ${f(K.dialT)} ${K.dialMat}</b></div>
       <div><span>Movement</span><b>${K.movement} · Ø${f(K.movHolder)} fit</b></div>
-      <div><span>Day window</span><b>R${f(K.calendar.dayRin)}–${f(K.calendar.dayRout)} · ≤ ${K.calendar.dayArcMax}°</b></div>
-      <div><span>Date window</span><b>${f(K.calendar.dateW)} × ${f(K.calendar.dateH)} at ${f(K.calendar.dateC)} mm</b></div>
+      ${K.calendar ? `<div><span>Day window</span><b>R${f(K.calendar.dayRin)}–${f(K.calendar.dayRout)} · ≤ ${K.calendar.dayArcMax}°</b></div>
+      <div><span>Date window</span><b>${f(K.calendar.dateW)} × ${f(K.calendar.dateH)} at ${f(K.calendar.dateC)} mm</b></div>` : `<div><span>Calendar</span><b>none</b></div>`}
       <div><span>Crown</span><b>Ø${f(K.crownD)} mm at 3H</b></div>
       <div><span>Material / WR</span><b>${K.steel} · ${K.wr}</b></div>
       <div><span>Tolerance</span><b>${K.tol}</b></div>`;
@@ -13449,6 +13532,8 @@ const GSTR = {en:{
   "card.gems":"NOREL · diamond hours", "card.gemsSub":"A diamond at each free hour",
   "card.pave":"NOREL · diamond-set numerals", "card.paveSub":"Line-set figures, to review",
   "card.vernoy":"Vernoy", "card.study":"Style study",
+  "start.yours":"Your watches", "card.tk":"Time Keeper × Nivada", "card.tkSub":"Silver and rose gold",
+  "case.tk":"Time Keeper × Nivada", "case.tkSub":"37 mm · rubber strap",
   "case.norel":"NOREL", "case.norelSub":"41 mm round · current drawing", "case.vernoy":"Vernoy cushion", "case.vernoySub":"36 mm · strap",
   "case.r3":"NOREL R3", "case.r3Sub":"Earlier drawing", "case.d":"NOREL Concept D", "case.dSub":"Earlier proposal",
   "case.earlier":"Earlier NOREL drawings", "case.metal":"Metal", "case.finish":"Finish",
@@ -13583,6 +13668,8 @@ GSTR.ar = {
   "card.gems":"NOREL · ألماس عند الساعات", "card.gemsSub":"ماسة عند كل ساعة خالية",
   "card.pave":"NOREL · أرقام مرصّعة بالألماس", "card.paveSub":"أرقام مرصوفة بالأحجار، للمراجعة",
   "card.vernoy":"Vernoy", "card.study":"دراسة تصميم",
+  "start.yours":"ساعاتك", "card.tk":"تايم كيبر × نيفادا", "card.tkSub":"فضي وذهبي وردي",
+  "case.tk":"تايم كيبر × نيفادا", "case.tkSub":"37 ملم · حزام مطاطي",
   "case.norel":"NOREL", "case.norelSub":"دائرية 41 ملم · الرسم الحالي", "case.vernoy":"Vernoy وسادية", "case.vernoySub":"36 ملم · حزام",
   "case.r3":"NOREL R3", "case.r3Sub":"رسم سابق", "case.d":"NOREL Concept D", "case.dSub":"مقترح سابق",
   "case.earlier":"رسومات NOREL السابقة", "case.metal":"المعدن", "case.finish":"التشطيب",
@@ -13674,6 +13761,8 @@ GSTR.ar = {
    that means two things takes a context: "shape:Diamond" is the marker shape,
    "Diamond" the stone. */
 const GWORD = {ar:{
+  /* the two watches */
+  "Time Keeper × Nivada":"تايم كيبر × نيفادا",
   /* colours */
   "White":"أبيض", "Silver":"فضي", "Royal blue":"أزرق ملكي", "Navy":"كحلي", "Charcoal":"فحمي", "Black":"أسود", "Gold":"ذهبي", "Red":"أحمر",
   "Cream":"كريمي", "Vintage lume":"مضيء عتيق", "Lume green":"أخضر مضيء", "Light grey":"رمادي فاتح", "Grey":"رمادي", "Champagne":"شمبانيا",
@@ -14474,7 +14563,9 @@ Object.assign(GWORD.ar, {
       }catch(e){ return ""; }
     });
   }
-  let noreRef = null;
+  let noreRef = null, tkRef = null;
+  /* the second watch, the Time Keeper × Nivada; a first visit still opens on the NOREL */
+  fetch("./designs/timekeeper-nivada.json").then(r => r.ok ? r.json() : null).then(j => { if(j){ tkRef = j; if(STEPS[step].k === "start") paint(); } }).catch(()=>{});
   fetch("./designs/norel-concept-d-powder-blue.json").then(r => r.ok ? r.json() : null).then(j => { if(j){ noreRef = j; firstOpen(); if(STEPS[step].k === "start") paint(); } }).catch(()=>{});
   /* On a first visit the studio opens on the watch being made, the NOREL,
      rather than on a generic dial: once nothing is stored on this device,
@@ -14813,7 +14904,10 @@ Object.assign(GWORD.ar, {
       const cards = [];
       const first = isFirst();
       cards.push({id:"fresh", name:gT("card.plain"), sub:gT("card.plainSub"), st:freshState()});
-      if(noreRef && !first) cards.push({id:"norel", name:gT("card.norel"), sub:gT("card.norelSub"), st:migrateHands(deep(BASE, noreRef))});
+      /* the watches being made, NOREL and the Time Keeper × Nivada, in a row of their own */
+      const ours = [];
+      if(noreRef) ours.push({id:"norel", name:gT("card.norel"), sub:gT("card.norelSub"), st:migrateHands(deep(BASE, noreRef))});
+      if(tkRef) ours.push({id:"tk-nivada", name:gT("card.tk"), sub:gT("card.tkSub"), st:migrateHands(deep(BASE, tkRef))});
       if(noreRef) cards.push({id:"norel-gems", name:gT("card.gems"), sub:gT("card.gemsSub"), st:gemExample("gems")},
                              {id:"norel-pave", name:gT("card.pave"), sub:gT("card.paveSub"), st:gemExample("pave")});
       for(const n of Object.keys(PRESETS)) if(n !== "Standard") cards.push({id:"p:"+n, name:n.replace(/^Vernoy — /,""), sub:n.startsWith("Vernoy") ? gT("card.vernoy") : gT("card.study"), st:migrateHands(deep(BASE, PRESETS[n]))});
@@ -14831,6 +14925,7 @@ Object.assign(GWORD.ar, {
       h += `<div class="gHero"><div class="gPic">${thumb(S, "cur")}</div><div><div class="gName">${esc2(S.meta.name)}</div>`
         + `<div class="gSub">${first ? "" : rec.at ? esc2(gT("start.edited", when(rec.at), rec.step > 0 ? STEPS[back].t : "")) : ""}</div>`
         + `<button type="button" class="gGo" data-gcontinue="${back}">${first ? gT("start.begin") : gT("start.continue")}</button></div></div>`;
+      if(ours.length) h += `<h3>${gT("start.yours")}</h3><div class="gCards">${ours.map(card).join("")}</div>`;
       h += `<div class="gH3"><h3>${first ? gT("start.other") : gT("start.new")}</h3><button type="button" class="gMore gSeeAll" data-gdo="startAll">${startAll ? gT("start.fewer") : gT("start.seeAll", cards.length)}</button></div>`
         + `<div class="gCards${startAll ? " all" : ""}">${cards.map(card).join("")}</div>`;
       if(vers.length) h += `<h3>${gT("start.versions", vers.length)}</h3><div class="gCards">${vers.map(card).join("")}</div>`;
@@ -14846,9 +14941,9 @@ Object.assign(GWORD.ar, {
           try{ S = clone(keep); applyCaseModel(K.model, m); st = S; }finally{ S = keep; }
           return thumb(st, "case:" + m);
         };
-        const name = {[VERNOY_CASE.model]:["case.vernoy","case.vernoySub"], [NOREL_R3.model]:["case.r3","case.r3Sub"], [NOREL_D.model]:["case.d","case.dSub"], [NOREL_R4.model]:["case.norel","case.norelSub"]};
+        const name = {[VERNOY_CASE.model]:["case.vernoy","case.vernoySub"], [NOREL_R3.model]:["case.r3","case.r3Sub"], [NOREL_D.model]:["case.d","case.dSub"], [NOREL_R4.model]:["case.norel","case.norelSub"], [TK_NIVADA.model]:["case.tk","case.tkSub"]};
         const card = m => `<button type="button" class="gCard ${m===K.model?"on":""}" data-gcase="${esc2(m)}" title="${esc2(m)}"><div class="gPic">${pic(m)}</div><div class="gName">${esc2(name[m] ? gT(name[m][0]) : m)}</div><div class="gSub">${esc2(name[m] ? gT(name[m][1]) : "")}</div></button>`;
-        const now = [NOREL_R4.model, VERNOY_CASE.model].filter(m => CASE_MODELS.indexOf(m) >= 0), earlier = CASE_MODELS.filter(m => now.indexOf(m) < 0);
+        const now = [NOREL_R4.model, TK_NIVADA.model, VERNOY_CASE.model].filter(m => CASE_MODELS.indexOf(m) >= 0), earlier = CASE_MODELS.filter(m => now.indexOf(m) < 0);
         return `<div class="gCards">${now.map(card).join("")}</div>`
           + (earlier.length ? `<h3>${gT("case.earlier")}</h3><div class="gCards">${earlier.map(card).join("")}</div>` : "");
       }
@@ -14857,7 +14952,7 @@ Object.assign(GWORD.ar, {
       /* the bezel: fluted as drawn, or set with stones (round cases) */
       if(K.shape === "round"){
         const gb = gemBezelOn(S) ? S.case.gemBezel : "none";
-        h += `<h3>${gW("Bezel")}</h3>` + chips44("case.gemBezel", [["none","Fluted"],["round","Round stones"],["baguette","Baguettes"]], gb);
+        h += `<h3>${gW("Bezel")}</h3>` + chips44("case.gemBezel", [["none", K.flutes === 0 ? "Plain" : "Fluted"],["round","Round stones"],["baguette","Baguettes"]], gb);
         if(gb !== "none"){
           const B = gemBezelSpec(S);
           h += `<h3>${gW("Bezel stones")}</h3>` + stoneChips("case.gemStone", GEM_STONE_CHIPS, B.stone);
@@ -15498,6 +15593,7 @@ Object.assign(GWORD.ar, {
         let st = null;
         if(id === "fresh") st = freshState();
         else if(id === "norel" && noreRef) st = migrateHands(deep(BASE, noreRef));
+        else if(id === "tk-nivada" && tkRef) st = migrateHands(deep(BASE, tkRef));
         else if(id === "norel-gems" && noreRef) st = gemExample("gems");
         else if(id === "norel-pave" && noreRef) st = gemExample("pave");
         else if(id.startsWith("p:")){ const n = id.slice(2); st = migrateHands(deep(BASE, PRESETS[n])); st.meta.name = n; }

@@ -197,6 +197,46 @@ stored in a design file do not change. In the full editor at laptop widths
 the toolbar sits tighter, and on a narrower window it takes a second row
 rather than pushing Share and Export off the screen.
 
+## The Time Keeper × Nivada (v3.5.0)
+
+A second watch beside the NOREL: a Time Keeper (@timekeeperkw, Kuwait) edition
+of the Nivada Grenchen F77, from the owner's front render. **Start** now has a
+**Your watches** row with both, NOREL B6098G-A1 and Time Keeper × Nivada
+(تايم كيبر × نيفادا in Arabic); tapping one opens its design. A first visit
+still opens on the NOREL.
+
+- **The case** (`Time Keeper × Nivada · F77`) is a round dial opening in the
+  integrated octagonal case: a flat bezel with eight screws, crown at 3,
+  black rubber strap, no calendar (no day or date window, no cyclops).
+  Published for the F77 37 mm: 37.00 across, 45.00 lug to lug, 12.60 high,
+  10 ATM, a double-domed sapphire. Everything else (the Ø27.50 opening, the
+  bezel, strap, crown, glass and dial blank) is an estimate measured off the
+  render, and the case's own note in `index.html` says so. Replace them with
+  Nivada's figures when a drawing arrives.
+- **The photograph** (`app/case-timekeeper-nivada.jpg`) is the render with the
+  dial artwork taken out and the opening filled plainly; the bezel, the
+  flange and the strap are the render's own. It is cropped 2:3 on the dial
+  and is 1040 × 1560. The opening was found by edge-fitting the dark line
+  where the dial meets the flange: centre 50.00 / 47.84 %, Ø58.63 % of the
+  width. Gold and a gem-set bezel are not laid onto this photograph, so
+  those switch to the drawn case, which is the round case with a plain
+  screwed bezel and a strap.
+- **The design** (`designs/timekeeper-nivada.json`) is the render's dial as
+  closely as the studio draws it: a grained silver-white dial, applied
+  rose-gold Arabic-Indic numerals at all twelve hours (Noto Naskh Arabic),
+  slim rose-gold pencil hands, a rose-gold seconds hand with a 3.5 mm tail,
+  "Nivada" typed in applied rose gold over GRENCHEN, TIME KEEPER above 6, and
+  a fine dark minute track. What it cannot show: the shield logo and the
+  script "Nivada" (no built-in mark for them; upload the artwork under
+  **Text → Logo** to use it), SWISS and MADE split either side of 6 (there is
+  one footer line, and it carries TIME KEEPER), and the dial's vertical
+  brushing (the brushed finish is drawn as a sunburst-like sheen, so grained
+  is used).
+- The 3D view draws this case as a generic round case (with a fluted bezel and no strap); only the NOREL has its own 3D case.
+
+Also in 3.5.0: on opening, simple mode is chosen before the page is drawn,
+so a phone no longer shows the full editor for a moment first.
+
 ## The bracelet to the supplier's sheet (v3.4.1)
 
 The 3D bracelet now follows Blue Creations' variant sheet for the
@@ -563,8 +603,8 @@ version and build you have.
 
 ## Cases
 
-A design names the case it is drawn for. **Case → Case** offers three, each fixed
-to its factory drawings:
+A design names the case it is drawn for. **Case → Case** offers these, each fixed
+to its factory drawings (the Time Keeper × Nivada to published figures and estimates until a drawing arrives):
 
 | case | what it is |
 |---|---|
@@ -572,6 +612,7 @@ to its factory drawings:
 | NOREL B6098G-A1 · R3 | Blue Creations' 41 mm round case as drawn: 40.0 / 34.8 fluted bezel (72 V flutes 0.41 mm deep, taken from their STEP; the photograph uses that bezel), Ø32.5 opening, President bracelet, Sellita SW240-1 day-date |
 | NOREL B6098G-A1 · Concept D | the proposal: a 41.0 bezel flush with the case, 33.8 inside (3.6 mm of flutes and land a side), Ø31.4 opening, 2.5× cyclops |
 | NOREL B6098G-A1 · R4 (3 Nov) | Blue Creations' assembly drawing of 2026.11.03, Concept D taken up: Ø41 bezel flush, (3.40) ring to Ø34.2, Ø33.5 glass, Ø31.4 opening, Ø32.5 dial, 11.2 mm; a Ø7.0 × 5.5 cut-circle cyclops centred 10.0 mm out (date at 9.95) |
+| Time Keeper × Nivada · F77 | Nivada Grenchen F77, Time Keeper edition: 37 mm, 45 lug to lug, 12.6 high (published); Ø27.5 opening, plain bezel with eight screws, rubber strap and the rest estimated from the render; no calendar |
 
 Changing the case refits the dial: every radial measurement — chapter ring,
 tracks, zones, borders, numerals, indices, logo position — is scaled by the
