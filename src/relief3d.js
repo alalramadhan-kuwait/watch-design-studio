@@ -154,11 +154,20 @@ function pose(mode){
   controls.target.set(0,mode==='macro'?2:mode==='front'?0:-4,mode==='front'?-2:-5);
   camera.position.set(...(mode==='front'?[0,0,122]:mode==='macro'?[13,-21,33]:[38,-64,84]));controls.update();render();
 }
+/* A path may say how it stands up with data-relief: "skip" is drawing that
+   only reads in 2D (a lume channel's shaded wall, a polished end facet),
+   "lume" is lume set into a channel cut through the hand's table, so it is
+   laid lower than the metal round it and in its own material. */
+const lumeMaterial=new THREE.MeshStandardMaterial({color:'#e3ead8',roughness:.6,metalness:0,envMapIntensity:.4});
 function extrudeSVG(svg,material,depth,bevel,z,parent=model,segments=2){
   const data=loader.parse(svg),group=new THREE.Group();parent.add(group);group.scale.y=-1;group.position.z=z;
   for(const path of data.paths){
     if(path.userData?.style?.fill==='none')continue;
+    const relief=path.userData?.node?.getAttribute?.('data-relief');
+    if(relief==='skip')continue;
+    const lume=relief==='lume';
     for(const shape of SVGLoader.createShapes(path)){
+      if(lume){mesh(new THREE.ExtrudeGeometry(shape,{depth:depth*.55,bevelEnabled:false,curveSegments:18,steps:1}),lumeMaterial,group);continue;}
       mesh(new THREE.ExtrudeGeometry(shape,{depth,bevelEnabled:bevel>0,bevelSize:bevel,bevelThickness:bevel*.65,bevelOffset:-bevel*.5,bevelSegments:segments,curveSegments:18,steps:1}),material,group);
     }
   }

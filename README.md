@@ -200,6 +200,45 @@ stored in a design file do not change. In the full editor at laptop widths
 the toolbar sits tighter, and on a narrower window it takes a second row
 rather than pushing Share and Export off the screen.
 
+## Royal Oak hands (v4.3.0)
+
+From the owner: "Add Royal Oak hands as one of the options."
+
+- **A Royal Oak set.** Hands → Shape has **Royal Oak** (رويال أوك) next to
+  Day-date. Like Day-date it sets all three hands at once, at the lengths and
+  widths measured on the Royal Oak Selfwinding 41 mm (15510ST), as shares of
+  the dial opening: the minute hand to 0.875 of the radius (the inner edge of
+  the minute track), 1.26 mm wide; the hour hand to 0.57 (just inside the
+  markers), 1.35 mm wide; neither with a tail. The seconds hand is the
+  Royal Oak's own: a fine needle to 0.92 of the radius, with a long flat
+  counterweight paddle with an open slot, reaching 0.40 of the radius behind
+  the centre.
+- **The shape.** Straight bars with parallel sides, a flat polished table
+  between two bevels, square tips with chamfered corners, and a narrow neck
+  with a 45° shoulder where each hand meets its collet. The collets are the
+  Royal Oak's: a wide one under the hour hand and a flat seconds cap with the
+  pivot showing.
+- **Lume let in, not laid on.** The set turns the lume on, and on these hands
+  it is a channel cut into the table: a dark wall round it, the edge toward
+  the light in the wall's shadow. In the 3D view the channel is cut through
+  the metal and the lume sits below it, and the seconds slot is open. Lume
+  off leaves the polished table whole. The seconds hand never carries lume.
+- **Metal.** Steel hands become white gold, as on the steel watch; hands
+  already in gold, blued or black steel keep their metal. Every metal chip
+  still works afterwards.
+- **Elsewhere.** The seconds tab has a **Royal Oak** card (the needle and
+  paddle on their own). The full editor's Style list and the More options
+  Shape cards have **Royal Oak** and **Royal Oak seconds**; chosen there they
+  change the shape only, as Day-date does.
+- **Sources.** Audemars Piguet's product picture of the 15510ST (a straight-on
+  render, used for the outline, widths and lengths) and Monochrome Watches'
+  photographs of the 15500ST (used for the seconds counterweight, which the
+  render hides under the minute hand). The measurements are written out
+  beside `FACET["royal-oak"]` in `index.html`.
+
+Every existing hand style, with and without lume, and every preset and file
+in `designs/` draw exactly as in 4.2.0 (compared byte for byte).
+
 ## The Vernoy among your watches, a way off the earlier NOREL drawings, and a brushed steel dial (v4.2.0)
 
 From the owner: "There is the third case. Vernoy." And, on the Time Keeper ×

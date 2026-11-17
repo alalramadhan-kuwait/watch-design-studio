@@ -167,8 +167,9 @@ test('every choice on a sheet has a plain name and its Arabic', () => {
   } finally { lang('en'); }
   assert.deepEqual(noAr, [], 'choices with no Arabic');
   assert.ok(seen.length > 150, 'the scan found the choices (' + seen.length + ')');
-  // all twenty-five hand shapes are offered, the four drawn spindles by name
-  assert.equal(LISTS.HAND_STYLES.length, 25);
+  // all twenty-seven hand shapes are offered (the Royal Oak pair since 4.3.0), the four drawn spindles by name
+  assert.equal(LISTS.HAND_STYLES.length, 27);
+  assert.equal(G.gOptLabel('H.style', 'royal-oak'), 'Royal Oak');
   assert.equal(G.gOptLabel('H.style', 'vector · Vernoy spindle 90%'), 'Vernoy spindle 90%');
   assert.equal(G.gOptLabel('indices.style', 'diamond'), 'Diamond shape', 'the marker shape, not the stone');
   assert.equal(G.gOptLabel('H.style', 'dd-seconds'), 'Long needle', 'the shared glossary answers first where it has a name');
