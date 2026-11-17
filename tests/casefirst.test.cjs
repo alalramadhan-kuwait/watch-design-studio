@@ -71,7 +71,8 @@ test('the photograph stays on for what it can show, and only then', () => {
   assert.equal(photoShows(NOREL, 'case.strapColor', '#4E3629'), true);
   // the button, on the stage, whenever a photographed case is drawn
   assert.match(guide, /photoBtn\.id = "gPhotoBtn"/);
-  assert.match(guide, /!!K\.photoFile && \(!S\.render \|\| S\.render\.view === "front"\) && \(!S\.tpl\.on \|\| photoPlan\(S, K\) === false\)/);
+  // (since 4.2.0 every case with a photograph, the Vernoy's built-in one included; not on R3 or Concept D, which have their own note)
+  assert.match(guide, /front && !old && hasPhoto\(K\) && \(!S\.tpl\.on \|\| photoPlan\(S, K\) === false\)/);
 });
 
 test('cards show a photographed case in its photograph, with its own ids', () => {

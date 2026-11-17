@@ -1355,7 +1355,12 @@ const VERNOY_CASE = {
   height:7.90, bezelH:2.50, midH:4.10,
   opening:30.50, glassSeat:31.60, glassD:31.50, glassT:1.20, glassBevel:"35° × 0.20, AR underside",
   dialD:31.30, dialT:0.40, dialHolder:31.60, dialMat:"brass",
-  movHolder:25.00, crownD:4.50, crownTube:2.00, cabochon:2.00, tol:"±0.05 mm, ±1°"
+  movHolder:25.00, crownD:4.50, crownTube:2.00, cabochon:2.00, tol:"±0.05 mm, ±1°",
+  /* Its photograph is the one built into the page (BUILTIN_CASE, lined up by
+     BUILTIN_CASE_CAL), not a file of its own: the watch in polished steel on
+     a dark brown strap, which is what it can show. "strap" names that strap
+     in the words simple mode uses when it puts it back. */
+  photoOwn:{finish:"polished", strapColor:"#4E3629", strap:"brown"}
 };
 /* NOREL B6098G-A1, Blue Creations: a round 41 mm case with a fluted bezel and
    a Sellita SW240-1 day-date. R3 is the case as drawn; Concept D is the
@@ -1508,6 +1513,10 @@ function casePhoto(K){
   return null;
 }
 const tplAvail = st => { const K = caseOf(st); return K.photoFile ? !!casePhoto(K) : !!(tplImage && K.photo); };
+/* Whether a case has a photograph to show: a file of its own, or, for the
+   Vernoy, the picture built into the page. Everything that asks "can this
+   case be shown as the real watch" asks this, not photoFile. */
+const hasPhoto = K => !!(K && (K.photoFile || K.photo));
 const caseOutlinePath = (K, half, scale) => K.shape === "round" ? disc(half)
   : cushion(half, K.rSide*(scale||1), K.rCorner*(scale||1));
 
@@ -2092,7 +2101,7 @@ const APP_BUILD = "__BUILD__";
 /* The version people see, raised with every change that reaches them:
    major for a new way of working, minor for something new to do, patch for
    a fix. Shown on the watch screen, so any screenshot says which it was. */
-const APP_VERSION = "4.0.0";
+const APP_VERSION = "4.2.0";
 const APP_DATE = "__DATE__";
 
 /* Every route that replaces S passes through one of these three, which is
@@ -2117,7 +2126,7 @@ function applyCaseModel(from, to){
   c.model = B.model; c.locked = true;
   c.diameter = B.flat; c.opening = B.opening; c.lugToLug = B.lugToLug; c.lugWidth = B.lugWidth; c.thickness = B.height;
   if(S.dial.lock) S.dial.diameter = B.dialD;
-  S.tpl.on = !!(B.photoFile || B.photo);       // a NOREL case brings its own photograph
+  S.tpl.on = hasPhoto(B);                       // every case opens on its photograph
   casePhoto(B);
   const k = B.opening / A.opening;
   if(Math.abs(k - 1) > 1e-6){
@@ -3456,6 +3465,10 @@ const MFINISH = {
   grained:     {rough:0.74, metal:0.04, aniso:0.00, groove:"none",   coat:0.05, grain:0.075, dish:0.015},
   sandblasted: {rough:0.82, metal:0.30, aniso:0.00, groove:"none",   coat:0.02, grain:0.095, dish:0.015},
   brushed:     {rough:0.34, metal:0.88, aniso:0.82, groove:"linear", coat:0.04, grain:0.050, dish:0.015},
+  /* Brushed steel (simple mode's "Brushed steel"): drawn by brushSteelK
+     below rather than by the light model, so the grain shows as grain at
+     phone size. These figures only serve whatever else reads the table. */
+  brushedsteel:{rough:0.34, metal:0.88, aniso:0.82, groove:"linear", coat:0.04, grain:0.050, dish:0.015},
   sunburst:    {rough:0.36, metal:0.92, aniso:0.80, groove:"radial", coat:0.05, grain:0.055, dish:0.020},
   circular:    {rough:0.34, metal:0.86, aniso:0.80, groove:"circle", coat:0.04, grain:0.048, dish:0.015},
   gloss:       {rough:0.10, metal:0.00, aniso:0.00, groove:"none",   coat:0.80, grain:0.006, dish:0.020, rim:0.18, rimAt:0.92},
@@ -4105,6 +4118,101 @@ function slabUV(P, ux, uy){
   return [ xr/span + 0.5 + (P.offX||0), yr/span*(P.tex.w/P.tex.h) + 0.5 + (P.offY||0) ];
 }
 
+/* ---------------------------------------------------------------------
+   Brushed steel. A dial brushed in one direction, like the Nivada F77's,
+   reads as two things at once: fine, dense, slightly uneven lines of grain,
+   and a broad band of light lying across them. The light model above gives
+   the band but smears the grain into a sheen at phone size, so this finish
+   is drawn directly: the dial colour (the metal) is lit by the band and
+   streaked by the grain, in linear light.
+
+   The grain is value noise stretched along the brush: about 9 cells to
+   the millimetre across it and one every 4.5 mm along it, with two finer
+   layers on top, so the lines vary in brightness and length the way real
+   brushing does, and the same on every render. A few lines in a hundred
+   are deeper scratches. "vertical" runs the grain from 12 to 6,
+   "horizontal" from 9 to 3, and "circular" round the centre.
+
+   The band sits on the side of the dial toward the studio light, across
+   the grain: a horizontal band on a vertical brush, and on a circular
+   brush the bright bar through the centre that a record shows. */
+const BRUSH_DIRS = ["vertical", "horizontal", "circular"];
+const brushDirOf = d => BRUSH_DIRS.indexOf(d) >= 0 ? d : "vertical";
+/* where the band lies, in fractions of the dial radius along the brush
+   (linear) or as an angle (circular), from the light's azimuth */
+function brushBand(az, dir){
+  const a = (+az || 0)*Math.PI/180, lx = Math.cos(a), ly = Math.sin(a);
+  dir = brushDirOf(dir);
+  return dir === "circular" ? {phi:Math.atan2(ly, lx)} : {p0:0.34*(dir === "vertical" ? ly : lx)};
+}
+/* the grain at a point, roughly -1 to 1, in millimetres across and along the brush */
+function brushGrain(across, along){
+  const n = (x, y) => mVnoise(x, y)*2 - 1;
+  let g = 0.45*n(across*9, along*0.22) + 0.35*n(across*21 + 3.1, along*0.55 + 1.7) + 0.20*n(across*47 + 9.2, along*1.3 + 4.4);
+  /* the odd deeper line, for a few millimetres; each line of grain starts
+     its stretches at its own place, so they do not end in a row */
+  const col = Math.floor(across*9);
+  if(mHash(col*1.37, Math.floor(along*0.30 + mHash(col*0.71, 3.3)*7)) > 0.965) g += 0.45;
+  return g;
+}
+/* the light on brushed steel at (ux, uy) mm, as a multiplier of the
+   metal's colour: the band, and the grain, which shows most inside it */
+function brushSteelK(ux, uy, dialR, dir, band, key){
+  dir = brushDirOf(dir);
+  let across, along, b;
+  if(dir === "circular"){
+    const r = Math.hypot(ux, uy), th = Math.atan2(uy, ux);
+    across = r; along = th*Math.max(r, 0.5);
+    let d = Math.abs(th - band.phi) % Math.PI; d = Math.min(d, Math.PI - d);
+    b = Math.exp(-Math.pow(d/0.40, 2))*Math.min(1, r/(0.18*dialR));
+  } else {
+    const v = dir === "vertical";
+    across = v ? ux : uy; along = v ? uy : ux;
+    b = Math.exp(-Math.pow((along/dialR - band.p0)/0.46, 2));
+  }
+  b *= key;
+  const g = brushGrain(across, along);
+  return 0.84 + 0.26*b + g*(0.09 + 0.06*b);
+}
+
+/* the grain as SVG strokes for the drawn dial: one path for each of six
+   looks (three strengths of light, three of shade), each stroke 1.5 to 8.5
+   mm long, made once for each size and direction from a fixed seed */
+const BRUSH_2D = new Map();
+function brushPaths2D(rOut, dir){
+  const key = (+rOut).toFixed(3) + "|" + dir;
+  if(BRUSH_2D.has(key)) return BRUSH_2D.get(key);
+  let sd = 0x2F6B3A91;
+  const rnd = () => { sd = (sd + 0x6D2B79F5) >>> 0; let t = sd; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0)/4294967296; };
+  const P6 = [[], [], [], [], [], []], pick = () => { const u = rnd(); return (rnd() < 0.5 ? 0 : 3) + (u < 0.5 ? 0 : u < 0.85 ? 1 : 2); };
+  const g = v => f(v, 3);
+  if(dir === "circular"){
+    for(let r = 0.3; r < rOut; r += 0.13*(0.7 + 0.6*rnd())){
+      let a0 = rnd()*2*Math.PI; const end = a0 + 2*Math.PI;
+      while(a0 < end){
+        const a1 = Math.min(end, a0 + Math.min(2.6, (1.5 + rnd()*7)/r));
+        if(rnd() < 0.8) P6[pick()].push(`M${g(r*Math.cos(a0))} ${g(r*Math.sin(a0))}A${g(r)} ${g(r)} 0 0 1 ${g(r*Math.cos(a1))} ${g(r*Math.sin(a1))}`);
+        a0 = a1 + rnd()*0.8/r;
+      }
+    }
+  } else {
+    const v = dir === "vertical";
+    for(let x = -rOut; x < rOut; x += 0.13*(0.7 + 0.6*rnd())){
+      const half = Math.sqrt(Math.max(0, rOut*rOut - x*x));
+      let y = -half - rnd()*4;
+      while(y < half){
+        const y1 = Math.min(half, y + 1.5 + rnd()*7);
+        if(rnd() < 0.8) P6[pick()].push(v ? `M${g(x)} ${g(y)}V${g(y1)}` : `M${g(y)} ${g(x)}H${g(y1)}`);
+        y = y1 + rnd()*0.8;
+      }
+    }
+  }
+  const out = P6.map(a => a.join(""));
+  if(BRUSH_2D.size > 12) BRUSH_2D.clear();
+  BRUSH_2D.set(key, out);
+  return out;
+}
+
 function renderDialPixels(opt){
   /* Supersample rather than band-limiting the geometry away: render the
      field at a multiple of the output grid and box-filter it down. Fine
@@ -4152,6 +4260,9 @@ function renderDialPixels(opt){
   const az = G.az*Math.PI/180, el = G.el*Math.PI/180;
   const L = [Math.cos(el)*Math.cos(az), Math.cos(el)*Math.sin(az), Math.sin(el)];
 
+  /* brushed steel is drawn directly (brushSteelK) */
+  const BR = finish === "brushedsteel" ? {dir:brushDirOf(opt.brush), band:brushBand(G.az, opt.brush), key:Math.min(1, G.key/1.5)} : null;
+
   const anisoAmt = M.aniso*G.anisoScale;
   const a = Math.max(1e-3, M.rough*M.rough);
   const aspect = Math.sqrt(1 - 0.92*anisoAmt);
@@ -4166,6 +4277,12 @@ function renderDialPixels(opt){
       const rr = Math.hypot(ux, uy);
       if(rr > dialR){ buf[i+3] = 0; continue; }
       const rn = rr/dialR, th = Math.atan2(uy, ux);
+      if(BR){
+        const k = brushSteelK(ux, uy, dialR, BR.dir, BR.band, BR.key)*exposure*(1 - 0.14*Math.pow(rn, 6));
+        for(let c=0; c<3; c++) buf[i+c] = mLin2srgb(Math.min(1, Math.max(0, alin[c]*k)))*255 + (mHash(x*7.1, y*3.3) - 0.5);
+        buf[i+3] = 255;
+        continue;
+      }
 
       /* --- groove frame for brushed / sunray microstructure -------------- */
       let gAng = 0, rghMod = 1;
@@ -4382,9 +4499,9 @@ function stoneArgs(st, color){
                fibre:d.stFibre, fibreAngle:d.stFibreAngle}};
 }
 let _matLast = null;
-function materialURL(color, finish, mode, az, el, px, guil, stone, surf){
+function materialURL(color, finish, mode, az, el, px, guil, stone, surf, brush){
   if(typeof document === "undefined") return null;      // headless: no material
-  const key = [color, finish, mode, az, el, px, CASE_SPEC.dialD,
+  const key = [color, finish + (finish === "brushedsteel" ? ":" + brushDirOf(brush) : ""), mode, az, el, px, CASE_SPEC.dialD,
                surf ? [surf.dome, surf.satin].join(".") : "-",
                guil && Object.values(guil).join(","),
                stone && [stone.type, stone.slab, stone.scale, stone.rot, stone.offX,
@@ -4404,7 +4521,7 @@ function materialURL(color, finish, mode, az, el, px, guil, stone, surf){
     const ctx = cv.getContext("2d");
     const buf = renderDialPixels({px, dialMM:CASE_SPEC.dialD, base:color, finish,
                                   lighting:mode, light:{az:+az, el:+el}, guil, stone,
-                                  override: surf || null,
+                                  override: surf || null, brush,
                                   ss: (guil || stone) ? 2 : 1});
     const img = ctx.createImageData(px, px);
     img.data.set(buf);
@@ -4417,7 +4534,7 @@ function materialURL(color, finish, mode, az, el, px, guil, stone, surf){
 }
 /* map the app's finish names onto the material model */
 const MAT_FINISH = {flat:"matte", matte:"matte", gloss:"gloss", lacquer:"lacquer",
-  enamel:"enamel", sunburst:"sunburst", guilloche:"guilloche", brushed:"brushed",
+  enamel:"enamel", sunburst:"sunburst", guilloche:"guilloche", brushed:"brushed", brushedsteel:"brushedsteel",
   grained:"grained", sandblasted:"sandblasted", stone:"stone", metallic:"metallic",
   circular:"circular", mop:"mop"};
 
@@ -4465,7 +4582,7 @@ function buildSVG(st, o={}){
     const url = materialURL(color, MAT_FINISH[finish] || "matte", matMode,
                             st.render.az, st.render.el, o.matPx || st.render.quality, gu,
                             stoneArgs(st, color),
-                            (surf.dome || surf.satin) ? surf : null);
+                            (surf.dome || surf.satin) ? surf : null, st.dial.brushDir);
     if(!url) return null;
     const cid = id("mi");
     defs.push(`<clipPath id="${cid}"><path d="${rIn>0?annulus(rOut,rIn):disc(rOut)}" clip-rule="evenodd"/></clipPath>`);
@@ -4505,6 +4622,27 @@ function buildSVG(st, o={}){
       }
       for(let r=1.0;r<rOut;r+=0.42) inner.push(`<circle r="${f(r,2)}" fill="none" stroke="${lo}" stroke-opacity="0.16" stroke-width="0.055"/>`);
       inner.push(vignette(0.30,0.46));
+    } else if(finish==="brushedsteel"){
+      /* the drawn brushed steel (cards, and the plain 2D view): the grain as
+         short strokes of the metal's own light and shade, and the band of
+         light across it, placed as on the shaded dial */
+      const dir = brushDirOf(st.dial.brushDir), bd = brushBand(st.render && st.render.az, dir), P6 = brushPaths2D(rOut, dir);
+      const OP = [0.10, 0.17, 0.26];
+      P6.forEach((dd, j) => { if(dd) inner.push(`<path d="${dd}" fill="none" stroke="${j < 3 ? hi : deep}" stroke-opacity="${OP[j % 3]}" stroke-width="0.075"/>`); });
+      if(dir === "circular"){
+        for(const [w, op] of [[0.62, 0.16], [0.30, 0.22]]) for(const s0 of [0, Math.PI]){
+          const a0 = bd.phi + s0 - w, a1 = bd.phi + s0 + w, R2 = rOut*1.02;
+          inner.push(`<path d="M0 0L${f(R2*Math.cos(a0),3)} ${f(R2*Math.sin(a0),3)}A${f(R2,3)} ${f(R2,3)} 0 0 1 ${f(R2*Math.cos(a1),3)} ${f(R2*Math.sin(a1),3)}Z" fill="${tint(color, 0.5)}" fill-opacity="${op}"/>`);
+        }
+      } else {
+        const gid = id("bs"), v = dir === "vertical", c0 = bd.p0*rOut;
+        defs.push(`<linearGradient id="${gid}" gradientUnits="userSpaceOnUse" x1="${v ? 0 : f(-rOut,3)}" y1="${v ? f(-rOut,3) : 0}" x2="${v ? 0 : f(rOut,3)}" y2="${v ? f(rOut,3) : 0}">`
+          + [-1, -0.5, 0, 0.5, 1].map(t => { const at = Math.max(0, Math.min(1, (c0 + t*0.92*rOut + rOut)/(2*rOut)));
+              return `<stop offset="${f(at,3)}" stop-color="${tint(color, 0.55)}" stop-opacity="${f(0.42*Math.exp(-t*t*4),3)}"/>`; }).join("")
+          + `</linearGradient>`);
+        inner.push(`<circle r="${rOut}" fill="url(#${gid})"/>`);
+      }
+      inner.push(vignette(0.08, 0.22));
     } else if(finish==="brushed"){
       for(let y=-rOut;y<rOut;y+=0.22)
         inner.push(`<line x1="${-rOut}" y1="${f(y,2)}" x2="${rOut}" y2="${f(y,2)}" stroke="${(y*10|0)%2?hi:lo}" stroke-opacity="0.16" stroke-width="0.09"/>`);
@@ -9738,7 +9876,7 @@ const SCHEMA = {
       C("dial.color","Dial colour"),
       N("dial.dome","Doming (− dished, + domed)",-0.60,0.60,.01,""),
     N("dial.satin","Satin overlay",0,1,.02,""),
-    SEL("dial.finish","Finish",["matte","gloss","sunburst","guilloche","brushed","grained","sandblasted","enamel","lacquer","stone","metallic","circular","mop"]),
+    SEL("dial.finish","Finish",["matte","gloss","sunburst","guilloche","brushedsteel","brushed","grained","sandblasted","enamel","lacquer","stone","metallic","circular","mop"]),
     N("dial.ombre","Ombré (darker toward the edge)",0,1,.02,""),
     SEL("dial.pave","Pavé (set with diamonds)",["none",...PAVE_ZONES]),
     ...(PAVE_ZONES.indexOf(S.dial.pave) >= 0 ? [SEL("dial.paveStone","Pavé stones",Object.keys(GEM_STONES)),
@@ -9794,6 +9932,7 @@ const SCHEMA = {
     }
     if(S.dial.finish === "sunburst" || S.dial.finish === "brushed" || S.dial.finish === "circular")
       return base.concat([N("dial.rays","Legacy ray count",12,120,1,"")]);
+    if(S.dial.finish === "brushedsteel") return base.concat([SEL("dial.brushDir","Direction",BRUSH_DIRS)]);
     /* simple mode's "Mother of pearl" is the photographed nacre; this one is not */
     if(S.dial.finish === "mop")
       return base.concat([{t:"say", l:"A pearl sheen over the dial colour. For real nacre, choose the stone finish and the mother of pearl family."}]);
@@ -11319,7 +11458,7 @@ function drawMacro(){
   const ang = 45*Math.PI/180;
   const buf = renderDialPixels({
     px, dialMM:CASE_SPEC.dialD, base:S.dial.color,
-    finish: MAT_FINISH[S.dial.finish] || "matte", lighting:mode,
+    finish: MAT_FINISH[S.dial.finish] || "matte", lighting:mode, brush:S.dial.brushDir,
     light:{az:+S.render.az, el:+S.render.el},
     guil:{pattern:S.dial.pattern, cell:S.dial.cell, pitch:S.dial.pitch,
           rays:S.dial.rays2, twist:S.dial.twist, wall:S.dial.wall,
@@ -12880,6 +13019,7 @@ refineBootRender();
     ['enamel','Grand feu enamel','A glass-like surface with a deep body and rolled highlights. Visual simulation; firing is not modelled.'],
     ['lacquer','Polished lacquer','A high-gloss coating with a pronounced clear-coat response.'],
     ['sunburst','Sunray brushing','Radial anisotropic reflections shift with the studio light.'],
+    ['brushedsteel','Brushed steel','Fine, uneven lines of grain with a band of light across them, in the dial colour; vertical, horizontal or circular.'],
     ['brushed','Straight brushing','Linear directional grain for a clean metallic dial.'],
     ['circular','Circular brushing','Fine circular grain creates a restrained rotating reflection.'],
     ['sandblasted','Fine sandblasting','A diffuse, finely textured surface with gentle metallic response.'],
@@ -12955,7 +13095,7 @@ refineBootRender();
       const {key,state}=items.shift(),cv=content.querySelector(`[data-swatch="${CSS.escape(key)}"]`);
       if(cv){
         const d=state.dial;
-        const data=renderDialPixels({px:96,dialMM:CASE_SPEC.dialD,base:d.color,finish:MAT_FINISH[d.finish]||'matte',lighting:'studio',light:{az:135,el:45},
+        const data=renderDialPixels({px:96,dialMM:CASE_SPEC.dialD,base:d.color,finish:MAT_FINISH[d.finish]||'matte',lighting:'studio',light:{az:135,el:45},brush:d.brushDir,
           guil:d.finish==='guilloche'?{...d,rays:d.rays2}:null,stone:d.finish==='stone'?stoneArgs(state,d.color):null,
           crop:d.finish==='guilloche'?{cx:5,cy:5,span:5}:null,ss:1});
         const ctx=cv.getContext('2d'),img=ctx.createImageData(96,96);img.data.set(data);ctx.putImageData(img,0,0);
@@ -13287,6 +13427,9 @@ window.WatchReliefBridge={
       if(d2.finish==='guilloche')v=.5+guilField(gu,ux,uy,rad,Math.atan2(uy,ux))*2;
       else if(d2.finish==='stone'&&d2.stone==='meteorite'){
         const result=syntheticStone('meteorite',ux,uy,{scale:d2.stoneScale||22,contrast:d2.stoneContrast||1,rot:d2.stoneRot||0,tint:0});v=result.c.reduce((a,b)=>a+b,0)/3;
+      }else if(d2.finish==='brushedsteel'){
+        const dr=brushDirOf(d2.brushDir);
+        v=.5+.12*(dr==='circular'?brushGrain(rad,Math.atan2(uy,ux)*Math.max(rad,.5)):dr==='vertical'?brushGrain(ux,uy):brushGrain(uy,ux));
       }else if(['brushed','sunburst','circular'].includes(d2.finish)){
         const p=d2.finish==='brushed'?uy:d2.finish==='circular'?rad:Math.atan2(uy,ux)*12;v=.5+.12*Math.sin(p*130);
       }
@@ -13600,6 +13743,15 @@ body.guided #gFrameBtn{ display:block }
   align-items:center; gap:8px; white-space:nowrap; cursor:pointer; box-shadow:0 4px 14px rgba(0,0,0,.22) }
 #gPhotoBtn svg{ width:20px; height:20px; flex:none }
 body.guided #gPhotoBtn:not([hidden]){ display:inline-flex }
+/* On an earlier NOREL drawing (R3, Concept D), which has no photograph of
+   the real watch: a lighter pill in the same place, saying so, that moves
+   the design to the 3 Nov case on its photograph */
+#gR4Btn{ display:none; position:absolute; left:12px; right:12px; margin:0 auto; width:max-content; top:54px; z-index:7; min-height:44px; max-width:calc(100% - 24px);
+  padding:6px 16px 6px 12px; border-radius:16px; border:1px solid var(--ds-border, #d9d6cf); background:rgba(255,255,255,.94); color:var(--ds-text, #1d1d1f);
+  font:600 14px/1.25 var(--ds-font, -apple-system, sans-serif); align-items:center; gap:8px; cursor:pointer; text-align:start; box-shadow:0 3px 12px rgba(0,0,0,.14) }
+#gR4Btn svg{ width:20px; height:20px; flex:none }
+#gR4Btn small{ display:block; font-weight:400; font-size:12px; color:var(--ds-text-2, #5f5b55); margin-top:1px }
+body.guided #gR4Btn:not([hidden]){ display:inline-flex }
 body:not(.guided) #gStartMore{ display:none }
 /* the "Start from…" row on the Case step: a plain dial, a style, a saved version */
 .gStartRow{ display:flex; width:100%; align-items:center; justify-content:space-between; gap:10px; min-height:52px; margin:12px 0 4px; padding:8px 14px;
@@ -13795,6 +13947,9 @@ const GSTR = {en:{
   "card.pave":"NOREL · diamond-set numerals", "card.paveSub":"Line-set figures, to review",
   "card.vernoy":"Vernoy", "card.study":"Style study",
   "start.yours":"Your watches", "card.tk":"Time Keeper × Nivada", "card.tkSub":"Silver and rose gold",
+  /* the third watch; its reference is joined by a hyphen that does not
+     break, so a narrow card wraps it after the name, not inside it */
+  "card.vernoyRd":"Vernoy RD26‑0172", "card.vernoyRdSub":"Cushion · 36 mm",
   "case.tk":"Nivada F77 · Time Keeper", "case.tkSub":"37 mm · rubber strap",
   "case.norel":"NOREL", "case.norelSub":"41 mm round · current drawing", "case.vernoy":"Vernoy cushion", "case.vernoySub":"36 mm · strap",
   "case.r3":"NOREL R3", "case.r3Sub":"Earlier drawing", "case.d":"NOREL Concept D", "case.dSub":"Earlier proposal",
@@ -13864,7 +14019,9 @@ const GSTR = {en:{
   "photo.show":"Show the real photo", "photo.on":"Showing the real photo.", "photo.again":"Back on the real photo.",
   "photo.changed": list => `Showing the real photo: ${list}, as photographed.`,
   "photo.steel":"steel", "photo.plainBezel":"the plain bezel", "photo.finish": f => `${f.toLowerCase()} finish`,
-  "photo.strap":"the strap shown", "photo.bracelet":"the bracelet shown", "photo.blackStrap":"the black strap",
+  "photo.strap":"the strap shown", "photo.bracelet":"the bracelet shown", "photo.blackStrap":"the black strap", "photo.brownStrap":"the brown strap",
+  "photo.toR4":"Switch to the 3 Nov case (real photo)", "photo.toR4Note":"An earlier NOREL drawing, with no photograph.",
+  "photo.onR4":"On the 3 Nov case, in its real photograph.",
   "case.gemNote": (n, ct, metal) => `${n} stones · ≈ ${ct} ct · set in 18k ${metal}. Blue Creations would have to make this bezel.`,
   "case.gemRound":"Round brilliants are drawn on the round NOREL case only.",
   "dial.paveNote": (n, ct) => `${n} stones · ≈ ${ct} ct. A pavé dial is 18k gold about 0.8–1.0 mm thick, not the 0.40 mm brass blank: Blue Creations to confirm.`,
@@ -13935,6 +14092,7 @@ GSTR.ar = {
   "card.pave":"NOREL · أرقام مرصّعة بالألماس", "card.paveSub":"أرقام مرصوفة بالأحجار، للمراجعة",
   "card.vernoy":"Vernoy", "card.study":"دراسة تصميم",
   "start.yours":"ساعاتك", "card.tk":"تايم كيبر × نيفادا", "card.tkSub":"فضي وذهبي وردي",
+  "card.vernoyRd":"فيرنوي RD26‑0172", "card.vernoyRdSub":"وسادية · 36 ملم",
   "case.tk":"نيفادا F77 · تايم كيبر", "case.tkSub":"37 ملم · حزام مطاطي",
   "case.norel":"NOREL", "case.norelSub":"دائرية 41 ملم · الرسم الحالي", "case.vernoy":"Vernoy وسادية", "case.vernoySub":"36 ملم · حزام",
   "case.r3":"NOREL R3", "case.r3Sub":"رسم سابق", "case.d":"NOREL Concept D", "case.dSub":"مقترح سابق",
@@ -14004,7 +14162,9 @@ GSTR.ar = {
   "photo.show":"اعرض الصورة الحقيقية", "photo.on":"تظهر الصورة الحقيقية.", "photo.again":"عادت الصورة الحقيقية.",
   "photo.changed": list => `تظهر الصورة الحقيقية: ${list}، كما في الصورة.`,
   "photo.steel":"الستيل", "photo.plainBezel":"الإطار السادة", "photo.finish": f => `التشطيب ${f}`,
-  "photo.strap":"إظهار الحزام", "photo.bracelet":"إظهار السوار", "photo.blackStrap":"الحزام الأسود",
+  "photo.strap":"إظهار الحزام", "photo.bracelet":"إظهار السوار", "photo.blackStrap":"الحزام الأسود", "photo.brownStrap":"الحزام البني",
+  "photo.toR4":"انتقل إلى قالب 3 نوفمبر (صورة حقيقية)", "photo.toR4Note":"رسم NOREL سابق، بلا صورة.",
+  "photo.onR4":"على قالب 3 نوفمبر، في صورته الحقيقية.",
   "case.gemNote": (n, ct, metal) => `${arCount(n, "حجر واحد", "حجران", "أحجار", "حجراً")} · ≈ ${ct} قيراط · مرصّعة في ${({"yellow gold":"ذهب أصفر", "rose gold":"ذهب وردي", "white gold":"ذهب أبيض"})[metal] || metal} عيار 18. على Blue Creations أن تصنع هذا الإطار.`,
   "case.gemRound":"الإطار المرصّع يُرسم على قالب NOREL الدائري فقط.",
   "dial.paveNote": (n, ct) => `${arCount(n, "حجر واحد", "حجران", "أحجار", "حجراً")} · ≈ ${ct} قيراط. الميناء المرصّع بالكامل من ذهب عيار 18 بسماكة 0.8–1.0 ملم تقريباً، لا من النحاس بسماكة 0.40 ملم: على Blue Creations أن تؤكد ذلك.`,
@@ -14056,6 +14216,7 @@ const GWORD = {ar:{
   /* dial */
   "Sunburst":"شمسي", "Matte":"مطفي", "Guilloché":"غيوشيه", "Enamel":"إينامل", "Lacquer":"لاكيه", "Gloss":"لامع", "Grained":"محبّب",
   "Stone":"حجر", "Mother of pearl":"صدف", "Pearl sheen":"لمعة الصدف", "Pattern":"النقشة", "All dial settings":"كل إعدادات الميناء",
+  "Brushed steel":"ستيل مُمشّط", "Vertical":"عمودي", "Horizontal":"أفقي", "Circular":"دائري",
   "Meteorite":"نيزكي", "Aventurine":"أفينتورين", "Opal":"أوبال", "Snowflake obsidian":"أوبسيديان مرقّط", "Onyx":"أونيكس", "Carnelian":"عقيق أحمر",
   "Jade":"يشم", "Rhodonite":"رودونيت", "Lapis lazuli":"لازورد", "Malachite":"ملكيت", "Sodalite":"سوداليت", "White onyx":"أونيكس أبيض",
   "Pietersite":"بيترسايت", "Red jasper":"يشب أحمر", "Tiger's eye":"عين النمر",
@@ -14146,7 +14307,7 @@ const G_CHECK_AR = {
    editor shows its drop-down values by these proper names instead of the
    lower-case words stored in the design file (the stored values do not
    change). Anything not listed is shown with a capital letter. */
-const GLOSS_OPT = {matte:"Matte", gloss:"Gloss", sunburst:"Sunburst", guilloche:"Guilloché", brushed:"Brushed", grained:"Grained",
+const GLOSS_OPT = {matte:"Matte", gloss:"Gloss", sunburst:"Sunburst", guilloche:"Guilloché", brushed:"Brushed", brushedsteel:"Brushed steel", grained:"Grained",
   sandblasted:"Sandblasted", enamel:"Enamel", lacquer:"Lacquer", stone:"Stone", metallic:"Metallic", circular:"Circular brushed",
   mop:"Pearl sheen", "mother of pearl":"Mother of pearl", none:"None", railroad:"Railroad", ticks:"Ticks", dots:"Dots", beads:"Beads", dashes:"Dashes",
   "dd-seconds":"Long needle", "pomme-ouverte":"Breguet", obelisque:"Obelisk", "day-date":"Day-date", "printed":"Printed",
@@ -14850,11 +15011,13 @@ Object.assign(GWORD.ar, {
     return b;
   }
   /* the photograph view of a design, cropped as the drawn cards are; null
-     while the photograph, or its gold look, is still being made */
+     while the photograph, or its gold look, is still being made. The
+     Vernoy's photograph is the built-in picture, placed where the design
+     lines it up (st.tpl), as the main view places it. */
   function photoThumb(st){
     const K = caseOf(st);
-    if(!K.photoFile || !st.tpl || !st.tpl.on || !casePhoto(K) || photoPlan(st, K) === false) return null;
-    const n = ++thumbSeq, C = K.photoCal;
+    if(!hasPhoto(K) || !st.tpl || !st.tpl.on || !tplAvail(st) || photoPlan(st, K) === false) return null;
+    const n = ++thumbSeq, C = K.photoFile ? K.photoCal : {w:tplW, h:tplH, cx:st.tpl.cx, cy:st.tpl.cy, dia:st.tpl.dia};
     const svg = buildTemplate(st, {tag:"pt" + n, insTag:"pi" + n, material:false});
     if(svg.indexOf(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${C.w} ${C.h}"`) !== 0) return null;
     const px = C.w*C.dia/100/K.opening, side = K.flat*1.12*px, x = C.w*C.cx/100 - side/2, y = C.h*C.cy/100 - side/2;
@@ -14862,7 +15025,7 @@ Object.assign(GWORD.ar, {
       .replace(/href="(data:image\/[a-z+]+;base64,[^"]{4000,})"/g, (m, u) => `href="${blobOf(u)}"`);
   }
   function thumb(st, key){
-    const ph = !!(caseOf(st).photoFile && st.tpl && st.tpl.on), k = "t|" + key + "|" + keyOf(st) + (ph ? "|photo" : "");
+    const ph = !!(hasPhoto(caseOf(st)) && st.tpl && st.tpl.on), k = "t|" + key + "|" + keyOf(st) + (ph ? "|photo" : "");
     if(pics.has(k)) return pics.get(k);
     if(ph){ try{ const p = photoThumb(st); if(p) return memo(k, () => p); }catch(e){} }
     /* the drawing; while the photograph is on its way it stands in, and is
@@ -15211,6 +15374,15 @@ Object.assign(GWORD.ar, {
     const day = x => Math.floor((new Date(x.getFullYear(), x.getMonth(), x.getDate())).getTime()/864e5);
     const diff = day(n) - day(d);
     return diff <= 0 ? gT("start.today") : diff === 1 ? gT("start.yesterday") : d.toLocaleDateString(GLANG === "ar" ? "ar-u-nu-latn" : [], {day:"numeric", month:"short"}); };
+  /* The third watch, the Vernoy: the RD26-0172 design, which is the
+     studio's own base design, on the photograph built into the page. It is
+     among Your watches, so it is not listed again under Start from. */
+  const VERNOY_DESIGN = "Vernoy — RD26-0172";
+  function vernoyState(){
+    const st = migrateHands(deep(BASE, PRESETS[VERNOY_DESIGN]));
+    st.meta.name = VERNOY_DESIGN; st.case.model = VERNOY_CASE.model; st.tpl.on = true;
+    return st;
+  }
   /* The top of the Case step, where the watch is chosen: the watches being
      made, the way back to the design last worked on, and "Start from…" for
      a plain dial, a style or a saved version. */
@@ -15219,6 +15391,7 @@ Object.assign(GWORD.ar, {
     const ours = [], cards = [];
     if(noreRef) ours.push({id:"norel", name:gT("card.norel"), sub:gT("card.norelSub"), st:migrateHands(deep(BASE, noreRef))});
     if(tkRef) ours.push({id:"tk-nivada", name:gT("card.tk"), sub:gT("card.tkSub"), st:migrateHands(deep(BASE, tkRef))});
+    ours.push({id:"vernoy", name:gT("card.vernoyRd"), sub:gT("card.vernoyRdSub"), st:vernoyState()});
     const card = c => `<button type="button" class="gCard" data-gstart="${esc2(c.id)}"><div class="gPic">${thumb(c.st, c.id)}</div><div class="gName">${esc2(c.name)}</div><div class="gSub">${esc2(c.sub)}</div></button>`;
     /* English or Arabic, each written in its own language */
     const langs = `<div class="gLang" role="group" aria-label="Language · اللغة">`
@@ -15237,7 +15410,7 @@ Object.assign(GWORD.ar, {
     /* everything else to start from, folded away until asked for */
     if(noreRef) cards.push({id:"norel-gems", name:gT("card.gems"), sub:gT("card.gemsSub"), st:gemExample("gems")},
                            {id:"norel-pave", name:gT("card.pave"), sub:gT("card.paveSub"), st:gemExample("pave")});
-    for(const n of Object.keys(PRESETS)) if(n !== "Standard") cards.push({id:"p:"+n, name:n.replace(/^Vernoy — /,""), sub:n.startsWith("Vernoy") ? gT("card.vernoy") : gT("card.study"), st:migrateHands(deep(BASE, PRESETS[n]))});
+    for(const n of Object.keys(PRESETS)) if(n !== "Standard" && n !== VERNOY_DESIGN) cards.push({id:"p:"+n, name:n.replace(/^Vernoy — /,""), sub:n.startsWith("Vernoy") ? gT("card.vernoy") : gT("card.study"), st:migrateHands(deep(BASE, PRESETS[n]))});
     const vers = (versions || []).map((v,i) => ({id:"v:"+i, name:v.name, sub:gT("start.version"), st:v.state ? migrateHands(deep(BASE, v.state)) : null})).filter(c => c.st);
     h += `<button type="button" class="gStartRow${startAll ? " on" : ""}" id="gStartFrom" data-gdo="startAll" aria-expanded="${startAll}"><span><b>${gT("start.from")}</b><small>${gT("start.fromSub", cards.length + 1 + vers.length)}</small></span><i aria-hidden="true">${startAll ? "⌃" : "›"}</i></button>`;
     if(startAll){
@@ -15253,7 +15426,7 @@ Object.assign(GWORD.ar, {
         /* each case is shown wearing this dial, the way picking it would leave it */
         const pic = m => {
           /* a case with a photograph is pictured in it, even while the screen shows the drawing */
-          if(m === K.model){ if(!K.photoFile || S.tpl.on) return thumb(S, "case:" + m); const st = clone(S); st.tpl.on = true; return thumb(st, "case:" + m); }
+          if(m === K.model){ if(!hasPhoto(K) || S.tpl.on) return thumb(S, "case:" + m); const st = clone(S); st.tpl.on = true; return thumb(st, "case:" + m); }
           const keep = S; let st;
           try{ S = clone(keep); applyCaseModel(K.model, m); st = S; }finally{ S = keep; }
           return thumb(st, "case:" + m);
@@ -15279,7 +15452,7 @@ Object.assign(GWORD.ar, {
       }
       h += toggle("case.strap", K.bracelet ? "Show the bracelet" : "Show the strap", S.case.strap);
       if(!K.bracelet && S.case.strap) h += `<h3>${gW("Strap colour")}</h3>` + swatches("case.strapColor", [["#4E3629","Brown"],["#1E1E20","Black"],["#1E2B45","Navy"],["#A0744A","Tan"],["#2F3B2E","Green"],["#7A2433","Burgundy"]], S.case.strapColor, {row:true});
-      if(K.photoFile || K.photo){ h += toggle("tpl.on", "Show as a photograph", S.tpl.on); if(S.tpl.on) h += `<p class="gNote">${gT(K.photoParts ? "case.photoGold" : "case.photoNote")}</p>`; }
+      if(hasPhoto(K)){ h += toggle("tpl.on", "Show as a photograph", S.tpl.on); if(S.tpl.on) h += `<p class="gNote">${gT(K.photoParts ? "case.photoGold" : "case.photoNote")}</p>`; }
       return h + more("case", "All case settings");
     },
     dial(tab){
@@ -15302,11 +15475,13 @@ Object.assign(GWORD.ar, {
            full editor's "mop" finish is something else, a pearl sheen over the
            dial colour, so it gets its own chip rather than lighting this one. */
         const isMop = d.finish === "stone" && d.stone === "mother of pearl";
-        let h = chips("dial.finish", [["sunburst","Sunburst"],["matte","Matte"],["guilloche","Guilloché"],["enamel","Enamel"],["lacquer","Lacquer"],["gloss","Gloss"],["grained","Grained"],["stone","Stone"],["nacre","Mother of pearl"]]
+        let h = chips("dial.finish", [["sunburst","Sunburst"],["brushedsteel","Brushed steel"],["matte","Matte"],["guilloche","Guilloché"],["enamel","Enamel"],["lacquer","Lacquer"],["gloss","Gloss"],["grained","Grained"],["stone","Stone"],["nacre","Mother of pearl"]]
           .concat(d.finish === "mop" ? [["mop","Pearl sheen"]] : []), isMop ? "nacre" : d.finish);
         if(d.finish === "stone" && !isMop){
           h += `<h3>${gW("Stone")}</h3>` + chips("ui.stone", STONE_FAMILIES.filter(f => f !== "other" && f !== "mother of pearl" && BUILTIN_STONE[f]).map(f => [f, f[0].toUpperCase() + f.slice(1)]), d.stone);
         }
+        /* brushed steel: which way the grain runs (12 to 6 on the Nivada) */
+        if(d.finish === "brushedsteel") h += `<h3>${gW("Direction")}</h3>` + chips("dial.brushDir", [["vertical","Vertical"],["horizontal","Horizontal"],["circular","Circular"]], brushDirOf(d.brushDir));
         if(d.finish === "guilloche") h += `<h3>${gW("Pattern")}</h3>` + chips("dial.pattern", GUIL_PATTERNS.map(p => [p, (GUIL_LABEL[p] || p).replace(/ \(.*/,"")]), d.pattern);
         /* ombré over any surface, and a pavé of small diamonds over all or part of it */
         h += slider("dial.ombre", "Ombré", 0, 1, 0.05, d.ombre || 0, "pct");
@@ -15618,7 +15793,7 @@ Object.assign(GWORD.ar, {
   /* the whole design as its photograph can show it */
   function photoFits(st){
     const K = caseOf(st), c = st.case, own = K.photoOwn || {};
-    if(!K.photoFile) return false;
+    if(!hasPhoto(K)) return false;
     return (twoToneOf(st) ? !!K.photoParts : metalShows(K, c.material)) && (!own.finish || c.finish === own.finish) && c.strap !== false
       && (!!K.bracelet || !own.strapColor || String(c.strapColor).toUpperCase() === own.strapColor.toUpperCase()) && photoPlan(st, K) !== false;
   }
@@ -15629,28 +15804,24 @@ Object.assign(GWORD.ar, {
      shows, and a word on what changed. */
   function showPhoto(){
     const K = caseOf(S), c = S.case, own = K.photoOwn || {}, done = [];
-    if(!K.photoFile) return;
+    if(!hasPhoto(K)) return;
     if(twoToneOf(S) ? !K.photoParts : !metalShows(K, c.material)){ c.material = LUX_STEEL; c.twoTone = "none"; done.push(gT("photo.steel")); }
     if(gemBezelOn(S) && !K.photoParts){ c.gemBezel = "none"; done.push(gT("photo.plainBezel")); }
     if(own.finish && c.finish !== own.finish){ c.finish = own.finish; done.push(gT("photo.finish", gW(GLOSS_OPT[own.finish] || own.finish))); }
     if(c.strap === false){ c.strap = true; done.push(gT(K.bracelet ? "photo.bracelet" : "photo.strap")); }
-    if(!K.bracelet && own.strapColor && String(c.strapColor).toUpperCase() !== own.strapColor.toUpperCase()){ c.strapColor = own.strapColor; done.push(gT("photo.blackStrap")); }
+    if(!K.bracelet && own.strapColor && String(c.strapColor).toUpperCase() !== own.strapColor.toUpperCase()){ c.strapColor = own.strapColor; done.push(gT(own.strap === "brown" ? "photo.brownStrap" : "photo.blackStrap")); }
     S.tpl.on = true; photoAuto = false;
     commit(); paintAll();
     toast(done.length ? gT("photo.changed", gT("list", done)) : gT("photo.on"));
   }
   function apply(path, v, sheet){
-    /* A case with no photograph of its own (the Vernoy's built-in picture)
-       takes no metal, finish or strap, so any of them shows the drawing. */
+    /* Every case has a photograph now (the Vernoy's is the built-in
+       picture), and each keeps it for what it can show: its steel, its own
+       finish and its strap. Anything else shows the drawing until a choice
+       that fits, or "Show the real photo", brings it back. */
     let drawn = false, back = false;
     const K0 = caseOf(S), photoOn = S.tpl.on && tplAvail(S);
-    if(K0.photoFile){
-      if(photoOn && /^(case\.(material|finish|strap|strapColor)|ui\.metal)$/.test(path) && !photoShows(K0, path, v)){ S.tpl.on = false; drawn = true; photoAuto = true; }
-    } else {
-      const takes = m => !!K0.photoParts && (!!goldOf(m) || String(m).toUpperCase() === LUX_STEEL);
-      if(/^case\.(material|finish|strap|strapColor)$/.test(path) && photoOn && get(S, path) !== v && !(path === "case.material" && takes(v))){ S.tpl.on = false; drawn = true; }
-      if(path === "ui.metal" && photoOn && !/^two:/.test(v) && !takes(v) && String(v).toUpperCase() !== String(S.case.material).toUpperCase()){ S.tpl.on = false; drawn = true; }
-    }
+    if(hasPhoto(K0) && photoOn && /^(case\.(material|finish|strap|strapColor)|ui\.metal)$/.test(path) && !photoShows(K0, path, v)){ S.tpl.on = false; drawn = true; photoAuto = true; }
     if(path === "tpl.on") photoAuto = false;
     if(path === "hands.material"){ for(const k of ["hHand","mHand","sHand"]) if(S[k]) S[k].material = v; }
     else if(path === "ui.metal"){ if(/^two:/.test(v)){ S.case.material = LUX_STEEL; S.case.twoTone = v.slice(4); } else { S.case.material = v; S.case.twoTone = "none"; } }
@@ -15690,7 +15861,7 @@ Object.assign(GWORD.ar, {
     /* a two-tone case or a gem bezel the photograph has no parts for,
        whichever case it was chosen on */
     const K = caseOf(S);
-    if(S.tpl.on && K.photoFile && photoPlan(S, K) === false){ S.tpl.on = false; drawn = true; photoAuto = true; }
+    if(S.tpl.on && hasPhoto(K) && photoPlan(S, K) === false){ S.tpl.on = false; drawn = true; photoAuto = true; }
     /* the drawing came up for an earlier choice, and the design fits the photograph again */
     else if(!S.tpl.on && photoAuto && path !== "tpl.on" && K === K0 && photoFits(S)){ S.tpl.on = true; photoAuto = false; back = true; }
     commit(); paintAll();
@@ -15748,8 +15919,29 @@ Object.assign(GWORD.ar, {
   photoBtn.type = "button"; photoBtn.id = "gPhotoBtn"; photoBtn.hidden = true;
   photoBtn.addEventListener("pointerdown", e => e.stopPropagation());
   photoBtn.onclick = e => { e.stopPropagation(); soon(null, showPhoto); };
+  /* On a design whose case is an earlier NOREL drawing, R3 or Concept D:
+     those cases have a render but no photograph of the real watch, so the
+     preview says so and offers the 3 Nov case (R4) on its real photograph.
+     It stands where "Show the real photo" would. */
+  const r4Btn = document.createElement("button");
+  r4Btn.type = "button"; r4Btn.id = "gR4Btn"; r4Btn.hidden = true;
+  r4Btn.addEventListener("pointerdown", e => e.stopPropagation());
+  r4Btn.onclick = e => { e.stopPropagation(); soon(null, toR4); };
+  const earlierNorel = st => { const m = st && st.case && st.case.model; return m === NOREL_R3.model || m === NOREL_D.model; };
+  function toR4(){
+    if(!earlierNorel(S)) return;
+    apply("case.model", NOREL_R4.model);
+    if(!S.tpl.on){ S.tpl.on = true; photoAuto = false; commit(); paintAll(); }
+    toast(gT("photo.onR4"));
+  }
   function syncPhotoBtn(){
-    const K = caseOf(S), want = mode === "guided" && !!K.photoFile && (!S.render || S.render.view === "front") && (!S.tpl.on || photoPlan(S, K) === false);
+    const K = caseOf(S), front = mode === "guided" && (!S.render || S.render.view === "front"), old = front && earlierNorel(S);
+    r4Btn.hidden = !old;
+    if(old){
+      r4Btn.dir = G_DIR[GLANG] || "ltr";
+      r4Btn.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h3l2-2.5h6L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="12" cy="13" r="3.6" fill="none" stroke="currentColor" stroke-width="1.8"/></svg><span>${gT("photo.toR4")}<small>${gT("photo.toR4Note")}</small></span>`;
+    }
+    const want = front && !old && hasPhoto(K) && (!S.tpl.on || photoPlan(S, K) === false);
     photoBtn.hidden = !want;
     if(want){
       photoBtn.dir = G_DIR[GLANG] || "ltr";
@@ -15980,6 +16172,7 @@ Object.assign(GWORD.ar, {
         if(id === "fresh") st = freshState();
         else if(id === "norel" && noreRef) st = migrateHands(deep(BASE, noreRef));
         else if(id === "tk-nivada" && tkRef) st = migrateHands(deep(BASE, tkRef));
+        else if(id === "vernoy") st = vernoyState();
         else if(id === "norel-gems" && noreRef) st = gemExample("gems");
         else if(id === "norel-pave" && noreRef) st = gemExample("pave");
         else if(id.startsWith("p:")){ const n = id.slice(2); st = migrateHands(deep(BASE, PRESETS[n])); st.meta.name = n; }
@@ -16098,7 +16291,7 @@ Object.assign(GWORD.ar, {
   /* ---- placing it, and the switch between the two modes ---- */
   const mBody = document.getElementById("mBody");
   if(mBody) mBody.appendChild(guide); else document.querySelector(".shell").appendChild(guide);
-  const stg0 = document.getElementById("stage"); if(stg0){ stg0.appendChild(frameBtn); stg0.appendChild(photoBtn); }
+  const stg0 = document.getElementById("stage"); if(stg0){ stg0.appendChild(frameBtn); stg0.appendChild(photoBtn); stg0.appendChild(r4Btn); }
   const modeBtn = document.createElement("button");
   modeBtn.type = "button"; modeBtn.className = "btn"; modeBtn.id = "gModeBtn";
   const bar = document.querySelector(".bar");

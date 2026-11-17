@@ -155,7 +155,8 @@ Since v3.0.0 simple mode moves differently:
   back. Choosing a design or a case frames it again, so a 41 mm NOREL is no
   longer shown at the 36 mm Vernoy's framing.
 - **The top of the Case step** (since v4.0.0; it was a Start step of its
-  own) shows your watches, and, after a while away, the design you were on
+  own) shows your watches (NOREL B6098G-A1, Time Keeper × Nivada and, since
+  v4.2.0, Vernoy RD26-0172), and, after a while away, the design you were on
   with **Continue designing** (it returns to the step you were on).
   **Start from…** opens the other starting points and your saved versions.
   A first visit opens on the NOREL B6098G-A1, the watch being made. A reload
@@ -198,6 +199,57 @@ text component **Text**, and the ⋯ menu's save **Save version**. The values
 stored in a design file do not change. In the full editor at laptop widths
 the toolbar sits tighter, and on a narrower window it takes a second row
 rather than pushing Share and Export off the screen.
+
+## The Vernoy among your watches, a way off the earlier NOREL drawings, and a brushed steel dial (v4.2.0)
+
+From the owner: "There is the third case. Vernoy." And, on the Time Keeper ×
+Nivada: "The dial should be brushed steel that matches the case of the
+watch. If the option isn't available, add it as a surface."
+
+- **Three watches.** **Your watches** on the Case step is now NOREL
+  B6098G-A1, Time Keeper × Nivada and **Vernoy RD26-0172** ("Cushion · 36
+  mm"; فيرنوي RD26-0172, "وسادية · 36 ملم"). Tapping the Vernoy opens the
+  *Vernoy — RD26-0172* design (the studio's own base design) on its
+  photograph; it is no longer listed again under **Start from…**. On a phone
+  the three cards sit in one row with no scrolling, each a full-size target.
+- **The Vernoy's photograph is a real photograph.** The cushion case has had
+  a photograph built in since the start (the page's own picture, lined up
+  by `BUILTIN_CASE_CAL`), but 4.0.0 only counted a photograph kept as a file,
+  so the Vernoy was treated as a drawing. Every place that asks whether a
+  case has a photograph now asks `hasPhoto` (a file, or the built-in
+  picture): the watch and case cards show it in the photograph, picking it
+  shows the photograph, and it follows the same rules as the others. It
+  shows its own polished steel on the dark brown strap; any other metal, a
+  brushed or satin finish, another strap colour or the strap hidden switches
+  to the drawing with **Show the real photo**, which puts back steel,
+  polished and "the brown strap". Its designs draw exactly as before: the
+  photograph view and the drawing of every preset and every file in
+  `designs/` were compared byte for byte with 4.0.0.
+- **Off an earlier NOREL drawing.** A design on NOREL R3 or Concept D (cases
+  that have a render but no photograph of the real watch) shows a light note
+  on the watch: **Switch to the 3 Nov case (real photo)** · "An earlier
+  NOREL drawing, with no photograph." (انتقل إلى قالب 3 نوفمبر (صورة
+  حقيقية)). Tapping it moves the design to the R4 case of 3 Nov on its real
+  photograph, rescaled as any case change is.
+- **Brushed steel, a new surface.** Dial → Surface has **Brushed steel**
+  (ستيل مُمشّط), with a **Direction**: **Vertical** (the default, grain from
+  12 to 6 as on the Nivada), **Horizontal** or **Circular**. It is drawn
+  directly rather than by the light model, which smeared grain into a sheen:
+  fine, dense lines of grain that vary in length and brightness (the same
+  on every render), the odd deeper line, and a broad band of light lying
+  across the grain on the side toward the studio light (on a circular brush,
+  the bright bar through the centre that a record shows). The dial colour is
+  the metal, so blue steel or champagne brush the same way. The cards and
+  the plain 2D view draw it as strokes and a gradient, without SVG filters.
+  It is stored as the finish `brushedsteel` with `brushDir`; the full editor
+  lists it as **Brushed steel** with its **Direction**. The older
+  **Brushed** finish is left exactly as it was, because the Valmont study
+  uses it.
+- **The Time Keeper × Nivada dial is brushed steel**, vertical, in #DDDFE1:
+  the light grey of the case's brushed steel in its photograph (about
+  #D4D4D4 on the bezel), and the lightest that keeps the rose gold hands
+  above the studio's 2:1 contrast check, where a grey a shade darker raised
+  a warning on Hands.
 
 ## The case first, the real photographs, and the F77 drawn as itself (v4.0.0)
 
@@ -275,7 +327,8 @@ The Time Keeper × Nivada dial now carries what 3.5.0 could not show.
 Remaining differences from the reference: the reference's GRENCHEN, TIME
 KEEPER and SWISS MADE are a heavier, tighter sans than the studio's line
 font; its script is the brand's own drawing, which Gelasio follows closely
-but not letter for letter; and its dial is vertically brushed.
+but not letter for letter. (Its vertically brushed dial is drawn since
+v4.2.0.)
 
 ## The Time Keeper × Nivada (v3.5.0)
 
