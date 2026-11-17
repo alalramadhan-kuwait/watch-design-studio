@@ -200,3 +200,8 @@ test('the clasp cover is 16.0 wide with its arched end longer than its sides',()
   assert.ok(Math.abs(o[2][1]-16*1.09)<1e-9);
   assert.ok(loopArea(o)!==0);
 });
+test('no raised index under a calendar window, as in 2D (4.5.0)',()=>{
+  const state={indices:{on:true,applied:true,count:12,skipNumerals:false},numerals:{on:false},day:{on:true},date:{on:true,at:3}};
+  assert.deepEqual(markerAngles(state),[30,60,120,150,180,210,240,270,300,330]);
+  state.day.on=false;state.date.on=false;assert.equal(markerAngles(state).length,12);
+});

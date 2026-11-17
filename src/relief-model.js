@@ -30,18 +30,19 @@ export function markerAngles(state){
   /* Hours set one by one: a raised marker at every gem hour and every
      applied index hour, none under a calendar window. A gem stands as a
      metal boss of its footprint here; the stone itself is drawn in 2D. */
-  const m=state.markers;
+  const m=state.markers,cov=new Set();
+  if(state.day?.on)cov.add(12);
+  if(state.date?.on&&Number.isInteger(state.date.at))cov.add(state.date.at===0?12:state.date.at);
   if(m?.perHour&&Array.isArray(m.at)&&Math.round(i?.count||12)===12){
-    const cov=new Set();
-    if(state.day?.on)cov.add(12);
-    if(state.date?.on&&Number.isInteger(state.date.at))cov.add(state.date.at===0?12:state.date.at);
     return m.at.map((k,n)=>({k,n})).filter(({k,n})=>!cov.has(n||12)&&(k==='gem'||k==='gemAlt'||((k==='index'||k==='indexAlt')&&i?.on&&i.applied))).map(({n})=>n*30);
   }
   if(!i?.on||!i.applied)return [];
   const sets={quarters:[12,3,6,9],even:[12,2,4,6,8,10],1212:[12,6],all:[12,1,2,3,4,5,6,7,8,9,10,11]};
   const occupied=state.numerals?.on?(sets[state.numerals.set]||sets.all):[];
   const count=Math.min(60,Math.max(4,Math.round(i.count||12)));
-  return Array.from({length:count},(_,n)=>({n,angle:n*360/count})).filter(({n})=>!i.skipNumerals||!occupied.includes(n===0?12:n)).map(i=>i.angle);
+  /* as in 2D, no index stands under a calendar window (before 4.5.0 the 3D view raised one there) */
+  const under=a=>{const h=a/30;return Number.isInteger(h)&&cov.has(h===0?12:h);};
+  return Array.from({length:count},(_,n)=>({n,angle:n*360/count})).filter(({n})=>!i.skipNumerals||!occupied.includes(n===0?12:n)).map(i=>i.angle).filter(a=>!under(a));
 }
 
 /* A dial is made up: discs printed or turned on top of one another, and a

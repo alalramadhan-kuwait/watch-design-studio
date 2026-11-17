@@ -2101,7 +2101,7 @@ const APP_BUILD = "__BUILD__";
 /* The version people see, raised with every change that reaches them:
    major for a new way of working, minor for something new to do, patch for
    a fix. Shown on the watch screen, so any screenshot says which it was. */
-const APP_VERSION = "4.4.0";
+const APP_VERSION = "4.5.0";
 const APP_DATE = "__DATE__";
 
 /* Every route that replaces S passes through one of these three, which is
@@ -7312,6 +7312,7 @@ const MARKER_PRESETS = [
   ["allBag", "All baguettes"],
   ["sap69", "Sapphire 6 & 9"],
   ["special6", "Special 6"],
+  ["f77", "F77 dial"],
   ["custom", "Each hour…"]
 ];
 const GEM_ROUND_DIAMOND = {cut:"round", n:1, d:1.50, stone:"diamond", setting:"bezel", metal:"white gold"};
@@ -7332,9 +7333,26 @@ function applyMarkerPreset(st, id){
   else if(id === "sap69"){ fill(h => q(h) ? "gemAlt" : "gem"); Object.assign(st.gem, {cut:"round", n:1, d:1.50, stone:"diamond", setting:"bezel"});
     Object.assign(st.gemAlt, {cut:"baguette", n:1, L:2.60, W:1.10, stone:"blue sapphire", setting:"bezel", metal:st.gem.metal}); }
   else if(id === "special6"){ fill(h => h === 6 ? "indexAlt" : "index"); Object.assign(ix, {style:"baton", altStyle:"double", metal:"white gold"}); }
+  /* The F77's dial: its markers at every hour a window leaves free, and its
+     minute track of fine dots on the markers' outer ends (measured with
+     F77_IX). The guided step sets the F77 hands with it. */
+  else if(id === "f77"){ fill(() => "index"); f77IndexSet(st);
+    Object.assign(st.minute, {on:true, style:"dots", diameter:+(gemOpenR(st)*1.90).toFixed(2), thickness:0.20, fives:false}); }
   else return st;
   syncMarkerFlags(st);
   if(id === "qGems" || id === "qNums") nm.on = true;
+  return st;
+}
+/* The Nivada F77's markers as measured (F77_IX): the style, applied, and
+   their size and place as shares of the opening radius R, so they sit as
+   they do on the F77 whatever the case: centred at 0.808R (outer end
+   0.948R), 0.28R long, a single bar 0.078R wide. Steel unless a metal is
+   already chosen; the lume plots stay as they are (off on the owner's
+   dial). */
+function f77IndexSet(st){
+  const R = gemOpenR(st), ix = st.indices;
+  Object.assign(ix, {style:"f77", applied:true, count:12, radius:+(R*0.808).toFixed(2), length:+(R*0.28).toFixed(2), width:+(R*0.078).toFixed(2)});
+  if(!ix.metal) ix.metal = "polished steel";
   return st;
 }
 /* Which Layout chip the design is on: the plan, and for the gem layouts
@@ -7344,7 +7362,7 @@ function markerPresetOf(st){
   const sig = s => {
     const at = s.markers.at, u = k => at.indexOf(k) >= 0;
     return at.join() + (u("gem") ? "|" + s.gem.cut + s.gem.n + s.gem.stone : "") + (u("gemAlt") ? "|" + s.gemAlt.cut + s.gemAlt.stone : "")
-      + (u("indexAlt") ? "|" + s.indices.style + s.indices.altStyle : "");
+      + (u("indexAlt") ? "|" + s.indices.style + s.indices.altStyle : "") + (u("index") && s.indices.style === "f77" ? "|f77" : "");
   };
   const mine = sig(st);
   for(const [id] of MARKER_PRESETS){
@@ -8249,6 +8267,75 @@ function facetBar(xc, W, L, col, aDeg, la, MT){
        + `<rect x="${f(ix0,3)}" y="${f(iy0,3)}" width="${f(Math.max(0.01,ix1-ix0),3)}" height="${f(Math.max(0.01,iy1-iy0),3)}" fill="${tint(MT ? MT.base : col,0.10)}"/>`
        + `<rect x="${f(x0,3)}" y="${f(y0,3)}" width="${f(W,3)}" height="${f(L,3)}" fill="none" stroke="${MT ? MT.lo : shade(col,0.55)}" stroke-opacity=".5" stroke-width="0.025"/>`;
 }
+/* The Nivada Grenchen F77's hour markers (v4.5.0), from the owner's
+   photograph of the F77 37 mm (salmon basket-weave dial, date at 3; the
+   one the F77 hands were measured on, at the same 12.4 px a millimetre,
+   see FACET["f77"]), checked against Nivada Grenchen's front render of the
+   F77 SST Black MK1 and Watchreport's and Fratello's photographs of the
+   blue F77, whose macro shows how a marker is cut.
+
+   In the photograph the markers are centred 2.5 px above the pinion (the
+   opening's centre is 7 px below it); measured from there, opposite pairs
+   agree to a pixel. Each is a polished steel bar with a pitched top: two
+   long facets meeting at a ridge down the middle, hipped at both ends, so
+   the lit facet and the dark one split the bar lengthwise and each end
+   shows a chevron. There is no lume in the bar.
+     Outer end at 161.6 px, 13.03 mm, 0.948R; inner end at 113.9 px,
+       9.18 mm, 0.668R; so 3.85 mm long (0.28R), centred at 0.808R.
+     A single bar 13.3 px across, 1.07 mm (0.078R).
+     At 12, 6 and 9 (and 3, where there is no date) a pair of the same bars
+       side by side, 19.3 px, 1.56 mm across in all: each bar 0.71 of a
+       single one, almost touching (a hairline between them).
+     The hips run in at about 45 degrees, half the bar's width.
+   Nivada's render agrees on the proportions to within a few per cent
+   (length 0.32 of the outer radius against 0.30, width 0.29 of the length
+   against 0.28). The MK1 also has a small oval lume plot beyond each
+   marker's outer end, 0.60 mm along the radius by 0.50 mm across with its
+   centre 0.35 mm out; the owner's salmon dial has none, so the plots are
+   off unless indices.lume is set, and are then in the F77 hands' lume.
+   The minute track is a ring of dark dots on the markers' outer ends
+   (162 px, 0.95R; about 0.22 mm across), which the minute track's own
+   "dots" style draws: the F77 dial layout sets it.
+   Half-widths and offsets are shares of W, the single bar's width. */
+const F77_IX = {pair:0.71, pitch:0.375, hip:0.5, plotOut:0.33, plotL:0.28, plotT:0.235};
+/* The bars of one marker, [centre x, width]: a pair at 12, 3, 6 and 9. */
+function f77Bars(W, a){
+  const q = Math.abs(a - Math.round(a/90)*90) < 1e-6;
+  return q ? [[-F77_IX.pitch*W, F77_IX.pair*W], [F77_IX.pitch*W, F77_IX.pair*W]] : [[0, W]];
+}
+/* One F77 marker in its turned frame. Applied with a light, each facet takes
+   its own share of it, as facetBar's bevels do; printed, or as the shadow's
+   footprint, the bars are plain; for the 3D view (roof) each bar is marked
+   to be built with its pitched top. MT is a metal, or null for the colour. */
+function f77Index(ix, a, la, MT, roof){
+  const L = ix.length, W = ix.width, col = ix.color, y0 = -L/2, y1 = L/2;
+  const P = (x, y) => `${f(x,3)} ${f(y,3)}`;
+  let s = "";
+  for(const [xc, w] of f77Bars(W, a)){
+    const x0 = xc - w/2, x1 = xc + w/2, h = Math.min(w*F77_IX.hip, L*0.45);
+    const rect = `M${P(x0,y0)} L${P(x1,y0)} L${P(x1,y1)} L${P(x0,y1)}Z`;
+    if(roof){ s += `<path data-relief="roof" d="${rect}" fill="#fff"/>`; continue; }
+    if(!(ix.applied && la != null)){ s += `<path d="${rect}" fill="${MT ? MT.base : col}"/>`; continue; }
+    const ar = a*Math.PI/180, lx = Math.cos(la), ly = Math.sin(la);
+    const tone = (nx, ny) => {
+      const wx = nx*Math.cos(ar) - ny*Math.sin(ar), wy = nx*Math.sin(ar) + ny*Math.cos(ar), k = wx*lx + wy*ly;
+      if(MT) return k > 0 ? mix(MT.base, MT.hi, 0.30 + 0.65*k) : mix(MT.base, MT.lo, 0.20 + 0.65*(-k));
+      return k > 0 ? tint(col, 0.25 + 0.65*k) : shade(col, 0.15 + 0.55*(-k));
+    };
+    const ra = y0 + h, rb = y1 - h;
+    s += `<path d="M${P(x0,y0)} L${P(xc,ra)} L${P(xc,rb)} L${P(x0,y1)}Z" fill="${tone(-1,0)}"/>`
+       + `<path d="M${P(x1,y0)} L${P(xc,ra)} L${P(xc,rb)} L${P(x1,y1)}Z" fill="${tone(1,0)}"/>`
+       + `<path d="M${P(x0,y0)} L${P(x1,y0)} L${P(xc,ra)}Z" fill="${tone(0,-1)}"/>`
+       + `<path d="M${P(x0,y1)} L${P(x1,y1)} L${P(xc,rb)}Z" fill="${tone(0,1)}"/>`
+       + `<path d="M${P(xc,ra)} L${P(xc,rb)}" fill="none" stroke="${MT ? MT.hi : tint(col,0.85)}" stroke-opacity=".6" stroke-width="${f(w*0.04,3)}"/>`
+       + `<path d="${rect}" fill="none" stroke="${MT ? MT.lo : shade(col,0.55)}" stroke-opacity=".5" stroke-width="0.025"/>`;
+  }
+  if(ix.lume){
+    const cy = y0 - W*F77_IX.plotOut, rl = W*F77_IX.plotL, rt = W*F77_IX.plotT;
+    s += `<path data-relief="lume" d="M${P(-rt,cy)} A${f(rt,3)} ${f(rl,3)} 0 1 0 ${P(rt,cy)} A${f(rt,3)} ${f(rl,3)} 0 1 0 ${P(-rt,cy)}Z" fill="${F77_LUME}" stroke="${shade(F77_LUME,0.35)}" stroke-width="0.02"/>`;
+  }
+  return s;
+}
 /* An index in metal (indices.metal): the same shapes, painted in the
    metal's own colours along the light, and an applied one casts the
    offset-copy shadow the gems cast, away from the light, so indices,
@@ -8283,13 +8370,14 @@ function metalIndexShape(ix, a, id, defs, la, MT){
     case "diamond":  s = `<path d="M0 ${-L/2} L${W} 0 L0 ${L/2} L${-W} 0 Z" fill="${lin()}"${out}/>`; break;
     case "triangle": s = `<path d="M0 ${-L/2} L${W} ${L/2} L${-W} ${L/2} Z" fill="${lin()}"${out}/>`; break;
     case "dagger":   s = `<path d="M0 ${-L/2} L${W} ${-L/6} L${W*0.6} ${L/2} L${-W*0.6} ${L/2} L${-W} ${-L/6} Z" fill="${lin()}"${out}/>`; break;
+    case "f77":      s = f77Index(ix, a, la, MT, false); break;
     case "double":   s = ix.applied ? facetBar(-W*1.4, W, L, MT.base, a, la, MT) + facetBar(W*1.4, W, L, MT.base, a, la, MT)
                        : `<rect x="${-W*1.9}" y="${-L/2}" width="${W}" height="${L}" fill="${MT.base}"/><rect x="${W*0.9}" y="${-L/2}" width="${W}" height="${L}" fill="${MT.base}"/>`; break;
     default:         s = ix.applied ? facetBar(0, W, L, MT.base, a, la, MT)
                        : `<rect x="${-W/2}" y="${-L/2}" width="${W}" height="${L}" fill="${MT.base}" rx="${W*0.12}"/>`;
   }
   const shadow = ix.applied
-    ? gemShadow(indexShape(Object.assign({}, ix, {applied:false, metal:null, color:"#000000", style:ix.style === "cone" ? "dot" : ix.style}), a, id, defs), 0.25, la) : "";
+    ? gemShadow(indexShape(Object.assign({}, ix, {applied:false, metal:null, color:"#000000", style:ix.style === "cone" ? "dot" : ix.style, lume:false}), a, id, defs), 0.25, la) : "";
   return shadow + place(s);
 }
 function indexShape(ix, a, id, defs, la){
@@ -8302,7 +8390,7 @@ function indexShape(ix, a, id, defs, la){
      is the same shadow the "Use markers" batons beside the day window use,
      which every renderer keeps. */
   const shadow = ix.applied
-    ? `<g transform="translate(0.06 0.10)" opacity="0.35">${indexShape(Object.assign({}, ix, {applied:false, color:"#000000", style:ix.style === "cone" ? "dot" : ix.style}), a, id, defs)}</g>` : "";
+    ? `<g transform="translate(0.06 0.10)" opacity="0.35">${indexShape(Object.assign({}, ix, {applied:false, color:"#000000", style:ix.style === "cone" ? "dot" : ix.style, lume:false}), a, id, defs)}</g>` : "";
   const g = s => `${shadow}<g transform="rotate(${a}) translate(0,${-r})">${s}</g>`;
   switch(ix.style){
     case "dot":     return g(`<circle r="${W}" fill="${col}"/>`);
@@ -8330,6 +8418,7 @@ function indexShape(ix, a, id, defs, la){
     case "diamond": return g(`<path d="M0 ${-L/2} L${W} 0 L0 ${L/2} L${-W} 0 Z" fill="${col}"/>`);
     case "triangle":return g(`<path d="M0 ${-L/2} L${W} ${L/2} L${-W} ${L/2} Z" fill="${col}"/>`);
     case "dagger":  return g(`<path d="M0 ${-L/2} L${W} ${-L/6} L${W*0.6} ${L/2} L${-W*0.6} ${L/2} L${-W} ${-L/6} Z" fill="${col}"/>`);
+    case "f77":     return g(f77Index(ix, a, la, null, !!ix.roof));
     case "double":  return ix.applied && la != null
       ? g(facetBar(-W*1.4, W, L, col, a, la) + facetBar(W*1.4, W, L, col, a, la))
       : g(`<rect x="${-W*1.9}" y="${-L/2}" width="${W}" height="${L}" fill="${col}"/><rect x="${W*0.9}" y="${-L/2}" width="${W}" height="${L}" fill="${col}"/>`);
@@ -10289,14 +10378,16 @@ const SCHEMA = {
   hour:{title:"Hour track", hint:"12 divisions, often inside the sector.", fields:[
     N("hour.diameter","Track diameter",6,44), N("hour.thickness","Thickness",.1,1.5,.02),
     SEL("hour.style","Style",["ticks","ring"]), C("hour.color","Colour")]},
-  indices:{title:"Indices", hint:"Applied indices cast a shadow; printed ones sit flat.", fields:[
-    SEL("indices.style","Shape",["baton","dot","cone","box","diamond","triangle","dagger","double"]),
+  indices:{title:"Indices", hint:"Applied indices cast a shadow; printed ones sit flat.", fields:()=>[
+    SEL("indices.style","Shape",["baton","dot","cone","box","diamond","triangle","dagger","double","f77"]),
     N("indices.radius","Distance from centre",3,22), N("indices.length","Length",.4,6,.05), N("indices.width","Width",.1,2.5,.05),
     N("indices.count","Count",4,24,1,""), C("indices.color","Colour"),
     /* "colour" paints in the colour above; a metal makes the index in it */
     SEL("indices.metal","Finish",["colour"].concat(GEM_METALS)),
     SEL("indices.altStyle","Accent index shape",["double","baton","triangle","dagger","dot","diamond","cone","box"]),
-    CK("indices.applied","Applied"), CK("indices.skipNumerals","Skip where numerals sit")]},
+    CK("indices.applied","Applied"), CK("indices.skipNumerals","Skip where numerals sit"),
+    /* the F77 MK1's lume plots beyond each marker; the owner's dial has none */
+    ...(S.indices.style === "f77" ? [CK("indices.lume","Lume plots")] : [])]},
   /* Each hour on its own: what it carries. 12 and 3 under the NOREL's
      windows stay empty whatever is chosen here. */
   markers:{title:"Hour by hour", get hint(){ return Math.round(S.indices.count || 12) !== 12
@@ -13615,7 +13706,7 @@ window.WatchReliefBridge={
         return `<svg xmlns="http://www.w3.org/2000/svg"></svg>`;}
       if(k==='indexAlt'){const body=indexShape({...st.indices,style:st.indices.altStyle||'double',metal:null,applied:false},angle,()=>`ix3d${i++}`,defs);
         return `<svg xmlns="http://www.w3.org/2000/svg"><defs>${defs.join('')}</defs>${body}</svg>`;}}
-    let body=indexShape({...st.indices,applied:false,metal:null},angle,()=>`ix3d${i++}`,defs);
+    let body=indexShape({...st.indices,applied:false,metal:null,roof:true},angle,()=>`ix3d${i++}`,defs);
     if(st.indices.style==='box'){const ix=st.indices;body=`<g transform="rotate(${angle}) translate(0,${-ix.radius})"><path fill="#fff" fill-rule="evenodd" d="M${-ix.width} ${-ix.length/2}h${ix.width*2}v${ix.length}h${-ix.width*2}z M${-ix.width+.12} ${-ix.length/2+.12}v${ix.length-.24}h${ix.width*2-.24}v${-ix.length+.24}z"/></g>`;}
     return `<svg xmlns="http://www.w3.org/2000/svg"><defs>${defs.join('')}</defs>${body}</svg>`;
   },
@@ -14461,12 +14552,12 @@ const GWORD = {ar:{
   "no markers":"بلا مؤشرات", "Layout":"التوزيع",
   "Same at every hour":"نفسه عند كل ساعة", "Gems at 6 & 9, numerals elsewhere":"أحجار عند 6 و9، وأرقام في البقية",
   "Numerals at 6 & 9, gems elsewhere":"أرقام عند 6 و9، وأحجار في البقية", "Diamond at each hour":"ماسة عند كل ساعة",
-  "All baguettes":"كلها باغيت", "Sapphire 6 & 9":"ياقوت أزرق عند 6 و9", "Special 6":"6 مميزة", "Each hour…":"كل ساعة وحدها…",
+  "All baguettes":"كلها باغيت", "Sapphire 6 & 9":"ياقوت أزرق عند 6 و9", "Special 6":"6 مميزة", "F77 dial":"ميناء نيفادا F77", "Each hour…":"كل ساعة وحدها…",
   "Index shape":"شكل المؤشر", "Accent shape":"شكل المؤشر المميّز", "Baton":"عصا", "Double":"مزدوج", "Dagger":"خنجر", "Triangle":"مثلث",
   "Dot":"نقطة", "shape:Diamond":"معيّن", "Box":"مربع",
   "Numerals":"الأرقام", "Printed":"مطبوع", "Raised print":"طباعة بارزة", "Applied metal":"معدن مركّب", "Enamel-filled":"مملوء بالمينا",
   "Lume":"مضيء", "Diamond-set":"مرصّع بالألماس", "Metal":"المعدن", "Stones":"الأحجار", "Diamond":"ألماس", "Black diamond":"ألماس أسود",
-  "Sapphire":"ياقوت أزرق", "Ruby":"ياقوت أحمر", "Emerald":"زمرد", "Stone size":"حجم الحجر", "Raised (applied)":"بارز (مركّب)",
+  "Sapphire":"ياقوت أزرق", "Ruby":"ياقوت أحمر", "Emerald":"زمرد", "Stone size":"حجم الحجر", "Raised (applied)":"بارز (مركّب)", "Lume plots":"نقاط مضيئة",
   "Index finish":"تشطيب المؤشرات", "Size":"المقاس", "Distance from centre":"البعد عن المركز", "Thickness":"السماكة", "Index size":"مقاس المؤشرات",
   "Length":"الطول", "Width":"العرض", "All marker settings":"كل إعدادات المؤشرات",
   "Gem":"حجر", "Accent gem":"حجر مميّز", "Round":"دائري", "Two rounds":"دائريان", "Three rounds":"ثلاثة دائرية", "Baguette":"باغيت",
@@ -15772,7 +15863,7 @@ Object.assign(GWORD.ar, {
         if(showIx){
           /* "Diamond" here is the shape, not the stone */
           const shp = l => l.map(([v, w]) => [v, gW(w, "shape")]);
-          h += `<h3>${gW("Index shape")}</h3>` + chips44("indices.style", shp([["baton","Baton"],["double","Double"],["dagger","Dagger"],["triangle","Triangle"],["dot","Dot"],["diamond","Diamond"],["box","Box"]]), ix.style);
+          h += `<h3>${gW("Index shape")}</h3>` + chips44("indices.style", shp([["baton","Baton"],["double","Double"],["f77","Nivada F77"],["dagger","Dagger"],["triangle","Triangle"],["dot","Dot"],["diamond","Diamond"],["box","Box"]]), ix.style);
           if(per && planHas(S, "indexAlt")) h += `<h3>${gW("Accent shape")}</h3>` + chips44("indices.altStyle", shp([["double","Double"],["baton","Baton"],["triangle","Triangle"],["dagger","Dagger"],["dot","Dot"],["diamond","Diamond"]]), ix.altStyle || "double");
         }
         return h;
@@ -15799,6 +15890,7 @@ Object.assign(GWORD.ar, {
         }
         if(showIx){
           h += toggle("indices.applied", "Raised (applied)", ix.applied);
+          if(ix.style === "f77") h += toggle("indices.lume", "Lume plots", !!ix.lume);
           h += `<h3>${gW("Index finish")}</h3>` + chips44("indices.metal", [[null,"Colour"],["polished steel","Steel"],["white gold","White gold"],["yellow gold","Gold"],["rose gold","Rose gold"],["blackened steel","Black"]], ix.metal || null);
           if(!ix.metal) h += printingBlock("indices");
         }
@@ -16073,6 +16165,8 @@ Object.assign(GWORD.ar, {
     else if(/^gem(Alt)?\.metal$/.test(path)){ const g = S[path.split(".")[0]]; g.metal = v; g.metalChosen = true; }
     else if(/^gem(Alt)?\.lab$/.test(path)){ S[path.split(".")[0]].origin = v ? "lab" : "natural"; }
     else if(path === "hands.lume"){ for(const k of ["hHand","mHand"]) S[k].lume = v; }
+    /* the F77 markers come at their own size and place, as the F77 hands do */
+    else if(path === "indices.style" && v === "f77") f77IndexSet(S);
     else if(path === "text.line2"){ S.text.line2 = v; S.text.line2On = !!v; }
     else if(path === "logo.kind"){
       if(v === "other") return;                    // the mark already on the dial
@@ -16378,7 +16472,8 @@ Object.assign(GWORD.ar, {
     if(d.gset === "ui.mpal"){ mpal = JSON.parse(d.gv); paint(); return; }
     if(d.gset === "ui.pgroup"){ pgroup = JSON.parse(d.gv); const gs = guide.querySelectorAll(".gPfound");
       if(gs.length) gs.forEach(g => { const p = g.dataset.path || "dial.color"; g.innerHTML = pantoneGrid(p, curOf(p)); }); else paint(); return; }
-    if(d.gset === "ui.layout"){ const v = JSON.parse(d.gv); soon(t, () => { eachHour = v === "custom"; applyMarkerPreset(S, v); pickHour = null; commit(); paintAll(); }); return; }
+    if(d.gset === "ui.layout"){ const v = JSON.parse(d.gv); soon(t, () => { eachHour = v === "custom"; applyMarkerPreset(S, v); pickHour = null;
+      if(v === "f77") setHand("f77"); else { commit(); paintAll(); } }); return; }
     if(d.gset === "ui.hourKind"){ if(pickHour === null) return; const v = JSON.parse(d.gv);
       soon(t, () => { migrateMarkers(S); S.markers.at[pickHour] = v; S.markers.perHour = true; syncMarkerFlags(S); commit(); paintAll(); }); return; }
     if(d.ghour !== undefined){ pickHour = +d.ghour === pickHour ? null : +d.ghour; paint(); return; }

@@ -200,6 +200,47 @@ stored in a design file do not change. In the full editor at laptop widths
 the toolbar sits tighter, and on a narrower window it takes a second row
 rather than pushing Share and Export off the screen.
 
+## Nivada F77 hour markers (v4.5.0)
+
+From the owner: "Add Nivada F77 indices also."
+
+- **An F77 marker.** Markers → Shape has **Nivada F77** (نيفادا F77) next
+  to Double. Chosen there it puts the markers where they sit on the F77 37
+  mm, as shares of the dial opening, so they fit whichever case: the outer
+  end at 0.948 of the radius and the inner end at 0.668, 0.28 of the radius
+  long (3.85 mm on the F77) and 0.078 wide (1.07 mm), applied, in steel. A
+  metal already chosen (gold, black) is kept.
+- **The shape.** A polished bar with a pitched top: two long facets meeting
+  at a ridge down the middle and a hip at each end, so one facet catches
+  the light and the other falls dark, and each end shows a chevron. At 12,
+  3, 6 and 9 the marker is a pair of slimmer bars side by side (1.56 mm
+  across in all), as on the F77. A window covers its hour as it does any
+  marker's. Printed, the bars are flat.
+- **Lume.** The F77's markers carry no lume in the bar. Nivada's black MK1
+  has a small lume plot beyond each marker's outer end; the owner's salmon
+  dial has none, so the plots are off. **Lume plots** (Markers → Made by,
+  or the full editor) turns them on, in the F77 hands' lume.
+- **The F77 dial layout.** Markers → Layout has **F77 dial**: the F77
+  markers at every hour a window leaves free, the minute track as the F77's
+  ring of fine dots on the markers' outer ends (0.95 of the radius,
+  0.22 mm dots, no larger fives), and the F77 hands.
+- **3D.** Each bar stands up with its pitched top: walls to a little under
+  half the marker height, then the two facets to the ridge, hipped at the
+  ends. The lume plots stand as lume. The 3D view also no longer raises an
+  index under a calendar window, which it did before for indices set the
+  same at every hour.
+- **Sources.** The owner's photograph (positions, lengths, widths, the
+  pairs, the minute dots), at the same 12.4 px a millimetre as the F77
+  hands; Nivada Grenchen's front render of the F77 SST Black MK1 (the
+  proportions, the pairs at all four quarters, the lume plots); and
+  Watchreport's macro of the blue F77 (the pitched top and the hips). The
+  measurements are written out beside `F77_IX` in `index.html`.
+
+Every existing index style, in colour and in each metal, applied and
+printed, 12 or 60 of them, the same at every hour or set hour by hour, and
+every preset and file in `designs/` draw exactly as in 4.4.0 (compared byte
+for byte). The Time Keeper × Nivada design is unchanged.
+
 ## Nivada F77 hands (v4.4.0)
 
 From the owner, with a photograph of a Nivada Grenchen F77 (salmon

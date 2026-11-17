@@ -159,7 +159,10 @@ function pose(mode){
    "lume" is lume set into a channel cut through the hand's table, so it is
    laid lower than the metal round it and in its own material; "sunk" is
    metal set below the rest, the floor of a channel between two rails (the
-   F77's hands), so the channel reads as a groove. */
+   F77's hands), so the channel reads as a groove; "roof" is a bar with a
+   pitched top, the F77's hour markers: upright walls to a little under half
+   the height, then two long facets up to a ridge down the middle, hipped
+   at both ends (roofBar). */
 const lumeMaterial=new THREE.MeshStandardMaterial({color:'#e3ead8',roughness:.6,metalness:0,envMapIntensity:.4});
 function extrudeSVG(svg,material,depth,bevel,z,parent=model,segments=2){
   const data=loader.parse(svg),group=new THREE.Group();parent.add(group);group.scale.y=-1;group.position.z=z;
@@ -169,12 +172,35 @@ function extrudeSVG(svg,material,depth,bevel,z,parent=model,segments=2){
     if(relief==='skip')continue;
     const lume=relief==='lume',sunk=relief==='sunk';
     for(const shape of SVGLoader.createShapes(path)){
+      if(relief==='roof'){const g=roofBar(shape.getPoints(),depth);if(g){mesh(g,material,group);continue;}}
       if(sunk){mesh(new THREE.ExtrudeGeometry(shape,{depth:depth*.35,bevelEnabled:false,curveSegments:18,steps:1}),material,group);continue;}
       if(lume){mesh(new THREE.ExtrudeGeometry(shape,{depth:depth*.55,bevelEnabled:false,curveSegments:18,steps:1}),lumeMaterial,group);continue;}
       mesh(new THREE.ExtrudeGeometry(shape,{depth,bevelEnabled:bevel>0,bevelSize:bevel,bevelThickness:bevel*.65,bevelOffset:-bevel*.5,bevelSegments:segments,curveSegments:18,steps:1}),material,group);
     }
   }
   return group;
+}
+/* A four-cornered footprint stood up as a bar with a pitched top: walls to
+   0.45 of the height, a ridge along the long axis at the full height, its
+   ends set in by half the width so each end is a hip. Every face is flat
+   and wound outward, so the facets catch the light one by one. */
+function roofBar(points,depth){
+  const p=points.filter((q,i)=>i===0||q.distanceTo(points[i-1])>1e-6);
+  if(p.length>4&&p[p.length-1].distanceTo(p[0])<1e-6)p.pop();
+  if(p.length!==4)return null;
+  let [A,B,C,D]=p;if(A.distanceTo(B)>B.distanceTo(C))[A,B,C,D]=[B,C,D,A];
+  const w=A.distanceTo(B),len=B.distanceTo(C);if(!(w>0&&len>w*.2))return null;
+  const m1=A.clone().add(B).multiplyScalar(.5),m2=C.clone().add(D).multiplyScalar(.5),ax=m2.clone().sub(m1).normalize(),h=Math.min(w*.5,len*.45);
+  const R1=m1.clone().addScaledVector(ax,h),R2=m2.clone().addScaledVector(ax,-h),e=depth*.45;
+  const V=(q,z)=>new THREE.Vector3(q.x,q.y,z),c=V(A.clone().add(C).multiplyScalar(.5),depth*.4),pos=[];
+  const tri=(a,b,d)=>{const n=b.clone().sub(a).cross(d.clone().sub(a)),o=a.clone().add(b).add(d).multiplyScalar(1/3).sub(c);
+    for(const v of n.dot(o)<0?[a,d,b]:[a,b,d])pos.push(v.x,v.y,v.z);};
+  const quad=(a,b,d,f)=>{tri(a,b,d);tri(a,d,f);};
+  const lo=[A,B,C,D].map(q=>V(q,0)),hi=[A,B,C,D].map(q=>V(q,e)),r1=V(R1,depth),r2=V(R2,depth);
+  for(let i=0;i<4;i++)quad(lo[i],lo[(i+1)%4],hi[(i+1)%4],hi[i]);
+  quad(lo[0],lo[1],lo[2],lo[3]);
+  tri(hi[0],hi[1],r1);tri(hi[2],hi[3],r2);quad(hi[1],hi[2],r2,r1);quad(hi[3],hi[0],r1,r2);
+  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));g.computeVertexNormals();return g;
 }
 /* A profile [r, z] turned about the dial axis. */
 function lathe(pts,segments,material,parent=model){
