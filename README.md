@@ -200,6 +200,62 @@ stored in a design file do not change. In the full editor at laptop widths
 the toolbar sits tighter, and on a narrower window it takes a second row
 rather than pushing Share and Export off the screen.
 
+## How the lines are made: engraved, gloss, brushed, UV (v4.6.0)
+
+From the owner, on the Time Keeper × Nivada: "Is there an option for the
+lines to be engraved? And check if there is another technique that hides
+them so they only show at certain angles."
+
+- **Made by, for each line.** Text → Lines has a **Made by** row under the
+  line under the logo (GRENCHEN), the line above 6 (TIME KEEPER) and the
+  words either side of 6 (SWISS MADE), each set on its own. The full
+  editor has the same under Text → **Lines made by**, and More options
+  under **How the lines are made**. The choices:
+  - **Printed**, as before and the default. Every older design draws
+    exactly as it did.
+  - **Raised print**: a second pass of ink, the logo's raised print.
+  - **Engraved, filled**: cut into the dial and filled with the line
+    colour. The wall on the light's side sits dark in the shadow of the
+    lip, the far wall catches the light.
+  - **Tone on tone**: cut and left open. The cut is the dial's own colour,
+    so the letters are seen only by the light on their walls: faint with
+    the light high or overhead, clearer as it drops and turns.
+  - **Gloss on matte**: clear lacquer on the dial. It shows only where it
+    throws the light back at you, brightest with the light from the 12
+    side, gone with it from the 6 side.
+  - **Brushed across**: on a brushed or brushed steel dial the letters are
+    brushed at right angles to the dial (vertical grain, horizontal in the
+    letters). Brushed metal is brightest with the light across its grain,
+    so the letters are bright with the light from 12 or 6, dark with it
+    from 3 or 9, and all but vanish at 45° between. On a dial that is not
+    brushed they are shown tone on tone, and the step says so.
+  - **UV ink**: invisible in daylight. **Show under UV** (in the step when
+    a line uses it, and in More options) darkens the watch to the violet
+    of a UV lamp and the ink glows blue-white. In the dial maker's artwork
+    (the dial-only export) it is drawn in its own violet so it can be seen.
+- **Light angle.** With any of the light-dependent ones chosen, the step
+  shows a **Light angle** slider: the scene's own light (render.az, the
+  same as View → Light from), to turn the light round and watch the
+  lettering come and go. It changes the picture, not the design.
+- **The minute track and printed batons.** The minute track's Made by
+  (Dial → More options, or the full editor) adds engraved and filled,
+  tone on tone and gloss on matte to printed and raised print; printed
+  batons, dots, diamonds, triangles, daggers and doubles (applied off, no
+  metal) get the same four under Markers → More options → Index markers.
+  Beads, applied and metal markers stay as they are.
+- **The design check.** Engraved lettering is cut about 0.05 mm deep: fine
+  in the 0.40 mm brass dial, flagged under 0.35 mm. Tone on tone and gloss
+  are flagged as possibly hard to read; UV ink as needing the supplier to
+  confirm the ink; brushed across on a dial that is not brushed as shown
+  engraved instead.
+- **How it is drawn.** Each line is defined once and laid down again as
+  offset copies, cut down by masks, lit by the scene's light direction and
+  height. No SVG filter is used, because WebKit drops filters in the
+  photograph view.
+
+Every preset and file in `designs/` draws exactly as in 4.5.0 (buildSVG
+and buildTemplate compared byte for byte, on every case).
+
 ## Nivada F77 hour markers (v4.5.0)
 
 From the owner: "Add Nivada F77 indices also."

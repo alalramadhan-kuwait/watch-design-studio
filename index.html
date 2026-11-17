@@ -2101,7 +2101,7 @@ const APP_BUILD = "__BUILD__";
 /* The version people see, raised with every change that reaches them:
    major for a new way of working, minor for something new to do, patch for
    a fix. Shown on the watch screen, so any screenshot says which it was. */
-const APP_VERSION = "4.5.0";
+const APP_VERSION = "4.6.0";
 const APP_DATE = "__DATE__";
 
 /* Every route that replaces S passes through one of these three, which is
@@ -4541,6 +4541,29 @@ const MAT_FINISH = {flat:"matte", matte:"matte", gloss:"gloss", lacquer:"lacquer
 /* =====================================================================
    4. RENDER — buildSVG(state, options) returns a complete SVG string
    ===================================================================== */
+/* How the dial's lettering, a printed minute track and printed batons can
+   be made (madeBy, in buildSVG). Printed is the default and draws exactly
+   what it always did. The rest: a second pass of ink; cut and filled; cut
+   and left open, tone on tone, seen only by its walls; clear lacquer on a
+   matte dial, seen only in its reflection; the dial's own brushing turned
+   a quarter turn inside the letters; and ink that shows only under a UV
+   lamp. The minute track and batons take the cut and gloss ones. */
+const LINE_TECH = [["printed","Printed"],["double printed","Raised print"],["engraved + filled","Engraved, filled"],
+  ["engraved","Tone on tone"],["gloss on matte","Gloss on matte"],["brushed across","Brushed across"],["uv ink","UV ink"]];
+const LINE_TECH_IDS = LINE_TECH.map(x => x[0]);
+/* the techniques of the lines a design shows, other than printed */
+const lineTechsUsed = st => { const T = st && st.text; if(!T || T.on === false) return [];
+  return [[T.line2On !== false && T.line2, T.line2Tech], [T.footOn !== false && T.foot, T.footTech], [T.splitOn && T.split, T.splitTech]]
+    .filter(x => x[0] && LINE_TECH_IDS.indexOf(x[1]) > 0).map(x => x[1]); };
+const MINUTE_TECH = ["engraved + filled","engraved","gloss on matte"];
+/* the four whose look turns on the light, so the light-angle slider is offered with them */
+const LINE_TECH_LIT = new Set(["engraved + filled","engraved","gloss on matte","brushed across"]);
+/* the printed batons that are one flat shape in one colour */
+const INDEX_TECH_STYLES = new Set(["baton","double","dot","diamond","triangle","dagger"]);
+const LINE_BRUSHED_FINISH = new Set(["brushed","brushedsteel"]);
+/* UV ink: its colour in the dial maker's artwork, its glow and core under
+   the lamp, and the dark violet the rest of the watch goes under it */
+const UV_ART = "#6E5BFF", UV_GLOW = "#8FD8FF", UV_CORE = "#EAF8FF", UV_DARK = "#1A1233";
 function buildSVG(st, o={}){
   const scope = o.scope||"full";               // full | dial | hands
   const c = st.case, d = st.dial;
@@ -5059,6 +5082,8 @@ function buildSVG(st, o={}){
 
   /* ---------------- DIAL STACK ---------------- */
   const dialStart = body.length;
+  /* UV-ink lettering waiting to be laid over everything else (madeBy) */
+  const uvGlow = [];
   if(scope!=="hands"){
     const R = dialD/2;
     if(d.on){
@@ -5304,6 +5329,114 @@ function buildSVG(st, o={}){
       body.push(`<g data-layer="pave">${paveDialSVG(cs, paveDialD(st), GEM_STONES[d.paveStone] ? d.paveStone : "diamond", MT, laP, {id, defs, grads:new Map()}, 0.6, paveDialZone(st))}</g>`);
     }
 
+    /* ---- How a line of lettering, a printed track or printed batons are
+       made, when they are not simply printed ----
+       Everything here is drawn from one definition of the artwork, laid
+       down again as offset copies and cut down by masks: no SVG filter,
+       because WebKit drops filters in the photograph view and the
+       lettering vanished with them before. The artwork is passed in with
+       its colour left as "inherit", so each copy takes its own.
+
+       The light is the scene's one light. This engine's shadows fall
+       toward -L, so the light stands at +L, as the engraved numerals
+       reason it out. In a cut, the wall on the light's side sits in the
+       shadow of the lip and the far wall faces the light; the lower the
+       light, the longer that shadow. */
+    let grainDef = null;
+    const madeBy = (tech, art, mo) => {
+      mo = mo || {};
+      if(!art) return "";
+      const face = st.dial.color, ink = mo.ink || "#1B1B1B", sz = mo.size || 1;
+      const az = ((st.render && st.render.az) || 135)*Math.PI/180, lx = Math.cos(az), ly = Math.sin(az);
+      const elD = Math.max(5, Math.min(90, +((st.render && st.render.el) || 40)));
+      const el = elD*Math.PI/180;
+      /* how far a wall's shadow reaches, against the depth of the cut */
+      const reach = Math.min(2.2, Math.max(0.3, 1/Math.tan(el)));
+      const gid = id("lt");
+      defs.push(`<g id="${gid}">${art}</g>`);
+      const use = (fill, dx, dy, extra) => `<use href="#${gid}" x="${f(dx||0,4)}" y="${f(dy||0,4)}" fill="${fill}"`
+        + (mo.stroke ? ` stroke="${fill}"` : "") + (extra||"") + `/>`;
+      const box = ` maskUnits="userSpaceOnUse" x="-40" y="-40" width="80" height="80"`;
+      /* the artwork less a copy of itself nudged by (dx, dy): the band left
+         on the side away from the nudge */
+      const minus = (dx, dy) => { const m = id("ltm");
+        defs.push(`<mask id="${m}"${box}>${use("#fff")}${use("#000", dx, dy)}</mask>`); return ` mask="url(#${m})"`; };
+      const inside = () => { const m = id("ltm");
+        defs.push(`<mask id="${m}"${box}>${use("#fff")}</mask>`); return ` mask="url(#${m})"`; };
+      if(tech === "brushed across" && !LINE_BRUSHED_FINISH.has(st.dial.finish)) tech = "engraved";
+      if(tech === "double printed"){
+        /* a second pass of ink: the logo's raised print, its lip a hard
+           copy rather than a blurred one */
+        const off = sz*0.03, th = sz*0.04;
+        const base = labOf(face)[0] > 55 ? shade(ink, 0.22) : tint(ink, 0.22);
+        return use(shade(ink, 0.45), -lx*th*0.8, -ly*th*0.8, ` opacity="0.30"`)
+          + use(base, lx*off, ly*off) + use(ink);
+      }
+      if(tech === "engraved + filled" || tech === "engraved"){
+        const s = Math.min(sz*0.07, sz*0.028*reach), h = s*0.7;
+        const dark = shade(face, 0.55), lite = tint(face, 0.70);
+        /* Filled: the colour lies in the cut, so only a sliver of each wall
+           shows. Tone on tone: nothing in the cut, the floor is the dial a
+           shade down, and the walls are all there is to read. */
+        const filled = tech === "engraved + filled";
+        return (filled ? use(shade(ink, 0.045)) : use("#000", 0, 0, ` opacity="0.05"`))
+          + use(dark, 0, 0, minus(-lx*s, -ly*s) + ` opacity="${filled ? 0.35 : 0.50}"`)
+          + use(lite, 0, 0, minus(lx*h, ly*h) + ` opacity="${filled ? 0.55 : 0.65}"`);
+      }
+      if(tech === "gloss on matte"){
+        /* Clear lacquer on the dial: the same colour as what is under it,
+           so it shows only where it throws the light back at the eye. The
+           view is from in front and a little below 6, so the mirror angle
+           is a light from the 12 side (az 270), and it fades as the light
+           swings round toward 6. */
+        const sp = Math.pow((1 - ly)/2, 2)*(0.45 + 0.55*Math.sin(el));
+        const w = sz*0.022;
+        return use("#FFFFFF", 0, 0, ` opacity="${f(0.02 + 0.50*sp, 3)}"`)
+          + use("#000", 0, 0, minus(lx*w, ly*w) + ` opacity="0.06"`)
+          + use("#FFFFFF", 0, 0, minus(-lx*w, -ly*w) + ` opacity="${f(0.10 + 0.55*sp, 3)}"`);
+      }
+      if(tech === "brushed across"){
+        /* The dial's own grain turned a quarter turn inside the letters.
+           Brushed metal is brightest with the light across its grain, so
+           as the light goes round the letters and the dial take turns to
+           be the bright one; at 45° between the two they match and the
+           letters all but disappear. */
+        const dd = st.dial.finish === "brushedsteel" ? brushDirOf(st.dial.brushDir) : "horizontal";
+        const at = mo.at || [0, 0], ar = Math.hypot(at[0], at[1]) || 1;
+        const gD = dd === "vertical" ? [0, 1] : dd === "horizontal" ? [1, 0] : [-at[1]/ar, at[0]/ar];
+        const gL = [-gD[1], gD[0]];
+        const lDir = Math.abs(gL[1]) >= Math.abs(gL[0]) ? "vertical" : "horizontal";
+        const aniso = g => Math.abs(lx*g[1] - ly*g[0]);
+        const R = dialD/2;
+        const band = dir => { if(dd === "circular") return 0;
+          const p0 = 0.34*(dir === "vertical" ? ly : lx), along = dir === "vertical" ? at[1] : at[0];
+          return Math.exp(-Math.pow((along/R - p0)/0.46, 2)); };
+        const dt = 0.26*(band(lDir) - band(dd)) + (0.30 + 0.45*Math.cos(el))*(aniso(gL) - aniso(gD));
+        if(!grainDef) grainDef = {};
+        if(!grainDef[lDir]){
+          const g2 = id("ltg"), P6 = brushPaths2D(R, lDir), OP = [0.10, 0.17, 0.26];
+          defs.push(`<g id="${g2}">` + P6.map((p, j) => p ? `<path d="${p}" fill="none" stroke="${j < 3 ? tint(face, 0.42) : shade(face, 0.62)}" stroke-opacity="${OP[j % 3]}" stroke-width="0.075"/>` : "").join("") + `</g>`);
+          grainDef[lDir] = g2;
+        }
+        const tone = dt >= 0 ? use("#FFFFFF", 0, 0, ` opacity="${f(Math.min(0.6, dt*1.5), 3)}"`)
+                             : use(shade(face, 0.6), 0, 0, ` opacity="${f(Math.min(0.5, -dt*1.3), 3)}"`);
+        return use(face) + `<g${inside()}><use href="#${grainDef[lDir]}"/></g>` + tone;
+      }
+      if(tech === "uv ink"){
+        /* Invisible by daylight. In the artwork for the dial maker it is
+           drawn in a colour of its own so the printer can see it; on the
+           watch it shows only under the UV lamp, where it glows above a
+           dial gone dark (drawn over the hands, at the end of the dial). */
+        if(scope === "dial") return use(UV_ART);
+        if(!(st.render && st.render.uv)) return "";
+        uvGlow.push((mo.stroke ? "" : [0.16, 0.10, 0.05].map(w => use(UV_GLOW, 0, 0,
+            ` stroke="${UV_GLOW}" stroke-width="${f(w*sz, 3)}" stroke-opacity="0.16" stroke-linejoin="round"`)).join(""))
+          + use(UV_CORE));
+        return "";
+      }
+      return use(ink);
+    };
+
     // minute track
     const mt = st.minute;
     if(mt.on){
@@ -5352,6 +5485,11 @@ function buildSVG(st, o={}){
         </filter>`);
         trackFx = tf;
       }
+      /* Cut, tone on tone, gloss or UV: the marks are drawn once with their
+         colour left open and handed to madeBy, as the lettering is. Beads
+         are turned parts, not printing, so they stay as they are. */
+      const mtech = MINUTE_TECH.indexOf(mt.tech) >= 0 && mt.style !== "beads" ? mt.tech : "";
+      const tcol = mtech ? "inherit" : mt.color, mtFrom = body.length;
       /* One group so the relief is built once for the whole track rather than
          sixty times, which also keeps each mark's shoulder consistent. */
       if(trackFx) body.push(`<g filter="url(#${trackFx})">`);
@@ -5360,8 +5498,8 @@ function buildSVG(st, o={}){
          inward, so the eye finds the fives without the track going heavy. */
       const rail = Math.max(0.045, Math.min(0.08, t*0.18));
       if(mt.style==="railroad"){
-        body.push(ringMaybeBroken(r + t, rail, mt.color));
-        body.push(ringMaybeBroken(r - t, rail, mt.color));
+        body.push(ringMaybeBroken(r + t, rail, tcol));
+        body.push(ringMaybeBroken(r - t, rail, tcol));
       }
       for(let i=0;i<60;i++){
         const a=i*6, five=i%5===0, len = five&&mt.fives ? Math.max(mt.fiveLen, 0.6) : Math.max(t*1.6, 0.42);
@@ -5375,21 +5513,22 @@ function buildSVG(st, o={}){
         if(mt.textBreak !== false && !clearsText(a, r, len, wide)) continue;
         if(mt.style==="dots"){
           const p=pt(r,a);
-          body.push(`<circle cx="${f(p[0],3)}" cy="${f(p[1],3)}" r="${f(five&&mt.fives?t*0.85:t*0.55,3)}" fill="${mt.color}"/>`);
+          body.push(`<circle cx="${f(p[0],3)}" cy="${f(p[1],3)}" r="${f(five&&mt.fives?t*0.85:t*0.55,3)}" fill="${tcol}"${tcol === mt.color ? "" : ` stroke="none"`}/>`);
         } else if(mt.style==="beads"){
           /* Turned, not printed — so it is drawn one bead at a time here
              rather than from the ring helper, which would not know which
              marks the lettering has taken out. */
-          body.push(beadRing(r, 1, five&&mt.fives ? t*0.85 : t*0.55, mt.color, {from:a}));
+          body.push(beadRing(r, 1, five&&mt.fives ? t*0.85 : t*0.55, tcol, {from:a}));
         } else if(mt.style==="railroad"){
           const bold = five && mt.fives;
           const p0 = pt(bold ? r - t - Math.min(0.45, t*1.2) : r - t, a), p1 = pt(r + t, a);
-          body.push(`<line x1="${f(p0[0],3)}" y1="${f(p0[1],3)}" x2="${f(p1[0],3)}" y2="${f(p1[1],3)}" stroke="${mt.color}" stroke-width="${f(bold ? rail*2.6 : rail*1.15,3)}"/>`);
+          body.push(`<line x1="${f(p0[0],3)}" y1="${f(p0[1],3)}" x2="${f(p1[0],3)}" y2="${f(p1[1],3)}" stroke="${tcol}" stroke-width="${f(bold ? rail*2.6 : rail*1.15,3)}"/>`);
         } else { // ticks / dashes
           const p0=pt(r-len/2,a), p1=pt(r+len/2,a);
-          body.push(`<line x1="${f(p0[0],3)}" y1="${f(p0[1],3)}" x2="${f(p1[0],3)}" y2="${f(p1[1],3)}" stroke="${mt.color}" stroke-width="${f(five?mt.thickness*1.5:mt.thickness,3)}" stroke-linecap="${mt.style==="dashes"?"round":"butt"}"/>`);
+          body.push(`<line x1="${f(p0[0],3)}" y1="${f(p0[1],3)}" x2="${f(p1[0],3)}" y2="${f(p1[1],3)}" stroke="${tcol}" stroke-width="${f(five?mt.thickness*1.5:mt.thickness,3)}" stroke-linecap="${mt.style==="dashes"?"round":"butt"}"/>`);
         }
       }
+      if(mtech) body.push(madeBy(mtech, body.splice(mtFrom).join(""), {ink:mt.color, size:Math.max(0.5, t*6), stroke:true}));
       if(trackFx) body.push(`</g>`);
     }
     // hour track
@@ -5430,6 +5569,15 @@ function buildSVG(st, o={}){
         if(ix.skipNumerals && numeralPositions.includes(i===0?12:i)) continue;
         body.push(indexShape(ix, a, id, defs, ((st.render && st.render.az) || 135)*Math.PI/180));
       }
+    }
+    /* Printed batons made another way — cut, tone on tone, gloss or UV ink —
+       by the same drawing as the lettering. Only flat printed shapes in one
+       colour: an applied, metal or faceted marker is a part, not printing. */
+    const ixTech = ix.on && !ix.applied && !(ix.metal && METALS[ix.metal]) && MINUTE_TECH.indexOf(ix.tech) >= 0
+      && INDEX_TECH_STYLES.has(ix.style || "baton") && (!plan || INDEX_TECH_STYLES.has(ix.altStyle || "double")) ? ix.tech : "";
+    if(ixTech && body.length > ixFrom){
+      const art = body.splice(ixFrom).join("").split(`fill="${ix.color}"`).join(`fill="inherit"`);
+      body.push(madeBy(ixTech, art, {ink:ix.color, size:Math.max(0.6, (ix.width || 0.5)*2.5)}));
     }
     tagLayer("indices", ixFrom);
     // numerals
@@ -6793,10 +6941,24 @@ function buildSVG(st, o={}){
       }
       /* Off hides the line; it does not clear it. Turning the footer off and
          on again should not cost you what you typed into it. */
-      if(tx.line2On !== false)
-        body.push(line(tx.line2, tx.line2Y, tx.line2Size, tx.line2Curve, letterFam(tx.line2Font, "sans", defs), 0.14));
-      if(tx.footOn !== false)
-        body.push(line(tx.foot,  tx.footY,  tx.footSize,  tx.footCurve,  letterFam(tx.footFont, "sans", defs), 0.22));
+      /* Each line is printed unless it says otherwise (text.line2Tech,
+         footTech, splitTech). Printed, it is drawn exactly as it always
+         was; made any other way it is drawn once with its colour left open
+         and handed to madeBy. */
+      const lineInk = tx.lineColor || tx.color;
+      const techOf = k => LINE_TECH_IDS.indexOf(tx[k]) > 0 ? tx[k] : "printed";
+      if(tx.line2On !== false){
+        const tch = techOf("line2Tech");
+        if(tch === "printed") body.push(line(tx.line2, tx.line2Y, tx.line2Size, tx.line2Curve, letterFam(tx.line2Font, "sans", defs), 0.14));
+        else body.push(madeBy(tch, line(tx.line2, tx.line2Y, tx.line2Size, tx.line2Curve, letterFam(tx.line2Font, "sans", defs), 0.14, "inherit"),
+                              {ink:lineInk, size:tx.line2Size, at:[0, tx.line2Y]}));
+      }
+      if(tx.footOn !== false){
+        const tch = techOf("footTech");
+        if(tch === "printed") body.push(line(tx.foot,  tx.footY,  tx.footSize,  tx.footCurve,  letterFam(tx.footFont, "sans", defs), 0.22));
+        else body.push(madeBy(tch, line(tx.foot, tx.footY, tx.footSize, tx.footCurve, letterFam(tx.footFont, "sans", defs), 0.22, "inherit"),
+                              {ink:lineInk, size:tx.footSize, at:[0, tx.footY]}));
+      }
       /* The words either side of 6, the same size, each centred on its own
          place. Laid along the circle they lean with it, as SWISS and MADE
          do on a curved footer; otherwise they stand upright. Letter-spacing
@@ -6804,7 +6966,9 @@ function buildSVG(st, o={}){
          by half a space to keep the gap round the 6 even. */
       const split = splitLine(tx);
       if(split.length){
-        const famS = letterFam(tx.splitFont, "sans", defs), ink = tx.lineColor || tx.color;
+        const stch = techOf("splitTech");
+        const famS = letterFam(tx.splitFont, "sans", defs), ink = stch === "printed" ? tx.lineColor || tx.color : "inherit";
+        const sFrom = body.length;
         for(const p of split){
           const turn = tx.splitCurve === false ? "" : ` rotate(${f(p.rot,3)})`;
           const word = hasArabic(p.t) ? arText(p.t, famS, p.size, ` fill="${ink}"`)
@@ -6812,6 +6976,9 @@ function buildSVG(st, o={}){
               + ` fill="${ink}" text-anchor="middle" dominant-baseline="central">${esc(p.t)}</text>`;
           body.push(`<g transform="translate(${f(p.x,3)} ${f(p.y,3)})${turn}">${word}</g>`);
         }
+        if(stch !== "printed")
+          body.push(madeBy(stch, body.splice(sFrom).join(""), {ink:lineInk, size:tx.splitSize,
+            at:[0, split.reduce((a, p) => a + p.y, 0)/split.length]}));
       }
     }
     /* Closes the layer group opened above. It used to sit inside the on/off
@@ -6951,6 +7118,15 @@ function buildSVG(st, o={}){
     body.push(`<circle r="${f(bossR*0.16,3)}" fill="${bossDark}"/>`);
     body.push(`<circle cx="${f(-lxH*bossR*0.06,3)}" cy="${f(-lyH*bossR*0.06,3)}" r="${f(bossR*0.09,3)}" fill="${bossLite}" fill-opacity="0.75"/>`);
     }
+  }
+
+  /* Under the UV lamp: the whole face goes dark violet, hands too, and only
+     the UV ink glows. The glow is laid last so the darkening does not
+     dim it; it sits above the hands, which only matters where a hand
+     crosses the lettering. */
+  if(uvGlow.length){
+    body.push(`<circle r="${f(Math.max(opening, dialD)/2,3)}" fill="${UV_DARK}" opacity="0.72" pointer-events="none"/>`);
+    body.push(`<g data-layer="text" pointer-events="none">${uvGlow.join("")}</g>`);
   }
 
   /* --- everything on the dial is masked by the Ø30.50 bezel opening --- */
@@ -10371,7 +10547,7 @@ const SCHEMA = {
     N("minute.diameter","Track diameter",6,44), N("minute.thickness","Thickness",.08,1.2,.02),
     SEL("minute.style","Style",["dots","beads","ticks","railroad","dashes"]),
     C("minute.color","Colour"), CK("minute.fives","Emphasise 5-minute marks"), N("minute.fiveLen","5-min length",.2,3,.05),
-    SEL("minute.tech","Made by",["printed","double printed"]),
+    SEL("minute.tech","Made by",["printed","double printed","engraved + filled","engraved","gloss on matte"]),
     ...(S.minute.tech === "double printed" ? [N("minute.edgeLight","Edge light",0,1,.05,"")] : []),
     CK("minute.textBreak","Break the track around the text"),
     ...(S.minute.textBreak !== false ? [N("minute.textGap","Gap either side",0,2,.05)] : [])]},
@@ -10386,6 +10562,9 @@ const SCHEMA = {
     SEL("indices.metal","Finish",["colour"].concat(GEM_METALS)),
     SEL("indices.altStyle","Accent index shape",["double","baton","triangle","dagger","dot","diamond","cone","box"]),
     CK("indices.applied","Applied"), CK("indices.skipNumerals","Skip where numerals sit"),
+    /* printed batons can be cut or glossed as the lettering can */
+    ...(!S.indices.applied && !(S.indices.metal && METALS[S.indices.metal]) && INDEX_TECH_STYLES.has(S.indices.style || "baton")
+        ? [SEL("indices.tech","Made by",["printed","engraved + filled","engraved","gloss on matte"])] : []),
     /* the F77 MK1's lume plots beyond each marker; the owner's dial has none */
     ...(S.indices.style === "f77" ? [CK("indices.lume","Lume plots")] : [])]},
   /* Each hour on its own: what it carries. 12 and 3 under the NOREL's
@@ -10513,6 +10692,15 @@ const SCHEMA = {
           CK("text.line2Curve","Curve the second line"),
           CK("text.footCurve","Curve the footer")
         ])
+      ]),
+      /* How each line is made. The light angle is the scene's own light,
+         offered here because a cut or a gloss line is only seen by it. */
+      GRP("Lines made by",[
+        ...(T.line2On ? [SEL("text.line2Tech","Second line",["printed","double printed","engraved + filled","engraved","gloss on matte","brushed across","uv ink"])] : []),
+        ...(T.footOn ? [SEL("text.footTech","Footer",["printed","double printed","engraved + filled","engraved","gloss on matte","brushed across","uv ink"])] : []),
+        ...(T.splitOn ? [SEL("text.splitTech","Either side of 6",["printed","double printed","engraved + filled","engraved","gloss on matte","brushed across","uv ink"])] : []),
+        ...(lineTechsUsed(S).some(t => LINE_TECH_LIT.has(t)) ? [N("render.az","Light angle",0,360,1,"°")] : []),
+        CK("render.uv","Show under UV")
       ]),
       GRP("Advanced", textAdvanced(T), {adv:true})
     ];
@@ -13489,6 +13677,16 @@ refineBootRender();
     }
     if(st.dial.finish==='stone')add(false,'Stone source',st.dial.slab?'A slab is selected. Confirm scale, thickness and the exact production cut.':'Synthetic preview only. Select a photographed slab before material sign-off.','dial');
     if(st.dial.finish==='guilloche')add(st.dial.cell>=.3&&st.dial.pitch>=.15,'Surface detail scale',`Cell ${f(st.dial.cell,2)} mm · pitch ${f(st.dial.pitch,2)} mm. Fine detail needs dial-maker review; these limits are advisory.`,'dial');
+    /* Lettering, a track or batons made some way other than ink (madeBy):
+       a cut needs metal under it, tone-on-tone and gloss can be hard to
+       read, brushing across needs a brushed dial, and UV ink a supplier. */
+    if(typeof lineTechsUsed==='function'){const used=lineTechsUsed(st),mk=x=>x&&MINUTE_TECH.indexOf(x)>=0?[x]:[];
+     const all=used.concat(st.minute&&st.minute.on&&st.minute.style!=='beads'?mk(st.minute.tech):[],st.indices&&st.indices.on&&!st.indices.applied?mk(st.indices.tech):[]);
+     const dT=(typeof caseOf==='function'&&caseOf(st).dialT)||.40;
+     if(all.some(t=>t==='engraved + filled'||t==='engraved'))add(dT>=.35,'Engraved lettering',`Cut about 0.05 mm deep into a ${f(dT,2)} mm dial${dT>=.35?'; 0.40 mm brass is fine for that depth':'; under 0.35 mm the dial is too thin to cut safely'}. Confirm the depth with the dial maker.`,'text');
+     if(all.some(t=>t==='engraved'||t==='gloss on matte'))add(false,'Faint lettering','Tone-on-tone and gloss-on-matte lettering is seen only by the light on it and may be hard to read. Check a sample in shop light and daylight.','text');
+     if(used.indexOf('brushed across')>=0)add(LINE_BRUSHED_FINISH.has(st.dial.finish),'Brushed lettering',LINE_BRUSHED_FINISH.has(st.dial.finish)?'The letters are brushed at right angles to the dial: the dial maker masks and re-brushes them.':'The dial is not brushed, so the brushed-across lettering is shown engraved tone on tone instead.','text');
+     if(used.indexOf('uv ink')>=0)add(false,'UV ink','UV ink cannot be seen in daylight. The supplier must confirm the ink, its glow under the lamp and how long it lasts.','text');}
     /* Gems and diamond-set numerals: their fit against the hands, the
        windows, the track and the dial, then the setter's questions. */
     if(typeof gemChecks==='function'){
@@ -14150,6 +14348,9 @@ body:not(.guided) #gStartMore{ display:none }
   .gCard .gName{ font-size:13px }
   .gChips{ gap:8px }
   .gChips button{ flex:none; min-height:44px; padding:0 16px; font-size:15px }
+  /* how a line is made: seven short choices, wrapped so all of them show */
+  .gChips.gMade{ flex-wrap:wrap; overflow:visible; margin:0; padding:2px 0 6px; gap:6px }
+  .gChips.gMade button{ padding:0 12px; font-size:14px }
   .gRow{ min-height:44px; margin:2px 0 }
   .gRow label, .gRow > span{ font-size:15px }
   .gRow input[type=text]{ font-size:16px; padding:10px 12px; max-width:62%; min-height:44px; box-sizing:border-box }
@@ -14296,6 +14497,10 @@ const GSTR = {en:{
   "pos.above": mm => `${mm} mm above the centre`, "pos.below": mm => `${mm} mm below the centre`, "pos.centre":"At the centre",
   "text.under":"Under the logo", "text.above6":"Above 6", "text.field":"Text", "text.eg": x => `e.g. ${x}`, "text.clear":"Clear",
   "text.split6":"Split either side of 6", "eg.split":"SWISS MADE",
+  "text.lightNote":"Turn the light to see the lettering come and go. This moves the light in the picture only; the design does not change.",
+  "text.brushNote":"This dial is not brushed, so the lettering is shown engraved tone on tone instead.",
+  "text.faintNote":"Tone on tone and gloss lettering can be hard to read in some light.",
+  "text.uvNote":"UV ink cannot be seen in daylight. It glows under a UV lamp; the dial maker must confirm the ink.",
   "sec.long":"Long needle",
   "day.width": mm => `${mm} mm wide`, "day.custom": deg => `${deg}°`, "day.names":"Day names",
   "fix.white":"Print in white", "fix.navy":"Print in navy", "fix.narrow": deg => `Narrow to ${deg}°`, "fix.fit":"Make them fit",
@@ -14439,6 +14644,10 @@ GSTR.ar = {
   "pos.above": mm => `${mm} ملم فوق المركز`, "pos.below": mm => `${mm} ملم تحت المركز`, "pos.centre":"في المركز",
   "text.under":"تحت الشعار", "text.above6":"فوق الرقم 6", "text.field":"النص", "text.eg": x => `مثلاً ${x}`, "text.clear":"مسح",
   "text.split6":"مقسوم حول ٦", "eg.split":"SWISS MADE",
+  "text.lightNote":"حرّك الضوء لترى الكتابة تظهر وتختفي. هذا يحرّك الضوء في الصورة فقط ولا يغيّر التصميم.",
+  "text.brushNote":"هذا الميناء غير مصقول بالفرشاة، لذلك تظهر الكتابة محفورة بلون الميناء بدلاً من ذلك.",
+  "text.faintNote":"الكتابة المحفورة بلون الميناء أو اللامعة قد تصعب قراءتها في بعض الإضاءة.",
+  "text.uvNote":"حبر الأشعة فوق البنفسجية لا يُرى في ضوء النهار، ويتوهّج تحت مصباح الأشعة. على صانع الميناء تأكيد الحبر.",
   "sec.long":"إبرة طويلة",
   "day.width": mm => `بعرض ${mm} ملم`, "day.custom": deg => `\u2066${deg}°\u2069`, "day.names":"أسماء الأيام",
   "fix.white":"اطبع بالأبيض", "fix.navy":"اطبع بالكحلي", "fix.narrow": deg => `ضيّقها إلى \u2066${deg}°\u2069`, "fix.fit":"اجعلها تتسع",
@@ -14626,7 +14835,11 @@ const G_CHECK_AR = {
   "Day window clearance":"نافذة اليوم تمتد تحت الإطار.",
   "Bilingual day disc":"على Sellita أن تؤكد توفر قرص يوم بلغتين لمحرك SW240-1 قبل طلب الميناء.",
   "Gem-set bezel":"على Blue Creations أن تصنع إطاراً مرصّعاً بالأحجار.",
-  "Pavé dial":"الميناء المرصّع بالكامل يحتاج قاعدة ذهبية أسمك: على Blue Creations أن تؤكد ذلك."
+  "Pavé dial":"الميناء المرصّع بالكامل يحتاج قاعدة ذهبية أسمك: على Blue Creations أن تؤكد ذلك.",
+  "Engraved lettering":"الميناء أرق من أن تُحفر فيه الكتابة.",
+  "Faint lettering":"الكتابة بلون الميناء أو اللامعة قد تصعب قراءتها.",
+  "Brushed lettering":"الميناء غير مصقول بالفرشاة، لذلك تظهر الكتابة محفورة.",
+  "UV ink":"على المورّد تأكيد حبر الأشعة فوق البنفسجية."
 };
 
 /* One glossary for both modes. The words simple mode uses win, and the full
@@ -14639,7 +14852,8 @@ const GLOSS_OPT = {matte:"Matte", gloss:"Gloss", sunburst:"Sunburst", guilloche:
   "dd-seconds":"Long needle", "pomme-ouverte":"Breguet", obelisque:"Obelisk", "day-date":"Day-date", "printed":"Printed",
   "royal-oak":"Royal Oak", "ro-seconds":"Royal Oak seconds", "f77":"Nivada F77", "f77-seconds":"Nivada F77 seconds",
   "double printed":"Raised print", "applied metal":"Applied metal", "polished steel":"Steel", "blued steel":"Blued steel",
-  "blackened steel":"Black", "yellow gold":"Gold"};
+  "blackened steel":"Black", "yellow gold":"Gold",
+  "gloss on matte":"Gloss on matte", "brushed across":"Brushed across the grain", "uv ink":"UV ink"};
 const glossOpt = o => typeof o !== "string" ? o : (GLOSS_OPT[o] || (/^[a-z]/.test(o) ? o[0].toUpperCase() + o.slice(1) : o));
 
 /* Where to pick up after a reload. Back within half an hour, the step you
@@ -14765,7 +14979,11 @@ const G_CHECK_WORDS = {
   "Day window clearance":["calendar","The day window runs under the bezel."],
   "Bilingual day disc":["calendar","Sellita must confirm a bilingual SW240-1 day disc."],
   "Gem-set bezel":["case","Blue Creations must make a gem-set bezel."],
-  "Pavé dial":["dial","A pavé dial needs a thicker gold dial: Blue Creations to confirm."]
+  "Pavé dial":["dial","A pavé dial needs a thicker gold dial: Blue Creations to confirm."],
+  "Engraved lettering":["text","The dial is too thin to engrave the lettering."],
+  "Faint lettering":["text","Tone-on-tone or gloss lettering may be hard to read."],
+  "Brushed lettering":["text","The dial is not brushed, so the lettering is shown engraved."],
+  "UV ink":["text","The supplier must confirm the UV ink."]
 };
 const G_CHECK_QUIET = new Set(["Movement and production review","Gem setting production review","Case reference","Stone source","Two-tone parts"]);
 const G_LAYER_STEP = {case:"case", tpl:"case", dial:"dial", minute:"dial", sector:"dial", chapter:"dial", borders:"dial",
@@ -14826,7 +15044,7 @@ const G_MORE = {
       "numerals.metalTex","numerals.edgeLight","numerals.height","numerals.bevel"]},
     {id:"engrave", t:"Engraving", src:"numerals", show:"numerals.on", paths:["numerals.engDepth","numerals.engBevel","numerals.engShadow",
       "numerals.engHilite","numerals.engRecess","render.az","numerals.engSharp"]},
-    {id:"indices", t:"Index markers", src:"indices", show:"indices.on", paths:["indices.style","indices.count","indices.radius","indices.skipNumerals"]}],
+    {id:"indices", t:"Index markers", src:"indices", show:"indices.on", paths:["indices.style","indices.count","indices.radius","indices.skipNumerals","indices.tech"]}],
   hands:[
     {id:"shape", t:"Shape", src:"@", paths:["H.style"], cards:["H.style"]},
     {id:"length", t:"Length", src:"@", paths:["H.reach","H.hourShare","H.reachTrim","H.length","say"]},
@@ -14842,7 +15060,8 @@ const G_MORE = {
       "text.resTextScale","text.embAuto","text.embShape","text.embW","text.embH","text.embPad","text.embBorder","text.embInset","text.plateAuto",
       "text.plateShape","text.platePad","text.plateW","text.plateH","text.plateTaper","text.logoBevel","text.plateTintOn","text.plateTint"]},
     {id:"mark", t:"Logo artwork", src:"text", paths:["text.logoMark"]},
-    {id:"spacing", t:"Spacing and lines", src:"text", paths:["text.logoTrack","text.logoCurve","text.lineColor","text.nameShiftX","text.nameShiftY"]}],
+    {id:"spacing", t:"Spacing and lines", src:"text", paths:["text.logoTrack","text.logoCurve","text.lineColor","text.nameShiftX","text.nameShiftY"]},
+    {id:"linesmade", t:"How the lines are made", src:"text", paths:["text.line2Tech","text.footTech","text.splitTech","render.az","render.uv"]}],
   calendar:[
     {id:"date", t:"Date window", src:"date", show:"date.on", paths:["date.cyclops","date.w","date.h","date.at","date.dist","date.shown","date.frame"]},
     {id:"day", t:"Day window", src:"day", show:"day.on", need:"calendar", paths:["day.arc","day.bevel","day.frame","day.textH","day.shown","day.frameColor"]}],
@@ -14917,6 +15136,8 @@ const G_MORE_LABEL = {
   "text.plateW":"Width", "text.plateH":"Height", "text.plateTaper":"Tip taper", "text.logoBevel":"Bevel",
   "text.plateTintOn":"Choose the plate colour", "text.plateTint":"Plate colour",
   "text.logoTrack":"Letter spacing", "text.logoCurve":"Curve the logo", "text.lineColor":"Line colour",
+  "text.line2Tech":"Under the logo, made by", "text.footTech":"Above 6, made by", "text.splitTech":"Either side of 6, made by",
+  "render.uv":"Show under UV", "render.az|Light angle":"Light angle", "indices.tech":"Made by",
   "text.nameShiftX":"Logo across", "text.nameShiftY":"Logo up or down",
   "date.cyclops":"Magnifier", "date.w":"Width", "date.h":"Height", "date.at":"Position", "date.dist":"Distance from centre",
   "date.shown":"Date shown", "date.frame":"Frame colour",
@@ -14929,6 +15150,10 @@ const G_MORE_LABEL = {
    the sheet means something more particular by it. By value, or by
    "path=value" for one setting only. */
 const G_MORE_OPT = {
+  /* how a line, the track or a printed baton is made (LINE_TECH) */
+  "gloss on matte":"Gloss on matte", "brushed across":"Brushed across the grain", "uv ink":"UV ink",
+  "text.line2Tech=engraved":"Engraved, tone on tone", "text.footTech=engraved":"Engraved, tone on tone", "text.splitTech=engraved":"Engraved, tone on tone",
+  "minute.tech=engraved":"Engraved, tone on tone", "indices.tech=engraved":"Engraved, tone on tone",
   sandblasted:"Sandblasted", metallic:"Metallic", flat:"Flat", line:"Line", ring:"Ring",
   "same as dial":"Same as the dial", clous:"Clous de Paris", orge:"Grain d'orge", soleil:"Soleil", cercles:"Circles", vagues:"Waves",
   flamme:"Flammé", panier:"Basket", damier:"Checker", tapisserie:"Stepped squares", perlage:"Perlage", geneva:"Geneva waves",
@@ -15001,7 +15226,13 @@ Object.assign(GWORD.ar, {
   "Shimmer strength":"قوة البريق", "Shimmer direction":"اتجاه البريق", "Shimmer angle":"زاوية البريق", "How many sparkles":"عدد اللمعات",
   "Sparkle strength":"قوة اللمعات", "Tint with the dial colour":"صبغة بلون الميناء",
   "Track diameter":"قطر المسار", "Stronger five-minute marks":"إبراز علامات الدقائق الخمس", "Five-minute mark length":"طول علامات الدقائق الخمس",
-  "Made by":"طريقة الصنع", "Edge light":"ضوء الحافة", "Break the track at the lettering":"قطع المسار عند الكتابة", "Gap each side":"الفراغ على كل جانب",
+  "Made by":"طريقة الصنع",
+  "Engraved, filled":"محفورة ومحشوّة", "Tone on tone":"بلون الميناء", "Gloss on matte":"لامعة على مطفي", "Brushed across":"مصقولة بالعرض",
+  "UV ink":"حبر فوق بنفسجي", "Engraved, tone on tone":"محفورة بلون الميناء نفسه", "Brushed across the grain":"مصقولة بعكس اتجاه الصقل",
+  "Show under UV":"اعرضها تحت الأشعة فوق البنفسجية", "Light angle":"زاوية الضوء", "Lines made by":"طريقة صنع الأسطر",
+  "Second line":"السطر الثاني", "Footer":"السطر السفلي", "Either side of 6":"حول الرقم 6", "How the lines are made":"طريقة صنع الأسطر",
+  "Under the logo, made by":"طريقة صنع السطر تحت الشعار", "Above 6, made by":"طريقة صنع السطر فوق الرقم 6",
+  "Either side of 6, made by":"طريقة صنع الكلمتين حول الرقم 6", "Edge light":"ضوء الحافة", "Break the track at the lettering":"قطع المسار عند الكتابة", "Gap each side":"الفراغ على كل جانب",
   "Outer diameter":"القطر الخارجي", "Inner diameter":"القطر الداخلي", "Finish":"التشطيب", "Separator lines":"خطوط فاصلة", "Separator colour":"لون الخطوط الفاصلة",
   "Style":"النمط", "Show this zone":"إظهار هذه المنطقة", "Inner diameter (0 makes a disc)":"القطر الداخلي (الصفر يجعلها قرصاً)",
   "Height above the dial (3D view)":"الارتفاع فوق الميناء (العرض ثلاثي الأبعاد)", "Edge":"الحافة", "Bead size":"مقاس الحبيبات",
@@ -15964,14 +16195,24 @@ Object.assign(GWORD.ar, {
            example in grey italics rather than text that looks set */
         /* each line has its own face, so أوتوماتيك can sit in Naskh under a Latin logo */
         const lineFace = (k, txt) => `<div class="gH3"><h3>${gW("Font")}</h3></div>` + letterTiles(k, LINE_FONTS, LINE_FONTS.indexOf(T[k.split(".")[1]]) < 0 ? "sans" : T[k.split(".")[1]], txt);
+        /* how each line is made, as compact chips under its other settings */
+        const madeChips = k => `<div class="gH3"><h3>${gW("Made by")}</h3></div>` + chips(k, LINE_TECH, LINE_TECH_IDS.indexOf(T[k.split(".")[1]]) > 0 ? T[k.split(".")[1]] : "printed").replace('<div class="gChips">', '<div class="gChips gMade">');
         let h = `<h3>${gT("text.under")}</h3>` + textIn("text.line2", gT("text.field"), T.line2On === false ? "" : T.line2, gT("text.eg", gT("eg.line2")), true);
-        if(T.line2On !== false && T.line2) h += slider("text.line2Size", "Size", 0.4, 2, 0.05, T.line2Size) + slider("text.line2Y", "Position", -12, 14, 0.1, T.line2Y, "pos") + toggle("text.line2Curve", "Follow the curve", !!T.line2Curve) + lineFace("text.line2Font", T.line2);
+        if(T.line2On !== false && T.line2) h += slider("text.line2Size", "Size", 0.4, 2, 0.05, T.line2Size) + slider("text.line2Y", "Position", -12, 14, 0.1, T.line2Y, "pos") + toggle("text.line2Curve", "Follow the curve", !!T.line2Curve) + lineFace("text.line2Font", T.line2) + madeChips("text.line2Tech");
         h += `<h3>${gT("text.above6")}</h3>` + textIn("text.foot", gT("text.field"), T.footOn === false ? "" : T.foot, gT("text.eg", gT("eg.foot")), true);
-        if(T.footOn !== false && T.foot) h += slider("text.footSize", "Size", 0.4, 2, 0.05, T.footSize) + slider("text.footY", "Position", -12, 15, 0.1, T.footY, "pos") + toggle("text.footCurve", "Follow the curve", !!T.footCurve) + lineFace("text.footFont", T.foot);
+        if(T.footOn !== false && T.foot) h += slider("text.footSize", "Size", 0.4, 2, 0.05, T.footSize) + slider("text.footY", "Position", -12, 15, 0.1, T.footY, "pos") + toggle("text.footCurve", "Follow the curve", !!T.footCurve) + lineFace("text.footFont", T.foot) + madeChips("text.footTech");
         /* two words either side of the 6, near the edge: typing them turns the line on, clearing it turns it off */
         h += `<h3>${gT("text.split6")}</h3>` + textIn("text.split", gT("text.field"), T.splitOn ? T.split : "", gT("text.eg", gT("eg.split")), true);
         if(T.splitOn && T.split) h += slider("text.splitSize", "Size", 0.3, 1.5, 0.05, T.splitSize) + slider("text.splitR", "Distance from centre", 8, 14, 0.1, T.splitR)
-          + slider("text.splitGap", "Space either side of 6", 0, 5, 0.05, T.splitGap) + toggle("text.splitCurve", "Lean with the curve", T.splitCurve !== false) + lineFace("text.splitFont", T.split);
+          + slider("text.splitGap", "Space either side of 6", 0, 5, 0.05, T.splitGap) + toggle("text.splitCurve", "Lean with the curve", T.splitCurve !== false) + lineFace("text.splitFont", T.split) + madeChips("text.splitTech");
+        /* The lines that are only seen by the light get the light itself,
+           to turn round and watch them come and go; UV ink gets the lamp. */
+        const used = lineTechsUsed(S);
+        if(used.some(t => LINE_TECH_LIT.has(t)))
+          h += `<h3>${gW("Light")}</h3>` + slider("render.az", "Light angle", 0, 360, 1, +S.render.az || 135, "deg") + `<p class="gNote">${gT("text.lightNote")}</p>`;
+        if(used.indexOf("brushed across") >= 0 && !LINE_BRUSHED_FINISH.has(S.dial.finish)) h += `<p class="gNote">${gT("text.brushNote")}</p>`;
+        if(used.indexOf("engraved") >= 0 || used.indexOf("gloss on matte") >= 0) h += `<p class="gNote">${gT("text.faintNote")}</p>`;
+        if(used.indexOf("uv ink") >= 0) h += toggle("render.uv", "Show under UV", !!S.render.uv) + `<p class="gNote">${gT("text.uvNote")}</p>`;
         return h + more("text", "All text settings");
       }
       const blk = printingBlock("text");
