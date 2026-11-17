@@ -412,5 +412,35 @@
   "reach": "free",
   "reachTrim": 1.03,
   "stem": "solid"
+ },
+ "sheet": {
+  "designNo": "103277_4",
+  "date": "",
+  "designer": "",
+  "brand": "",
+  "movement": "",
+  "versions": [],
+  "baseline": null,
+  "strap": {
+   "type": "",
+   "style": "",
+   "maker": "",
+   "buckle": "",
+   "buckleColor": "",
+   "buckleLogo": ""
+  },
+  "handRef": "W36017",
+  "secRef": "",
+  "finishes": {},
+  "caseback": "",
+  "notes": "",
+  "rows": {
+   "dial": {
+    "mark": "changed"
+   },
+   "logoScript": {
+    "note": "(same as before)"
+   }
+  }
  }
 }

@@ -200,6 +200,81 @@ stored in a design file do not change. In the full editor at laptop widths
 the toolbar sits tighter, and on a narrower window it takes a second row
 rather than pushing Share and Export off the screen.
 
+## The maker's sheet (v4.8.0)
+
+One A3 landscape PDF in the maker's own layout: Nivada Grenchen's design
+sheet 103277_3, as redrawn in Claude Design and approved by the owner. It
+is how the owner sends a design back to the factory.
+
+- **Where.** Simple mode's Finish step has a *Maker's sheet (PDF)* tile
+  (ورقة المصنع) and, under the name, a *For the maker* section, folded to
+  one line until it is opened. The Export sheet has a *Maker's sheet (PDF)*
+  button, the atelier bar a *Maker's sheet* button, and the full editor a
+  *For the maker › Maker's sheet* component with the same fields. Each opens
+  a preview of the page; *Make the PDF* then hands it to the usual Ready
+  sheet: *Share…* (on an iPhone, the share sheet: Mail, WhatsApp, Save to
+  Files) and *Save to device*.
+- **What the owner fills in** (kept in the design as `sheet`, so it travels
+  with saved versions and syncing): the maker's design number, the date
+  (today if empty), the designer, and anything to change from the case's
+  own: the brand on the footer, the movement, the band and its maker, the
+  buckle, the hand references (W36017; the seconds hand "find existing"
+  when empty), the finish of each part, the caseback's ring text, and notes.
+  An empty field takes the case's: NIVADA GRENCHEN and "Automatic Soprod
+  P024 (without Date)" on the Time Keeper × Nivada, "NOREL / Blue Creations"
+  and the Sellita SW240-1 on the NOREL cases. The values stay in English,
+  as the sheet does.
+- **Versions.** Version A is the design on screen. Up to three saved
+  versions stand beside it as A1 to A3 (picked on the preview; a label can
+  be renamed), and one saved version can be named the maker's last, to
+  compare A with. A lists every part; each later version lists only what
+  differs from A. A part that differs only in colour is marked
+  *(New color)* in red, with a swatch and its nearest Pantone code (Cool
+  Gray 5 C); any other difference *(changed)*; a part that was not there
+  *(New)*. The owner's own marks and notes on A's lines are kept
+  (`sheet.rows`): the Time Keeper × Nivada design marks its dial
+  *(changed)* and its script *(same as before)*, as the approved page does.
+- **The lines** are written from the design in the maker's words: "Case:
+  Stainless steel, vertical brush, polished bevels", "Shiny rose gold
+  applied Arabic-Indic numerals, 12 pcs", "Applied logo rose gold (shiny &
+  sandblasted)", "Black printed: GRENCHEN, TIME KEEPER, SWISS MADE",
+  "Hands: Shiny rose gold, pencil (W36017)".
+- **The page.** The versions at 1:1 and Version A at 200%, from the case
+  photograph with the dial drawn in, on white (the photograph's studio
+  ground is keyed out from its edges); where the photograph cannot show a
+  version, the drawn case. A strap colour the photograph does not have is
+  its own strap re-coloured, inside the strap's region measured off the
+  photograph (`photoStrap`), so the grey fabric A1 stays on the photograph
+  (its strap within ΔE 1 of Cool Gray 5 C, the case untouched). Below: the
+  owner's two drawings of the F77, front and side (`app/tk-f77-*.png`);
+  for a case without drawings, an outline drawn from its figures with the
+  maker's four dimensions and callouts, and no side view; the caseback, its
+  ring set glyph by glyph with the edition's XX/XX called out; a buckle for
+  each kind of strap on the sheet; the hands at 1:1 with their references
+  and lengths; the dial alone (no hands, no production guides) with
+  callouts to the applied logo, the raised script, the applied indexes and
+  the printing; the movement; the footer with the date, design number,
+  designer and the brand.
+- **How it is made.** The page is one SVG in millimetres (`buildSheetSVG`),
+  which is both the preview and, through jsPDF 2.5.2 and svg2pdf.js 2.2.4,
+  the PDF: text in the PDF's own Helvetica (not embedded), lines and shapes
+  as vectors, the renders as JPEG at 280 dpi or more at their printed size.
+  Words Helvetica cannot draw, Arabic above all, are drawn by the browser
+  and placed as pictures, and are put in the PDF's keywords so it can still
+  be searched. The two libraries (`vendor/`, MIT, licences beside them) are
+  loaded the first time a sheet is made and are kept by the service worker,
+  so it works offline. The file is named for the maker:
+  `NIVADA-GRENCHEN_103277_4_2026-11-17.pdf`.
+- **Size and time** (desktop Chromium, from a cold start): the Time Keeper ×
+  Nivada with A1 about 0.6 MB, the preview about 2 s, the PDF a further
+  0.25 s.
+
+Every preset and file in `designs/` draws exactly as in 4.7.1 (buildSVG
+and buildTemplate compared byte for byte, with the fonts loaded). The two
+changes to shared code only add options: `buildSVG(…, {guides:false})`
+leaves the dial's production guides out, and `svgToPng`'s fifth argument
+can ask for another backing colour or the canvas itself.
+
 ## The F77 to Nivada's drawings and sheet (v4.7.0)
 
 Nivada Grenchen's design sheet 103277_3 (16 July 2026) and its front and

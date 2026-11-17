@@ -1199,6 +1199,7 @@ body.guided .atelier-nav, body.guided #gHideInGuided, body.guided .bar .grp.tool
   <button type="button" data-atelier="studies">Design studies</button>
   <button type="button" data-atelier="check">Design check</button>
   <button type="button" data-atelier="spec">Specification</button>
+  <button type="button" id="open-sheet">Maker's sheet</button>
   <span class="atelier-note">Local-first · Made to explore</span>
 </nav>
 <dialog id="atelier-dialog" class="atelier-dialog" aria-labelledby="atelier-title">
@@ -1284,6 +1285,7 @@ body.guided .atelier-nav, body.guided #gHideInGuided, body.guided .bar .grp.tool
     <p class="sub" id="expWhat"></p>
     <div class="tools" style="flex-direction:column;align-items:stretch;gap:8px">
       <button class="btn key" data-x="png">Export image (PNG)</button>
+      <button class="btn" id="mkSheetBtn" title="One A3 page in the maker's layout: the versions at 1:1 with their specification and change marks, the 200% render, the drawings, caseback, buckles, hands and dial, as a PDF.">Maker's sheet (PDF)</button>
       <button class="btn" id="moreT" style="margin-top:2px">More formats</button>
       <div id="moreBox" style="display:none;flex-direction:column;gap:8px">
         <div class="row" style="gap:6px">
@@ -1314,6 +1316,22 @@ body.guided .atelier-nav, body.guided #gHideInGuided, body.guided .bar .grp.tool
     <div class="tools" style="flex-direction:column;align-items:stretch;gap:8px">
       <button class="btn key" id="saveGo">Save</button>
       <button class="btn" id="saveCancel">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- The maker's sheet: the page as it will print, the versions on it, then the PDF -->
+<div class="sheet" id="mkSheet">
+  <button class="sheetX" data-close="1" aria-label="Close">✕</button>
+  <div class="card" style="max-width:1180px">
+    <h2>Maker's sheet</h2>
+    <p class="sub" id="mkWhat"></p>
+    <div style="overflow:auto;border-radius:8px;background:#fff;margin-bottom:10px;-webkit-overflow-scrolling:touch"><div id="mkPrev" style="width:100%"></div></div>
+    <div class="tools" style="margin-bottom:8px"><button class="btn" id="mkZoom">Zoom in</button></div>
+    <div id="mkPick"></div>
+    <div class="tools" style="flex-direction:column;align-items:stretch;gap:8px">
+      <button class="btn key" id="mkGo">Make the PDF</button>
+      <button class="btn" id="mkClose">Close</button>
     </div>
   </div>
 </div>
@@ -1360,7 +1378,10 @@ const VERNOY_CASE = {
      BUILTIN_CASE_CAL), not a file of its own: the watch in polished steel on
      a dark brown strap, which is what it can show. "strap" names that strap
      in the words simple mode uses when it puts it back. */
-  photoOwn:{finish:"polished", strapColor:"#4E3629", strap:"brown"}
+  photoOwn:{finish:"polished", strapColor:"#4E3629", strap:"brown"},
+  /* what the maker's sheet says when the design says nothing: the brand on
+     its footer, the movement, and the strap and buckle */
+  sheet:{brand:"VERNOY", movement:"Movement 1062", strap:{type:"leather", buckle:"pin buckle", buckleColor:"steel", buckleLogo:"engraved"}}
 };
 /* NOREL B6098G-A1, Blue Creations: a round 41 mm case with a fluted bezel and
    a Sellita SW240-1 day-date. R3 is the case as drawn; Concept D is the
@@ -1386,7 +1407,9 @@ const NOREL_R3 = {
   /* what the photographs of the NOREL show: polished steel on its bracelet */
   photoOwn:{finish:"polished"},
   calendar:{dayRin:11.27, dayRout:13.17, dayArcMax:53, dateC:9.95, dateRin:8.75, dateRout:11.15, dateW:2.40, dateH:2.00},
-  back:["SELLITA SW240-1", "ALL STAINLESS STEEL", "10 ATM WATER RESISTANT"]
+  back:["SELLITA SW240-1", "ALL STAINLESS STEEL", "10 ATM WATER RESISTANT"],
+  /* the maker's sheet: NOREL's watch, made by Blue Creations, on its bracelet */
+  sheet:{brand:"NOREL / Blue Creations", movement:"Automatic Sellita SW240-1", strap:{type:"bracelet", buckle:"folding clasp", buckleColor:"steel", buckleLogo:"engraved"}}
 };
 const NOREL_D = Object.assign({}, NOREL_R3, {
   model:"NOREL B6098G-A1 · Concept D", ref:"B6098G-A1 Concept D (proposal)",
@@ -1508,7 +1531,23 @@ const TK_NIVADA = {
        body:{top:18.55, lugEnd:23.10, lugOut:11.40, polish:{to:9.20, c:[12.80, 13.10]}},
        lugIn:7.15, screws:{r:17.06, top:23.8, side:22.2, d:1.50},
        crown:{x0:19.15, xb:19.55, x1:22.35, collar:5.05}, strap:{w0:11.25, w1:9.20, y1:32.6}},
-  back:["NIVADA GRENCHEN · TIME KEEPER", "ALL STAINLESS STEEL", "10 ATM WATER RESISTANT"]
+  back:["NIVADA GRENCHEN · TIME KEEPER", "ALL STAINLESS STEEL", "10 ATM WATER RESISTANT"],
+  /* The maker's sheet, as Nivada's 103277_3 writes it: their brand on the
+     footer, the movement, the black flat rubber strap on a brushed pin
+     buckle with the logo engraved, and the caseback's ring (the edition
+     number XX/XX after the names; the lower words are hard to read on the
+     sheet, so they are the approved design's). The owner's two drawings,
+     front and side, stand in the technical row as they were drawn. */
+  sheet:{brand:"NIVADA GRENCHEN", movement:"Automatic Soprod P024",
+         strap:{type:"rubber", style:"flat", buckle:"pin buckle", buckleColor:"steel", buckleLogo:"engraved"},
+         ring:["NIVADA GRENCHEN × TIME KEEPER", "XX/XX", "AUTOMATIC", "10 ATM", "SAPPHIRE", "SWISS MADE"],
+         drawings:{front:{file:"./app/tk-f77-front.png", w:1160, h:870}, side:{file:"./app/tk-f77-side.png", w:740, h:925}}},
+  /* Where the strap is in the photograph, in mm from the dial centre (y
+     down), measured off it: beyond the lug blocks' ends (22.45 above, 22.75
+     below), and between the blocks (within 7.70 of the axis) from 18.85
+     out. A strap of another colour is the photograph's own strap re-coloured
+     there, as the gold of a two-tone case is laid on its parts. */
+  photoStrap:{ends:[-22.45, 22.75], tongue:{x:7.70, y:18.85}}
 };
 const CASES = {[VERNOY_CASE.model]:VERNOY_CASE, [NOREL_R3.model]:NOREL_R3, [NOREL_D.model]:NOREL_D, [NOREL_R4.model]:NOREL_R4, [TK_NIVADA.model]:TK_NIVADA};
 const CASE_MODELS = Object.keys(CASES);
@@ -1645,7 +1684,15 @@ const BASE = {
   mHand:{on:true, style:"pomme-ouverte", length:13.5, width:0.46, tail:0.5, boss:1.60, color:"#FFFFFF", finish:"polished", lume:false,
          pommeD:1.25, pommePos:92, ringW:.26, tipW:.16, taper:.62, stem:"solid"},
   sHand:{on:false, style:"counter", length:13.8, width:.32, tail:3.6, boss:.8, color:"#FFFFFF", finish:"polished", lume:false,
-         pommeD:1.4, pommePos:80, ringW:.18, tipW:.18, taper:.7}
+         pommeD:1.4, pommePos:80, ringW:.18, tipW:.18, taper:.7},
+  /* The maker's sheet (Export › Maker's sheet). Empty means the case's own:
+     its brand, movement, strap, finishes and caseback. versions are the
+     saved versions shown beside this design as A1 to A3, {ref:id, label};
+     baseline is the saved version the maker last sent, compared against;
+     rows holds the owner's own marks and notes on Version A's lines. */
+  sheet:{designNo:"", date:"", designer:"", brand:"", movement:"", versions:[], baseline:null,
+         strap:{type:"", style:"", maker:"", buckle:"", buckleColor:"", buckleLogo:""},
+         handRef:"", secRef:"", finishes:{}, caseback:"", notes:"", rows:{}}
 };
 
 /* All presets are dial studies inside the same fixed case — Ø30.50 visible opening. */
@@ -2128,7 +2175,7 @@ const APP_BUILD = "__BUILD__";
 /* The version people see, raised with every change that reaches them:
    major for a new way of working, minor for something new to do, patch for
    a fix. Shown on the watch screen, so any screenshot says which it was. */
-const APP_VERSION = "4.7.1";
+const APP_VERSION = "4.8.0";
 const APP_DATE = "__DATE__";
 
 /* Every route that replaces S passes through one of these three, which is
@@ -7223,8 +7270,9 @@ function buildSVG(st, o={}){
     body.push(`<circle r="${opening/2}" fill="url(#${gid})" pointer-events="none"/>`);
   }
 
-  /* --- dial-only artwork carries the blank and visible-opening guides --- */
-  if(scope==="dial"){
+  /* --- dial-only artwork carries the blank and visible-opening guides,
+     unless asked not to (the maker's sheet shows the dial alone) --- */
+  if(scope==="dial" && o.guides !== false){
     over.push(`<circle r="${dialD/2}" fill="none" stroke="#1F4E6B" stroke-width="0.06"/>`);
     over.push(`<circle r="${opening/2}" fill="none" stroke="#B3312A" stroke-width="0.06" stroke-dasharray="0.8 0.6"/>`);
     over.push(`<text x="0" y="${f(dialD/2+1.2,2)}" font-family="'IBM Plex Mono',monospace" font-size="0.8" fill="#1F4E6B" text-anchor="middle">Ø${f(dialD)} blank · Ø${f(opening)} visible · ${f(CASE_SPEC.dialT)} brass</text>`);
@@ -10111,7 +10159,9 @@ const LAYER_GROUPS = [
     ["date","Date window","date.on"]]],
   ["Scene", [
     ["render","Material preview",null],
-    ["time","Preview time",null]]]
+    ["time","Preview time",null]]],
+  ["For the maker", [
+    ["sheet","Maker's sheet",null]]]
 ];
 const LAYERS = LAYER_GROUPS.flatMap(g => g[1]);
 let groupOpen = {};
@@ -10810,7 +10860,26 @@ const SCHEMA = {
     N("render.quality","Preview resolution",160,720,20,"px")]},
   time:{title:"Preview time", hint:"Only affects the render, not the design.", fields:[
     N("meta.time.h","Hour",0,11,1,""), N("meta.time.m","Minute",0,59,1,""), N("meta.time.s","Second",0,59,1,""),
-    TX("meta.name","Design name")]}
+    TX("meta.name","Design name")]},
+  /* The maker's sheet: the same details simple mode's Finish step asks
+     for. A field left empty takes the case's own (shown in its label). */
+  sheet:{title:"Maker's sheet", get hint(){ return "One A3 page in the maker's own layout, as a PDF: the versions at 1:1 with their specification and change marks, the 200% render, the drawings, caseback, buckles, hands and dial. Empty fields take the case's own."; },
+    fields:()=>{
+      ensureSheet(S);
+      const d = sheetInfo(S), sp = sheetStrap(S), fin = sheetFinishes(S), opt = (cur, list) => ["auto"].concat(list.filter(x => x !== "auto"));
+      return [ACT("makerSheet","Preview and make the PDF"),
+        TX("sheet.designNo","Design number"), TX("sheet.date",`Date, as 2026-11-17 (empty: today)`), TX("sheet.designer","Designer"),
+        TX("sheet.brand",`Brand on the footer (empty: ${d.brandDefault || "none"})`), TX("sheet.movement",`Movement (empty: ${sheetMovement(Object.assign({}, S, {sheet:{}}))})`),
+        SEL("sheet.strap.type",`Band (auto: ${sp.type})`,opt(S.sheet.strap.type || "auto", SHEET_STRAPS)),
+        SEL("sheet.strap.style","Band style",["auto","flat","curved"]), TX("sheet.strap.maker","Strap maker"),
+        SEL("sheet.strap.buckle",`Buckle (auto: ${sp.buckle})`,opt("", SHEET_BUCKLES)),
+        SEL("sheet.strap.buckleColor",`Buckle colour (auto: ${sp.buckleColor})`,opt("", SHEET_BUCKLE_COLOURS)),
+        SEL("sheet.strap.buckleLogo",`Buckle logo (auto: ${sp.buckleLogo})`,["auto","engraved","none"]),
+        TX("sheet.handRef","Hour and minute hand reference"), TX("sheet.secRef","Seconds hand reference (empty: find existing)"),
+        ...SHEET_FINISH_PARTS.map(([k, l]) => TX("sheet.finishes." + k, `${l} finish (empty: ${(caseOf(S).finishes || {})[k] || fin[k] || "none"})`)),
+        TX("sheet.caseback",`Caseback ring, words split by · (empty: ${sheetCasebackRing(Object.assign({}, S, {sheet:{}})).join(" · ")})`),
+        TX("sheet.notes","Notes for the maker")];
+    }}
 };
 /* What a supplied drawing already decides, and so does not ask for. This was
    the other way round — a list of the fields to keep — which meant every
@@ -11064,6 +11133,7 @@ const REBUILD_PROPS = new Set(["case.model","day.lang","date.digits","day.edge",
 const handPrimary = k => [k+".style", k+".reach", k+".hourShare",
                           k+".reachTrim", k+".length", k+".material", k+".finish"];
 const PRIMARY = {
+  sheet:    ["sheet.designNo","sheet.date","sheet.designer","sheet.brand","sheet.movement","sheet.strap.type","sheet.strap.buckle","sheet.handRef","sheet.secRef","sheet.notes"],
   dial:     ["dial.color","dial.finish","dial.diameter","dial.pattern","dial.dome","dial.satin"],
   sector:   ["sector.on"],   /* each zone is its own collapsible row */
   borders:  ["borders.on"],   /* each band is its own collapsible row */
@@ -11105,6 +11175,8 @@ function splitAdvanced(host){
          and a computed reading, which belongs beside the control it reports
          on rather than in a different section from it. */
       if(fd.querySelector("[data-hand]") || fd.classList.contains("say")) return true;
+      /* the maker's sheet's own button stays at the top of its panel */
+      if(fd.querySelector('[data-act="makerSheet"]')) return true;
       const ctl = fd.querySelector("[data-p]");
       return !!ctl && keep.includes(ctl.dataset.p);
     };
@@ -11564,6 +11636,7 @@ function field(fd){
     return `<div class="f"><label>${fd.l}<span class="val">${list.length} for ${esc(sys)}</span></label>
       <div class="faces" data-p="${fd.p}">${tiles}</div></div>`;
   }
+  if(fd.t==="sel" && /^sheet\./.test(fd.p) && !v) v = "auto";
   if(fd.t==="sel") return `<div class="f"><label>${fd.l}</label>
     <select data-p="${fd.p}">${fd.opts.map(o=>`<option value="${esc(o).replace(/"/g,"&quot;")}" ${o===v?"selected":""}>${esc(typeof glossOpt === "function" ? glossOpt(o) : o)}</option>`).join("")}</select></div>`;
   if(fd.t==="act") return `<div class="f"><button class="btn" data-act="${fd.a}" style="width:100%">${fd.l}</button></div>`;
@@ -11653,6 +11726,7 @@ function paintAll(){ paintLayers(); paintProps(); paintView(); syncUndo(); syncP
    language. */
 function runAct(a, tr){
   const say = m => toast(tr ? tr(m) : m);
+  if(a === "makerSheet"){ openMakerSheet(); return; }
   /* A new zone goes inside the innermost one, which is where a dial gains a
      zone: you divide the centre, you do not add a ring outside the chapter. */
   if(a === "zoneAdd"){
@@ -12508,7 +12582,10 @@ function prepSVG(svg, W, H){
     out = out.replace(/(<svg[^>]*\swidth="[^"]*")/, `$1 height="${H}"`);
   return out;
 }
-function svgToPng(svg, W, H, timeoutMs){
+/* opt.bg is the colour under the drawing (white unless said), and
+   opt.canvas hands back the drawn canvas instead of a PNG, for the maker's
+   sheet to work on before it is encoded. */
+function svgToPng(svg, W, H, timeoutMs, opt){
   const src = prepSVG(svg, W, H);
   const xml = '<?xml version="1.0" encoding="UTF-8"?>\n' + src;
   /* Try every way a browser might accept this drawing, in order. WebKit is
@@ -12533,8 +12610,9 @@ function svgToPng(svg, W, H, timeoutMs){
       try{
         const cv = document.createElement("canvas"); cv.width = W; cv.height = H;
         const g = cv.getContext("2d");
-        g.fillStyle = "#fff"; g.fillRect(0,0,W,H);        // PNGs of a watch want a backing
+        g.fillStyle = (opt && opt.bg) || "#fff"; g.fillRect(0,0,W,H);        // PNGs of a watch want a backing
         g.drawImage(img, 0, 0, W, H);
+        if(opt && opt.canvas){ settled = true; clearTimeout(timer); clean(); resolve(cv); return; }
         cv.toBlob(b => {
           if(settled) return; settled = true; clearTimeout(timer); clean();
           b ? resolve(b) : reject(new Error("out of memory"));
@@ -12573,7 +12651,9 @@ function presentOutput(name, blob, type){
   const shareable = canShareFile(blob, name, type);
   q("#outShare").style.display = shareable ? "" : "none";
   q("#outCopy").style.display  = /json|html|svg|plain/.test(type) ? "" : "none";
-  q("#outHint").textContent = shareable
+  q("#outHint").textContent = type === "application/pdf"
+    ? (shareable ? "Share opens your phone's share sheet: Mail, WhatsApp or Save to Files." : "Save to device puts the PDF in your downloads.")
+    : shareable
     ? "Share opens your phone's share sheet — WhatsApp, Mail, or Save to Photos."
     : (isImg ? "Press and hold the image above, then choose Save to Photos or Share."
              : "Save to device puts the file in your downloads.");
@@ -13606,6 +13686,1120 @@ refineBootRender();
   document.addEventListener("visibilitychange", ()=>{
     if(document.visibilityState === "visible"){ check(); askLatest(); }
   });
+})();
+</script>
+<script>
+/* SHEET-PURE-BEGIN */
+/* =====================================================================
+   THE MAKER'S SHEET
+   One A3 landscape page in the manufacturer's own layout (Nivada
+   Grenchen's design sheet 103277_3, as redrawn in Claude Design and
+   approved by the owner): the versions at 1:1 with their specification in
+   the maker's words and red change marks, Version A again at 200%, the
+   front and side drawings, the caseback, the buckles, the hands and dial
+   panels, the movement and the footer.
+   The page is one SVG in millimetres. The same string is the on-screen
+   preview and, through svg2pdf, the PDF, so what is checked is what is
+   sent. Everything in this part is plain data and strings, with no page
+   or canvas, so the tests run it as it is; the photographs and panels are
+   rasterised by the browser part below and handed in as images.
+   ===================================================================== */
+const SHEET_INK = "#1A1A1A", SHEET_LINE = "#2B2B2B", SHEET_DIM = "#B23A55", SHEET_RED = "#D7263D",
+      SHEET_PANEL = "#DADADA", SHEET_FOOT = "#D9D9D9";
+const SHEET_FONT = "Helvetica, Arial, 'Liberation Sans', sans-serif";
+const SHEET_PT = 25.4/72;                       // one point, in mm
+/* The page, measured off the approved design (1587 × 1123 px for 420 ×
+   297 mm, so 1 px = 0.26465 mm). Version A's dial centre is at (66.17,
+   49.13) and Version A1's 84.69 mm to the right; the 200% render's at
+   (336.10, 79.31); the bottom row's boxes are the design's figures. */
+const SHEET_GRID = {
+  page:{w:420, h:297},
+  ver:{cx:66.17, pitch:84.69, pitch4:61.75, dialY:49.13, titleDX:-30.17, titleY:94.1, rowY:101.0, rowPitch:5.08, wrapPitch:4.29,
+       size:12*0.26465, titleSize:16*0.26465, bottom:200},
+  hero:{cx:336.10, dialY:79.31, scale:2, captionY:160.3},
+  front:{x:3.70, y:213.31, w:89.98, h:67.49},
+  side:{x:96.40, y:211.19, w:56.77, h:70.93},
+  caseback:{cx:182.62, cy:244.80, r:18.43},
+  buckles:[{cx:230.24, cy:238.15, capY:254.3}, {cx:273.92, cy:238.30, capY:249.3}],
+  hands:{x:299.06, y:222.31, w:52.93, h:52.93},
+  dial:{x:355.96, y:222.31, w:58.75, h:52.93},
+  movement:{x:414.70, y:281.2, size:13*0.26465},
+  footer:{y:284.50, h:12.50, textY:292.2, size:15*0.26465, date:7.41, number:68.8, designer:185.3, brandRight:412.59,
+          brandSize:18*0.26465, brandTrack:2*0.26465}
+};
+/* Helvetica's widths from Adobe's metrics, per 1000 em, for 32 to 126:
+   the text is set in the PDF's own Helvetica, which is not embedded, so
+   wrapping, centring and the tracked brand are worked out with the widths
+   the reader will draw it with. */
+const SHEET_AFM = {
+  r:[278,278,355,556,556,889,667,191,333,333,389,584,278,333,278,278,556,556,556,556,556,556,556,556,556,556,278,278,584,584,584,556,
+     1015,667,667,722,722,667,611,778,722,278,500,667,556,833,722,778,667,778,722,667,611,722,667,944,667,667,611,278,278,278,469,556,
+     333,556,556,500,556,556,278,556,556,222,222,500,222,833,556,556,556,556,333,500,278,556,500,722,500,500,500,334,260,334,584],
+  b:[278,333,474,556,556,889,722,238,333,333,389,584,278,333,278,278,556,556,556,556,556,556,556,556,556,556,333,333,584,584,584,611,
+     975,722,722,722,722,667,611,778,722,278,556,722,611,833,722,778,667,778,722,667,611,722,667,944,667,667,611,333,278,333,584,556,
+     333,556,611,556,611,556,333,611,611,278,278,556,278,889,611,611,611,611,389,556,333,611,556,778,556,556,500,389,280,389,584]
+};
+const SHEET_AFM_X = {"×":[584,584], "·":[278,278], "–":[556,556], "—":[1000,1000], "‘":[222,278], "’":[222,278], "“":[333,500], "”":[333,500],
+  "é":[556,556], "°":[400,400], "Ø":[778,778], "ø":[611,611], "±":[584,584], "…":[1000,1000], "•":[350,350], " ":[278,278]};
+function sheetTextW(s, size, bold){
+  let w = 0;
+  for(const ch of String(s)){
+    const c = ch.charCodeAt(0);
+    w += c >= 32 && c <= 126 ? SHEET_AFM[bold ? "b" : "r"][c - 32] : (SHEET_AFM_X[ch] || [556, 556])[bold ? 1 : 0];
+  }
+  return w/1000*size;
+}
+/* What the PDF's standard fonts can draw: WinAnsi. Anything else, Arabic
+   above all, is drawn by the browser as a picture of the words, where it
+   is shaped and ordered properly (see rasterLabel). */
+const SHEET_NOT_WINANSI = /[^\x20-\x7E\xA0-\xFF€‚ƒ„…†‡ˆ‰Š‹ŒŽ‘’“”•–—˜™š›œžŸ]/;
+const sheetEsc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;"}[c]));
+const sn = (v, d) => { const x = +(+v).toFixed(d == null ? 3 : d); return String(Object.is(x, -0) ? 0 : x); };
+/* a figure the way the maker writes it: trailing zeros off, "mm" straight after */
+const sheetMM = v => sn(v, 2) + "mm";
+const sheetCap = s => s ? String(s).charAt(0).toUpperCase() + String(s).slice(1) : "";
+const sheetTitle = s => String(s || "").replace(/(^|[\s(/-])([a-z])/g, (m, a, b) => a + b.toUpperCase());
+const SHEET_MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+function sheetToday(now){
+  const d = now || new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+function sheetDateText(iso){
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || "");
+  return m ? `${+m[3]} ${SHEET_MONTHS[+m[2] - 1]} ${m[1]}` : String(iso || "");
+}
+
+/* ---- the design's sheet details ----
+   S.sheet holds what only the owner knows (the maker's design number, who
+   drew it, the hand references) and anything they change from the case's
+   own defaults. Empty means "the case's default", so a design moved to
+   another case takes that case's brand and movement. */
+const SHEET_BASE = {designNo:"", date:"", designer:"", brand:"", movement:"", versions:[], baseline:null,
+  strap:{type:"", style:"", maker:"", buckle:"", buckleColor:"", buckleLogo:""},
+  handRef:"", secRef:"", finishes:{}, caseback:"", notes:"", rows:{}};
+const sheetOf = st => {
+  const s = (st && st.sheet) || {};
+  return Object.assign({}, SHEET_BASE, s, {strap:Object.assign({}, SHEET_BASE.strap, s.strap || {}),
+    finishes:Object.assign({}, s.finishes || {}), rows:Object.assign({}, s.rows || {}),
+    versions:Array.isArray(s.versions) ? s.versions : []});
+};
+const SHEET_STRAPS = ["rubber", "fabric Velcro", "leather", "bracelet"];
+const SHEET_BUCKLES = ["pin buckle", "Velcro loop", "folding clasp"];
+const SHEET_BUCKLE_FOR = {rubber:"pin buckle", leather:"pin buckle", "fabric Velcro":"Velcro loop", bracelet:"folding clasp"};
+const SHEET_BUCKLE_COLOURS = ["steel", "silver", "black", "gold", "rose gold"];
+/* The parts whose finish the maker's drawings name, in the order they are
+   called out, with the words used when a case says nothing about one. */
+const SHEET_FINISH_PARTS = [["lugTop","Lug tops"], ["caseShoulder","Case shoulders"], ["bezelTop","Bezel top"], ["bezelEdge","Bezel edge"],
+  ["caseFlank","Case flank"], ["crown","Crown"], ["crystal","Crystal"]];
+const sheetActive = v => v != null && v !== "" && v !== "auto";
+/* The strap as the sheet describes it: what the owner chose, else the
+   case's own. A different kind of strap brings its own buckle, so a
+   fabric strap does not inherit the rubber strap's "flat". */
+function sheetStrap(st){
+  const K = caseOf(st), sh = sheetOf(st), def = Object.assign({type:K.bracelet ? "bracelet" : "leather", style:"", maker:""}, (K.sheet && K.sheet.strap) || {});
+  const own = sh.strap, type = sheetActive(own.type) ? own.type : def.type, same = type === def.type;
+  const pick = (k, fall) => sheetActive(own[k]) ? own[k] : (same && sheetActive(def[k]) ? def[k] : fall);
+  const buckle = pick("buckle", SHEET_BUCKLE_FOR[type] || "pin buckle");
+  return {type, style:pick("style", ""), maker:pick("maker", ""), buckle,
+    buckleColor:pick("buckleColor", buckle === "Velcro loop" ? "silver" : "steel"),
+    buckleLogo:pick("buckleLogo", buckle === "Velcro loop" ? "none" : "engraved")};
+}
+/* The words for the movement: "Automatic Soprod P024 (without Date)". */
+function sheetMovement(st){
+  const K = caseOf(st), sh = sheetOf(st);
+  if(sheetActive(sh.movement)) return sh.movement;
+  const base = (K.sheet && K.sheet.movement) || K.movement || "";
+  const d = st.date && st.date.on, y = st.day && st.day.on;
+  return base + (d && y ? " (Day-Date)" : d ? " (with Date)" : y ? " (with Day)" : " (without Date)");
+}
+function sheetFinishes(st){
+  const K = caseOf(st), sh = sheetOf(st), out = {};
+  const own = K.finishes || (K.photoOwn && K.photoOwn.finish === "brushed"
+    ? {bezelTop:"vertical brush", caseFlank:"vertical brush", crown:"polishing"} : {bezelTop:"polishing", caseFlank:"polishing", crown:"polishing"});
+  for(const [k] of SHEET_FINISH_PARTS){ const v = sheetActive(sh.finishes[k]) ? sh.finishes[k] : own[k]; if(v) out[k] = v; }
+  return out;
+}
+function sheetCasebackRing(st){
+  const K = caseOf(st), sh = sheetOf(st);
+  if(sheetActive(sh.caseback)) return sh.caseback.split(/\s*[·•|]\s*/).filter(Boolean);
+  return (K.sheet && K.sheet.ring) || K.back || [K.steel && String(K.steel).toUpperCase(), K.wr].filter(Boolean);
+}
+function sheetInfo(st, now){
+  const K = caseOf(st), sh = sheetOf(st);
+  const brandDef = (K.sheet && K.sheet.brand) || "";
+  return {designNo:sh.designNo || "", date:sheetActive(sh.date) ? sh.date : sheetToday(now), designer:sh.designer || "",
+    brand:sheetActive(sh.brand) ? sh.brand : brandDef, brandDefault:brandDef, movement:sheetMovement(st),
+    notes:sh.notes || "", handRef:sh.handRef || "", secRef:sh.secRef || ""};
+}
+/* "NIVADA-GRENCHEN_103277_4_2026-11-17.pdf": what the maker files it under. */
+function sheetFileName(info){
+  const clean = s => String(s || "").normalize("NFKD").replace(/[̀-ͯ]/g, "").replace(/[^A-Za-z0-9._-]+/g, "-").replace(/^-+|-+$/g, "");
+  const brand = clean(String(info.brand || "").split("/")[0]) || "Design";
+  return [brand, clean(info.designNo), clean(info.date)].filter(Boolean).join("_") + ".pdf";
+}
+
+/* ---- the maker's words ---- */
+/* Colours by the names a supplier uses, nearest within reason, else the
+   Pantone code: the sheet is read by someone choosing paint. */
+const SHEET_COLOURS = [["#FFFFFF","White"],["#F4F2EC","White"],["#F6F5F1","Ivory"],["#F1EAD7","Cream"],["#E9E7E1","Silver white"],["#DDDFE1","Silver white"],
+  ["#D0D3D6","Silver"],["#B9BEC4","Light grey"],["#B1B2B3","Grey"],["#7E8389","Grey"],["#7B828A","Slate"],["#55585E","Dark grey"],["#2A2D32","Charcoal"],
+  ["#15171C","Black"],["#1E1E20","Black"],["#1F2023","Black"],["#0E1F55","Navy"],["#1F2D47","Navy"],["#1E2B45","Navy"],["#003087","Blue"],["#1D3FA0","Royal blue"],
+  ["#1D2F9B","Royal blue"],["#5C8FC9","Sky blue"],["#A9C3DD","Powder blue"],["#9ED3EC","Ice blue"],["#1F4A3A","Green"],["#2F3B2E","Green"],["#8FB8A2","Mint"],
+  ["#CFE3C1","Lume green"],["#E4D3A8","Vintage lume"],["#D9C9A3","Champagne"],["#D9B37A","Champagne"],["#E6B8A2","Salmon"],["#C9A55A","Gold"],
+  ["#C08A6E","Rose gold"],["#8C6A3F","Bronze"],["#4E3629","Brown"],["#6B4A33","Brown"],["#A0744A","Tan"],["#5E1E2C","Burgundy"],["#7A2433","Burgundy"],
+  ["#8E1B2A","Red"]];
+const sheetIsHex = c => /^#[0-9a-f]{6}$/i.test(c || "");
+let SHEET_COL_LAB = null;
+function sheetColourName(hex){
+  if(!sheetIsHex(hex)) return "";
+  const u = hex.toUpperCase(), hit = SHEET_COLOURS.find(c => c[0] === u);
+  if(hit) return hit[1];
+  if(!SHEET_COL_LAB) SHEET_COL_LAB = SHEET_COLOURS.map(c => labOf(c[0]));
+  const L = labOf(u); let best = -1, bd = 1e9;
+  SHEET_COL_LAB.forEach((m, i) => { const d = Math.hypot(L[0] - m[0], L[1] - m[1], L[2] - m[2]); if(d < bd){ bd = d; best = i; } });
+  if(bd <= 9) return SHEET_COLOURS[best][1];
+  const p = typeof nearestPantone === "function" ? nearestPantone(u) : null;
+  return p ? "PANTONE " + p.code : u;
+}
+/* the swatch's caption: the Pantone code, as the example writes it */
+function sheetSwatchName(hex){
+  const p = typeof nearestPantone === "function" ? nearestPantone(hex) : null;
+  if(!p) return String(hex).toUpperCase();
+  return p.exact ? p.code : "nearest " + p.code;
+}
+const SHEET_METAL = {"polished steel":"steel", "rhodium":"rhodium", "white gold":"white gold", "yellow gold":"yellow gold", "rose gold":"rose gold",
+  "brass":"brass", "blackened steel":"black"};
+const sheetMetal = m => SHEET_METAL[m] || String(m || "steel");
+const SHEET_FINISH = {polished:"Shiny", satin:"Satin", brushed:"Brushed", sandblasted:"Sandblasted", matte:"Matte"};
+const sheetFinish = f => SHEET_FINISH[f] || "Shiny";
+const sheetSteelish = hex => { const u = String(hex || "").toUpperCase(); return sheetIsHex(u) && [1, 3, 5].every(i => Math.abs(parseInt(u.slice(i, i + 2), 16) - parseInt("#C8C9C7".slice(i, i + 2), 16)) <= 8); };
+function sheetCaseMetal(st){
+  const c = st.case || {}, g = typeof goldOf === "function" ? goldOf(c.material) : null;
+  if(g) return sheetCap(g);
+  if(sheetSteelish(c.material) || !sheetIsHex(c.material)) return "Stainless steel";
+  const n = sheetColourName(c.material);
+  return n === "Black" ? "Black PVD steel" : "Stainless steel, " + n.toLowerCase() + " colour";
+}
+const SHEET_DIAL_FINISH = {matte:"matte", gloss:"gloss", sunburst:"sunray", guilloche:"guilloché", brushed:"brushed", grained:"grained",
+  sandblasted:"sandblasted", enamel:"enamel", lacquer:"lacquered", metallic:"metallic", circular:"circular brush", mop:"mother-of-pearl", flat:"matte"};
+function sheetDialFinish(d){
+  if(d.finish === "brushedsteel" || d.finish === "brushed") return (d.brushDir === "horizontal" ? "horizontal" : d.brushDir === "circular" ? "circular" : "vertical") + " brush";
+  if(d.finish === "guilloche") return "guilloché " + String(d.pattern || "").replace(/-/g, " ");
+  if(d.finish === "stone") return String(d.stone || "stone");
+  return SHEET_DIAL_FINISH[d.finish] || String(d.finish || "");
+}
+const SHEET_SYSTEM = {"arabic ٠–٩":"Arabic-Indic numerals", "persian ۰–۹":"Persian numerals", "roman I–XII":"Roman numerals", "western 0–9":"numerals"};
+const SHEET_HAND = {"pomme-ouverte":"pomme", "f77":"F77", "royal-oak":"baton (Royal Oak style)", "day-date":"Day-Date style", "dd-seconds":"needle", "ro-seconds":"needle with paddle",
+  "f77-seconds":"needle with lume plot", "stick":"needle", "counter":"needle"};
+const sheetHandStyle = s => SHEET_HAND[s] || String(s || "").replace(/-/g, " ");
+/* what an applied part is made of, in the maker's words: "Shiny rose gold" */
+const sheetMade = (metal, finish) => `${sheetFinish(finish)} ${sheetMetal(metal)}`;
+function sheetHandWords(h){
+  const m = h.material || (h.color && sheetIsHex(h.color) ? null : "polished steel");
+  return m ? sheetMade(m, h.finish) : `${sheetCap(sheetColourName(h.color).toLowerCase())}${h.finish === "polished" ? ", shiny" : ""}`;
+}
+function sheetPlanOf(st){
+  if(typeof hourPlan === "function"){ try{ return hourPlan(st).map(p => p.kind); }catch(e){} }
+  const nm = st.numerals || {}, ix = st.indices || {};
+  return Array.from({length:12}, () => nm.on ? "numeral" : ix.on ? "index" : "none");
+}
+/* The printed lines on the dial, logo first when it is printed. */
+function sheetPrinted(st){
+  const T = st.text || {}, out = [];
+  if(!T.on) return out;
+  const flat = /^(printed|double printed)$/.test(T.logoTech || "printed");
+  if(flat && (!T.logoMark || T.logoMark === "none") && T.logo) out.push(T.logo);
+  if(T.line2On !== false && T.line2) out.push(T.line2);
+  if(T.footOn !== false && T.foot) out.push(T.foot);
+  if(T.splitOn && T.split) out.push(T.split);
+  return out;
+}
+
+/* ---- the specification lines ----
+   One row per part, in the order the maker lists them. Each carries what
+   decides its marks: sig, everything about the part but its colour, and
+   col, its colours (and metals). A row that differs only in col is a new
+   colour; one that differs in sig is changed. */
+function sheetRows(st){
+  const K = caseOf(st), rows = [], c = st.case || {}, d = st.dial || {}, T = st.text || {};
+  const row = (key, label, text, sig, col, opt) => rows.push(Object.assign({key, label, text, sig:JSON.stringify(sig), col:col || []}, opt || {}));
+  const fin = sheetFinishes(st);
+  /* case: metal, the top's finish, and the polished bevel when there is one */
+  let caseText = sheetCaseMetal(st);
+  const adj = v => String(v).split(",")[0].replace(/^polishing$/, "polished");
+  if(c.finish === ((K.photoOwn && K.photoOwn.finish) || c.finish) && (fin.bezelTop || fin.lugTop)) caseText += ", " + adj(fin.bezelTop || fin.lugTop);
+  else caseText += ", " + ({polished:"polished", brushed:"brushed", satin:"satin"}[c.finish] || "polished");
+  if(fin.bezelEdge && /polish/.test(fin.bezelEdge) && !/polish/.test(caseText)) caseText += ", polished bevels";
+  const tt = typeof twoToneOf === "function" ? twoToneOf(st) : null;
+  if(tt) caseText += `, ${tt} bezel, crown and links`;
+  if(c.gemBezel === "round" || c.gemBezel === "baguette") caseText += `, ${c.gemBezel === "round" ? "round" : "baguette"} ${c.gemStone || "diamond"} bezel`;
+  row("case", "Case:", caseText, [c.model, c.finish, tt, c.gemBezel, c.gemStone, fin], [c.material]);
+  /* band */
+  const sp = sheetStrap(st);
+  if(sp.type === "bracelet" || K.bracelet) row("band", "Band:", `${sheetCaseMetal(st)} bracelet`, ["bracelet", c.finish], [c.material]);
+  else row("band", "Band:", `${sheetColourName(c.strapColor)} ${sp.type} strap${sp.maker ? " " + sp.maker : ""}${sp.style ? ", " + sp.style : ""}`,
+    [sp.type, sp.style, sp.maker, c.strap !== false], [String(c.strapColor || "").toUpperCase()]);
+  /* dial */
+  let dialText = d.finish === "stone" ? `${sheetCap(sheetDialFinish(d))} stone dial` : `${sheetColourName(d.color)} ${sheetDialFinish(d)} dial`;
+  if(d.ombre > 0) dialText += ", ombré";
+  if(d.pave && d.pave !== "none") dialText += `, pavé ${d.pave}`;
+  row("dial", "Dial:", dialText, [d.finish, d.brushDir, d.pattern, d.stone, d.pave, d.ombre > 0, d.dome, st.sector && st.sector.on, st.chapter && st.chapter.on],
+    [String(d.color || "").toUpperCase()]);
+  /* markers */
+  const plan = sheetPlanOf(st), count = k => plan.filter(x => x === k).length;
+  const nm = st.numerals || {}, ix = st.indices || {};
+  const nN = count("numeral");
+  if(nN){
+    const sys = SHEET_SYSTEM[nm.system] || "numerals", applied = nm.tech === "applied" && nm.material !== "paint";
+    const what = applied ? `${sheetMade(nm.metal, "polished")} applied ${sys}` : `${sheetColourName(nm.color)} ${nm.tech || "printed"} ${sys}`;
+    row("numerals", "", `${sheetCap(what)}${nm.pave ? `, set with ${nm.paveStone || "diamond"}s` : ""}, ${nN} pcs`, [nm.system, nm.style, nm.tech, nm.material, nm.size, nm.pave, nN],
+      [applied ? nm.metal : String(nm.color || "").toUpperCase()]);
+  }
+  const nI = count("index") + count("indexAlt");
+  if(nI){
+    const applied = ix.applied !== false, metal = ix.metal;
+    const what = applied ? (metal ? `${sheetMade(metal, "polished")} applied indexes` : `${sheetColourName(ix.color)} applied indexes`) : `${sheetColourName(ix.color)} printed indexes`;
+    row("indices", "", `${sheetCap(what)}, ${ix.style || "baton"}, ${nI} pcs`, [ix.style, ix.applied, ix.length, ix.width, nI], [metal || String(ix.color || "").toUpperCase()]);
+  }
+  const nG = count("gem") + count("gemAlt");
+  if(nG){ const g = st.gem || {};
+    row("gems", "", `${nG} × ${g.cut || "round"} ${g.stone || "diamond"} Ø${sn(g.d || 1.5, 2)}mm in ${g.metal || "white gold"} ${g.setting || "bezel"} settings`, [g.cut, g.stone, g.d, g.setting, g.n, nG], [g.metal]); }
+  /* logo: the Nivada mark is an applied shield over a raised script */
+  const mark = T.logoMark && T.logoMark !== "none" ? T.logoMark : "", applied = /^applied/.test(T.logoTech || "");
+  if(T.on && applied){
+    const metal = sheetMetal(T.logoMetal), fw = sheetFinish(T.logoFinish).toLowerCase();
+    const shield = /shield/i.test(mark), script = /script/i.test(mark) || (!mark && T.logo);
+    if(shield || (mark && !script)) row("logo", "", `Applied logo ${metal} (${fw}${shield && fw === "shiny" ? " & sandblasted" : ""})`, [mark, T.logoTech, T.logoFinish], [T.logoMetal]);
+    if(script){ const word = /Nivada/.test(mark) ? "Nivada" : (T.logo || "");
+      row("logoScript", "", `${sheetMade(T.logoMetal, T.logoFinish)} UP logo ${word}`.trim(), [mark, T.logoTech, T.logoFinish, word], [T.logoMetal]); }
+  } else if(T.on && mark && !/^(printed|double printed)$/.test(T.logoTech || "printed"))
+    row("logo", "", `${sheetCap(T.logoTech)} logo (${mark})`, [mark, T.logoTech], [String(T.color || "").toUpperCase()]);
+  else if(T.on && mark) row("logo", "", `${sheetColourName(T.color)} printed logo (${mark})`, [mark, T.logoTech], [String(T.color || "").toUpperCase()]);
+  const printed = sheetPrinted(st);
+  if(st.minute && st.minute.on && (st.minute.tech || "printed") === "printed") printed.push("minute track");
+  if(printed.length){ const ink = T.lineColor || T.color;
+    row("printing", "", `${sheetColourName(ink)} printed: ${printed.join(", ")}`, [printed], [String(ink || "").toUpperCase()]); }
+  /* calendar */
+  if(st.date && st.date.on){ const dt = st.date;
+    row("date", "Date:", `${dt.digits === "Arabic-Indic" ? "Arabic-Indic" : "Western"} digits, ${sheetColourName(dt.bg).toLowerCase()} disc at ${dt.at || 3} o'clock${dt.cyclops && dt.cyclops !== "none" ? ", " + dt.cyclops + " cyclops" : ""}`,
+      [dt.digits, dt.at, dt.cyclops, dt.frameW], [String(dt.bg || "").toUpperCase(), String(dt.text || "").toUpperCase()]); }
+  if(st.day && st.day.on){ const dy = st.day;
+    row("day", "Day:", `${dy.lang || "Arabic"} day disc, ${sheetColourName(dy.bg).toLowerCase()}`, [dy.lang, dy.arc, dy.edge], [String(dy.bg || "").toUpperCase(), String(dy.text || "").toUpperCase()]); }
+  /* hands */
+  const sh = sheetOf(st), hH = st.hHand || {}, mH = st.mHand || {}, sH = st.sHand || {};
+  if(hH.on !== false || mH.on !== false)
+    row("hands", "Hands:", `${sheetHandWords(hH)}, ${sheetHandStyle(hH.style)}${sh.handRef ? ` (${sh.handRef})` : ""}${hH.lume || mH.lume ? ", lume" : ""}`,
+      [hH.style, mH.style, hH.finish, hH.lume, mH.lume, sh.handRef, sn(hH.length, 1), sn(mH.length, 1)], [hH.material || String(hH.color || "").toUpperCase()]);
+  if(sH.on){
+    const tail = sH.style === "f77-seconds" ? "flat counterweight" : (sH.tail || 0) >= 2.5 ? "counterweight tail" : (sH.tail || 0) > 0 ? "short tail" : "no tail";
+    row("sec", "Sec. Hand:", `${sheetHandWords(sH)}, ${tail}${sh.secRef ? ` (${sh.secRef})` : ""}`, [sH.style, sH.tail, sH.finish, sH.lume, sh.secRef, sn(sH.length, 1)],
+      [sH.material || String(sH.color || "").toUpperCase()]);
+  }
+  /* the buckle is drawn on the sheet, so its line is only written when it changes */
+  row("buckle", "Buckle:", `${sheetCap(sp.buckleColor)} colour${sp.buckleLogo === "engraved" ? ", engraved logo" : ""}`, [sp.buckle, sp.buckleLogo], [sp.buckleColor], {quiet:true});
+  return rows;
+}
+const SHEET_MARK_TEXT = {changed:"(changed)", "New color":"(New color)", New:"(New)", removed:"(removed)"};
+/* The mark one row carries against the same row of the version it is
+   compared with: a new colour first (it is what the maker has to match,
+   so it comes with its swatch), then any other change, then a part that
+   was not there. */
+function sheetMark(row, ref){
+  if(!ref) return {mark:"New", swatches:row.col.filter(sheetIsHex)};
+  const cd = row.col.map((v, i) => String(v).toUpperCase() !== String(ref.col[i] == null ? "" : ref.col[i]).toUpperCase());
+  if(cd.some(Boolean)) return {mark:"New color", swatches:row.col.filter((v, i) => cd[i] && sheetIsHex(v))};
+  if(row.sig !== ref.sig || row.text !== ref.text) return {mark:"changed", swatches:[]};
+  return {mark:"", swatches:[]};
+}
+/* Version A against the baseline: every row, marked where it differs.
+   Later versions against A: only what differs, as on the example. The
+   owner's own marks and notes on A's rows (sheet.rows) are kept. */
+function sheetCompare(rows, refRows, all, own){
+  const out = [], by = new Map((refRows || []).map(r => [r.key, r]));
+  for(const r of rows){
+    const m = refRows ? sheetMark(r, by.get(r.key)) : {mark:"", swatches:[]};
+    const o = (own && own[r.key]) || {};
+    const mark = o.mark && o.mark !== "auto" ? (o.mark === "none" ? "" : o.mark) : m.mark;
+    const keep = all ? (!r.quiet || mark) : !!mark;
+    if(keep) out.push(Object.assign({}, r, {text:sheetActive(o.text) ? o.text : r.text, mark, note:o.note || "", swatches:mark === "New color" ? m.swatches : []}));
+  }
+  if(refRows && !all) for(const r of refRows) if(!r.quiet && !rows.some(x => x.key === r.key)) out.push(Object.assign({}, r, {text:"none", mark:"removed", note:"", swatches:[]}));
+  return out;
+}
+/* Everything the page needs, from the design and the saved versions:
+   Version A is the design as it is; A1 to A3 are saved versions the owner
+   picked; the baseline is the version the maker last sent. */
+function sheetPlan(st, saved, now){
+  const sh = sheetOf(st), list = Array.isArray(saved) ? saved : [];
+  const find = ref => list.find(v => v && v.id === ref);
+  const vers = [{label:"A", state:st}];
+  for(const e of sh.versions.slice(0, 3)){
+    const v = find(e && e.ref); if(!v || !v.state) continue;
+    vers.push({label:sheetActive(e.label) ? e.label : "A" + vers.length, state:v.state, name:v.name});
+  }
+  const base = sh.baseline ? find(sh.baseline) : null;
+  const rowsA = sheetRows(st);
+  vers[0].rows = sheetCompare(rowsA, base && base.state ? sheetRows(base.state) : null, true, sh.rows);
+  for(let i = 1; i < vers.length; i++) vers[i].rows = sheetCompare(sheetRows(vers[i].state), rowsA, false, null);
+  vers.forEach(v => { v.strap = sheetStrap(v.state); });
+  const info = sheetInfo(st, now), K = caseOf(st);
+  return {info, K, versions:vers, baseline:base ? base.name : "", hero:0, fileName:sheetFileName(info)};
+}
+
+/* ---- drawing helpers, all in page millimetres ---- */
+function sheetText(x, y, s, o, raster){
+  o = o || {}; const size = o.size || 3.175;
+  if(raster && SHEET_NOT_WINANSI.test(s)){
+    const im = raster(s, size, o);
+    if(im){ const w = im.wmm, x0 = o.anchor === "end" ? x - w : o.anchor === "middle" ? x - w/2 : x;
+      return `<image href="${im.url}" x="${sn(x0)}" y="${sn(y - im.ascmm)}" width="${sn(w)}" height="${sn(im.hmm)}" preserveAspectRatio="none"/>`; }
+  }
+  return `<text x="${sn(x)}" y="${sn(y)}" font-family="${SHEET_FONT}" font-size="${sn(size)}"${o.bold ? ' font-weight="bold"' : ""}${o.italic ? ' font-style="italic"' : ""}`
+    + `${o.anchor && o.anchor !== "start" ? ` text-anchor="${o.anchor}"` : ""} fill="${o.fill || SHEET_INK}">${sheetEsc(s)}</text>`;
+}
+const sheetTextWidth = (s, size, bold, raster) => {
+  if(raster && SHEET_NOT_WINANSI.test(s)){ const im = raster(s, size, {bold}); if(im) return im.wmm; }
+  return sheetTextW(s, size, bold);
+};
+/* Runs of differently set words (a bold label, the text, a red mark) laid
+   one after another and wrapped to a width. Each run is its own <text>
+   with its own x, which svg2pdf places exactly; a run of Arabic is one
+   picture. Returns the lines' markup and the height used. */
+function sheetRich(x, y, runs, width, size, pitch, raster){
+  const tokens = [];
+  for(const r of runs){
+    if(!r.t) continue;
+    if(SHEET_NOT_WINANSI.test(r.t)){ tokens.push(Object.assign({}, r, {w:sheetTextWidth(r.t, size, r.bold, raster)})); continue; }
+    for(const w of String(r.t).split(/(\s+)/)) if(w) tokens.push(Object.assign({}, r, {t:w, w:sheetTextW(w, size, r.bold), sp:/^\s+$/.test(w)}));
+  }
+  const lines = [[]]; let cur = 0;
+  for(const t of tokens){
+    if(t.sp){ if(lines[lines.length - 1].length) { lines[lines.length - 1].push(t); cur += t.w; } continue; }
+    if(cur + t.w > width && lines[lines.length - 1].some(z => !z.sp)){ const L = lines[lines.length - 1]; while(L.length && L[L.length - 1].sp) L.pop(); lines.push([]); cur = 0; }
+    lines[lines.length - 1].push(t); cur += t.w;
+  }
+  let out = "";
+  lines.forEach((L, i) => {
+    let xx = x, k = 0; const yy = y + i*pitch;
+    while(k < L.length){
+      const t = L[k];
+      if(t.sp){ xx += t.w; k++; continue; }
+      if(SHEET_NOT_WINANSI.test(t.t)){ out += sheetText(xx, yy, t.t, {size, bold:t.bold, fill:t.fill}, raster); xx += t.w; k++; continue; }
+      /* the words that follow in the same setting go out with it, as one <text> */
+      let s = t.t, w = t.w, j = k + 1;
+      for(;;){
+        let m = j, sp = "", spw = 0;
+        while(m < L.length && L[m].sp){ sp += L[m].t; spw += L[m].w; m++; }
+        const u = L[m];
+        if(!u || u.bold !== t.bold || u.fill !== t.fill || SHEET_NOT_WINANSI.test(u.t)) break;
+        s += sp + u.t; w += spw + u.w; j = m + 1;
+      }
+      out += sheetText(xx, yy, s, {size, bold:t.bold, fill:t.fill});
+      xx += w; k = j;
+    }
+  });
+  return {svg:out, lines:lines.length, height:(lines.length - 1)*pitch};
+}
+/* the largest size up to want at which s fits in width */
+const sheetFit = (s, want, width, bold, raster) => Math.min(want, want*width/Math.max(0.01, sheetTextWidth(s, want, bold, raster)));
+function sheetArrow(x, y, ang){
+  const L = 1.5, W = 0.45, bx = x - L*Math.cos(ang), by = y - L*Math.sin(ang), nx = -Math.sin(ang)*W, ny = Math.cos(ang)*W;
+  return `<path d="M${sn(x)} ${sn(y)}L${sn(bx + nx)} ${sn(by + ny)}L${sn(bx - nx)} ${sn(by - ny)}Z" fill="${SHEET_DIM}"/>`;
+}
+function sheetHDim(x1, x2, y, from, label, ext){
+  let s = "";
+  if(ext !== false) for(const [x, y0] of [[x1, from[0]], [x2, from[1]]])
+    s += `<line x1="${sn(x)}" y1="${sn(y0 - 0.8)}" x2="${sn(x)}" y2="${sn(y - 1.2)}" stroke="${SHEET_DIM}" stroke-width="0.13"/>`;
+  s += `<line x1="${sn(x1)}" y1="${sn(y)}" x2="${sn(x2)}" y2="${sn(y)}" stroke="${SHEET_DIM}" stroke-width="0.18"/>` + sheetArrow(x1, y, Math.PI) + sheetArrow(x2, y, 0);
+  return s + sheetText((x1 + x2)/2, y - 0.7, label, {size:2.2, anchor:"middle"});
+}
+function sheetVDim(y1, y2, x, from, label){
+  let s = "";
+  for(const [y, x0] of [[y1, from[0]], [y2, from[1]]])
+    s += `<line x1="${sn(x0 - 0.8)}" y1="${sn(y)}" x2="${sn(x - 1.2)}" y2="${sn(y)}" stroke="${SHEET_DIM}" stroke-width="0.13"/>`;
+  s += `<line x1="${sn(x)}" y1="${sn(y1)}" x2="${sn(x)}" y2="${sn(y2)}" stroke="${SHEET_DIM}" stroke-width="0.18"/>` + sheetArrow(x, y1, -Math.PI/2) + sheetArrow(x, y2, Math.PI/2);
+  return s + sheetText(x - 0.8, (y1 + y2)/2 + 0.8, label, {size:2.2, anchor:"end"});
+}
+const sheetLeader = (px, py, lx, ly) => `<circle cx="${sn(px)}" cy="${sn(py)}" r="0.35" fill="${SHEET_DIM}"/>`
+  + `<line x1="${sn(px)}" y1="${sn(py)}" x2="${sn(lx)}" y2="${sn(ly)}" stroke="${SHEET_DIM}" stroke-width="0.15"/>`;
+
+/* ---- the front outline, drawn from the case's figures ----
+   For a case with no drawing of its own: the case, its lugs, bezel,
+   opening and crown, the four dimensions the maker's drawing gives (case
+   width, across the lugs, between them, lug to lug) and callouts for the
+   finishes and the opening. Centred on the dial, in mm. */
+function caseOutlineDrawing(K, fin, cx, cy){
+  const R = K.flat/2, L = K.lugToLug/2, lo = K.lugOuter/2, li = K.lugWidth/2, g = [];
+  const yAt = x => Math.sqrt(Math.max(0, R*R - x*x));
+  const P = (x, y) => `${sn(cx + x)} ${sn(cy + y)}`;
+  const st = w => `fill="none" stroke="${SHEET_LINE}" stroke-width="${w}"`;
+  /* lugs first, so the case and bezel draw over their roots */
+  for(const sy of [-1, 1]) for(const sx of [-1, 1]){
+    const xo = sx*lo, xi = sx*li;
+    g.push(`<path d="M${P(xo, sy*yAt(lo)*0.96)}L${P(xo, sy*L)}L${P(xi, sy*L)}L${P(xi, sy*yAt(li)*0.98)}" ${st(0.25)}/>`);
+  }
+  if(K.shape === "round" || !K.rSide) g.push(`<circle cx="${sn(cx)}" cy="${sn(cy)}" r="${sn(R)}" fill="#FFFFFF" stroke="${SHEET_LINE}" stroke-width="0.25"/>`);
+  else if(typeof caseOutlinePath === "function") g.push(`<path transform="translate(${sn(cx)} ${sn(cy)})" d="${caseOutlinePath(K, R)}" fill="#FFFFFF" stroke="${SHEET_LINE}" stroke-width="0.25"/>`);
+  const bo = (K.bezelOD || K.flat - 1)/2, bi = (K.bezelID || K.opening + 2)/2;
+  g.push(`<circle cx="${sn(cx)}" cy="${sn(cy)}" r="${sn(bo)}" ${st(0.12)}/>`, `<circle cx="${sn(cx)}" cy="${sn(cy)}" r="${sn(bi)}" ${st(0.12)}/>`);
+  if(K.flutes > 0){ let p = ""; for(let i = 0; i < K.flutes; i++){ const a = i*2*Math.PI/K.flutes, c = Math.cos(a), s = Math.sin(a);
+    p += `M${P(c*(bi + 0.4), s*(bi + 0.4))}L${P(c*(bo - 0.3), s*(bo - 0.3))}`; } g.push(`<path d="${p}" ${st(0.07)}/>`); }
+  g.push(`<circle cx="${sn(cx)}" cy="${sn(cy)}" r="${sn(K.opening/2)}" ${st(0.25)}/>`);
+  if(K.cyclops) g.push(`<rect x="${sn(cx + (K.cyclops.c || 10) - K.cyclops.w/2)}" y="${sn(cy - K.cyclops.h/2)}" width="${sn(K.cyclops.w)}" height="${sn(K.cyclops.h)}" rx="${sn(Math.min(K.cyclops.h, K.cyclops.w)/2)}" ${st(0.12)}/>`);
+  /* the crown, knurled */
+  const cd = K.crownD || 5, cw = Math.max(2.4, cd*0.55), x0 = R - 0.2;
+  g.push(`<rect x="${sn(cx + x0)}" y="${sn(cy - cd/2)}" width="${sn(cw)}" height="${sn(cd)}" rx="0.5" fill="#FFFFFF" stroke="${SHEET_LINE}" stroke-width="0.25"/>`);
+  let kn = ""; for(let i = 1; i < 9; i++){ const y = -cd/2 + cd*i/9; kn += `M${P(x0 + 0.6, y)}L${P(x0 + cw - 0.2, y)}`; }
+  g.push(`<path d="${kn}" ${st(0.08)}/>`);
+  /* dimensions */
+  const top = cy - L;
+  g.push(sheetHDim(cx - R, cx + R, top - 6.2, [cy, cy], sheetMM(K.flat)));
+  g.push(sheetHDim(cx - lo, cx + lo, top - 3.3, [top, top], sheetMM(K.lugOuter)));
+  g.push(sheetHDim(cx - li, cx + li, top + 1.6, [top, top], sheetMM(K.lugWidth), false));
+  g.push(sheetVDim(cy - L, cy + L, cx - R - 4.5, [cx - lo, cx - lo], sheetMM(K.lugToLug)));
+  /* callouts: one label per finish, leaders to where it is, then the opening */
+  const lx = cx + R + cw + 2.2, calls = [];
+  const groups = new Map();
+  const at = {lugTop:[lo - 0.9, -L + 1.4], caseShoulder:[R*0.62, -R*0.8], bezelTop:[(bo + bi)/2*Math.SQRT1_2, -(bo + bi)/2*Math.SQRT1_2],
+    bezelEdge:[bo*0.97, -bo*0.24], caseFlank:[R*0.92, R*0.39], crown:[x0 + cw*0.6, cd/2 - 0.3]};
+  /* a flank only where the case shows beyond the bezel */
+  if(R - bo < 0.6) delete at.caseFlank;
+  for(const [k] of SHEET_FINISH_PARTS){ const v = fin[k]; if(!v || !at[k]) continue; const t = sheetTitle(v.split(",")[0]);
+    if(!groups.has(t)) groups.set(t, []); groups.get(t).push(at[k]); }
+  for(const [t, pts] of groups) calls.push({lines:[t], pts});
+  calls.push({lines:[sheetMM(K.opening), "Dial Opening"], pts:[[K.opening/2*0.3, K.opening/2*0.92]]});
+  calls.sort((a, b) => Math.min(...a.pts.map(p => p[1])) - Math.min(...b.pts.map(p => p[1])));
+  let y = top + 0.8;
+  for(const c of calls){
+    const want = Math.min(...c.pts.map(p => cy + p[1])) + 0.6; y = Math.max(y, want);
+    for(const p of c.pts) g.push(sheetLeader(cx + p[0], cy + p[1], lx - 0.6, y - 0.8));
+    c.lines.forEach((t, i) => g.push(sheetText(lx, y + i*2.9, t, {size:2.2})));
+    y += 2.9*c.lines.length + 1.6;
+  }
+  return g.join("");
+}
+
+/* ---- the caseback: rim, ring text set glyph by glyph, a placeholder
+   for the brand's mark, and the edition numbering ---- */
+function sheetCaseback(ring, cx, cy, Rr, raster){
+  const u = Rr/19.5, g = [];
+  g.push(`<circle cx="${sn(cx)}" cy="${sn(cy)}" r="${sn(19.5*u)}" fill="#F2F2F2" stroke="${SHEET_LINE}" stroke-width="0.28"/>`);
+  g.push(`<circle cx="${sn(cx)}" cy="${sn(cy)}" r="${sn(17*u)}" fill="none" stroke="${SHEET_LINE}" stroke-width="0.19"/>`);
+  g.push(`<circle cx="${sn(cx)}" cy="${sn(cy)}" r="${sn(12.6*u)}" fill="#E8E8E8" stroke="${SHEET_LINE}" stroke-width="0.19"/>`);
+  /* a neutral shield: the brand's own artwork goes here, never a redrawing of it */
+  g.push(`<path transform="translate(${sn(cx)} ${sn(cy)}) scale(${sn(u, 4)})" d="M-4 -5H4V1Q4 5 0 7Q-4 5 -4 1Z" fill="none" stroke="${SHEET_LINE}" stroke-width="${sn(0.3/u)}"/>`);
+  g.push(sheetText(cx, cy + 1.2*u, "LOGO", {size:1.8*u, anchor:"middle"}));
+  /* the ring, clockwise from 12, fitted to go once round */
+  const r = 14.6*u, toks = ring.filter(Boolean), sep = " · ";
+  const parts = []; toks.forEach((t, i) => { parts.push({t, tok:true}); parts.push({t:sep}); });
+  let size = 1.7*u, track = 0.25*u;
+  const widthOf = p => SHEET_NOT_WINANSI.test(p.t) ? sheetTextWidth(p.t, size, false, raster) : [...p.t].length*track + sheetTextW(p.t, size);
+  let total = parts.reduce((a, p) => a + widthOf(p), 0);
+  const room = 2*Math.PI*r*0.985;
+  if(total > room){ const k = room/total; size *= k; track *= k; total = parts.reduce((a, p) => a + widthOf(p), 0); }
+  /* first where each glyph falls along the ring, then the whole ring turned
+     so the edition number sits at half past one, under its callout (or the
+     first words centred at 12 when there is none) */
+  const glyphs = []; let s = 0, numberAt = null, firstEnd = null;
+  for(const p of parts){
+    const start = s;
+    if(SHEET_NOT_WINANSI.test(p.t)){ const w = widthOf(p); glyphs.push({s:s + w/2, t:p.t, pic:true}); s += w; }
+    else for(const ch of p.t){ const w = sheetTextW(ch, size) + track; if(ch !== " ") glyphs.push({s:s + w/2, t:ch}); s += w; }
+    if(p.tok && firstEnd == null) firstEnd = s;
+    if(p.tok && numberAt == null && /XX\/XX/.test(p.t)) numberAt = (start + s)/2;
+  }
+  const turn = numberAt != null ? Math.PI/4*r - numberAt : -(firstEnd || 0)/2;
+  for(const q of glyphs){
+    const deg = (q.s + turn)/r*180/Math.PI;
+    if(q.pic) g.push(`<g transform="rotate(${sn(deg)} ${sn(cx)} ${sn(cy)})">${sheetText(cx, cy - r, q.t, {size, anchor:"middle", fill:"#2B2B2B"}, raster)}</g>`);
+    else g.push(`<text transform="rotate(${sn(deg)} ${sn(cx)} ${sn(cy)})" x="${sn(cx)}" y="${sn(cy - r)}" font-family="${SHEET_FONT}" font-size="${sn(size)}" text-anchor="middle" fill="#2B2B2B">${sheetEsc(q.t)}</text>`);
+  }
+  if(numberAt != null) numberAt = Math.PI/4;
+  if(numberAt != null){
+    const ax = cx + (r + size*0.95)*Math.sin(numberAt), ay = cy - (r + size*0.95)*Math.cos(numberAt);
+    g.push(sheetLeader(ax, ay, cx + 18*u, cy - 19.2*u));
+    g.push(sheetText(cx + 7.8*u, cy - 20.6*u, "XX/XX to XX/XX", {size:3.175}));
+  }
+  g.push(sheetText(cx, cy + 24.9, "Caseback", {size:3.175, anchor:"middle"}));
+  return g.join("");
+}
+/* ---- buckles, as the approved design draws them ---- */
+const SHEET_BUCKLE_METAL = {steel:"#ECECEC", silver:"#EDEDED", black:"#3A3D42", gold:"#E3CC8A", "rose gold":"#E8C2AE"};
+function sheetBuckle(b, cx, cy, mark){
+  const g = [], fillM = SHEET_BUCKLE_METAL[b.buckleColor] || "#ECECEC", ink = SHEET_LINE;
+  if(b.buckle === "Velcro loop"){
+    const u = 0.31764, X = v => sn(cx + (v - 35)*u), Y = v => sn(cy + (v - 17)*u);
+    g.push(`<rect x="${X(2)}" y="${Y(2)}" width="${sn(66*u)}" height="${sn(30*u)}" rx="${sn(7*u)}" fill="${fillM}" stroke="${ink}" stroke-width="${sn(u)}"/>`);
+    g.push(`<rect x="${X(11)}" y="${Y(10)}" width="${sn(48*u)}" height="${sn(14*u)}" rx="${sn(3*u)}" fill="#FFFFFF" stroke="${ink}" stroke-width="${sn(u)}"/>`);
+  } else if(b.buckle === "folding clasp"){
+    const u = 0.35278, X = v => sn(cx + (v - 30)*u), Y = v => sn(cy + (v - 30)*u);
+    g.push(`<rect x="${X(14)}" y="${Y(2)}" width="${sn(32*u)}" height="${sn(56*u)}" rx="${sn(3*u)}" fill="${fillM}" stroke="${ink}" stroke-width="${sn(0.8*u)}"/>`);
+    g.push(`<line x1="${X(14)}" y1="${Y(30)}" x2="${X(46)}" y2="${Y(30)}" stroke="${ink}" stroke-width="${sn(0.6*u)}"/>`);
+    g.push(`<rect x="${X(22)}" y="${Y(36)}" width="${sn(16*u)}" height="${sn(10*u)}" rx="${sn(1.5*u)}" fill="none" stroke="${ink}" stroke-width="${sn(0.6*u)}"/>`);
+  } else {
+    const u = 0.35278, X = v => sn(cx + (v - 30)*u), Y = v => sn(cy + (v - 30)*u), strap = b.strapColor || "#2A2A2A";
+    g.push(`<rect x="${X(12)}" y="${Y(2)}" width="${sn(36*u)}" height="${sn(10*u)}" fill="${strap}"/>`);
+    g.push(`<rect x="${X(10)}" y="${Y(10)}" width="${sn(40*u)}" height="${sn(38*u)}" rx="${sn(6*u)}" fill="${fillM}" stroke="${ink}" stroke-width="${sn(0.8*u)}"/>`);
+    g.push(`<rect x="${X(12)}" y="${Y(48)}" width="${sn(36*u)}" height="${sn(10*u)}" fill="${strap}"/>`);
+    if(b.buckleLogo === "engraved") g.push(`<path transform="translate(${X(0)} ${Y(0)}) scale(${sn(u, 5)})" d="M24 20H36V27Q36 32 30 34Q24 32 24 27Z" fill="none" stroke="${ink}" stroke-width="0.8"/>`);
+  }
+  return g.join("");
+}
+function sheetBuckleCaption(b){
+  const first = b.buckle === "Velcro loop" ? "Buckle of Velcro Fabric strap" : b.buckle === "folding clasp" ? "Folding clasp" : `Buckle for ${b.type === "fabric Velcro" ? "fabric" : b.type}`;
+  return [first, b.buckleLogo === "engraved" ? "Engraved logo" : `${b.buckleColor} color`];
+}
+
+/* ---- the whole page ----
+   plan from sheetPlan; R the rasters (renders, panels, drawings) as
+   {url, wmm, hmm, fx, fy}; o.raster(text, sizeMM, opt) draws words the PDF
+   fonts cannot. Returns {svg, boxes}: boxes are the blocks' extents, which
+   the tests hold inside the page. */
+function buildSheetSVG(plan, R, o){
+  o = o || {}; R = R || {};
+  const G = SHEET_GRID, raster = o.raster || null, out = [], boxes = [];
+  const box = (name, x, y, w, h) => boxes.push({name, x, y, w, h});
+  out.push(`<rect x="0" y="0" width="420" height="297" fill="#FFFFFF"/>`);
+  const vers = plan.versions, n = vers.length, pitch = n <= 3 ? G.ver.pitch : G.ver.pitch4;
+  const img = (r, cx, cy, k, name) => {
+    if(!r || !r.url) return;
+    const w = r.wmm*k, h = r.hmm*k, x = cx - w*r.fx, y = cy - h*r.fy;
+    out.push(`<image href="${r.url}" x="${sn(x)}" y="${sn(y)}" width="${sn(w)}" height="${sn(h)}" preserveAspectRatio="none"/>`);
+    box(name, x, y, w, h);
+  };
+  /* the versions, 1:1, each with its lines */
+  const size = n <= 3 ? G.ver.size : 8*SHEET_PT, tsize = n <= 3 ? G.ver.titleSize : 11*SHEET_PT;
+  let lowest = 0;
+  vers.forEach((v, i) => {
+    const cx = G.ver.cx + i*pitch, tx = cx + G.ver.titleDX, tw = pitch - 5.3;
+    img((R.versions || [])[i], cx, G.ver.dialY, 1, "version" + v.label);
+    out.push(sheetText(tx, G.ver.titleY, "Version " + v.label, {size:tsize, bold:true, italic:true}, raster));
+    let fs = size, y, body;
+    /* smaller type before running into the drawings */
+    for(;;){
+      y = G.ver.rowY; body = [];
+      const sw = [];
+      for(const r of v.rows){
+        const runs = [{t:r.label, bold:true}, {t:(r.label ? " " : "") + r.text}];
+        if(r.note) runs.push({t:" " + r.note});
+        if(r.mark) runs.push({t:" " + (SHEET_MARK_TEXT[r.mark] || "(" + r.mark + ")"), fill:SHEET_RED});
+        const t = sheetRich(tx, y, runs, tw, fs, fs*1.35, raster);
+        body.push(t.svg); y += t.height + fs*1.6;
+        for(const hx of r.swatches || []) if(!sw.includes(hx)) sw.push(hx);
+      }
+      if(sw.length){ y += 5.6 - fs*1.6; for(const hx of sw){
+        body.push(`<rect x="${sn(tx)}" y="${sn(y)}" width="5.82" height="3.70" fill="${hx}" stroke="#9A9C9C" stroke-width="0.26"/>`);
+        body.push(sheetText(tx + 7.94, y + 3.15, sheetSwatchName(hx), {size:fs})); y += 5.6; } }
+      if(y <= G.ver.bottom || fs < 2.3) break;
+      fs *= 0.92;
+    }
+    out.push(body.join(""));
+    box("text" + v.label, tx, G.ver.titleY - tsize, tw, y - G.ver.titleY + tsize);
+    lowest = Math.max(lowest, y);
+  });
+  /* the owner's notes, under the lines */
+  if(plan.info.notes){
+    const t = sheetRich(36, Math.max(lowest + 6, 172), [{t:"Notes:", bold:true}, {t:" " + plan.info.notes}], 240, G.ver.size, G.ver.size*1.35, raster);
+    out.push(t.svg); box("notes", 36, Math.max(lowest + 6, 172) - G.ver.size, 240, t.height + G.ver.size*1.4);
+  }
+  /* Version A again, at 200% */
+  img((R.versions || [])[plan.hero || 0], G.hero.cx, G.hero.dialY, G.hero.scale, "hero");
+  out.push(sheetText(G.hero.cx, G.hero.captionY, "200%", {size:13*0.26465, bold:true, italic:true, anchor:"middle"}));
+  /* the bottom row: the front and side drawings ... */
+  const fit = (r, B, name) => { if(!r || !r.url) return; const k = Math.min(B.w/r.wpx, B.h/r.hpx), w = r.wpx*k, h = r.hpx*k, x = B.x + (B.w - w)/2, y = B.y + (B.h - h)/2;
+    out.push(`<image href="${r.url}" x="${sn(x)}" y="${sn(y)}" width="${sn(w)}" height="${sn(h)}" preserveAspectRatio="none"/>`); box(name, x, y, w, h); };
+  if(R.front && R.front.url) fit(R.front, G.front, "front");
+  else { const svg = caseOutlineDrawing(plan.K, sheetFinishes(vers[0].state), 40.5, 247.0); out.push(svg); box("front", 3.7, 213.3, 90, 67.5); }
+  if(R.side && R.side.url) fit(R.side, G.side, "side");
+  /* ... the caseback ... */
+  out.push(sheetCaseback(sheetCasebackRing(vers[0].state), G.caseback.cx, G.caseback.cy, G.caseback.r, raster));
+  box("caseback", G.caseback.cx - G.caseback.r, G.caseback.cy - G.caseback.r - 6, 2*G.caseback.r + 20, 2*G.caseback.r + 32);
+  /* ... the buckles: one for each kind of strap on the sheet, A's first ... */
+  const seen = [];
+  vers.forEach((v, i) => { const b = Object.assign({}, v.strap, {strapColor:v.state.case && v.state.case.strapColor});
+    if(seen.length < 2 && !seen.some(x => x.b.buckle === b.buckle && x.b.type === b.type)) seen.push({b, v, i}); });
+  seen.forEach(({b, v, i}, k) => {
+    const S2 = G.buckles[k];
+    out.push(sheetBuckle(b, S2.cx, S2.cy));
+    const cap = sheetBuckleCaption(b), row = v.rows.find(r => r.key === "buckle"), mark = i > 0 && row && row.mark ? row.mark : "";
+    const fs0 = 12*0.26465;
+    cap.forEach((t, j) => {
+      const full = j === 1 && mark ? t + (SHEET_MARK_TEXT[mark] || "") : t, fsz = sheetFit(full, fs0, 42, true, raster);
+      if(j === 1 && mark){
+        const w1 = sheetTextW(t, fsz, true), w2 = sheetTextW(SHEET_MARK_TEXT[mark], fsz, true), x0 = S2.cx - (w1 + w2)/2;
+        out.push(sheetText(x0, S2.capY + j*4.29, t, {size:fsz, bold:true, italic:true}, raster));
+        out.push(sheetText(x0 + w1, S2.capY + j*4.29, SHEET_MARK_TEXT[mark], {size:fsz, bold:true, italic:true, fill:SHEET_RED}));
+      } else out.push(sheetText(S2.cx, S2.capY + j*4.29, t, {size:fsz, bold:true, italic:true, anchor:"middle"}, raster));
+    });
+    box("buckle" + k, S2.cx - 21, S2.cy - 11, 42, S2.capY + 6 - S2.cy + 11);
+  });
+  /* ... the hands ... */
+  const H = G.hands, A = vers[0].state, inf = plan.info;
+  out.push(`<rect x="${sn(H.x)}" y="${sn(H.y)}" width="${sn(H.w)}" height="${sn(H.h)}" fill="${SHEET_PANEL}"/>`);
+  box("hands", H.x, H.y, H.w, H.h);
+  if(R.hands && R.hands.url){ const w = R.hands.wmm, cxh = H.x + H.w/2, cyh = H.y + 23.4;
+    out.push(`<image href="${R.hands.url}" x="${sn(cxh - w/2)}" y="${sn(cyh - w/2)}" width="${sn(w)}" height="${sn(w)}" preserveAspectRatio="none"/>`); }
+  out.push(sheetText(H.x + 3.17, H.y + 6.8, "Hands", {size:14*0.26465, bold:true, italic:true}));
+  const r5 = v => sn(Math.round((+v || 0)*2)/2, 1);
+  const hh = A.hHand || {}, mh = A.mHand || {}, shd = A.sHand || {};
+  const hl = [`H/M.Hands: ${inf.handRef || sheetCap(sheetHandStyle(hh.style))} (${r5(hh.length)}x${r5(mh.length)}mm)`];
+  if(shd.on) hl.push(`Sec. Hand: ${inf.secRef || "find existing"} (${r5(shd.length)}mm)`);
+  hl.forEach((t, j) => out.push(sheetText(H.x + H.w/2, H.y + 44.6 + j*4.6, t, {size:sheetFit(t, 9*SHEET_PT, H.w - 4, true, raster), bold:true, italic:true, anchor:"middle"}, raster)));
+  /* ... the dial, with what is applied and printed pointed out. It is drawn
+     at the approved design's size, the dial 24.4 mm across (so 0.84 of
+     the F77's), which leaves room round it for the callouts ... */
+  const D = G.dial, dcx = D.x + D.w/2, dcy = D.y + 22.2, Kd = caseOf(A), dD = A.dial && A.dial.lock === false ? A.dial.diameter : Kd.dialD;
+  const dk = Math.min(1, 24.4/(dD || 29));
+  out.push(`<rect x="${sn(D.x)}" y="${sn(D.y)}" width="${sn(D.w)}" height="${sn(D.h)}" fill="${SHEET_PANEL}"/>`);
+  box("dial", D.x, D.y, D.w, D.h);
+  if(R.dial && R.dial.url){ const w = R.dial.wmm*dk;
+    out.push(`<image href="${R.dial.url}" x="${sn(dcx - w/2)}" y="${sn(dcy - w/2)}" width="${sn(w)}" height="${sn(w)}" preserveAspectRatio="none"/>`); }
+  out.push(sheetDialCallouts(A, dcx, dcy, D, raster, dk));
+  /* the movement, and the footer band */
+  const mv = "Movement:  " + inf.movement;
+  out.push(sheetText(G.movement.x, G.movement.y, mv, {size:G.movement.size, bold:true, italic:true, anchor:"end"}, raster));
+  const F = G.footer;
+  out.push(`<rect x="0" y="${sn(F.y)}" width="420" height="${sn(297 - F.y)}" fill="${SHEET_FOOT}"/>`);
+  box("footer", 0, F.y, 420, 297 - F.y);
+  out.push(sheetText(F.date, F.textY, "Date: " + sheetDateText(inf.date), {size:F.size}, raster));
+  out.push(sheetText(F.number, F.textY, "Design number: " + (inf.designNo || ""), {size:F.size}, raster));
+  out.push(sheetText(F.designer, F.textY, "Designer: " + (inf.designer || ""), {size:F.size}, raster));
+  /* the brand, tracked: one glyph at a time, as svg2pdf has no letter-spacing */
+  if(inf.brand){
+    if(SHEET_NOT_WINANSI.test(inf.brand)) out.push(sheetText(F.brandRight, F.textY + 0.1, inf.brand, {size:F.brandSize, bold:true, anchor:"end"}, raster));
+    else {
+      const chars = [...inf.brand], ws = chars.map(ch => sheetTextW(ch, F.brandSize, true));
+      let x = F.brandRight - ws.reduce((a, b) => a + b, 0) - F.brandTrack*(chars.length - 1);
+      chars.forEach((ch, k) => { if(ch !== " ") out.push(sheetText(x, F.textY + 0.1, ch, {size:F.brandSize, bold:true})); x += ws[k] + F.brandTrack; });
+    }
+  }
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="420mm" height="297mm" viewBox="0 0 420 297">${out.join("")}</svg>`;
+  return {svg, boxes};
+}
+/* The dial panel's callouts: the applied logo, the raised script, the
+   applied indexes (two leaders, to 12 and the next marker round) and the
+   printing, each label in a corner of the panel with a leader to the part. */
+function sheetDialCallouts(st, cx, cy, D, raster, k){
+  const T = st.text || {}, nm = st.numerals || {}, ix = st.indices || {}, g = [], fs = 11*0.26465, lead = 3.3;
+  k = k || 1;
+  const P = (x, y) => [cx + x*k, cy + y*k];
+  const label = (lines, x, y, anchor) => lines.forEach((t, i) => g.push(sheetText(x, y + i*lead, t, {size:fs, anchor}, raster)));
+  const mark = T.logoMark && T.logoMark !== "none" ? T.logoMark : "", applied = T.on && /^applied/.test(T.logoTech || "");
+  const shield = /shield/i.test(mark), script = /script/i.test(mark) || (!mark && T.logo);
+  const top = D.y + 4.4;
+  if(applied && (shield || (mark && !script))){
+    const a = P(0, (T.logoY || -7) - 0.27*(T.logoSize || 2));
+    label(["Applied logo"], cx - 10.8, top);
+    g.push(sheetLeader(a[0], a[1], cx - 10.8 + sheetTextW("Applied logo", fs)*0.62, top + 0.9));
+  }
+  let ly = cy - 3.0;
+  if(applied && script){
+    const a = P(-1.4, (T.logoY || -7) + 1.3), l1 = `${sheetFinish(T.logoFinish)} ${sheetCap(sheetMetal(T.logoMetal))}`, x = D.x + 2.1;
+    label([l1, "color UP"], x, ly);
+    g.push(sheetLeader(a[0], a[1], x + sheetTextW("color UP", fs) + 0.6, ly + lead - 0.9));
+    ly += 2*lead + 2.2;
+  }
+  /* the markers: what they are made of, to the first two hours round from 12 that carry one */
+  const plan = sheetPlanOf(st), hrs = [];
+  for(const h of [12, 1, 2, 3, 11]){ const k = plan[h % 12]; if((k === "numeral" || k === "index" || k === "indexAlt") && hrs.length < 2 && (hrs.length === 0 || h !== 1)) hrs.push([h, k]); }
+  if(hrs.length){
+    const isNum = hrs[0][1] === "numeral", appliedM = isNum ? nm.tech === "applied" : ix.applied !== false;
+    const words = appliedM ? `${sheetFinish(isNum ? "polished" : "polished")} Applied Indexes` : `${sheetTitle(sheetColourName(isNum ? nm.color : ix.color))} Printed Indexes`;
+    const parts = words.split(" "), l1 = parts.slice(0, 2).join(" "), l2 = parts.slice(2).join(" ");
+    const xr = D.x + D.w - 2.1;
+    label([l1, l2], xr, top, "end");
+    const ex = xr - sheetTextW(l1, fs)*0.55, ey = top + lead + 0.9;
+    for(const [h, k] of hrs){ const r = (k === "numeral" ? nm.radius : ix.radius) || 11, a = h*Math.PI/6, p = P(r*Math.sin(a) + (h === 12 ? 1.0 : 0), -r*Math.cos(a) - (h === 12 ? 0 : 1.0));
+      g.push(sheetLeader(p[0], p[1], ex, ey)); }
+  }
+  const pr = sheetPrinted(st);
+  if(pr.length && T.on){
+    const ink = T.lineColor || T.color, y0 = T.line2On !== false && T.line2 ? T.line2Y : T.footOn !== false && T.foot ? T.footY : (T.logoY || 0);
+    const a = P(-2.2, (y0 || 0) - 0.2), x = D.x + 2.1, t = `${sheetTitle(sheetColourName(ink))} Printed`;
+    label([t], x, ly);
+    g.push(sheetLeader(a[0], a[1], x + sheetTextW(t, fs) + 0.6, ly - 0.9));
+  }
+  /* the caption under the dial */
+  const d = st.dial || {}, cap = [`${sheetTitle(d.finish === "stone" ? (d.stone || "stone") : sheetDialFinish(d))} Dial`];
+  if(pr.length) cap.push("w/ printed details");
+  cap.forEach((t, i) => g.push(sheetText(cx, D.y + 45.3 + i*4.29, t, {size:sheetFit(t, 12*0.26465, D.w - 4, false, raster), anchor:"middle"}, raster)));
+  return g.join("");
+}
+/* The hour and minute hand references the maker has given lengths for, so
+   a design drawn to other lengths is flagged before the sheet goes out. */
+const SHEET_HAND_REFS = {"W36017":{h:8.5, m:12.0}};
+function sheetHandWarning(st){
+  const sh = sheetOf(st), ref = SHEET_HAND_REFS[String(sh.handRef || "").trim().toUpperCase()];
+  if(!ref) return "";
+  const out = [];
+  if(st.hHand && Math.abs(st.hHand.length - ref.h) > 0.2) out.push(`Hour hand drawn ${sn(st.hHand.length, 2)} mm, reference says ${sn(ref.h, 2)} mm`);
+  if(st.mHand && Math.abs(st.mHand.length - ref.m) > 0.2) out.push(`Minute hand drawn ${sn(st.mHand.length, 2)} mm, reference says ${sn(ref.m, 2)} mm`);
+  return out.join(". ");
+}
+/* SHEET-PURE-END */
+/* ---- the browser's part: the renders, the panels, words drawn as
+   pictures, the preview and the PDF ---- */
+const sheetSay = (k, en, ...a) => (typeof gT === "function" && typeof GLANG !== "undefined" && GLANG !== "en") ? gT(k, ...a) : en;
+const sheetHash = t => { let h = 0x811c9dc5; for(let i = 0; i < t.length; i++){ h ^= t.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0).toString(36) + t.length; };
+/* what a render shows: the design without its sheet details */
+const sheetKey = (role, st) => role + ":" + sheetHash(JSON.stringify(Object.assign({}, st, {sheet:null})));
+const SHEET_CACHE = new Map();
+/* The dial's surface raster, in pixels across the dial. Its cost grows with
+   the square of this, and the sheet needs no more than it prints: the 200%
+   render's dial is 56 mm at 280 dpi, about 620 px, and the dial panel the
+   same; a 1:1 version's dial is 28 mm at 340 dpi. The hero and the panel
+   share one raster. */
+const SHEET_MAT_HERO = 720, SHEET_MAT_SMALL = 440;
+const sheetCached = async (key, make) => {
+  if(SHEET_CACHE.has(key)) return SHEET_CACHE.get(key);
+  const v = await make();
+  if(SHEET_CACHE.size > 24) SHEET_CACHE.delete(SHEET_CACHE.keys().next().value);
+  SHEET_CACHE.set(key, v);
+  return v;
+};
+/* the drawing functions read the case through S in places; a version is
+   drawn as the design on screen for the moment it takes */
+function sheetWith(st, fn){ const keep = S; S = st; try{ return fn(); } finally { S = keep; } }
+const sheetPause = ms => new Promise(r => setTimeout(r, ms));
+const sheetVB = svg => { const m = /viewBox="([^"]+)"/.exec(svg); return m ? m[1].split(/[\s,]+/).map(Number) : [0, 0, 32, 32]; };
+const sheetJPEG = (cv, q) => { const u = cv.toDataURL("image/jpeg", q || 0.9); cv.width = cv.height = 0; return u; };
+function sheetImage(src){
+  return new Promise((ok, no) => { const im = new Image(); im.onload = () => ok(im); im.onerror = () => no(new Error("could not read " + String(src).slice(0, 40))); im.src = src; });
+}
+
+/* Whether the photograph can show this version: its steel (or the gold it
+   has parts for), its own finish, and its strap, in any colour where the
+   strap can be re-coloured. Otherwise the version is the drawn case. */
+function sheetPhotoFits(st){
+  const K = caseOf(st), c = st.case || {}, own = K.photoOwn || {};
+  if(!(K.photoFile || (K.photo && tplImage))) return false;
+  if(c.strap === false && !K.bracelet) return false;
+  const two = twoToneOf(st);
+  if(!(two ? !!K.photoParts : (sheetSteelish(c.material) || (!!K.photoParts && !!goldOf(c.material))))) return false;
+  if(own.finish && c.finish !== own.finish) return false;
+  if(K.photoFile && photoPlan(st, K) === false) return false;
+  if(!K.bracelet && own.strapColor && String(c.strapColor || "").toUpperCase() !== own.strapColor.toUpperCase() && !K.photoStrap) return false;
+  return true;
+}
+function sheetPhotoGeom(st, K){
+  if(K.photoFile){ const C = K.photoCal; return {key:K.photoFile, src:casePhoto(K), w:C.w, h:C.h, cx:C.cx, cy:C.cy, dia:C.dia}; }
+  const T = st.tpl || {};
+  return {key:"tpl:" + sheetHash(String(tplImage).slice(-200)) + tplW, src:tplImage, w:tplW, h:tplH, cx:T.cx, cy:T.cy, dia:T.dia};
+}
+async function sheetPhotoReady(st, K){
+  for(let i = 0; i < 120; i++){
+    const g = sheetPhotoGeom(st, K);
+    let ok = !!g.src;
+    const plan = K.photoFile ? photoPlan(st, K) : null;
+    if(ok && plan && (plan.full || plan.two)) ok = !!tintedPhoto(K, plan);
+    if(ok) return g;
+    await sheetPause(50);
+  }
+  return null;
+}
+/* The photograph's studio ground, keyed out once per photograph: each
+   row's ground is modelled from the picture's left and right edges, and
+   everything reached from the border without leaving it by more than a
+   few levels is ground. The edge pixels next to it are lightened by how
+   close they are to it. Returned as a white layer with that alpha, at the
+   photograph's own size, laid over a render to turn the ground white. */
+const SHEET_GROUND = new Map();
+async function sheetGround(g){
+  if(SHEET_GROUND.has(g.key)) return SHEET_GROUND.get(g.key);
+  const im = await sheetImage(g.src), w = g.w, h = g.h;
+  const cv = document.createElement("canvas"); cv.width = w; cv.height = h;
+  const cx = cv.getContext("2d"); cx.drawImage(im, 0, 0, w, h);
+  const px = cx.getImageData(0, 0, w, h).data;
+  const Lm = new Float32Array(h*3), Rm = new Float32Array(h*3);
+  for(let y = 0; y < h; y++) for(let c = 0; c < 3; c++){
+    let a = 0, b = 0; for(let x = 1; x <= 8; x++){ a += px[(y*w + x)*4 + c]; b += px[(y*w + w - 1 - x)*4 + c]; }
+    Lm[y*3 + c] = a/8; Rm[y*3 + c] = b/8;
+  }
+  const off = (x, y) => { const i = (y*w + x)*4, t = x/(w - 1); let d = 0;
+    for(let c = 0; c < 3; c++){ const m = Lm[y*3 + c] + (Rm[y*3 + c] - Lm[y*3 + c])*t; d = Math.max(d, Math.abs(px[i + c] - m)); } return d; };
+  const TOL = 5, seen = new Uint8Array(w*h), qu = new Int32Array(w*h); let qh = 0, qt = 0;
+  const push = (x, y) => { const k = y*w + x; if(seen[k] || off(x, y) > TOL) return; seen[k] = 1; qu[qt++] = k; };
+  for(let x = 0; x < w; x++){ push(x, 0); push(x, h - 1); }
+  for(let y = 0; y < h; y++){ push(0, y); push(w - 1, y); }
+  while(qh < qt){ const k = qu[qh++], x = k % w, y = (k - x)/w;
+    if(x > 0) push(x - 1, y); if(x < w - 1) push(x + 1, y); if(y > 0) push(x, y - 1); if(y < h - 1) push(x, y + 1); }
+  const out = cx.createImageData(w, h), o = out.data;
+  for(let y = 0; y < h; y++) for(let x = 0; x < w; x++){
+    const k = y*w + x; let a = 0;
+    if(seen[k]) a = 255;
+    else if((x > 0 && seen[k - 1]) || (x < w - 1 && seen[k + 1]) || (y > 0 && seen[k - w]) || (y < h - 1 && seen[k + w])) a = Math.max(0, 255*(1 - off(x, y)/40));
+    o[k*4] = o[k*4 + 1] = o[k*4 + 2] = 255; o[k*4 + 3] = a;
+  }
+  cx.putImageData(out, 0, 0);
+  SHEET_GROUND.set(g.key, cv);
+  return cv;
+}
+/* A strap of another colour: the photograph's strap, inside the region
+   K.photoStrap gives, re-coloured by its own light. Dark pixels take the
+   colour fully, the steel and the ground beside it not at all. */
+function sheetStrapTint(cv, g, K, hex){
+  const W = cv.width, H = cv.height, ctx = cv.getContext("2d"), id = ctx.getImageData(0, 0, W, H), d = id.data;
+  const s = W/g.w*g.w*g.dia/100/K.opening, cx = W*g.cx/100, cy = H*g.cy/100, P = K.photoStrap, rgb = hex2rgb(hex);
+  for(let j = 0; j < H; j++){
+    const y = (j + 0.5 - cy)/s, beyond = y < P.ends[0] || y > P.ends[1], tongueRow = Math.abs(y) > P.tongue.y;
+    if(!beyond && !tongueRow) continue;
+    for(let i = 0; i < W; i++){
+      if(!beyond && Math.abs((i + 0.5 - cx)/s) > P.tongue.x) continue;
+      const o = (j*W + i)*4, L = 0.299*d[o] + 0.587*d[o + 1] + 0.114*d[o + 2];
+      const a = Math.max(0, Math.min(1, (170 - L)/60)); if(a <= 0) continue;
+      const k = Math.max(0.60, Math.min(1.25, 1 + 0.9*(L - 22)/120));      // the rubber's own mid-tone (L 22) takes the colour exactly
+      for(let c = 0; c < 3; c++) d[o + c] = d[o + c] + (Math.min(255, rgb[c]*k) - d[o + c])*a;
+    }
+  }
+  ctx.putImageData(id, 0, 0);
+}
+/* One version's picture: the photograph with the dial drawn in, the strap
+   re-coloured if need be and the ground made white; or the drawn case.
+   Version A is also the 200% render, so it is drawn for that: at least
+   280 dpi at twice its size, and at most 1600 px tall. The others need
+   only their 1:1 size, at 340 dpi. */
+async function sheetVersionRaster(st, hero, i){
+  const K = caseOf(st);
+  return sheetCached(sheetKey((hero ? "hero" : "ver") + i, st), async () => {
+    const g = sheetPhotoFits(st) ? await sheetPhotoReady(st, K) : null;
+    if(g){
+      const pxmm = g.w*g.dia/100/K.opening, wmm = g.w/pxmm, ar = g.h/g.w;
+      const W = hero ? Math.min(Math.ceil(2*wmm/25.4*280), Math.floor(1600/ar)) : Math.ceil(wmm/25.4*340), H = Math.round(W*ar);
+      let cv = null;
+      for(const mat of [true, false]){
+        try{
+          const svg = sheetWith(st, () => buildTemplate(st, mat ? {insTag:"sv" + i, matPx:hero ? SHEET_MAT_HERO : SHEET_MAT_SMALL} : {insTag:"sv" + i, material:false}));
+          cv = await svgToPng(svg, W, H, 90000, {canvas:true}); break;
+        }catch(e){ cv = null; }
+      }
+      if(cv){
+        const own = (K.photoOwn || {}).strapColor;
+        if(K.photoStrap && !K.bracelet && own && String(st.case.strapColor || "").toUpperCase() !== own.toUpperCase()) sheetStrapTint(cv, g, K, st.case.strapColor);
+        try{ const m = await sheetGround(g); cv.getContext("2d").drawImage(m, 0, 0, cv.width, cv.height); }catch(e){}
+        return {url:sheetJPEG(cv, 0.9), wmm, hmm:wmm*ar, fx:g.cx/100, fy:g.cy/100, px:W, kind:"photo"};
+      }
+    }
+    /* the drawn case */
+    for(const mat of [true, false]){
+      try{
+        const svg = sheetWith(st, () => buildSVG(st, mat ? {scope:"full", matPx:hero ? SHEET_MAT_HERO : SHEET_MAT_SMALL, tag:"sv" + i} : {scope:"full", material:false, tag:"sv" + i}));
+        const vb = sheetVB(svg), box = vb[2], W = Math.min(1600, Math.ceil((hero ? 2 : 1)*box/25.4*(hero ? 280 : 340)));
+        const cv = await svgToPng(svg, W, W, 90000, {canvas:true});
+        return {url:sheetJPEG(cv, 0.9), wmm:box, hmm:box, fx:-vb[0]/box, fy:-vb[1]/vb[3], px:W, kind:"drawn"};
+      }catch(e){}
+    }
+    return null;
+  });
+}
+/* the hands alone, at 10:09:35 as on the design, 1:1, on the panel grey */
+async function sheetHandsRaster(st){
+  return sheetCached(sheetKey("hands", st), async () => {
+    const svg = sheetWith(st, () => buildSVG(st, {scope:"hands", material:false, tag:"sh"}));
+    const vb = sheetVB(svg), cv = await svgToPng(svg, 1000, 1000, 60000, {canvas:true, bg:SHEET_PANEL});
+    return {url:sheetJPEG(cv, 0.9), wmm:vb[2]};
+  });
+}
+/* the dial alone: no hands, no production guides, the blank's edge kept */
+async function sheetDialRaster(st){
+  return sheetCached(sheetKey("dial", st), async () => {
+    const d = clone(st); d.hHand.on = false; d.mHand.on = false; if(d.sHand) d.sHand.on = false;
+    let svg = null, cv = null;
+    for(const mat of [true, false]){
+      try{ svg = sheetWith(d, () => buildSVG(d, mat ? {scope:"dial", guides:false, matPx:SHEET_MAT_HERO, tag:"sd"} : {scope:"dial", guides:false, material:false, tag:"sd"}));
+        cv = await svgToPng(svg, 1000, 1000, 60000, {canvas:true, bg:SHEET_PANEL}); break; }catch(e){ cv = null; }
+    }
+    if(!cv) return null;
+    const vb = sheetVB(svg), K = caseOf(d), c = d.case, dl = d.dial;
+    const dialD = dl.lock ? (c.locked ? K.dialD : c.opening + 0.8) : dl.diameter;
+    const out = document.createElement("canvas"); out.width = out.height = 1000;
+    const g = out.getContext("2d"); g.fillStyle = SHEET_PANEL; g.fillRect(0, 0, 1000, 1000);
+    g.save(); g.beginPath(); g.arc(500, 500, dialD/2*1000/vb[2], 0, 2*Math.PI); g.clip(); g.drawImage(cv, 0, 0); g.restore();
+    cv.width = cv.height = 0;
+    return {url:sheetJPEG(out, 0.9), wmm:vb[2]};
+  });
+}
+/* the owner's drawings for a case that has them, as JPEG on white */
+async function sheetDrawing(d){
+  if(!d) return null;
+  return sheetCached("drawing:" + d.file, async () => {
+    try{
+      const im = await sheetImage(d.file), cv = document.createElement("canvas"); cv.width = im.naturalWidth; cv.height = im.naturalHeight;
+      const g = cv.getContext("2d"); g.fillStyle = "#fff"; g.fillRect(0, 0, cv.width, cv.height); g.drawImage(im, 0, 0);
+      const w = cv.width, h = cv.height;
+      return {url:sheetJPEG(cv, 0.92), wpx:w, hpx:h};
+    }catch(e){ return null; }
+  });
+}
+/* Words the PDF's Helvetica cannot draw (Arabic above all), drawn by the
+   browser, which shapes and orders them, at 12 px a millimetre (305 dpi)
+   in IBM Plex Sans Arabic, already in the page. A line that mixes
+   directions is drawn whole, so it keeps the order the browser gives it. */
+const SHEET_LABELS = new Map();
+function rasterLabel(text, sizeMM, o){
+  o = o || {};
+  const key = [text, sizeMM, o.bold, o.italic, o.fill].join("|");
+  if(SHEET_LABELS.has(key)) return SHEET_LABELS.get(key);
+  const pxmm = 12, fpx = sizeMM*pxmm, rtl = /^[^A-Za-z֐-ࣿיִ-ﻼ]*[֐-ࣿיִ-ﻼ]/.test(text);
+  const font = `${o.italic ? "italic " : ""}${o.bold ? "bold " : ""}${fpx.toFixed(1)}px "IBM Plex Sans Arabic", "IBM Plex Sans", Helvetica, Arial, sans-serif`;
+  const cv = document.createElement("canvas"); let g = cv.getContext("2d"); g.font = font; g.direction = rtl ? "rtl" : "ltr";
+  const w = Math.ceil(g.measureText(text).width) + 4, asc = Math.ceil(fpx*1.05), h = Math.ceil(fpx*1.5);
+  cv.width = w; cv.height = h; g = cv.getContext("2d");
+  g.font = font; g.direction = rtl ? "rtl" : "ltr"; g.textAlign = rtl ? "right" : "left"; g.textBaseline = "alphabetic";
+  g.fillStyle = o.fill || SHEET_INK; g.fillText(text, rtl ? w - 2 : 2, asc);
+  const r = {url:cv.toDataURL("image/png"), wmm:w/pxmm, hmm:h/pxmm, ascmm:asc/pxmm};
+  if(SHEET_LABELS.size > 200) SHEET_LABELS.clear();
+  SHEET_LABELS.set(key, r);
+  return r;
+}
+/* Everything for the page, rasters included. One version at a time, each
+   canvas released before the next: on an older iPhone it is the canvas
+   memory, not the time, that runs out. */
+async function sheetBuild(onStep){
+  ensureSheet(S);
+  const plan = sheetPlan(S, versions);
+  try{ await document.fonts.ready; await document.fonts.load('40px "IBM Plex Sans Arabic"'); }catch(e){}
+  const R = {versions:[]};
+  for(let i = 0; i < plan.versions.length; i++){
+    if(onStep) onStep(`Drawing Version ${plan.versions[i].label}…`);
+    R.versions[i] = await sheetVersionRaster(plan.versions[i].state, i === plan.hero, i);
+  }
+  if(onStep) onStep("Drawing the hands and the dial…");
+  const A = plan.versions[0].state;
+  R.hands = await sheetHandsRaster(A);
+  R.dial = await sheetDialRaster(A);
+  const dr = plan.K.sheet && plan.K.sheet.drawings;
+  if(dr){ R.front = await sheetDrawing(dr.front); R.side = await sheetDrawing(dr.side); }
+  const words = new Set();
+  const raster = (t, size, o) => { words.add(t); return rasterLabel(t, size, o); };
+  const page = buildSheetSVG(plan, R, {raster});
+  return {plan, R, svg:page.svg, boxes:page.boxes, words:[...words]};
+}
+function ensureSheet(st){
+  if(!st) return st;
+  if(!st.sheet || typeof st.sheet !== "object") st.sheet = clone(BASE.sheet);
+  for(const k of ["strap", "finishes", "rows"]) if(!st.sheet[k] || typeof st.sheet[k] !== "object") st.sheet[k] = clone(BASE.sheet[k]);
+  if(!Array.isArray(st.sheet.versions)) st.sheet.versions = [];
+  return st;
+}
+/* the two libraries, fetched the first time a sheet is made and kept by
+   the service worker for offline use */
+let pdfKit = null;
+function loadPdfKit(){
+  if(window.jspdf && window.jspdf.jsPDF && window.jspdf.jsPDF.API && window.jspdf.jsPDF.API.svg) return Promise.resolve(window.jspdf);
+  if(!pdfKit) pdfKit = (async () => {
+    const add = src => new Promise((ok, no) => { const el = document.createElement("script"); el.src = src; el.onload = ok;
+      el.onerror = () => { el.remove(); no(new Error("The PDF maker could not load")); }; document.head.appendChild(el); });
+    if(!window.jspdf) await add("./vendor/jspdf-2.5.2.umd.min.js");
+    if(!window.svg2pdf) await add("./vendor/svg2pdf-2.2.4.umd.min.js");
+    return window.jspdf;
+  })().catch(e => { pdfKit = null; throw e; });
+  return pdfKit;
+}
+/* The PDF: the page's SVG through svg2pdf into an A3 landscape jsPDF, so
+   the lines and words stay vector and the pictures go in as JPEG. */
+async function sheetPDF(built){
+  const kit = await loadPdfKit(), inf = built.plan.info;
+  const doc = new kit.jsPDF({orientation:"landscape", unit:"mm", format:"a3", compress:true, putOnlyUsedFonts:true});
+  doc.setProperties({title:`${inf.brand ? inf.brand + " " : ""}design sheet ${inf.designNo}`.trim(), subject:inf.designNo || "", author:inf.designer || "",
+    keywords:built.words.join(" · "), creator:"Watch Design Studio " + APP_VERSION});
+  const host = document.createElement("div");
+  host.style.cssText = "position:fixed;left:-20000px;top:0;width:420px;height:297px;overflow:hidden;pointer-events:none";
+  host.innerHTML = built.svg; document.body.appendChild(host);
+  try{ await doc.svg(host.firstElementChild, {x:0, y:0, width:420, height:297}); }
+  finally{ host.remove(); }
+  return doc.output("blob");
+}
+
+/* ---- the preview, and where it is opened from ---- */
+let mkBuilt = null, mkRun = 0, mkZoomed = false;
+function mkPicker(){
+  const sh = sheetOf(S), list = versions.slice().reverse(), chosen = sh.versions.map(e => e.ref);
+  const esc3 = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;"}[c]));
+  let h = `<div class="f"><label>${sheetSay("mk.beside", "Versions beside this one (up to 3)")}</label>`;
+  if(!list.length) h += `<p class="sub" style="margin:4px 0 0">${sheetSay("mk.none", "No saved versions yet. Save one (Done on the Finish step, or Save) to show it beside this design.")}</p>`;
+  h += `<div style="display:flex;flex-direction:column;gap:4px;max-height:180px;overflow:auto">`;
+  for(const v of list){
+    const k = chosen.indexOf(v.id), on = k >= 0, e = on ? sh.versions[k] : null;
+    h += `<label class="chk" style="display:flex;align-items:center;gap:8px"><input type="checkbox" data-mkv="${esc3(v.id)}" ${on ? "checked" : ""} ${!on && chosen.length >= 3 ? "disabled" : ""}>
+      <span style="flex:1">${esc3(v.name)}</span>${on ? `<input type="text" data-mkl="${esc3(v.id)}" value="${esc3(e.label || "A" + (k + 1))}" style="width:56px" aria-label="Label">` : ""}</label>`;
+  }
+  h += `</div></div><div class="f"><label>${sheetSay("mk.base", "Compare Version A with the maker's last version")}</label><select data-mkb="1">`
+    + `<option value="">${sheetSay("mk.noBase", "Nothing (no automatic marks)")}</option>`
+    + list.map(v => `<option value="${esc3(v.id)}" ${sh.baseline === v.id ? "selected" : ""}>${esc3(v.name)}</option>`).join("") + `</select></div>`;
+  /* The owner's own marks and notes on Version A's lines, for what the
+     comparison cannot know: "(changed)" on a part reworked since the
+     maker's sheet, "(same as before)" beside one that is not. */
+  const marks = [["auto", sheetSay("mk.auto", "Automatic")], ["changed", "(changed)"], ["New color", "(New color)"], ["New", "(New)"], ["none", sheetSay("mk.noMark", "No mark")]];
+  h += `<details class="f"><summary>${sheetSay("mk.marks", "Marks and notes on Version A")}</summary><div style="display:flex;flex-direction:column;gap:6px;margin-top:6px">`;
+  for(const r of sheetRows(S)){
+    const o = sh.rows[r.key] || {}, cur = o.mark || "auto";
+    h += `<div style="display:grid;grid-template-columns:1fr auto;gap:4px 6px;align-items:center"><span style="font-size:12px">${esc3((r.label ? r.label + " " : "") + r.text)}</span>
+      <select data-mkm="${esc3(r.key)}" aria-label="Mark">${marks.map(([v, l]) => `<option value="${v}" ${v === cur ? "selected" : ""}>${esc3(l)}</option>`).join("")}</select>
+      <input type="text" data-mkn="${esc3(r.key)}" value="${esc3(o.note || "")}" placeholder="${esc3(sheetSay("mk.notePh", "Note, e.g. (same as before)"))}" style="grid-column:1 / span 2"></div>`;
+  }
+  h += `</div></details>`;
+  return h;
+}
+async function mkRefresh(){
+  const run = ++mkRun, what = q("#mkWhat"), prev = q("#mkPrev"), go = q("#mkGo");
+  const wasOpen = !!q("#mkPick details[open]");
+  q("#mkPick").innerHTML = mkPicker();
+  if(wasOpen){ const dd = q("#mkPick details"); if(dd) dd.open = true; }
+  go.disabled = true; what.textContent = sheetSay("mk.drawing", "Drawing the sheet…");
+  try{
+    const b = await sheetBuild(t => { if(run === mkRun) what.textContent = t; });
+    if(run !== mkRun) return;
+    mkBuilt = b;
+    prev.innerHTML = b.svg.replace(/ width="420mm" height="297mm"/, ' style="display:block;width:100%;height:auto"');
+    const warn = sheetHandWarning(S), inf = b.plan.info;
+    what.textContent = `${b.plan.fileName} · A3 landscape · ${b.plan.versions.length} version${b.plan.versions.length > 1 ? "s" : ""}`
+      + (b.plan.baseline ? ` · A compared with “${b.plan.baseline}”` : "") + (warn ? ` · ${warn}` : "") + (inf.designNo ? "" : " · no design number yet");
+    go.disabled = false;
+  }catch(e){ if(run === mkRun) what.textContent = "Could not draw the sheet: " + e.message; }
+}
+function openMakerSheet(){
+  ensureSheet(S);
+  q("#expSheet").classList.remove("open");
+  q("#mkSheet").classList.add("open");
+  mkZoomed = false; q("#mkPrev").style.width = "100%";
+  mkRefresh();
+}
+async function makeMakerPDF(){
+  const go = q("#mkGo"), what = q("#mkWhat");
+  go.disabled = true;
+  const t0 = performance.now();
+  try{
+    what.textContent = sheetSay("mk.making", "Making the PDF…");
+    const b = mkBuilt || await sheetBuild();
+    const blob = await sheetPDF(b);
+    const ms = Math.round(performance.now() - t0);
+    window.__sheetLast = {ms, size:blob.size, name:b.plan.fileName};
+    presentOutput(b.plan.fileName, blob, "application/pdf");
+    what.textContent = `${b.plan.fileName} · ${(blob.size/1048576).toFixed(2)} MB`;
+  }catch(e){ toast("Could not make the PDF: " + e.message); what.textContent = e.message; }
+  go.disabled = false;
+}
+(function(){
+  const sheet = q("#mkSheet"); if(!sheet) return;
+  q("#mkGo").onclick = makeMakerPDF;
+  q("#mkClose").onclick = () => sheet.classList.remove("open");
+  q("#mkZoom").onclick = () => { mkZoomed = !mkZoomed; q("#mkPrev").style.width = mkZoomed ? "300%" : "100%";
+    q("#mkZoom").textContent = mkZoomed ? sheetSay("mk.zoomOut", "Fit to the screen") : sheetSay("mk.zoomIn", "Zoom in"); };
+  sheet.addEventListener("change", e => {
+    const t = e.target, d = t.dataset; ensureSheet(S);
+    const sh = S.sheet;
+    if(d.mkv){ const v = sh.versions.filter(x => x.ref !== d.mkv);
+      if(t.checked && v.length < 3) v.push({ref:d.mkv, label:""});
+      sh.versions = v.map((x, i) => ({ref:x.ref, label:x.label && !/^A\d$/.test(x.label) ? x.label : ""})); }
+    else if(d.mkl){ const e2 = sh.versions.find(x => x.ref === d.mkl); if(e2) e2.label = t.value.trim(); }
+    else if(d.mkb) sh.baseline = t.value || null;
+    else if(d.mkm || d.mkn){ const k = d.mkm || d.mkn, o = Object.assign({}, sh.rows[k] || {});
+      if(d.mkm){ if(t.value === "auto") delete o.mark; else o.mark = t.value; } else { if(t.value.trim()) o.note = t.value.trim(); else delete o.note; }
+      if(Object.keys(o).length) sh.rows[k] = o; else delete sh.rows[k]; }
+    else return;
+    commit(); mkRefresh();
+  });
+  for(const id of ["#mkSheetBtn", "#open-sheet"]){ const b = q(id); if(b) b.onclick = openMakerSheet; }
 })();
 </script>
 <script>
@@ -14653,6 +15847,15 @@ const GSTR = {en:{
   "day.bothNote":"Both names in every position of the disc, the Arabic on the right. Sellita must confirm a bilingual SW240-1 day disc.",
   "day.altNote":"The disc carries the week in Arabic and in English, one after the other, and setting the day picks which shows. Sellita must confirm a bilingual SW240-1 day disc.",
   "fin.openCheck":"Open the design check →",
+  "mk.title":"For the maker", "mk.unfold":"Sheet details", "mk.fold":"Fold the sheet details",
+  "mk.sum": (no, n) => `Sheet: ${no} · A3 · ${n} version${n === 1 ? "" : "s"}`,
+  "mk.designerPh":"Your name", "mk.find":"find existing",
+  "mk.lengths": (h, m, s) => `Drawn now: hour ${h} mm, minute ${m} mm${s ? `, seconds ${s} mm` : ""}. The sheet prints these beside the references.`,
+  "mk.versionsNote":"The versions beside this one, and the maker's last version to compare it with, are chosen on the preview.",
+  "mk.beside":"Versions beside this one (up to 3)", "mk.none":"No saved versions yet. Save one (Done on the Finish step) to show it beside this design.",
+  "mk.base":"Compare Version A with the maker's last version", "mk.noBase":"Nothing (no automatic marks)",
+  "mk.drawing":"Drawing the sheet…", "mk.making":"Making the PDF…", "mk.zoomIn":"Zoom in", "mk.zoomOut":"Fit to the screen",
+  "mk.marks":"Marks and notes on Version A", "mk.auto":"Automatic", "mk.noMark":"No mark", "mk.notePh":"Note, e.g. (same as before)",
   "toast.drawnCase":"Showing the drawing: the photograph cannot show this. “Show the real photo” goes back to it.",
   "case.photoGold":"Blue Creations' photograph of the steel watch: gold and two-tone are laid onto it. A finish or a strap it cannot show switches to the drawing.",
   "photo.show":"Show the real photo", "photo.on":"Showing the real photo.", "photo.again":"Back on the real photo.",
@@ -14800,6 +16003,15 @@ GSTR.ar = {
   "day.bothNote":"الاسمان معاً في كل موضع من القرص، والعربي على اليمين. على Sellita أن تؤكد توفر قرص يوم بلغتين لمحرك SW240-1 قبل طلب الميناء.",
   "day.altNote":"القرص يحمل أيام الأسبوع بالعربي وبالإنجليزي واحداً بعد الآخر، وضبط اليوم يحدد أيهما يظهر. على Sellita أن تؤكد توفر قرص يوم بلغتين لمحرك SW240-1 قبل طلب الميناء.",
   "fin.openCheck":"افتح فحص التصميم ←",
+  "mk.title":"للمصنع", "mk.unfold":"تفاصيل الورقة", "mk.fold":"اطوِ تفاصيل الورقة",
+  "mk.sum": (no, n) => `الورقة: ${no} · A3 · ${n === 1 ? "إصدار واحد" : n === 2 ? "إصداران" : n + " إصدارات"}`,
+  "mk.designerPh":"اسمك", "mk.find":"find existing (ابحث عن عقرب موجود)",
+  "mk.lengths": (h, m, s) => `المرسوم الآن: عقرب الساعات \u2066${h} mm\u2069، الدقائق \u2066${m} mm\u2069${s ? `، الثواني \u2066${s} mm\u2069` : ""}. تُطبع هذه الأطوال بجانب المراجع.`,
+  "mk.versionsNote":"تختار من المعاينة الإصدارات التي تظهر بجانب هذا التصميم، وآخر إصدار من المصنع للمقارنة.",
+  "mk.beside":"إصدارات بجانب هذا التصميم (حتى 3)", "mk.none":"لا توجد إصدارات محفوظة بعد. احفظ إصداراً (تم في خطوة الإنهاء) ليظهر بجانب هذا التصميم.",
+  "mk.base":"قارن الإصدار A بآخر إصدار من المصنع", "mk.noBase":"لا شيء (بلا علامات تلقائية)",
+  "mk.drawing":"جارٍ رسم الورقة…", "mk.making":"جارٍ إنشاء ملف PDF…", "mk.zoomIn":"تكبير", "mk.zoomOut":"ملاءمة الشاشة",
+  "mk.marks":"علامات وملاحظات على الإصدار A", "mk.auto":"تلقائية", "mk.noMark":"بلا علامة", "mk.notePh":"ملاحظة، مثل (same as before)",
   "toast.drawnCase":"يظهر الرسم الآن: الصورة لا تستطيع إظهار هذا الاختيار. زر «اعرض الصورة الحقيقية» يعيدها.",
   "case.photoGold":"صورة Blue Creations للساعة الستيل، والذهب واللونان يُضافان عليها. التشطيب أو الحزام الذي لا تُظهره يعرض الرسم.",
   "photo.show":"اعرض الصورة الحقيقية", "photo.on":"تظهر الصورة الحقيقية.", "photo.again":"عادت الصورة الحقيقية.",
@@ -14835,6 +16047,15 @@ GSTR.ar = {
    that means two things takes a context: "shape:Diamond" is the marker shape,
    "Diamond" the stone. */
 const GWORD = {ar:{
+  /* the maker's sheet */
+  "Maker's sheet (PDF)":"ورقة المصنع (PDF)", "A3 for the maker":"صفحة A3 للمصنع", "Preview the maker's sheet":"معاينة ورقة المصنع",
+  "Design number":"رقم التصميم", "Date":"التاريخ", "Designer":"المصمم", "Brand":"العلامة التجارية", "Movement":"المحرك",
+  "Rubber":"مطاط", "Fabric Velcro":"قماش بلاصق", "Leather":"جلد", "Bracelet":"سوار معدني", "Curved":"منحني", "Strap maker":"صانع السير",
+  "Buckle":"الإبزيم", "Pin buckle":"إبزيم بدبوس", "Velcro loop":"حلقة لاصقة", "Folding clasp":"قفل قابل للطي",
+  "Engraved logo":"شعار محفور", "No logo":"بلا شعار", "Hands":"العقارب",
+  "Hour and minute reference":"مرجع عقربي الساعات والدقائق", "Seconds reference":"مرجع عقرب الثواني",
+  "Finishes":"التشطيبات", "Lug tops":"أعلى العروات", "Case shoulders":"أكتاف القالب", "Bezel top":"سطح الإطار", "Bezel edge":"حافة الإطار",
+  "Case flank":"جانب القالب", "Crown":"التاج", "Crystal":"الكريستال", "Caseback":"الغطاء الخلفي", "Ring text":"نص الحلقة", "Notes":"ملاحظات",
   /* the two watches */
   "Time Keeper × Nivada":"تايم كيبر × نيفادا",
   /* colours */
@@ -16384,14 +17605,50 @@ Object.assign(GWORD.ar, {
         <div class="gActions"><button type="button" class="key" data-gdo="share">${gT("fin.share")}</button><button type="button" data-gdo="export">${gT("fin.export")}</button>
         <button type="button" data-gdo="refine">${gT("fin.refine")}</button></div></div>`;
       h += textIn("meta.name", "Name", S.meta.name, gT("eg.name"));
+      h += makerBlock();
       h += `<h3>${gT("fin.check")}</h3>` + checkSummary();
       /* Saving is the footer's "Done", so the tiles are what comes after it */
       h += `<h3>${gT("fin.keep")}</h3><div class="gActions">
-        ${[["export","Export","Image, PDF or file"],["share","Share","Send a picture"],["3d","3D view","Turn it in your hand"],["compare","Compare","Side by side"],["spec","Specification","For the factory"]]
+        ${[["export","Export","Image, PDF or file"],["maker","Maker's sheet (PDF)","A3 for the maker"],["share","Share","Send a picture"],["3d","3D view","Turn it in your hand"],["compare","Compare","Side by side"],["spec","Specification","For the factory"]]
           .map(([k, l, s]) => `<button type="button" data-gdo="${k}">${gW(l)}<small>${gW(s)}</small></button>`).join("\n        ")}</div>`;
       return h;
     }
   };
+  /* For the maker: what the maker's sheet needs that the design does not
+     say (the maker's design number, who drew it, the hand references) and
+     anything to change from the case's own (brand, movement, strap and
+     buckle, finishes, caseback). Folded to one line until opened. The
+     values stay in English, as the sheet does; the labels follow the
+     language. Which versions stand beside this one, and which is the
+     maker's last, are picked on the sheet's preview. */
+  let makerOpen = false;
+  function makerBlock(){
+    ensureSheet(S);
+    const sh = S.sheet, d = sheetInfo(S), sp = sheetStrap(S), K = caseOf(S), bare = Object.assign({}, S, {sheet:{}});
+    const n = 1 + sheetPlan(S, versions).versions.length - 1, fin = sheetFinishes(bare);
+    let x = `<h3>${gT("mk.title")}</h3><button type="button" class="gMoreRow" data-gdo="makerFold" aria-expanded="${makerOpen}"><b>${makerOpen ? gT("mk.fold") : gT("mk.unfold")}</b><small>${esc2(gT("mk.sum", d.designNo || "—", n))}</small></button>`;
+    if(!makerOpen) return x;
+    x += textIn("sheet.designNo", "Design number", sh.designNo, "103277_4");
+    x += `<div class="gRow"><label>${gW("Date")}</label><span class="gField"><input type="date" data-gtext="sheet.date" value="${esc2(sh.date || sheetToday())}"></span></div>`;
+    x += textIn("sheet.designer", "Designer", sh.designer, gT("mk.designerPh"));
+    x += textIn("sheet.brand", "Brand", sh.brand, d.brandDefault);
+    x += textIn("sheet.movement", "Movement", sh.movement, sheetMovement(bare));
+    x += `<h3>${gW("Band")}</h3>` + chips("sheet.strap.type", [["rubber","Rubber"],["fabric Velcro","Fabric Velcro"],["leather","Leather"],["bracelet","Bracelet"]], sp.type);
+    if(sp.type !== "bracelet") x += chips("sheet.strap.style", [["flat","Flat"],["curved","Curved"]], sp.style) + textIn("sheet.strap.maker", "Strap maker", sh.strap.maker, "Delugs");
+    x += `<h3>${gW("Buckle")}</h3>` + chips("sheet.strap.buckle", [["pin buckle","Pin buckle"],["Velcro loop","Velcro loop"],["folding clasp","Folding clasp"]], sp.buckle)
+      + chips("sheet.strap.buckleColor", [["steel","Steel"],["silver","Silver"],["black","Black"],["gold","Gold"],["rose gold","Rose gold"]], sp.buckleColor)
+      + chips("sheet.strap.buckleLogo", [["engraved","Engraved logo"],["none","No logo"]], sp.buckleLogo);
+    const r5 = v => f(Math.round((+v || 0)*2)/2, 1).replace(/\.0$/, "");
+    x += `<h3>${gW("Hands")}</h3>` + textIn("sheet.handRef", "Hour and minute reference", sh.handRef, "W36017")
+      + textIn("sheet.secRef", "Seconds reference", sh.secRef, gT("mk.find"))
+      + `<p class="gNote">${gT("mk.lengths", r5(S.hHand.length), r5(S.mHand.length), S.sHand && S.sHand.on ? r5(S.sHand.length) : "")}</p>`;
+    const warn = sheetHandWarning(S); if(warn) x += `<p class="gNote" style="color:var(--g-warn-ink)">${esc2(warn)}</p>`;
+    x += `<h3>${gW("Finishes")}</h3>` + SHEET_FINISH_PARTS.map(([k, l]) => textIn("sheet.finishes." + k, l, sh.finishes[k], fin[k] || "")).join("");
+    x += `<h3>${gW("Caseback")}</h3>` + textIn("sheet.caseback", "Ring text", sh.caseback, sheetCasebackRing(bare).join(" · "));
+    x += textIn("sheet.notes", "Notes", sh.notes, "");
+    x += `<p class="gNote">${gT("mk.versionsNote")}</p><div class="gActions"><button type="button" class="key" data-gdo="maker">${gW("Preview the maker's sheet")}</button></div>`;
+    return x;
+  }
   /* the standard dial, in whichever case is chosen now */
   function freshState(){
     const keep = S; let st;
@@ -16869,11 +18126,12 @@ Object.assign(GWORD.ar, {
       if(d.gdo === "gemMore"){ gemMore = true; paint(); return; }
       if(d.gdo === "inkMore"){ inkMore = !inkMore; paint(); return; }
       if(d.gdo === "startAll"){ startAll = !startAll; paint(); return; }
+      if(d.gdo === "makerFold"){ makerOpen = !makerOpen; paint(); return; }
       if(d.gdo === "refine"){ savedAs = ""; go(0); return; }
       if(d.gdo === "hourAll"){ if(pickHour === null) return; const k = S.markers.at[pickHour], cov = coveredHours(S);
         S.markers.at = S.markers.at.map((x, i) => cov.has(i || 12) ? x : k); syncMarkerFlags(S); commit(); paintAll(); return; }
       ({save:()=>click("#save"), export:()=>click("#exp"), share:()=>{ if(document.querySelector("#share")) click("#share"); else click("#exp"); }, "3d":()=>click("#open-relief"),
-        compare:()=>click("#compare"), spec:()=>click('[data-atelier="spec"]'), check:()=>click('[data-atelier="check"]')}[d.gdo] || (()=>{}))();
+        compare:()=>click("#compare"), spec:()=>click('[data-atelier="spec"]'), check:()=>click('[data-atelier="check"]'), maker:()=>openMakerSheet()}[d.gdo] || (()=>{}))();
     }
   });
   /* the hand shapes, as the full editor sets them */

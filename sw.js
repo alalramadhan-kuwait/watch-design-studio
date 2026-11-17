@@ -44,7 +44,14 @@ const SHELL = [
   /* the second watch: the Time Keeper × Nivada case photograph and the design
      its Start card opens */
   "./app/case-timekeeper-nivada.jpg",
-  "./designs/timekeeper-nivada.json"
+  "./designs/timekeeper-nivada.json",
+  /* the maker's sheet: the two PDF libraries (about 450 KB together, the
+     page loads them only when a sheet is first made) and the owner's two
+     drawings of the F77 that stand in its technical row */
+  "./vendor/jspdf-2.5.2.umd.min.js",
+  "./vendor/svg2pdf-2.2.4.umd.min.js",
+  "./app/tk-f77-front.png",
+  "./app/tk-f77-side.png"
 ];
 
 self.addEventListener("install", e => {
