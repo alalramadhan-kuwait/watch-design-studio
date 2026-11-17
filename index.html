@@ -2128,7 +2128,7 @@ const APP_BUILD = "__BUILD__";
 /* The version people see, raised with every change that reaches them:
    major for a new way of working, minor for something new to do, patch for
    a fix. Shown on the watch screen, so any screenshot says which it was. */
-const APP_VERSION = "4.7.0";
+const APP_VERSION = "4.7.1";
 const APP_DATE = "__DATE__";
 
 /* Every route that replaces S passes through one of these three, which is
@@ -13482,9 +13482,30 @@ refineBootRender();
     /* with nothing to update to, a tap still answers: which version this is */
     if(!badge.classList.contains("old")){ toast(`You have version ${APP_VERSION}${fmtDate(APP_DATE) ? " of " + fmtDate(APP_DATE) : ""} (${buildName()}).`); return; }
     wantUpdate = true;
-    if(reg && reg.waiting) takeUpdate();
-    else { badge.textContent = "Updating…"; if(reg) reg.update().catch(()=>{}); setTimeout(()=>{ if(wantUpdate) location.reload(); }, 15000); }
+    if(reg && reg.waiting){ takeUpdate(); return; }
+    /* The new version is about 5 MB, so on a phone connection its download
+       can take longer than a fixed wait. Reloading before it finished used to
+       bring back the cached old version, and the badge could go round that
+       loop for ever. Now the page waits for the download itself, and if it
+       still has not arrived after a minute it clears the stored copy and
+       loads the published one straight from the site. Saved designs are in
+       local storage, not in that copy, so nothing of the work is lost. */
+    badge.textContent = "Updating… (downloading)";
+    if(reg) reg.update().catch(()=>{});
+    const t0 = Date.now();
+    const poll = setInterval(()=>{
+      if(reg && reg.waiting){ clearInterval(poll); takeUpdate(); return; }
+      if(Date.now() - t0 > 60000){ clearInterval(poll); hardUpdate(); }
+    }, 1000);
   };
+  /* The last resort: forget the stored app and fetch the published one. */
+  async function hardUpdate(){
+    try{ if(typeof saveNow === "function") saveNow(); }catch(e){}
+    badge.textContent = "Updating… (fresh copy)";
+    try{ const rs = await navigator.serviceWorker.getRegistrations(); await Promise.all(rs.map(r => r.unregister())); }catch(e){}
+    try{ const ks = await caches.keys(); await Promise.all(ks.filter(k => k.startsWith("wds-")).map(k => caches.delete(k))); }catch(e){}
+    location.replace(location.pathname + "?fresh=" + Date.now());
+  }
 
   if(!("serviceWorker" in navigator) || !isSecureContext) return;
 
@@ -13552,6 +13573,12 @@ refineBootRender();
     /* Already waiting from a previous visit. controller is null on the
        very first run, and that install is not an update to announce. */
     if(r.waiting && navigator.serviceWorker.controller) offer();
+    /* A download already under way when the page opened (it was reloaded
+       part-way through one) would otherwise finish unnoticed. */
+    const follow = nw => nw && nw.addEventListener("statechange", ()=>{
+      if(nw.state === "installed" && navigator.serviceWorker.controller) offer();
+    });
+    if(r.installing) follow(r.installing);
     r.addEventListener("updatefound", ()=>{
       const nw = r.installing; if(!nw) return;
       nw.addEventListener("statechange", ()=>{
