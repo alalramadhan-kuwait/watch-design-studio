@@ -200,6 +200,49 @@ stored in a design file do not change. In the full editor at laptop widths
 the toolbar sits tighter, and on a narrower window it takes a second row
 rather than pushing Share and Export off the screen.
 
+## Nivada F77 hands (v4.4.0)
+
+From the owner, with a photograph of a Nivada Grenchen F77 (salmon
+basket-weave dial, date at 3): "Add this F77 hand also."
+
+- **An F77 set.** Hands → Shape has **Nivada F77** (نيفادا F77) next to
+  Royal Oak. Like Royal Oak and Day-date it sets all three hands at once, at
+  the lengths and widths measured on the owner's photograph of the F77 37 mm,
+  as shares of the dial opening: the minute hand to 0.87 of the radius, about
+  0.9 mm wide; the hour hand to 0.59, about 1.0 mm wide; each with a short
+  tail of 0.18 through the centre. The seconds hand is the F77's own: a fine
+  steel needle to 0.88 of the radius with a small framed lume plot just
+  inside the markers (0.585 to 0.68) and a flat counterweight bar reaching
+  0.27 behind the centre.
+- **The shape.** Straight bars with parallel sides and square ends, built
+  as a U: two polished rails with a channel down the middle that runs the
+  whole length and is open at the tip and at the end of the tail. The lume
+  is white, as in the photograph, set into the channel (widened there to
+  half the hand) from the same distance out on both hands to just short of
+  the tip; past it the empty channel shows dark. The collets are the F77's: a
+  wide one under the hour hand and a flat seconds cap with the pivot showing.
+- **Lume and 3D.** The set turns the lume on. In the 3D view the channel is a
+  groove below the rails and the lume sits in it; the seconds plot's lume is
+  set into its frame. Lume off leaves the channel empty.
+- **Metal.** The F77's hands are steel, so the set leaves the metal alone:
+  steel stays steel, and gold, blued or black hands keep their colour.
+- **Elsewhere.** The seconds tab has a **Nivada F77** card (the needle, plot
+  and counterweight on their own). The full editor's Style list and the More
+  options Shape cards have **Nivada F77** and **Nivada F77 seconds**; chosen
+  there they change the shape only.
+- **The Time Keeper × Nivada keeps its hands.** Nothing changes on a saved
+  design or a preset until the F77 set is chosen.
+- **Sources.** The owner's photograph (lengths, widths, where the lume lies),
+  scaled by the 27.50 mm opening of the Time Keeper × Nivada case; Nivada
+  Grenchen's own front render of the F77 SST Black MK1 (how the hands are
+  built: the open channel, the tails, the seconds tip beyond the plot, the
+  collets); and Watchreport's and Fratello's hands-on photographs of the blue
+  F77. The measurements are written out beside `FACET["f77"]` in
+  `index.html`.
+
+Every existing hand style, with and without lume, and every preset and file
+in `designs/` draw exactly as in 4.3.0 (compared byte for byte).
+
 ## Royal Oak hands (v4.3.0)
 
 From the owner: "Add Royal Oak hands as one of the options."

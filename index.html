@@ -2101,7 +2101,7 @@ const APP_BUILD = "__BUILD__";
 /* The version people see, raised with every change that reaches them:
    major for a new way of working, minor for something new to do, patch for
    a fix. Shown on the watch screen, so any screenshot says which it was. */
-const APP_VERSION = "4.3.0";
+const APP_VERSION = "4.4.0";
 const APP_DATE = "__DATE__";
 
 /* Every route that replaces S passes through one of these three, which is
@@ -6884,6 +6884,10 @@ function buildSVG(st, o={}){
          1.1 mm in radius, the minute's just inside it, the seconds cap 0.8 */
       const r = h.style === "ro-seconds" && k === "sHand" ? 0.80
               : h.style === "royal-oak" && k !== "sHand" ? (k === "hHand" ? 1.10 : 0.95)
+              /* the F77's, as measured in Nivada's render: the hour hand's
+                 0.85 mm in radius, the minute's 0.70, the seconds cap 0.55 */
+              : h.style === "f77-seconds" && k === "sHand" ? 0.55
+              : h.style === "f77" && k !== "sHand" ? (k === "hHand" ? 0.85 : 0.70)
               : k === "sHand" ? Math.max(0.24, (h.boss || 0.8)/2*0.55)
               : (h.tail || 0) > 1 ? Math.max(root, k === "hHand" ? 0.55 : 0.45)      // a small polished cap, as on a Day-Date
               : Math.max(root, (h.boss || (k === "hHand" ? 2.2 : 1.6))/2*0.62, k === "hHand" ? 0.78 : 0.6);
@@ -6891,9 +6895,9 @@ function buildSVG(st, o={}){
       const g = id("hc"), g2 = id("hc");
       defs.push(`<linearGradient id="${g}" gradientUnits="userSpaceOnUse" x1="${f(-lxH*r,3)}" y1="${f(-lyH*r,3)}" x2="${f(lxH*r,3)}" y2="${f(lyH*r,3)}">
         <stop offset="0" stop-color="${mix(core, MM.dark, .7)}"/><stop offset=".5" stop-color="${core}"/><stop offset="1" stop-color="${mix(core, MM.lite, .9)}"/></linearGradient>`);
-      if(k === "sHand" && h.style === "ro-seconds"){
+      if(k === "sHand" && (h.style === "ro-seconds" || h.style === "f77-seconds")){
         /* the Royal Oak's seconds cap is flat, a turned disc with the pivot
-           showing in its centre, not a dome */
+           showing in its centre, not a dome; so is the F77's */
         defs.push(`<linearGradient id="${g2}" gradientUnits="userSpaceOnUse" x1="${f(lxH*r,3)}" y1="${f(lyH*r,3)}" x2="${f(-lxH*r,3)}" y2="${f(-lyH*r,3)}">
         <stop offset="0" stop-color="${mix(core, MM.dark, .45)}"/><stop offset="1" stop-color="${mix(core, MM.lite, .6)}"/></linearGradient>`);
         return `<circle r="${f(r,3)}" fill="url(#${g})" stroke="${mix(core, MM.dark, .8)}" stroke-opacity=".55" stroke-width="0.03"/>`
@@ -8475,7 +8479,7 @@ const STYLE_W = {
   "sword":2.5, "syringe":1.7, "dauphine":3.0, "feuille":2.2, "leaf":2.6,
   "baton":1.9, "alpha":2.4, "pencil":2.0, "obelisque":2.2, "cathedral":2.8,
   "mercedes":2.2, "stick":1.6, "day-date":1.9, "dd-seconds":1.6,
-  "royal-oak":2.25, "ro-seconds":1.6
+  "royal-oak":2.25, "ro-seconds":1.6, "f77":2.0, "f77-seconds":1.6
 };
 /* Supplied hand artwork carried as geometry rather than as a photograph: one
    compound path per hand, drawn pointing to 12 with the pivot at the origin,
@@ -8759,6 +8763,54 @@ const FACET = {
   "ro-seconds":(L,T,W) => { const p = roPaddle(T, W);
                   if(!p) return [[T,.55],[-L*.5,.42],[-L,.30]];
                   return [[T, p.endK], [T - p.ch, p.k], [p.s1, p.k], [p.s0, p.nk], [0, .55], [-L*.5, .42], [-L, .30]]; },
+  /* The Nivada Grenchen F77 hands, from the owner's photograph of the
+     F77 37 mm (salmon basket-weave dial, date at 3, steel bracelet; 1080 x
+     1080, hands at 10:09 and the seconds at 35), read for the lengths, the
+     widths and where the lume lies; confirmed against Nivada Grenchen's own
+     front render of the F77 SST Black MK1 (nivadagrenchenofficial.com,
+     f77-mk1-black-front-view.png, 1440 x 1800, hands at 10:10:38), which
+     is sharp enough to show how the hands are built, and Watchreport's
+     and Fratello's hands-on photographs of the blue F77 (2023), which show
+     the seconds hand's lume plot and the hands' tails.
+
+     Scale: the dial opening in the owner's photograph is 341 px across,
+     fitted to the edge of the salmon, which against the 27.50 mm opening
+     of the Time Keeper x Nivada case (TK_NIVADA) gives 12.4 px a
+     millimetre and an opening radius R of 13.75 mm; the case, 37 mm, comes
+     out at the same scale to within 2 per cent. Lengths are measured from
+     the pinion, which sits 7 px above the opening's centre in this
+     photograph.
+     Hour hand: tip at 0.59R (100.5 px), about 1.0 mm wide, a tail of
+       0.18R (31 px).
+     Minute hand: tip at 0.87R (148.5 px), about 0.9 mm wide, a tail of
+       0.18R (31 px). Nivada's render agrees to within a few hundredths of
+       R, with a slightly shorter minute tail (0.15R).
+     Both are straight bars with parallel sides and square ends, built as a
+     U: two polished rails with a channel down the middle, about a quarter
+     of the width across, which runs the whole length and stays open at the
+     tip and at the end of the tail. Each rail is a flat polished top with
+     a narrow bevel down its outer edge. The lume sits in the channel,
+     widened there to half the width, from the same distance out on both
+     hands (4.7 mm, which is 0.58 of the hour hand and 0.39 of the minute)
+     to about 0.7 of the width short of the tip; past it the empty channel
+     shows dark to the end. In the owner's photograph the lume is white;
+     on Nivada's black dial it is a pale cream.
+     Seconds hand: a plain steel needle about 0.22 mm wide to 0.88R
+       (Nivada's render; in the owner's photograph the tip is lost against
+       the 7 o'clock marker), with a lume plot in a steel frame 0.75 mm
+       wide and 1.27 mm long, from 0.585R to 0.68R (100 to 116 px, just
+       inside the markers' inner ends), the needle running on past it to
+       the tip. The counterweight is a flat bar 0.43 mm wide with rounded
+       corners, reaching 0.27R (46 px) behind the centre.
+     Collets: the hour hand's about 0.85 mm in radius, the minute's 0.70, the
+       seconds cap a flat turned disc of 0.55 with the pivot showing.
+     Half-widths here are shares of W, the hand's drawn width. */
+  "f77":       (L,T,W) => { const c = Math.min(W*0.08, 0.06);
+                  return T > c*2 ? [[T,.42],[T - c,.50],[-(L - c),.50],[-L,.42]] : [[T,.50],[-(L - c),.50],[-L,.42]]; },
+  "f77-seconds":(L,T,W) => { const p = f77Plot(L, W), w = f77Weight(T, W);
+                  const back = w ? [[T, .70], [T - w.c, w.k], [w.s1, w.k], [w.s0, .50]] : [[T, .50]];
+                  const plot = p ? [[-(p.y0 - p.s), .50], [-p.y0, p.k], [-p.y1, p.k], [-(p.y1 + p.s), .50]] : [];
+                  return back.concat(plot, [[-L, .50]]); },
   "baton":     (L,T) => [[T,.50],[-L,.50]],
   "pencil":    (L,T,W) => [[T,.50],[-(L - W*0.95),.50],[-L,0]],
   "syringe":   (L,T) => [[T,.50],[-L*.60,.50],[-L*.655,.12],[-L*.96,.08],[-L,0]],
@@ -8781,7 +8833,42 @@ function roLume(L, W){
   const prof = FACET["royal-oak"](L, 0, W);
   return {y0:prof[2][0] - W*0.08, y1:-L + W*0.16, hw:W*0.125};
 }
-const FACET_FLAT = new Set(["baton","pencil","syringe","stick","royal-oak","ro-seconds"]);
+const FACET_FLAT = new Set(["baton","pencil","syringe","stick","royal-oak","ro-seconds","f77","f77-seconds"]);
+/* The F77 seconds hand's lume plot, from the hand's length L and the
+   needle width W: the frame from 0.665L to 0.77L (0.585R to 0.68R on the
+   set's 0.88R hand), 1.70 W either side (0.75 mm across), with 45 degree
+   shoulders s long into the needle, and the lume inside it 0.6 of the
+   frame's half-width, 0.67 W in from each end. Too short a hand for a
+   plot gives none, and the hand is a plain needle. */
+function f77Plot(L, W){
+  const y0 = L*0.665, y1 = L*0.77, k = 1.70, s = (k - .5)*W;
+  if(!(y1 - y0 > W*2 && y0 - s > W*3 && L - y1 > s + W)) return null;
+  return {y0, y1, k, s, lume:{y0:y0 + W*0.67, y1:y1 - W*0.67, hw:k*W*0.60}};
+}
+/* The F77 seconds counterweight: a flat bar 0.98 W either side (0.43 mm
+   across) with its corners cut c back, narrowing to the needle between s1
+   and s0 under the seconds cap. Too short a tail gives none. */
+function f77Weight(T, W){
+  const k = .98, c = W*0.35, s0 = W*1.4, s1 = W*2.6;
+  if(!(T - c > W*3.2)) return null;
+  return {k, c, s0, s1};
+}
+/* The F77 hour and minute lume: from 4.7 mm out (kept between 0.38 and
+   0.60 of the hand) to 0.7 of the width short of the tip, half the width
+   across. In the hand's own frame, so y is negative toward the tip. */
+function f77Lume(L, W){
+  return {y0:-Math.min(L*0.60, Math.max(L*0.38, 4.7)), y1:-(L - W*0.70), hw:W*0.25};
+}
+const F77_LUME = "#EEEDE6";
+/* The opening cut through an F77 seconds hand's table where its lume plot
+   goes, as a sub-path to add to it, or "" for every other hand. */
+function f77Hole(h, L, W, q){
+  if(h.style !== "f77-seconds" || !h.lume) return "";
+  const p = f77Plot(L, W); if(!p) return "";
+  const {y0, y1, hw} = p.lume;
+  if(!(y1 - y0 > W*0.5)) return "";
+  return ` M${q(-hw, -y0)} L${q(hw, -y0)} L${q(hw, -y1)} L${q(-hw, -y1)}Z`;
+}
 /* The opening cut through a Royal Oak hand's table, as a sub-path to add to
    it (with a leading space), or "" for every other hand: the lume channel
    with its wall on the hour and minute hands when the lume is on, the
@@ -8799,17 +8886,34 @@ function roHole(h, L, T, W, q){
   }
   return "";
 }
+/* The tops of an F77 hand's two rails, and the floor of the channel between
+   them, which runs the whole length and is open at both ends. The channel
+   is a quarter of the width across, widened to half the width where the
+   lume lies. The floor is marked data-relief="sunk" so the 3D view sets it
+   below the rails. */
+function f77Rails(h, P, L, T, W, q, gTop, floor){
+  const tk = 0.72, cw = W*0.13, lu = h.lume ? f77Lume(L, W) : null;
+  const ok = lu && lu.y0 - lu.y1 > W;
+  /* the inner edge of the right-hand rail, tail to tip */
+  const inner = [[T, cw]].concat(ok ? [[lu.y0, cw], [lu.y0, lu.hw], [lu.y1, lu.hw], [lu.y1, cw]] : [], [[-L, cw]]);
+  const rail = s2 => `M${P.map(([y, w]) => q(s2*w*tk, y)).join(" L")} L${inner.slice().reverse().map(([y, x]) => q(s2*x, y)).join(" L")}Z`;
+  return `<path d="${rail(1)}" fill="${gTop}"/><path d="${rail(-1)}" fill="${gTop}"/>`
+       + `<path data-relief="sunk" d="M${inner.map(([y, x]) => q(x, y)).join(" L")} L${inner.slice().reverse().map(([y, x]) => q(-x, y)).join(" L")}Z" fill="${floor}"/>`;
+}
 function facetHand(h, prof, W, ctx){
   const L = h.length, T = h.tail || 0;
   const MAT = handMat(h), MM = HAND_MATERIAL[MAT] || HAND_MATERIAL["polished steel"], core = handCore(h);
   const flat = FACET_FLAT.has(h.style);
+  /* the share of each half-width that is flat table; an F77 hand is mostly
+     table, with only a narrow bevel down each outer edge */
+  const tk = h.style === "f77" || h.style === "f77-seconds" ? 0.72 : 0.42;
   /* light across the hand decides which side is bright, and how bright */
   let across = 0.8, sgn = 1;
   if(ctx){ const ar = (ctx.angle||0)*Math.PI/180; const llx = ctx.lx*Math.cos(ar) + ctx.ly*Math.sin(ar); sgn = llx >= 0 ? 1 : -1; across = Math.min(1, Math.max(0.6, Math.abs(llx)*1.15 + 0.15)); }
   const P = prof.map(([y, k]) => [y, k*W]);
   const q = (x, y) => `${f(x,3)} ${f(y,3)}`;
   const side = s2 => P.map(([y, w]) => q(s2*w, y)).join(" L");
-  const top = s2 => P.map(([y, w]) => q(s2*w*0.42, y)).join(" L");
+  const top = s2 => P.map(([y, w]) => q(s2*w*tk, y)).join(" L");
   const tipW = P[P.length-1][1];
   const lite = MM.lite, dark = MM.dark;
   const C = (k1, k2) => mix(core, k1 > 0 ? lite : dark, Math.abs(k1)*k2);
@@ -8839,14 +8943,15 @@ function facetHand(h, prof, W, ctx){
   let out = "";
   if(flat){
     /* bevel, table, bevel */
-    const tr = P.map(([y, w]) => q(w*0.42, y)).reverse().join(" L"), tl = P.map(([y, w]) => q(-w*0.42, y)).reverse().join(" L");
+    const tr = P.map(([y, w]) => q(w*tk, y)).reverse().join(" L"), tl = P.map(([y, w]) => q(-w*tk, y)).reverse().join(" L");
     out += `<path d="M${side(1)} L${tr}Z" fill="${fR}"/>`;
     out += `<path d="M${side(-1)} L${tl}Z" fill="${fL}"/>`;
     /* a Royal Oak hand's table is cut through where its lume channel or its
        counterweight slot goes, so the 3D view can sink the lume and see
        through the slot; every other hand's table is whole */
-    const hole = roHole(h, L, T, W, q);
-    out += `<path d="M${top(1)} L${P.slice().reverse().map(([y, w]) => q(-w*0.42, y)).join(" L")}Z${hole}" fill="${gTop}"${hole ? ` fill-rule="evenodd"` : ""}/>`;
+    const hole = roHole(h, L, T, W, q) || f77Hole(h, L, W, q);
+    if(h.style === "f77") out += f77Rails(h, P, L, T, W, q, gTop, mix(core, dark, .7));
+    else out += `<path d="M${top(1)} L${P.slice().reverse().map(([y, w]) => q(-w*tk, y)).join(" L")}Z${hole}" fill="${gTop}"${hole ? ` fill-rule="evenodd"` : ""}/>`;
     out += `<path d="M${top(1)}" fill="none" stroke="${mix(core, lite, .9)}" stroke-opacity=".55" stroke-width="0.022"/>`
          + `<path d="M${top(-1)}" fill="none" stroke="${mix(core, dark, .5)}" stroke-opacity=".35" stroke-width="0.022"/>`;
   }else{
@@ -8869,7 +8974,21 @@ function facetHand(h, prof, W, ctx){
       out += `<path data-relief="skip" d="M${q(-sgn*(c.hw + wl*0.5), c.y0)} L${q(-sgn*(c.hw + wl*0.5), c.y1)}" fill="none" stroke="${lite}" stroke-opacity=".6" stroke-width="0.018"/>`;
     }
   }
-  if(h.lume && h.style !== "royal-oak" && h.style !== "ro-seconds"){
+  if((h.style === "f77" || h.style === "f77-seconds") && h.lume){
+    /* The F77's lume sits in the channel between the rails (on the seconds
+       hand, in the frame of its plot): a dark wall round it, its edge on
+       the light's side in the wall's shadow, the far wall catching the
+       light. Only the lume itself is solid in the 3D view. */
+    const c = h.style === "f77" ? f77Lume(L, W) : (p => p && {y0:-p.lume.y0, y1:-p.lume.y1, hw:p.lume.hw})(f77Plot(L, W));
+    const wl = 0.025, rect = (hw, y0, y1, x0) => `M${q(x0 ?? -hw, y0)} L${q(hw, y0)} L${q(hw, y1)} L${q(x0 ?? -hw, y1)}Z`;
+    if(c && c.y0 - c.y1 > W*(h.style === "f77" ? 1 : 0.5)){
+      out += `<path data-relief="skip" d="${rect(c.hw + wl, c.y0 + wl, c.y1 - wl)}" fill="${mix(core, dark, .7)}"/>`;
+      out += `<path data-relief="lume" d="${rect(c.hw, c.y0, c.y1)}" fill="${F77_LUME}"/>`;
+      out += `<path data-relief="skip" d="${rect(sgn*c.hw, c.y0, c.y1, sgn*(c.hw - Math.min(0.05, c.hw*0.3)))}" fill="${dark}" fill-opacity=".22"/>`;
+      out += `<path data-relief="skip" d="M${q(-sgn*(c.hw + wl*0.5), c.y0)} L${q(-sgn*(c.hw + wl*0.5), c.y1)}" fill="none" stroke="${lite}" stroke-opacity=".6" stroke-width="0.016"/>`;
+    }
+  }
+  if(h.lume && h.style !== "royal-oak" && h.style !== "ro-seconds" && h.style !== "f77" && h.style !== "f77-seconds"){
     /* a lume channel in the body, inset from the edges, from a quarter of the way out to near the point */
     const pts = P.filter(([y]) => y <= -L*0.24 && y >= -L*0.86);
     const at = y => { for(let i = 1; i < P.length; i++){ const [y0, w0] = P[i-1], [y1, w1] = P[i]; if(y <= y0 && y >= y1) return w0 + (w1-w0)*(y-y0)/((y1-y0)||1); } return 0; };
@@ -10346,7 +10465,7 @@ function handSchema(k,title){
     ...HAND_VEC_NAMES.map(n=>"vector · "+n),
     "pomme-ouverte","pomme-pleine","pomme-facetee",
     "english","a-tact","retrograde","counter",
-    "day-date","dd-seconds","royal-oak","ro-seconds","sword","syringe","dauphine","feuille","leaf","baton","alpha","pencil","obelisque","cathedral","mercedes","stick"
+    "day-date","dd-seconds","royal-oak","ro-seconds","f77","f77-seconds","sword","syringe","dauphine","feuille","leaf","baton","alpha","pencil","obelisque","cathedral","mercedes","stick"
   ];
   return {title, hint:"Length runs from the centre of the movement to the tip. The pomme settings drive the whole Breguet family.", fields:()=>[
     /* The linked state has to be obvious: you are either editing the whole
@@ -14356,7 +14475,7 @@ const GWORD = {ar:{
   "Standard (4)":"قياسي (4)", "Numeral":"رقم", "Index":"مؤشر", "Accent index":"مؤشر مميّز", "Empty":"فارغ",
   "Day window":"نافذة اليوم", "Date + magnifier":"التاريخ والمكبّر", "Under a window":"تحت نافذة", "Apply to all free hours":"طبّقه على كل الساعات الخالية",
   /* hands */
-  "Day-date":"Day-Date", "Royal Oak":"رويال أوك", "Royal Oak seconds":"ثواني رويال أوك", "Dauphine":"دوفين", "Sword":"سيف", "Leaf":"ورقة", "Feuille":"فوي", "Alpha":"ألفا", "Pencil":"قلم", "Obelisk":"مسلّة",
+  "Day-date":"Day-Date", "Royal Oak":"رويال أوك", "Royal Oak seconds":"ثواني رويال أوك", "Nivada F77":"نيفادا F77", "Nivada F77 seconds":"ثواني نيفادا F77", "Dauphine":"دوفين", "Sword":"سيف", "Leaf":"ورقة", "Feuille":"فوي", "Alpha":"ألفا", "Pencil":"قلم", "Obelisk":"مسلّة",
   "Syringe":"حقنة", "Breguet":"بريغيه", "Mercedes":"مرسيدس", "Lume strip":"شريط مضيء", "All hand settings":"كل إعدادات العقارب",
   "Seconds hand":"عقرب الثواني", "Needle":"إبرة", "Lollipop":"دائرة", "Arrow":"سهم", "Matching":"مطابق", "Counterweight":"الذيل",
   "Disc":"قرص", "Ring":"حلقة", "Seconds hand metal":"معدن عقرب الثواني",
@@ -14427,7 +14546,7 @@ const GLOSS_OPT = {matte:"Matte", gloss:"Gloss", sunburst:"Sunburst", guilloche:
   sandblasted:"Sandblasted", enamel:"Enamel", lacquer:"Lacquer", stone:"Stone", metallic:"Metallic", circular:"Circular brushed",
   mop:"Pearl sheen", "mother of pearl":"Mother of pearl", none:"None", railroad:"Railroad", ticks:"Ticks", dots:"Dots", beads:"Beads", dashes:"Dashes",
   "dd-seconds":"Long needle", "pomme-ouverte":"Breguet", obelisque:"Obelisk", "day-date":"Day-date", "printed":"Printed",
-  "royal-oak":"Royal Oak", "ro-seconds":"Royal Oak seconds",
+  "royal-oak":"Royal Oak", "ro-seconds":"Royal Oak seconds", "f77":"Nivada F77", "f77-seconds":"Nivada F77 seconds",
   "double printed":"Raised print", "applied metal":"Applied metal", "polished steel":"Steel", "blued steel":"Blued steel",
   "blackened steel":"Black", "yellow gold":"Gold"};
 const glossOpt = o => typeof o !== "string" ? o : (GLOSS_OPT[o] || (/^[a-z]/.test(o) ? o[0].toUpperCase() + o.slice(1) : o));
@@ -15709,7 +15828,7 @@ Object.assign(GWORD.ar, {
       const hh = S.hHand;
       const METALS6 = [["polished steel","Steel"],["white gold","White gold"],["blued steel","Blued steel"],["yellow gold","Gold"],["rose gold","Rose gold"],["blackened steel","Black"]];
       if(tab === "shape"){
-        const styles = [["day-date","Day-date"],["royal-oak","Royal Oak"],["dauphine","Dauphine"],["baton","Baton"],["sword","Sword"],["leaf","Leaf"],["feuille","Feuille"],["alpha","Alpha"],["pencil","Pencil"],["obelisque","Obelisk"],["syringe","Syringe"],["pomme-ouverte","Breguet"],["mercedes","Mercedes"]];
+        const styles = [["day-date","Day-date"],["royal-oak","Royal Oak"],["f77","Nivada F77"],["dauphine","Dauphine"],["baton","Baton"],["sword","Sword"],["leaf","Leaf"],["feuille","Feuille"],["alpha","Alpha"],["pencil","Pencil"],["obelisque","Obelisk"],["syringe","Syringe"],["pomme-ouverte","Breguet"],["mercedes","Mercedes"]];
         let h = `<div class="gCards">${styles.map(([v,l]) => `<button type="button" class="gCard ${hh.style===v?"on":""}" data-ghand="${v}"><div class="gPic">${handPic(v)}</div><div class="gName">${gW(l)}</div></button>`).join("")}</div>`;
         h += `<h3>${gW("Metal")}</h3>` + chips("hands.material", METALS6, hh.material || "polished steel");
         h += toggle("hands.lume", "Lume strip", !!hh.lume);
@@ -15717,8 +15836,8 @@ Object.assign(GWORD.ar, {
       }
       let h = toggle("sHand.on", "Seconds hand", S.sHand.on);
       if(S.sHand.on){
-        const sh = S.sHand, curTip = sh.style === "dd-seconds" ? "dd" : sh.style === "ro-seconds" ? "ro" : sh.style !== "stick" ? "match" : (sh.secTip || "needle");
-        h += `<div class="gCards">${[["dd",gT("sec.long")],["ro","Royal Oak"],["needle","Needle"],["lollipop","Lollipop"],["arrow","Arrow"],["match","Matching"]].map(([v,l]) =>
+        const sh = S.sHand, curTip = sh.style === "dd-seconds" ? "dd" : sh.style === "ro-seconds" ? "ro" : sh.style === "f77-seconds" ? "f77" : sh.style !== "stick" ? "match" : (sh.secTip || "needle");
+        h += `<div class="gCards">${[["dd",gT("sec.long")],["ro","Royal Oak"],["f77","Nivada F77"],["needle","Needle"],["lollipop","Lollipop"],["arrow","Arrow"],["match","Matching"]].map(([v,l]) =>
           `<button type="button" class="gCard ${v===curTip?"on":""}" data-gsec="${v}"><div class="gPic">${secPic(v)}</div><div class="gName">${gW(l)}</div></button>`).join("")}</div>`;
         if(sh.style === "stick") h += `<h3>${gW("Counterweight")}</h3>` + chips("sHand.secTail", [["disc","Disc"],["ring","Ring"],["none","None"]], sh.secTail || "disc");
         h += `<h3>${gW("Seconds hand metal")}</h3>` + chips("sHand.material", METALS6.concat([["flame blue","Flame blue"],["gilt","Gilt"]]), sh.material || "polished steel");
@@ -15848,8 +15967,8 @@ Object.assign(GWORD.ar, {
     return memo("sec|" + tip + "|" + keyOf(S, ["sHand.style","sHand.secTip","sHand.width","sHand.tail","text","meta.name","tpl","day","date"]) + (tip === "match" ? S.hHand.style : ""), () => {
       try{
         const st = clone(S); st.hHand = {...st.hHand, on:false}; st.mHand = {...st.mHand, on:false};
-        st.sHand = {...st.sHand, on:true, style: tip === "match" ? S.hHand.style : tip === "dd" ? "dd-seconds" : tip === "ro" ? "ro-seconds" : "stick", secTip: tip === "match" ? "needle" : tip,
-          width: tip === "match" ? 0.2 : tip === "dd" ? 0.25 : tip === "ro" ? 0.19 : Math.min(st.sHand.width || 0.16, 0.2), tail: tip === "dd" ? 4.9 : tip === "ro" ? 6.3 : st.sHand.tail};
+        st.sHand = {...st.sHand, on:true, style: tip === "match" ? S.hHand.style : tip === "dd" ? "dd-seconds" : tip === "ro" ? "ro-seconds" : tip === "f77" ? "f77-seconds" : "stick", secTip: tip === "match" ? "needle" : tip,
+          width: tip === "match" ? 0.2 : tip === "dd" ? 0.25 : tip === "ro" ? 0.19 : tip === "f77" ? 0.14 : Math.min(st.sHand.width || 0.16, 0.2), tail: tip === "dd" ? 4.9 : tip === "ro" ? 6.3 : tip === "f77" ? 3.7 : st.sHand.tail};
         st.meta = {...st.meta, time:{h:0, m:0, s:52.5}};          // laid corner to corner, so the tip and tail both show
         const svg = buildSVG(st, {scope:"hands", tag:"gs"+tip, material:false});
         return svg.replace(/viewBox="[^"]*"/, `viewBox="-11.5 -11.5 14 14"`);
@@ -16277,6 +16396,7 @@ Object.assign(GWORD.ar, {
         if(tip === "match"){ sh.secTip = "match"; sh.style = S.hHand.style; sh.width = 0.2; }
         else if(tip === "dd"){ sh.secTip = "dd"; sh.style = "dd-seconds"; sh.width = 0.25; sh.tail = +(caseOf(S).opening/2*0.31).toFixed(2); }
         else if(tip === "ro"){ sh.secTip = "ro"; sh.style = "ro-seconds"; sh.width = 0.19; sh.tail = +(caseOf(S).opening/2*0.40).toFixed(2); }
+        else if(tip === "f77"){ sh.secTip = "f77"; sh.style = "f77-seconds"; sh.width = 0.14; sh.tail = +(caseOf(S).opening/2*0.27).toFixed(2); }
         else { sh.secTip = tip; sh.style = "stick"; if(!(sh.width <= 0.22)) sh.width = 0.18; }
         commit(); paintAll(); });
       return;
@@ -16345,8 +16465,24 @@ Object.assign(GWORD.ar, {
       Object.assign(S.sHand, {style:"ro-seconds", secTip:"ro", secTail:"none", width:0.19, reach:"free", length:+(Rr*0.92).toFixed(2), tail:+(Rr*0.40).toFixed(2), lume:false});
       for(const k of ["hHand","mHand","sHand"]){ const m = S[k].material; if(!m || m === "polished steel") S[k].material = "white gold"; }
     }
+    /* The F77 comes as a set as well, as on Nivada Grenchen's F77 37 mm:
+       measured in the owner's photograph as shares of the opening radius R
+       (the sources and the full outline are with FACET["f77"]). Minute
+       hand to 0.87R, about 0.9 mm wide; hour hand to 0.68 of the minute
+       (0.59R), about 1.0 mm wide; each with a 0.18R tail. The seconds is a
+       0.22 mm needle to 0.88R with a framed lume plot just inside the
+       markers and a flat counterweight reaching 0.27R behind the centre.
+       The lume is on, in the hands' channels and the seconds plot. The
+       F77's hands are steel, so the metal is left as it is: steel stays
+       steel, and a gold, blued or black hand keeps its colour. */
+    if(hs === "f77"){
+      const Rr = caseOf(S).opening/2;
+      Object.assign(S.mHand, {reach:"free", length:+(Rr*0.87).toFixed(2), tail:+(Rr*0.18).toFixed(2), width:0.45, lume:true});
+      Object.assign(S.hHand, {reach:"share of the minute hand", hourShare:0.68, tail:+(Rr*0.18).toFixed(2), width:0.50, lume:true});
+      Object.assign(S.sHand, {style:"f77-seconds", secTip:"f77", secTail:"none", width:0.14, reach:"free", length:+(Rr*0.88).toFixed(2), tail:+(Rr*0.27).toFixed(2), lume:true});
+    }
     /* the seconds hand is a fine needle on every one of these watches, whatever shape the hour and minute take */
-    if(S.sHand && hs !== "day-date" && hs !== "royal-oak"){ if(S.sHand.secTip === "match"){ S.sHand.style = hs; } else if(S.sHand.style !== "dd-seconds" && S.sHand.style !== "ro-seconds"){ S.sHand.style = "stick"; if(!(S.sHand.width <= 0.35)) S.sHand.width = 0.16; } }
+    if(S.sHand && hs !== "day-date" && hs !== "royal-oak" && hs !== "f77"){ if(S.sHand.secTip === "match"){ S.sHand.style = hs; } else if(S.sHand.style !== "dd-seconds" && S.sHand.style !== "ro-seconds" && S.sHand.style !== "f77-seconds"){ S.sHand.style = "stick"; if(!(S.sHand.width <= 0.35)) S.sHand.width = 0.16; } }
     commit(); paintAll();
   }
   /* Done on the Finish step keeps a version under the name above, then

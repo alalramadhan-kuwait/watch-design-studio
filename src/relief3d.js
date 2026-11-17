@@ -157,7 +157,9 @@ function pose(mode){
 /* A path may say how it stands up with data-relief: "skip" is drawing that
    only reads in 2D (a lume channel's shaded wall, a polished end facet),
    "lume" is lume set into a channel cut through the hand's table, so it is
-   laid lower than the metal round it and in its own material. */
+   laid lower than the metal round it and in its own material; "sunk" is
+   metal set below the rest, the floor of a channel between two rails (the
+   F77's hands), so the channel reads as a groove. */
 const lumeMaterial=new THREE.MeshStandardMaterial({color:'#e3ead8',roughness:.6,metalness:0,envMapIntensity:.4});
 function extrudeSVG(svg,material,depth,bevel,z,parent=model,segments=2){
   const data=loader.parse(svg),group=new THREE.Group();parent.add(group);group.scale.y=-1;group.position.z=z;
@@ -165,8 +167,9 @@ function extrudeSVG(svg,material,depth,bevel,z,parent=model,segments=2){
     if(path.userData?.style?.fill==='none')continue;
     const relief=path.userData?.node?.getAttribute?.('data-relief');
     if(relief==='skip')continue;
-    const lume=relief==='lume';
+    const lume=relief==='lume',sunk=relief==='sunk';
     for(const shape of SVGLoader.createShapes(path)){
+      if(sunk){mesh(new THREE.ExtrudeGeometry(shape,{depth:depth*.35,bevelEnabled:false,curveSegments:18,steps:1}),material,group);continue;}
       if(lume){mesh(new THREE.ExtrudeGeometry(shape,{depth:depth*.55,bevelEnabled:false,curveSegments:18,steps:1}),lumeMaterial,group);continue;}
       mesh(new THREE.ExtrudeGeometry(shape,{depth,bevelEnabled:bevel>0,bevelSize:bevel,bevelThickness:bevel*.65,bevelOffset:-bevel*.5,bevelSegments:segments,curveSegments:18,steps:1}),material,group);
     }

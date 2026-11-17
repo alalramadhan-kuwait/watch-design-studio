@@ -46,7 +46,7 @@ test('the style exists, with its matching seconds hand, wherever hands are chose
   // simple mode's Hands step: a card with a picture, and a seconds card
   assert.match(source, /const styles = \[\["day-date","Day-date"\],\["royal-oak","Royal Oak"\],/);
   assert.match(source, /data-ghand="\$\{v\}"><div class="gPic">\$\{handPic\(v\)\}/);
-  assert.match(source, /\["ro","Royal Oak"\],\["needle","Needle"\]/);
+  assert.match(source, /\["ro","Royal Oak"\],\["f77","Nivada F77"\],\["needle","Needle"\]/);
   assert.match(source, /sh\.style === "ro-seconds" \? "ro"/, 'the seconds card shows as chosen');
   // names, in English and Arabic
   assert.match(source, /"royal-oak":"Royal Oak", "ro-seconds":"Royal Oak seconds",/);
