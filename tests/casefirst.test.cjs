@@ -80,28 +80,44 @@ test('cards show a photographed case in its photograph, with its own ids', () =>
   assert.match(source, /tag:o\.insTag \|\| "ins", matPx:o\.matPx, material:o\.material\}/, 'the main view keeps "ins"');
 });
 
-test('the F77 is drawn as an octagon measured off its photograph', () => {
+test('the F77 is drawn to Nivada\'s front drawing, with the sheet\'s figures', () => {
   const ctx = vm.createContext({});
   vm.runInContext(chunk('const VERNOY_CASE = {', 'const CASE_SPEC = new Proxy') + '\nthis.K = TK_NIVADA;', ctx);
   const K = ctx.K, F = K.f77, Z = F.bezel, B = F.body;
   assert.equal(K.outline, 'f77');
   assert.equal(K.shape, 'round', 'still a round opening for everything else that asks');
-  assert.ok(Math.abs(2 * Z.h - K.bezelOD) < 0.2, 'the sides are the Ø36.0 across the flats');
-  assert.ok(Z.d < Z.h && Z.h < Z.v, 'short diagonals, the sides a little in from the top and bottom');
-  assert.ok(Z.flat / 2 > K.bezelID / 2 && Z.flat / 2 < Z.h - Z.chamfer, 'the brushed top runs between the bevel and the chamfer');
-  // the side curve meets the flank where they are said to
-  const arc = B.bulge - (B.sideR - Math.sqrt(B.sideR ** 2 - B.sideY ** 2));
-  assert.ok(Math.abs(arc - B.sideX) < 0.02, String(arc));
-  assert.ok(B.top > Z.v && B.lugEnd * 2 < K.lugToLug, 'the lug ends inside 45.00 lug to lug');
+  // the dimensioned figures, as written on the sheet
+  assert.equal(2 * Z.rx, K.flat, 'the bezel is the 38.00 across at 3 and 9');
+  assert.equal(2 * B.lugEnd, K.lugToLug); assert.equal(2 * B.lugOut, K.lugOuter); assert.equal(2 * F.lugIn, K.lugWidth);
+  assert.equal(F.screws.d, 1.5);
+  // a near-round bezel, a little wider than tall, touching the case's edge between the lug blocks at 12 and 6
+  assert.ok(Z.ry < Z.rx && Z.rx - Z.ry < 0.6, 'near round');
+  assert.equal(Z.ry, B.top);
+  assert.ok(Z.chRx < Z.rx && Z.chRy < Z.ry && Z.rx - Z.chRx < 0.8, 'a polished chamfer round its edge');
+  assert.ok(K.bezelID / 2 < Z.flat / 2 && Z.flat / 2 < Z.chRy, 'the brushed top between the bevel to the crystal and the chamfer');
+  assert.ok(K.opening < K.bezelID, 'the flange falls inside the bezel to the opening');
   // every screw head on the brushed top, clear of the chamfer and of the bevel to the crystal
-  const S = F.screws, heads = [[S.along, Z.v - S.inTop], [Z.h - S.inSide, S.along]];
+  const S = F.screws, rad = Math.PI / 180;
+  const heads = [[S.r * Math.sin(S.top * rad), S.r * Math.cos(S.top * rad)], [S.r * Math.cos(S.side * rad), S.r * Math.sin(S.side * rad)]];
   for (const [x, y] of heads) {
     assert.ok(Math.hypot(x, y) - S.d / 2 > Z.flat / 2, 'outside the bevel');
-    assert.ok(Math.max(x, y) + S.d / 2 < Math.max(Z.h, Z.v) - Z.chamfer, 'inside the chamfer');
+    assert.ok(Math.hypot(x / Z.chRx, y / Z.chRy) < 1 - (S.d / 2) / Z.chRx, 'inside the chamfer');
   }
-  assert.ok(F.crown.x0 < B.bulge && F.crown.x1 - F.crown.x0 > 2.5, 'the crown stands out of the case at 3');
+  // two near 12 and two near 6, two either side of 3 and of 9
+  assert.ok(S.top > 15 && S.top < 30 && S.side > 15 && S.side < 30);
+  // the flank from the lug corner touches the bezel tangentially: one point in common, at about 21° from upright
+  let lo = 0, hi = Math.PI / 2;
+  for (let i = 0; i < 50; i++) { const m = (lo + hi) / 2, x = Z.rx * Math.cos(m), y = Z.ry * Math.sin(m);
+    ((B.lugOut - x) * Math.cos(m) / Z.rx + (B.lugEnd - y) * Math.sin(m) / Z.ry) > 0 ? (hi = m) : (lo = m); }
+  const TX = Z.rx * Math.cos(lo), TY = Z.ry * Math.sin(lo), ang = Math.atan((TX - B.lugOut) / (B.lugEnd - TY)) / rad;
+  assert.ok(ang > 19 && ang < 23, String(ang));
+  assert.ok(B.polish.to > TY && B.polish.to < B.lugEnd, 'the polished strip ends on the flank, above the tangent');
+  // the crown stands out of the bezel at 3, its barrel Ø6.00, a narrower collar at its root
+  assert.ok(F.crown.x0 > Z.rx && F.crown.x1 - F.crown.xb > 2.5 && F.crown.collar < K.crownD);
   assert.deepEqual({ ...K.photoOwn }, { finish: 'brushed', strapColor: '#1E1E20' });
   // drawn by its own function, picked where the round case is
   assert.match(source, /\(K\.outline === "f77" \? f77Case : roundCase\)\(\);/);
-  assert.doesNotMatch(chunk('  const f77Case = () => {', '  /* ---------------- CASE + STRAP (RD26-0172'), /filter=/, 'no SVG filters');
+  const fn = chunk('  const f77Case = () => {', '  /* ---------------- CASE + STRAP (RD26-0172');
+  assert.doesNotMatch(fn, /filter=/, 'no SVG filters');
+  assert.doesNotMatch(fn, /octa/, 'no octagon any more');
 });

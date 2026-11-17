@@ -200,6 +200,48 @@ stored in a design file do not change. In the full editor at laptop widths
 the toolbar sits tighter, and on a narrower window it takes a second row
 rather than pushing Share and Export off the screen.
 
+## The F77 to Nivada's drawings and sheet (v4.7.0)
+
+Nivada Grenchen's design sheet 103277_3 (16 July 2026) and its front and
+side drawings replace the estimates the Time Keeper × Nivada was built on.
+
+- **The figures.** 38.00 across the case at 3 and 9 (not the published
+  37), 46.20 lug to lug, 22.80 across the lug blocks, 14.30 between them,
+  12.20 high over the domed crystal, the Ø28.00 dial opening (27.50
+  before), a Ø6.00 coin-edge crown, eight Ø1.50 screws, the Soprod P024
+  automatic without date, a black flat rubber strap by Delugs. Glass, dial
+  blank (now Ø29.00), movement holder and the bezel and middle heights stay
+  estimates; the case's note in `index.html` says which is which. The Case
+  card reads 38 mm.
+- **The drawn case** (photograph off) is now Nivada's front drawing rather
+  than the octagon read off the render: a near-round bezel ring (38.00
+  across at 3 and 9, 37.10 from 12 to 6) with a polished chamfer round its
+  edge, brushed upright, and a polished bevel to the crystal at Ø30.26;
+  eight hex-socket screws on R17.06, two either side of 12 and of 6 at
+  23.8° and two either side of 3 and of 9 at 22.2°; straight flat-topped
+  lug blocks; flanks running from the lug blocks to meet the bezel
+  tangentially, 21° from upright, with a polished strip down their outer
+  edge and the lug tops and shoulders brushed upright; the crown with its
+  collar and no guards. The drawing is not to scale (its dimension lines
+  disagree by up to 15 %), so the written figures are used as written and
+  the rest is measured at the scale its round parts agree on (17.40 px/mm).
+- **The photograph** is unchanged and still lines up: its opening's place
+  in the picture is what was measured, so the same 609.8 px is now 28.00
+  mm, and the dial fills it exactly. The drawn case and the photograph
+  agree on the opening, the 38 across, the flanks' angle and the screws to
+  within half a millimetre; they differ where the render and the sheet
+  differ: the render's bezel is twelve-sided, and its lug blocks are wider
+  and shorter than the sheet's.
+- **Saved designs** on this case, laid out for the 27.50 opening, are
+  refitted to 28.00 when opened (every radial figure × 1.018, as changing
+  case does), once.
+- **The reference design** (`designs/timekeeper-nivada.json`, the sheet's
+  Version A) is refitted the same way, with the hands at the sheet's
+  lengths: hour and minute W36017, 8.5 and 12.0 mm; seconds 13.0 mm.
+
+Every other preset and file in `designs/` draws exactly as in 4.6.0
+(buildSVG and buildTemplate compared byte for byte, on every other case).
+
 ## How the lines are made: engraved, gloss, brushed, UV (v4.6.0)
 
 From the owner, on the Time Keeper × Nivada: "Is there an option for the
@@ -916,7 +958,7 @@ version and build you have.
 ## Cases
 
 A design names the case it is drawn for. **Case → Case** offers these, each fixed
-to its factory drawings (the Time Keeper × Nivada to published figures and estimates until a drawing arrives):
+to its factory drawings (the Time Keeper × Nivada to Nivada's sheet, with a few estimates):
 
 | case | what it is |
 |---|---|
@@ -924,7 +966,7 @@ to its factory drawings (the Time Keeper × Nivada to published figures and esti
 | NOREL B6098G-A1 · R3 | Blue Creations' 41 mm round case as drawn: 40.0 / 34.8 fluted bezel (72 V flutes 0.41 mm deep, taken from their STEP; the photograph uses that bezel), Ø32.5 opening, President bracelet, Sellita SW240-1 day-date |
 | NOREL B6098G-A1 · Concept D | the proposal: a 41.0 bezel flush with the case, 33.8 inside (3.6 mm of flutes and land a side), Ø31.4 opening, 2.5× cyclops |
 | NOREL B6098G-A1 · R4 (3 Nov) | Blue Creations' assembly drawing of 2026.11.03, Concept D taken up: Ø41 bezel flush, (3.40) ring to Ø34.2, Ø33.5 glass, Ø31.4 opening, Ø32.5 dial, 11.2 mm; a Ø7.0 × 5.5 cut-circle cyclops centred 10.0 mm out (date at 9.95) |
-| Time Keeper × Nivada · F77 | Nivada Grenchen F77, Time Keeper edition: 37 mm, 45 lug to lug, 12.6 high (published); Ø27.5 opening, plain bezel with eight screws, rubber strap and the rest estimated from the render; no calendar |
+| Time Keeper × Nivada · F77 | Nivada Grenchen F77, Time Keeper edition, from Nivada's sheet 103277_3: 38 mm, 46.2 lug to lug, 22.8 across the lug blocks, 14.3 between them, 12.2 high, Ø28.0 opening, flat bezel with eight Ø1.5 screws, Ø6.0 crown, Soprod P024 without date, rubber strap; glass, dial blank and heights estimated; no calendar |
 
 Changing the case refits the dial: every radial measurement — chapter ring,
 tracks, zones, borders, numerals, indices, logo position — is scaled by the

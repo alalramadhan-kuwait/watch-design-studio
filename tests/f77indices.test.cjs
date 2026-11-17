@@ -28,7 +28,7 @@ vm.runInContext(
   + chunk('const F77_LUME', ';') + ';'
   + '\nthis.g={METALS,F77_IX,F77_LUME,f77Bars,f77Index,f77IndexSet,indexShape,applyMarkerPreset,markerPresetOf,migrateMarkers,hourPlan};', ctx);
 const G = ctx.g;
-const R = 13.75;                                         // the F77's opening radius, mm
+const R = 13.75;                                         // a fixture opening radius, mm (the shares do not depend on it)
 const ix = (o = {}) => ({ on: true, style: 'f77', radius: 0.808*R, length: 0.28*R, width: 0.078*R, color: '#FFFFFF', applied: true, count: 12, metal: 'polished steel', ...o });
 const LA = 135*Math.PI/180;
 const draw = (o, a = 30, la = LA) => { let n = 0; return G.indexShape(ix(o), a, k => k + (n++), [], la); };

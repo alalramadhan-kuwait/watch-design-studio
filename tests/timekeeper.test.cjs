@@ -36,8 +36,12 @@ test('the Time Keeper × Nivada is a case of its own, beside the NOREL', () => {
   assert.equal(caseOf({ case: { model: K.model } }), K);
   assert.equal(caseOf({ case: { model: 'no such case' } }), VERNOY_CASE, 'an unknown case still falls back to the Vernoy');
   assert.equal(K.shape, 'round');
-  // the published F77 37 mm figures
-  assert.equal(K.flat, 37.0); assert.equal(K.lugToLug, 45.0); assert.equal(K.height, 12.6); assert.equal(K.wr, '10 ATM');
+  // the figures on Nivada's sheet 103277_3 (16 July 2026)
+  assert.equal(K.flat, 38.0); assert.equal(K.lugToLug, 46.2); assert.equal(K.lugOuter, 22.8); assert.equal(K.lugWidth, 14.3);
+  assert.equal(K.height, 12.2); assert.equal(K.opening, 28.0); assert.equal(K.crownD, 6.0); assert.equal(K.wr, '10 ATM');
+  assert.equal(K.f77.screws.d, 1.5);
+  assert.equal(K.movement, 'Soprod P024 automatic, without date');
+  assert.match(K.tol, /Nivada sheet 103277_3/);
   // surfaces stack outside in, and the crystal opening sits inside the bezel
   assert.ok(K.opening < K.bezelID && K.bezelID < K.bezelOD && K.bezelOD <= K.flat);
   assert.ok(K.opening < K.dialD, 'the dial blank runs under the opening');
@@ -66,8 +70,11 @@ test('the case photograph is 2:3, 1040 × 1560, and its opening is measured insi
   const r = C.dia / 2 * C.w / 100, x = C.cx * C.w / 100, y = C.cy * C.h / 100;
   assert.ok(x - r > 0 && x + r < C.w && y - r > 0 && y + r < C.h);
   assert.ok(C.dia > 50 && C.dia < 70, String(C.dia));
-  // and the scale it implies puts the 37 mm case at about four fifths of the width
+  // the opening's place in the picture did not move when the sheet made it 28.00 (it was 27.50):
+  // the same 609.8 px is now 21.78 px a millimetre, which puts the 38 mm case at about four fifths of the width
+  assert.equal(C.dia, 58.63); assert.equal(C.cx, 50.00); assert.equal(C.cy, 47.84);
   const pxmm = C.w * C.dia / 100 / K.opening;
+  assert.ok(Math.abs(pxmm - 21.78) < 0.01, String(pxmm));
   assert.ok(Math.abs(pxmm * K.flat / C.w - 0.79) < 0.03, String(pxmm * K.flat / C.w));
   assert.ok(img.length < 400e3, 'small enough to cache');
 });
@@ -86,9 +93,43 @@ test('the design opens on that case with the dial of the reference render', () =
   assert.equal(design.text.line2, 'GRENCHEN'); assert.equal(design.text.foot, 'TIME KEEPER');
   // the reference dial has no minute track and no hour ticks: only the numerals
   assert.equal(design.minute.on, false); assert.equal(design.hour.on, false); assert.equal(design.indices.on, false);
-  // every radial figure fits the Ø27.50 opening
+  // the hands at the sheet's lengths: H/M W36017 8.5 × 12.0, seconds 13.0
+  assert.equal(design.hHand.length, 8.5); assert.equal(design.mHand.length, 12.0); assert.equal(design.sHand.length, 13.0);
+  // the dial refitted from 27.50 to 28.00 with the rest of the design
+  assert.equal(n.radius, 11.404); assert.equal(n.size, 4.022); assert.equal(design.dial.diameter, K.dialD);
+  // every radial figure fits the Ø28.00 opening
   assert.ok(n.radius + n.size / 2 < K.opening / 2);
   assert.ok(design.sHand.length < K.opening / 2);
+});
+
+test('a design saved for the 27.50 opening is refitted to 28.00 when opened, once', () => {
+  const c = vm.createContext({});
+  vm.runInContext(chunk('const VERNOY_CASE = {', 'const CASE_SPEC = new Proxy')
+    + chunk('function rescaleDial(', '/* A dial is laid out for an opening.')
+    + '\nthis.m = migrateCaseFigures;', c);
+  c.clone = o => JSON.parse(JSON.stringify(o));
+  const old = () => ({ case: { model: K.model, locked: true, opening: 27.5, diameter: 37, lugToLug: 45, lugWidth: 21, thickness: 12.6 },
+    dial: { lock: true, diameter: 28.5 }, chapter: {}, minute: { diameter: 27 }, hour: {}, indices: { radius: 13 }, numerals: { radius: 11.2, size: 3.95 },
+    sector: { zones: [] }, borders: {}, cross: {}, sub: {}, text: { logoY: -6.57 }, date: { dist: 9.95 },
+    hHand: { length: 8.1, reach: 'free' }, mHand: { length: 11.7, reach: 'free' }, sHand: { length: 13.4, reach: 'free' } });
+  const st = c.m(old());
+  assert.equal(st.case.opening, 28); assert.equal(st.case.diameter, 38); assert.equal(st.case.lugToLug, 46.2);
+  assert.equal(st.case.lugWidth, 14.3); assert.equal(st.case.thickness, 12.2); assert.equal(st.dial.diameter, 29);
+  assert.equal(st.numerals.radius, +(11.2 * 28 / 27.5).toFixed(3)); assert.equal(st.text.logoY, +(-6.57 * 28 / 27.5).toFixed(3));
+  assert.equal(st.mHand.length, +(11.7 * 28 / 27.5).toFixed(3));
+  // a version's arrays, shared by deep(), are copied, not rescaled where they lie
+  const saved = old(); saved.sector.zones = [{ outerD: 20 }]; const st2 = c.m({ ...saved, sector: { zones: saved.sector.zones } });
+  assert.equal(saved.sector.zones[0].outerD, 20); assert.equal(st2.sector.zones[0].outerD, +(20 * 28 / 27.5).toFixed(3));
+  // opened again, nothing moves
+  assert.equal(JSON.stringify(c.m(JSON.parse(JSON.stringify(st)))), JSON.stringify(st));
+  // a case set by hand, and any other case, are left alone
+  const hand = old(); hand.case.locked = false;
+  assert.equal(JSON.stringify(c.m(JSON.parse(JSON.stringify(hand)))), JSON.stringify(hand));
+  const other = old(); other.case.model = NOREL_R4.model;
+  assert.equal(JSON.stringify(c.m(JSON.parse(JSON.stringify(other)))), JSON.stringify(other));
+  // every route that opens a design passes through it, and changing case uses the same rescale
+  assert.match(chunk('function migrateHands(st){', 'const deep = '), /migrateCaseFigures\(st\);/);
+  assert.match(chunk('function applyCaseModel(from, to){', '/* Persistence'), /rescaleDial\(S, A\.opening, B\.opening, !B\.calendar\);/);
 });
 
 test('the Case step lists both watches, in English and Arabic, and a first visit still opens the NOREL', () => {

@@ -1425,63 +1425,89 @@ const NOREL_R4 = Object.assign({}, NOREL_D, {
 });
 /* Time Keeper × Nivada: a Time Keeper (Kuwait) edition of the Nivada Grenchen
    F77, the integrated steel case with a flat bezel held by eight screws, on a
-   black rubber strap, with no calendar. There is no factory drawing for it
-   yet, so the numbers come from two places. Published for the F77 37 mm:
-   37.00 across the case, 45.00 lug to lug, 12.60 high, 10 ATM, a double-domed
-   sapphire. Everything else is an estimate measured off the owner's front
-   render, scaled so the case is 37.00 wide (19.93 px/mm in the original):
-   the Ø27.50 visible opening, the bezel (Ø36.0 across its flats, Ø28.8 where
-   its polished inner bevel meets the crystal), the 21.0 strap and 26.0 over
-   the lug blocks, the 6.0 crown, the glass, the dial blank and the steel.
-   They are to be replaced by Nivada's figures when a drawing arrives. The
-   drawn case (when the photograph is off) is the F77's own shape, drawn by
-   f77Case from the figures in f77 below. */
+   black rubber strap, with no calendar. Time Keeper's edition is the 38 mm
+   case. The figures marked "sheet" are Nivada's, from their design sheet
+   103277_3 of 16 July 2026 and its dimensioned front drawing: 38.00 across
+   the case at 3 and 9, 46.20 lug to lug, 22.80 across the lug blocks, 14.30
+   between them (the strap's fixing width), 12.20 high over the domed
+   crystal, the Ø28.00 dial opening, the Ø6.00 crown, eight Ø1.50 screws,
+   the Soprod P024 automatic without date, the black flat rubber strap by
+   Delugs, and the finishes. 10 ATM is on the sheet's caseback. The rest
+   (glass, dial blank, movement holder, the bezel's and middle's heights)
+   are estimates until Nivada sends them. The drawn case (when the
+   photograph is off) is drawn by f77Case from the figures in f77 below. */
 const TK_NIVADA = {
   model:"Time Keeper × Nivada · F77", shape:"round", photo:false,
-  ref:"Nivada Grenchen F77 · Time Keeper edition", steel:"S.S 316L (estimate)", wr:"10 ATM",
-  movement:"automatic, calibre to confirm",
-  flat:37.00, diagonal:37.00, rSide:18.50, rCorner:18.50,                // published 37 mm
-  midFlat:37.00, midDiagonal:37.00, midRSide:18.50, midRCorner:18.50,
-  bezelOD:36.00, bezelID:28.80, land:0.50, flutes:0, screws:8,           // estimates: a plain bezel, 8 screws
-  lugToLug:45.00, lugWidth:21.00, lugOuter:26.00, springBar:1.80,        // 45.00 published; the rest estimates
-  height:12.60, bezelH:2.00, midH:6.00,                                  // 12.60 published; bezel and middle estimates
-  opening:27.50, glassSeat:30.00, glassD:29.80, glassT:1.50, glassBevel:"double-domed sapphire, anti-reflective (published); size an estimate",
-  dialD:28.50, dialT:0.40, dialHolder:28.50, dialMat:"brass (estimate)",
-  movHolder:26.00, crownD:6.00, crownTube:2.50, cabochon:0,
-  tol:"estimates from the front render, except 37.00, 45.00, 12.60 and 10 ATM (published for the F77 37 mm)",
-  bracelet:false,
+  ref:"Nivada Grenchen F77 · Time Keeper edition", steel:"stainless steel (grade to confirm)", wr:"10 ATM",
+  movement:"Soprod P024 automatic, without date",                       // sheet
+  flat:38.00, diagonal:38.00, rSide:19.00, rCorner:19.00,                // sheet: 38 mm at 3 and 9
+  midFlat:38.00, midDiagonal:38.00, midRSide:19.00, midRCorner:19.00,
+  /* the bezel ring as measured off the sheet's drawing: 38.00 across at 3
+     and 9 (37.10 from 12 to 6), Ø30.26 inside where it meets the crystal,
+     the polished inner bevel 0.35 wide; plain, eight screws */
+  bezelOD:38.00, bezelID:30.26, land:0.35, flutes:0, screws:8,
+  lugToLug:46.20, lugWidth:14.30, lugOuter:22.80, springBar:1.80,        // sheet
+  height:12.20, bezelH:2.00, midH:6.00,                                  // 12.20 sheet; bezel and middle estimates
+  opening:28.00, glassSeat:30.55, glassD:30.34, glassT:1.50, glassBevel:"domed sapphire, anti-reflective (domed on the sheet); size an estimate",
+  dialD:29.00, dialT:0.40, dialHolder:29.00, dialMat:"brass (estimate)",
+  movHolder:26.00, crownD:6.00, crownTube:2.50, cabochon:0,              // crown Ø6.00 sheet; the P024 is Ø25.6, holder to check against Soprod's data
+  tol:"38.00, 46.20, 22.80, 14.30, 12.20, 28.00, 6.00 crown, 8 × Ø1.50 screws from Nivada sheet 103277_3; other figures estimated",
+  bracelet:false, band:"black rubber, flat (Delugs)",                    // sheet
+  /* the finishes the sheet's drawings name, surface by surface */
+  finishes:{lugTop:"vertical brush", caseShoulder:"vertical brush", bezelTop:"vertical brush", bezelEdge:"polishing",
+            caseFlank:"polishing", crown:"polishing, embossed raised logo", crystal:"domed"},
   /* The owner's front render with the dial artwork taken out: crop 2:3 centred
      on the dial, 1040 × 1560. The opening was found by edge-fitting the dark
      line where the dial meets the flange: Ø548 px of the original 1122 × 1402,
      centred at (556.5, 670.75), which lands at 50.00 / 47.84 % and spans
-     58.63 % of the width here. The flange and the crystal's edge are kept. */
+     58.63 % of the width here. The flange and the crystal's edge are kept.
+     These say where the opening is in the picture, not how big it is, so
+     they did not change when the sheet made the opening 28.00 rather than
+     the 27.50 first estimated: the same 609.8 px is now 28.00 mm, 21.78 px
+     a millimetre rather than 22.17, and a dial drawn for 28.00 fills it
+     exactly. Designs saved for 27.50 are refitted when opened
+     (migrateCaseFigures). */
   photoFile:"./app/case-timekeeper-nivada.jpg", photoCal:{w:1040, h:1560, cx:50.00, cy:47.84, dia:58.63},
   /* What the photograph itself shows, so a choice that matches it can stay
      on the photograph: steel, brushed, on the black rubber strap. */
   photoOwn:{finish:"brushed", strapColor:"#1E1E20"},
-  /* The drawn F77, measured off that photograph at 22.17 px/mm (the Ø27.50
-     opening is 609.8 px), in mm from the dial centre, so the drawing and
-     the photograph line up when the view is switched. The render sits the
-     case about 0.25 mm left of the dial; the drawing is centred. The bezel
-     is an octagon: its top and bottom flats 18.40 from the centre, its
-     sides 18.05 (the Ø36.0 across the flats), its four short diagonals
-     17.95, the corners rounded to 2.0, with a polished chamfer 0.60 wide
-     round its edge and the brushed top running in to Ø30.6, where a
-     polished bevel steps down to the crystal at Ø28.8. Its eight screws sit
-     two to each long flat, 6.45 mm either side of the axis and 2.95 mm in
-     from the edge (2.90 on the sides), heads Ø1.45. The case middle runs
-     straight flanks out from the lug ends (12.13 mm either side of the axis
-     at 22.30) to 17.58 at 7.50, and a shallow curve (R25.67) between them
-     that is 18.70 out at 3 and 9; its edge is a polished bevel 0.75 wide.
-     The lug blocks stand from 7.50 out to the flank, between the case's
-     top edge at 18.60 and their ends at 22.30. The crown is 18.10 to 21.20
-     out at 3, Ø6.0, and the strap is 23.9 wide at the lugs, narrowing to
-     19.4 at 32 mm from the centre. */
+  /* The drawn F77, from the sheet's front drawing (1448 × 1086), in mm
+     from the dial centre. The drawing is not to scale: its dimension lines
+     read 17.29 px/mm for the 38, 17.94 for the 22.8, 18.9 for the 14.3 and
+     16.36 for the 46.2. Its round parts agree with each other (the Ø28
+     opening is 487.5 px and the 38 across the bezel 661 px, 17.40 px/mm),
+     so the dimensioned figures are taken as written and everything else is
+     measured at 17.40 px/mm.
+     - The bezel is a near-round ring, a little wider than tall: 19.00 out
+       at 3 and 9, 18.55 at 12 and 6, where it touches the case's edge
+       between the lug blocks. Its outer edge is a polished chamfer, 0.70
+       wide at 3 and 9 and 0.57 at 12 and 6 (inner edge 18.30 by 17.98).
+       The brushed top runs in to Ø30.96, where a polished bevel steps down
+       to the crystal at Ø30.26; the flange falls from there to the
+       opening.
+     - Eight screws, heads Ø1.50 with a hex socket, on a circle R17.06: two
+       either side of 12 and of 6 at 23.8° from the axis, two either side
+       of 3 and of 9 at 22.2°.
+     - The lug blocks stand straight, flat-topped, from 7.15 (the 14.30
+       between them) out to 11.40 (the 22.80 across them), between the
+       case's top edge at 18.55 and their ends at 23.10 (46.20).
+     - The flanks run straight from the lug blocks' outer corners to the
+       bezel, which they meet tangentially at 3 and 9's side (17.78 out,
+       6.53 from the axis; 21.1° from upright, as the drawing's 0.39 to
+       0.40 slope). The outer strip of each flank is polished: a lens from
+       the lug corner to 9.20 from the axis, 1.5 wide at its widest, its
+       inner edge a curve through (12.80, 13.10) as its control point. The
+       rest, the lug tops and the shoulders round the bezel, is brushed.
+     - The crown is coin-edged, Ø6.00, with a Ø5.05 collar from 19.15 out
+       and the knurled barrel from 19.55 to 22.35. There are no crown
+       guards.
+     The strap is the photograph's, taken in with the lug blocks: 22.50
+     wide at the lugs, 18.40 at 32.6 mm from the centre. */
   outline:"f77",
-  f77:{bezel:{v:18.40, h:18.05, d:17.95, r:2.0, chamfer:0.60, flat:30.60},
-       body:{top:18.60, lugEnd:22.30, flankX:12.13, sideX:17.58, sideY:7.50, bulge:18.70, sideR:25.67, bevel:0.75},
-       lugIn:7.50, screws:{along:6.45, inTop:2.95, inSide:2.90, d:1.45},
-       crown:{x0:18.10, x1:21.20}, strap:{w0:11.95, w1:9.70, y1:32.0}},
+  f77:{bezel:{rx:19.00, ry:18.55, chRx:18.30, chRy:17.98, flat:30.96},
+       body:{top:18.55, lugEnd:23.10, lugOut:11.40, polish:{to:9.20, c:[12.80, 13.10]}},
+       lugIn:7.15, screws:{r:17.06, top:23.8, side:22.2, d:1.50},
+       crown:{x0:19.15, xb:19.55, x1:22.35, collar:5.05}, strap:{w0:11.25, w1:9.20, y1:32.6}},
   back:["NIVADA GRENCHEN · TIME KEEPER", "ALL STAINLESS STEEL", "10 ATM WATER RESISTANT"]
 };
 const CASES = {[VERNOY_CASE.model]:VERNOY_CASE, [NOREL_R3.model]:NOREL_R3, [NOREL_D.model]:NOREL_D, [NOREL_R4.model]:NOREL_R4, [TK_NIVADA.model]:TK_NIVADA};
@@ -2072,6 +2098,7 @@ function migrateHands(st){
   migrateLogo(st);
   migrateNumerals(st);
   migrateHandArt(st);
+  migrateCaseFigures(st);
   if(typeof migrateMarkers === "function") migrateMarkers(st);
   if(!st) return st;
   for(const k of ["hHand","mHand","sHand"]){
@@ -2101,7 +2128,7 @@ const APP_BUILD = "__BUILD__";
 /* The version people see, raised with every change that reaches them:
    major for a new way of working, minor for something new to do, patch for
    a fix. Shown on the watch screen, so any screenshot says which it was. */
-const APP_VERSION = "4.6.0";
+const APP_VERSION = "4.7.0";
 const APP_DATE = "__DATE__";
 
 /* Every route that replaces S passes through one of these three, which is
@@ -2114,6 +2141,50 @@ function commit(){
 function undo(){ if(hi>0){hi--; S=clone(hist[hi]); paintAll(); queueSave();} }
 function redo(){ if(hi<hist.length-1){hi++; S=clone(hist[hi]); paintAll(); queueSave();} }
 function syncUndo(){ q("#undo").disabled = hi<=0; q("#redo").disabled = hi>=hist.length-1; }
+
+/* Scales every radial measurement of a dial laid out for an opening of
+   `from` mm to one of `to` mm: chapter ring, tracks, zones, borders,
+   numerals, indices, logo and lines, sub-dial, free-length hands, and the
+   date window unless the case places it (`date` false). */
+function rescaleDial(st, from, to, date){
+  const k = to / from;
+  if(!(Math.abs(k - 1) > 1e-6)) return st;
+  const sc = (o, keys) => { if(o) for(const key of keys) if(typeof o[key] === "number") o[key] = +(o[key]*k).toFixed(3); };
+  if(!st.dial.lock) sc(st.dial, ["diameter"]);
+  sc(st.chapter, ["outerD","innerD"]); sc(st.minute, ["diameter"]); sc(st.hour, ["diameter"]);
+  sc(st.indices, ["radius","length"]); sc(st.numerals, ["radius","size"]);
+  sc(st.sector, ["outerD","innerD"]); (st.sector.zones || []).forEach(z => sc(z, ["outerD","innerD"]));
+  const walkBorders = o => { if(!o || typeof o !== "object") return; if(typeof o.dia === "number") sc(o, ["dia"]); for(const v of Object.values(o)) if(v && typeof v === "object") walkBorders(v); };
+  walkBorders(st.borders);
+  sc(st.cross, ["length"]); sc(st.sub, ["dist","diameter"]); (st.sub.extra || []).forEach(x => sc(x, ["dist","diameter"]));
+  sc(st.text, ["logoY","logoSize","line2Y","line2Size","footY","footSize","splitR","splitSize","splitGap"]);
+  if(date) sc(st.date, ["dist","w","h"]);
+  for(const key of ["hHand","mHand","sHand"]) if(st[key] && (!st[key].reach || st[key].reach === "free")) sc(st[key], ["length"]);
+  return st;
+}
+/* A design saved on a case whose figures have since been corrected (the
+   Time Keeper × Nivada's opening was estimated at 27.50 until Nivada's
+   sheet gave 28.00) still carries the old opening. Opened, its dial is
+   refitted to the case as it now is, as moving it to another case would,
+   and its case figures are brought up to date, so the numerals and the
+   logo sit where they were designed against the opening. A case set by
+   hand (unlocked) is left as it is. */
+function migrateCaseFigures(st){
+  const c = st && st.case;
+  if(!c || !c.locked || !st.dial || typeof c.opening !== "number") return st;
+  const K = CASES[c.model];
+  if(K !== TK_NIVADA || c.opening === K.opening) return st;
+  /* deep() hands arrays over by reference, so a design opened from a saved
+     version shares its zones, bands and extra sub-dials with the version;
+     copy them first, or the version itself would be rescaled in memory */
+  if(st.sector && Array.isArray(st.sector.zones)) st.sector.zones = clone(st.sector.zones);
+  if(st.borders) st.borders = clone(st.borders);
+  if(st.sub && Array.isArray(st.sub.extra)) st.sub.extra = clone(st.sub.extra);
+  rescaleDial(st, c.opening, K.opening, !K.calendar);
+  c.diameter = K.flat; c.opening = K.opening; c.lugToLug = K.lugToLug; c.lugWidth = K.lugWidth; c.thickness = K.height;
+  if(st.dial.lock) st.dial.diameter = K.dialD;
+  return st;
+}
 
 /* A dial is laid out for an opening. Moving it to another case scales every
    radial measurement by the ratio of the two openings, so the design keeps its
@@ -2128,20 +2199,7 @@ function applyCaseModel(from, to){
   if(S.dial.lock) S.dial.diameter = B.dialD;
   S.tpl.on = hasPhoto(B);                       // every case opens on its photograph
   casePhoto(B);
-  const k = B.opening / A.opening;
-  if(Math.abs(k - 1) > 1e-6){
-    const sc = (o, keys) => { if(o) for(const key of keys) if(typeof o[key] === "number") o[key] = +(o[key]*k).toFixed(3); };
-    if(!S.dial.lock) sc(S.dial, ["diameter"]);
-    sc(S.chapter, ["outerD","innerD"]); sc(S.minute, ["diameter"]); sc(S.hour, ["diameter"]);
-    sc(S.indices, ["radius","length"]); sc(S.numerals, ["radius","size"]);
-    sc(S.sector, ["outerD","innerD"]); (S.sector.zones || []).forEach(z => sc(z, ["outerD","innerD"]));
-    const walkBorders = o => { if(!o || typeof o !== "object") return; if(typeof o.dia === "number") sc(o, ["dia"]); for(const v of Object.values(o)) if(v && typeof v === "object") walkBorders(v); };
-    walkBorders(S.borders);
-    sc(S.cross, ["length"]); sc(S.sub, ["dist","diameter"]); (S.sub.extra || []).forEach(x => sc(x, ["dist","diameter"]));
-    sc(S.text, ["logoY","logoSize","line2Y","line2Size","footY","footSize","splitR","splitSize","splitGap"]);
-    if(!B.calendar) sc(S.date, ["dist","w","h"]);
-    for(const key of ["hHand","mHand","sHand"]) if(S[key] && (!S[key].reach || S[key].reach === "free")) sc(S[key], ["length"]);
-  }
+  rescaleDial(S, A.opening, B.opening, !B.calendar);
   if(B.calendar){
     const K = B.calendar;
     S.day.on = true;
@@ -4817,12 +4875,14 @@ function buildSVG(st, o={}){
     body.push(`<circle r="${f(opening/2+0.04,3)}" fill="none" stroke="${shade(M0,0.70)}" stroke-opacity="0.55" stroke-width="0.09"/>`);
   };
   /* ---------------- CASE + STRAP (Nivada F77 top view) ----------------
-     The Time Keeper × Nivada drawn as the F77 it is, from the figures in
-     K.f77 (measured off its photograph): the rubber strap, the crown, the
-     case middle with its straight flanks and curved sides edged in a
-     polished bevel, the lug blocks, then the octagonal bezel, brushed with a
-     polished chamfer round it and eight screws, and the bevel and flange
-     falling to the crystal. Two-tone puts the bezel and crown in gold. */
+     The Time Keeper × Nivada drawn as Nivada's own front drawing shows it,
+     from the figures in K.f77: the rubber strap, the coin-edge crown, the
+     case with its straight lug blocks and its flanks running from them to
+     the bezel, the outer strip of each flank polished and the lug tops and
+     shoulders brushed upright, then the near-round bezel ring, brushed
+     upright with a polished chamfer round its edge and eight hex-socket
+     screws, and the polished bevel and the flange falling to the crystal.
+     Two-tone puts the bezel and crown in gold. */
   const f77Case = () => {
     const la = ((st.render && st.render.az) || 135);
     const M0 = c.material, two = twoToneOf(st), MG = two ? LUX_GOLD[two] : M0;
@@ -4832,99 +4892,118 @@ function buildSVG(st, o={}){
     const st3 = (a_,b_,c_) => `<stop offset="0" stop-color="${a_}"/><stop offset="0.5" stop-color="${b_}"/><stop offset="1" stop-color="${c_}"/>`;
     const F = K.f77, B = F.body, Z = F.bezel, k = (c.locked ? K.flat : c.diameter)/K.flat;
     const P = (x, y) => `${f(x*k,3)} ${f(y*k,3)}`;
-    /* The case middle's edge, x at height y: the side curve between the
-       flanks, the straight flank beyond them (they meet at sideY), drawn in
-       by `inset` for the bevel's inner edge. */
-    const sl = (B.sideX - B.flankX)/(B.lugEnd - B.sideY), sec = Math.hypot(1, sl);
-    const xAt = (y, inset) => { const R = B.sideR - inset, ay = Math.abs(y);
-      return ay <= B.sideY ? B.bulge - inset - (R - Math.sqrt(Math.max(0, R*R - ay*ay))) : B.flankX + sl*(B.lugEnd - ay) - inset*sec; };
-    const edge = (sx, y0, y1, inset) => { let s = ""; for(let i = 0; i <= 48; i++){ const y = y0 + (y1 - y0)*i/48; s += `L${P(sx*xAt(y, inset), y)}`; } return s; };
-    /* the middle alone, from the top edge round to the top edge */
-    const middle = inset => `M${P(-xAt(-B.top, inset), -B.top)}` + edge(1, -B.top, B.top, inset) + edge(-1, B.top, -B.top, inset) + "Z";
-    /* the outline with the lug blocks, which stand on the flanks up to the lug ends */
-    const L = F.lugIn, E = B.lugEnd, q = 0.55;
-    const outline = `M${P(L, -B.top)}L${P(L, -E + q)}Q${P(L, -E)} ${P(L + q, -E)}` + edge(1, -E, E, 0)
-      + `L${P(L + q, E)}Q${P(L, E)} ${P(L, E - q)}L${P(L, B.top)}L${P(-L, B.top)}L${P(-L, E - q)}Q${P(-L, E)} ${P(-L - q, E)}`
-      + edge(-1, E, -E, 0) + `L${P(-L - q, -E)}Q${P(-L, -E)} ${P(-L, -E + q)}L${P(-L, -B.top)}Z`;
+    const L = F.lugIn, E = B.lugEnd, XO = B.lugOut, T = B.top;
+    /* Where the flank, drawn from the lug block's outer corner, touches the
+       bezel's outline (an ellipse rx by ry): found once by bisection on the
+       angle round the ellipse. */
+    const tangent = (() => { let lo = 0, hi = Math.PI/2;
+      for(let i = 0; i < 40; i++){ const t = (lo + hi)/2, x = Z.rx*Math.cos(t), y = Z.ry*Math.sin(t);
+        ((XO - x)*Math.cos(t)/Z.rx + (E - y)*Math.sin(t)/Z.ry) > 1e-9 ? (hi = t) : (lo = t); }
+      const t = (lo + hi)/2; return [Z.rx*Math.cos(t), Z.ry*Math.sin(t)]; })();
+    const [TX, TY] = tangent, slope = (TX - XO)/(E - TY);
+    const flankX = y => XO + slope*(E - Math.abs(y));
+    /* the polished strip: from the lug corner down the flank to `to`, its
+       inner edge a curve, so it is a lens widest about two thirds down */
+    const pTo = [flankX(B.polish.to), B.polish.to], pC = B.polish.c;
+    const arc = (x, y, sweep) => `A${f(Z.rx*k,3)} ${f(Z.ry*k,3)} 0 0 ${sweep} ${P(x, y)}`;
+    /* The case: the lug blocks and the flanks, joined by the bezel's own
+       outline at 3 and 9 (the case is as wide as the bezel there). `inner`
+       swaps each flank's polished strip for its inner edge, which leaves
+       the brushed surface. */
+    const caseOutline = inner => {
+      const side = (sx, fromTop) => {               // one flank, from one lug corner down to the tangent, round, and up to the other
+        const a = fromTop ? -1 : 1, s = [];
+        if(inner) s.push(`Q${P(sx*pC[0], a*pC[1])} ${P(sx*pTo[0], a*pTo[1])}`);
+        s.push(`L${P(sx*TX, a*TY)}`, arc(sx*TX, -a*TY, 0));
+        s.push(inner ? `L${P(sx*pTo[0], -a*pTo[1])}Q${P(sx*pC[0], -a*pC[1])} ${P(sx*XO, -a*E)}` : `L${P(sx*XO, -a*E)}`);
+        return s.join("");
+      };
+      return `M${P(-L, -T)}L${P(-L, -E)}L${P(-XO, -E)}` + side(-1, true)
+        + `L${P(-L, E)}L${P(-L, T)}L${P(L, T)}L${P(L, E)}L${P(XO, E)}` + side(1, false)
+        + `L${P(L, -E)}L${P(L, -T)}Z`;
+    };
     /* --- the rubber strap: tapering away from the lugs, with its tongue
        between the lug blocks down to the case --- */
     if(c.strap){
       const sc = c.strapColor || "#1E1E20", W = F.strap, top = K.lugToLug/2 + 13;
       const wAt = y => W.w0 + (W.w1 - W.w0)*(y - E)/(W.y1 - E);
       for(const sy of [-1, 1]){
-        const band = `M${P(-L, sy*(B.top - 0.4))}L${P(-L, sy*(E - 0.4))}L${P(-W.w0, sy*(E - 0.4))}L${P(-wAt(top), sy*top)}L${P(wAt(top), sy*top)}L${P(W.w0, sy*(E - 0.4))}L${P(L, sy*(E - 0.4))}L${P(L, sy*(B.top - 0.4))}Z`;
+        const band = `M${P(-L, sy*(T - 0.4))}L${P(-L, sy*(E - 0.4))}L${P(-W.w0, sy*(E - 0.4))}L${P(-wAt(top), sy*top)}L${P(wAt(top), sy*top)}L${P(W.w0, sy*(E - 0.4))}L${P(L, sy*(E - 0.4))}L${P(L, sy*(T - 0.4))}Z`;
         body.push(`<path d="${band}" fill="${shade(sc,0.10)}"/>
           <path d="M${P(-W.w0 + 0.9, sy*E)}L${P(-wAt(top) + 0.9, sy*top)}M${P(W.w0 - 0.9, sy*E)}L${P(wAt(top) - 0.9, sy*top)}" stroke="${tint(sc,0.18)}" stroke-opacity=".5" stroke-width="0.10" fill="none"/>`);
       }
     }
-    /* --- the crown at 3, its knurled barrel seen from above; the case covers its root --- */
+    /* --- the crown at 3: its tube, a narrower collar against the bezel,
+       then the coin-edge barrel, its grooves running along it, the end
+       rounded over. The sheet has it polished. --- */
     {
-      const x0 = F.crown.x0*k, x1 = F.crown.x1*k, ch = K.crownD*k;
-      const cg = lgr(st3(shade(MG,0.42), tint(MG,0.6), shade(MG,0.34)), 90);
+      const CR = F.crown, x0 = CR.x0*k, xb = CR.xb*k, x1 = CR.x1*k, ch = K.crownD*k, cc = CR.collar*k;
+      const cg = lgr(st3(shade(MG,0.40), tint(MG,0.70), shade(MG,0.32)), 90);
       let fl = "";
-      for(let i = 1; i < 14; i++){ const fy = -ch/2 + ch*i/14;
-        fl += `<line x1="${f(x0+0.5,3)}" y1="${f(fy,3)}" x2="${f(x1-0.2,3)}" y2="${f(fy,3)}" stroke="${i%2?tint(MG,0.6):shade(MG,0.45)}" stroke-opacity=".85" stroke-width="0.12"/>`; }
-      body.push(`<rect x="${f(x0-0.4,3)}" y="${f(-K.crownTube/2,3)}" width="1.0" height="${f(K.crownTube,3)}" fill="${shade(MG,0.3)}"/>
-        <rect x="${f(x0,3)}" y="${f(-ch/2,3)}" width="${f(x1-x0,3)}" height="${f(ch,3)}" rx="0.7" fill="url(#${cg})" stroke="${shade(MG,0.62)}" stroke-opacity=".7" stroke-width="0.08"/>${fl}`);
+      for(let i = 1; i < 16; i++){ const fy = -ch/2 + ch*i/16;
+        fl += `<line x1="${f(xb+0.25,3)}" y1="${f(fy,3)}" x2="${f(x1-0.45,3)}" y2="${f(fy,3)}" stroke="${i%2?tint(MG,0.75):shade(MG,0.50)}" stroke-opacity=".85" stroke-width="0.13"/>`; }
+      body.push(`<rect x="${f(x0-0.6,3)}" y="${f(-K.crownTube/2,3)}" width="1.0" height="${f(K.crownTube,3)}" fill="${shade(MG,0.3)}"/>
+        <rect x="${f(x0,3)}" y="${f(-cc/2,3)}" width="${f(xb-x0+0.2,3)}" height="${f(cc,3)}" rx="0.25" fill="url(#${cg})" stroke="${shade(MG,0.62)}" stroke-opacity=".7" stroke-width="0.07"/>
+        <rect x="${f(xb,3)}" y="${f(-ch/2,3)}" width="${f(x1-xb,3)}" height="${f(ch,3)}" rx="0.75" fill="url(#${cg})" stroke="${shade(MG,0.62)}" stroke-opacity=".75" stroke-width="0.08"/>${fl}
+        <path d="M${f(x1-0.42,3)} ${f(-ch/2+0.35,3)}V${f(ch/2-0.35,3)}" stroke="${tint(MG,0.85)}" stroke-opacity=".6" stroke-width="0.10" fill="none"/>`);
     }
-    /* --- the case: the polished bevel all round, then the brushed top --- */
-    const gEdge = lgr(`<stop offset="0" stop-color="${tint(M0,0.85)}"/><stop offset="0.45" stop-color="${tint(M0,0.35)}"/><stop offset="0.6" stop-color="${shade(M0,0.30)}"/><stop offset="1" stop-color="${tint(M0,0.55)}"/>`);
-    body.push(`<path d="${outline}" fill="url(#${gEdge})" stroke="${shade(M0,0.6)}" stroke-opacity=".7" stroke-width="0.09"/>`);
-    const gTop = lgr(st3(tint(M0,0.10), shade(M0,0.10), shade(M0,0.26)));
-    const topCase = middle(B.bevel);
-    body.push(`<path d="${topCase}" fill="url(#${gTop})"/>`);
-    /* the lug blocks, brushed, rounded over at their ends, standing on the case's top edge */
-    const gLug = lgr(st3(tint(M0,0.50), shade(M0,0.02), shade(M0,0.18)), 90);
-    for(const sy of [-1, 1]) for(const sx of [-1, 1]){
-      const xo = xAt(E, B.bevel), xi = L, y0 = sy*B.top, y1 = sy*(E - 0.25);
-      const xm = sx*Math.max(xi + 0.5, xAt(B.top, B.bevel));
-      body.push(`<path d="M${P(sx*xi, y0)}L${P(sx*xi, y1)}L${P(sx*xo, y1)}L${P(xm, y0)}Z" fill="url(#${gLug})" stroke="${shade(M0,0.5)}" stroke-opacity=".45" stroke-width="0.07"/>
-        <path d="M${P(sx*xi, y1)}L${P(sx*xo, y1)}" stroke="${tint(M0,0.9)}" stroke-opacity=".8" stroke-width="0.22"/>`);
-    }
-    body.push(`<path d="M${P(-xAt(B.top, B.bevel), -B.top)}L${P(xAt(B.top, B.bevel), -B.top)}M${P(-xAt(B.top, B.bevel), B.top)}L${P(xAt(B.top, B.bevel), B.top)}" stroke="${shade(M0,0.45)}" stroke-opacity=".55" stroke-width="0.08"/>`);
-    /* --- the bezel: an octagon with rounded corners --- */
-    const octa = (v, h, d, r) => {
-      const kk = d*Math.SQRT2, C = [[-(kk-v), -v], [kk-v, -v], [h, -(kk-h)], [h, kk-h], [kk-v, v], [-(kk-v), v], [-h, kk-h], [-h, -(kk-h)]];
-      const t = r*Math.tan(Math.PI/8), u = (a, b) => { const dx = b[0]-a[0], dy = b[1]-a[1], n = Math.hypot(dx, dy); return [dx/n, dy/n]; };
-      let s = "";
-      for(let i = 0; i < 8; i++){
-        const p = C[i], up = u(C[(i+7)%8], p), un = u(p, C[(i+1)%8]);
-        const a = [p[0] - up[0]*t, p[1] - up[1]*t], b = [p[0] + un[0]*t, p[1] + un[1]*t];
-        s += `${i ? "L" : "M"}${P(a[0], a[1])}A${f(r*k,3)} ${f(r*k,3)} 0 0 1 ${P(b[0], b[1])}`;
-      }
-      return s + "Z";
-    };
-    const rbi = Math.max(opening/2 + 0.6, K.bezelID/2*k), rf = Z.flat/2*k, ch = Z.chamfer;
-    const hole = r => ` M0 ${f(-r,3)}A${f(r,3)} ${f(r,3)} 0 1 0 0 ${f(r,3)}A${f(r,3)} ${f(r,3)} 0 1 0 0 ${f(-r,3)}Z`;
-    const outer = octa(Z.v, Z.h, Z.d, Z.r), inner = octa(Z.v - ch, Z.h - ch, Z.d - ch, Z.r - ch);
-    const gCh = lgr(`<stop offset="0" stop-color="${tint(MG,0.98)}"/><stop offset="0.3" stop-color="${tint(MG,0.75)}"/><stop offset="0.6" stop-color="${shade(MG,0.45)}"/><stop offset="0.8" stop-color="${shade(MG,0.2)}"/><stop offset="1" stop-color="${tint(MG,0.6)}"/>`);
-    body.push(`<path d="${outer}" fill="url(#${gCh})" stroke="${shade(MG,0.62)}" stroke-opacity=".7" stroke-width="0.08"/>`);
-    const GB = gemBezelSpec(st);
-    const gBz = lgr(st3(tint(MG,0.28), tint(MG,0.04), shade(MG,0.14)));
-    body.push(`<path d="${inner}${hole(rf)}" fill="url(#${gBz})" fill-rule="evenodd" stroke="${shade(MG,0.45)}" stroke-opacity=".35" stroke-width="0.05"/>`);
-    /* brushed straight across, as the photograph shows: fine lines a quarter of a millimetre apart */
-    {
-      const cid = id("fb"), lim = Z.v*k;
-      defs.push(`<clipPath id="${cid}"><path d="${inner}${hole(rf)}" clip-rule="evenodd"/></clipPath>`);
+    /* --- the case: polished all over, the flanks' strips left that way,
+       then the brushed surface laid over the rest --- */
+    const outline = caseOutline(false), brushedCase = caseOutline(true);
+    const gEdge = lgr(`<stop offset="0" stop-color="${tint(M0,0.90)}"/><stop offset="0.4" stop-color="${tint(M0,0.40)}"/><stop offset="0.6" stop-color="${shade(M0,0.32)}"/><stop offset="1" stop-color="${tint(M0,0.60)}"/>`);
+    body.push(`<path d="${outline}" fill="url(#${gEdge})" stroke="${shade(M0,0.6)}" stroke-opacity=".75" stroke-width="0.09"/>`);
+    const gTop = lgr(st3(tint(M0,0.22), shade(M0,0.04), shade(M0,0.20)), 90);
+    body.push(`<path d="${brushedCase}" fill="url(#${gTop})" stroke="${shade(M0,0.45)}" stroke-opacity=".45" stroke-width="0.06"/>`);
+    /* brushed upright, as the sheet says of the lug tops: fine lines a
+       quarter of a millimetre apart, clipped to the brushed surface */
+    const brush = (clip, x0, x1, lim, col) => {
       let a = "", b = "";
-      for(let i = 0, x = -Z.h*k; x < Z.h*k; x += 0.24, i++){ const sg = `M${f(x,2)} ${f(-lim,2)}V${f(lim,2)}`; if(i % 2) a += sg; else b += sg; }
-      body.push(`<g clip-path="url(#${cid})"><path d="${a}" stroke="${tint(MG,0.7)}" stroke-opacity=".16" stroke-width="0.07"/><path d="${b}" stroke="${shade(MG,0.3)}" stroke-opacity=".08" stroke-width="0.06"/></g>`);
+      for(let i = 0, x = x0; x < x1; x += 0.24, i++){ const sg = `M${f(x,2)} ${f(-lim,2)}V${f(lim,2)}`; if(i % 2) a += sg; else b += sg; }
+      return `<g clip-path="url(#${clip})"><path d="${a}" stroke="${tint(col,0.7)}" stroke-opacity=".18" stroke-width="0.07"/><path d="${b}" stroke="${shade(col,0.3)}" stroke-opacity=".09" stroke-width="0.06"/></g>`;
+    };
+    {
+      const cid = id("fc");
+      defs.push(`<clipPath id="${cid}"><path d="${brushedCase}"/></clipPath>`);
+      body.push(brush(cid, -Z.rx*k, Z.rx*k, E*k, M0));
+    }
+    /* the lug blocks' flat tops catch the light along their ends */
+    for(const sy of [-1, 1])
+      body.push(`<path d="M${P(-XO + 0.1, sy*E)}L${P(-L - 0.05, sy*E)}M${P(L + 0.05, sy*E)}L${P(XO - 0.1, sy*E)}" stroke="${tint(M0,0.9)}" stroke-opacity=".75" stroke-width="0.18"/>`);
+    /* --- the bezel: a near-round ring, its polished chamfer outside, the
+       brushed top inside that --- */
+    const ell = (rx, ry) => `M${P(-rx, 0)}A${f(rx*k,3)} ${f(ry*k,3)} 0 1 0 ${P(rx, 0)}A${f(rx*k,3)} ${f(ry*k,3)} 0 1 0 ${P(-rx, 0)}Z`;
+    const rbi = Math.max(opening/2 + 0.6, K.bezelID/2*k), rf = Z.flat/2*k;
+    const hole = r => ` M0 ${f(-r,3)}A${f(r,3)} ${f(r,3)} 0 1 0 0 ${f(r,3)}A${f(r,3)} ${f(r,3)} 0 1 0 0 ${f(-r,3)}Z`;
+    const outer = ell(Z.rx, Z.ry), inner = ell(Z.chRx, Z.chRy);
+    const gCh = lgr(`<stop offset="0" stop-color="${tint(MG,0.98)}"/><stop offset="0.3" stop-color="${tint(MG,0.75)}"/><stop offset="0.6" stop-color="${shade(MG,0.45)}"/><stop offset="0.8" stop-color="${shade(MG,0.2)}"/><stop offset="1" stop-color="${tint(MG,0.6)}"/>`);
+    body.push(`<path d="${outer}" fill="url(#${gCh})" stroke="${shade(MG,0.62)}" stroke-opacity=".75" stroke-width="0.08"/>`);
+    const GB = gemBezelSpec(st);
+    const gBz = lgr(st3(tint(MG,0.30), tint(MG,0.05), shade(MG,0.14)));
+    body.push(`<path d="${inner}${hole(rf)}" fill="url(#${gBz})" fill-rule="evenodd" stroke="${shade(MG,0.45)}" stroke-opacity=".40" stroke-width="0.05"/>`);
+    {
+      const cid = id("fb");
+      defs.push(`<clipPath id="${cid}"><path d="${inner}${hole(rf)}" clip-rule="evenodd"/></clipPath>`);
+      body.push(brush(cid, -Z.rx*k, Z.rx*k, Z.ry*k, MG));
     }
     /* a gem-set bezel is a ring of gold and stones over the brushed top */
-    if(GB) body.push(gemBezelSVG(GB, {inner:[0, 0, rbi, rbi], outer:[0, 0, K.bezelOD/2*k, K.bezelOD/2*k]}, la*Math.PI/180, {id, defs, grads:new Map()}));
-    /* --- the eight screws, two on each long flat, their slots turned a little --- */
+    if(GB) body.push(gemBezelSVG(GB, {inner:[0, 0, rbi, rbi], outer:[0, 0, Z.rx*k, Z.ry*k]}, la*Math.PI/180, {id, defs, grads:new Map()}));
+    /* --- the eight screws: two either side of 12 and of 6, two either
+       side of 3 and of 9, hex sockets turned a little each --- */
     if(!GB){
-      const S8 = F.screws, sd = S8.d*k, sp = [];
+      const S8 = F.screws, sd = S8.d*k, sp = [], rad = Math.PI/180;
       for(const sy of [-1, 1]) for(const sx of [-1, 1]){
-        sp.push([sx*S8.along, sy*(Z.v - S8.inTop), sx*sy > 0 ? 160 : 20]);
-        sp.push([sx*(Z.h - S8.inSide), sy*S8.along, sx*sy > 0 ? 125 : 55]);
+        sp.push([sx*S8.r*Math.sin(S8.top*rad), sy*S8.r*Math.cos(S8.top*rad), sx*sy > 0 ? 10 : 35]);
+        sp.push([sx*S8.r*Math.cos(S8.side*rad), sy*S8.r*Math.sin(S8.side*rad), sx*sy > 0 ? 50 : 20]);
       }
       const gS = lgr(st3(tint(MG,0.85), tint(MG,0.25), shade(MG,0.35)));
       for(const [x, y, a] of sp){
-        const cx = x*k, cy = y*k, ra = a*Math.PI/180, dx = Math.cos(ra)*sd*0.40, dy = Math.sin(ra)*sd*0.40;
+        const cx = x*k, cy = y*k, hr = sd*0.21;
+        let hex = "";
+        for(let i = 0; i < 6; i++){ const t = (a + i*60)*rad; hex += `${i ? "L" : "M"}${f(cx + hr*Math.cos(t),3)} ${f(cy + hr*Math.sin(t),3)}`; }
         body.push(`<circle cx="${f(cx,3)}" cy="${f(cy,3)}" r="${f(sd/2 + 0.08,3)}" fill="${shade(MG,0.45)}" fill-opacity=".55"/>
           <circle cx="${f(cx,3)}" cy="${f(cy,3)}" r="${f(sd/2,3)}" fill="url(#${gS})" stroke="${shade(MG,0.6)}" stroke-width="0.06"/>
-          <line x1="${f(cx-dx,3)}" y1="${f(cy-dy,3)}" x2="${f(cx+dx,3)}" y2="${f(cy+dy,3)}" stroke="${shade(MG,0.62)}" stroke-width="0.20" stroke-linecap="round"/>`);
+          <circle cx="${f(cx,3)}" cy="${f(cy,3)}" r="${f(sd*0.33,3)}" fill="none" stroke="${shade(MG,0.35)}" stroke-opacity=".5" stroke-width="0.04"/>
+          <path d="${hex}Z" fill="${shade(MG,0.62)}" stroke="${shade(MG,0.75)}" stroke-width="0.03"/>`);
       }
     }
     /* --- the polished bevel down from the brushed top, then the flange to the opening --- */
@@ -4932,9 +5011,9 @@ function buildSVG(st, o={}){
       const gLand = lgr(`<stop offset="0" stop-color="${tint(MG,0.95)}"/><stop offset="0.4" stop-color="${tint(MG,0.45)}"/>
       <stop offset="0.6" stop-color="${shade(MG,0.25)}"/><stop offset="1" stop-color="${tint(MG,0.7)}"/>`);
       body.push(`<path d="${annulus(rf, rbi)}" fill="url(#${gLand})" fill-rule="evenodd"/>`);
-      body.push(`<circle r="${f(rf,3)}" fill="none" stroke="${shade(MG,0.5)}" stroke-opacity=".55" stroke-width="0.07"/>`);
+      body.push(`<circle r="${f(rf,3)}" fill="none" stroke="${shade(MG,0.5)}" stroke-opacity=".6" stroke-width="0.07"/>`);
     }
-    /* the flange is a light steel ring in the photograph, with fine rings where the crystal sits */
+    /* the flange is a light steel ring, with fine rings where the crystal sits */
     const gF = lgr(`<stop offset="0" stop-color="${tint(M0,0.60)}"/><stop offset="0.5" stop-color="${tint(M0,0.10)}"/><stop offset="1" stop-color="${shade(M0,0.22)}"/>`);
     body.push(`<path d="${annulus(rbi, opening/2)}" fill="url(#${gF})" fill-rule="evenodd"/>`);
     body.push(`<circle r="${f(rbi,3)}" fill="none" stroke="${shade(M0,0.55)}" stroke-opacity=".6" stroke-width="0.08"/>`);
@@ -9040,7 +9119,9 @@ const FACET = {
 
      Scale: the dial opening in the owner's photograph is 341 px across,
      fitted to the edge of the salmon, which against the 27.50 mm opening
-     of the Time Keeper x Nivada case (TK_NIVADA) gives 12.4 px a
+     then estimated for the Time Keeper x Nivada case (TK_NIVADA; Nivada's
+     sheet has since made it 28.00, and the shares of R below are
+     unchanged by that) gives 12.4 px a
      millimetre and an opening radius R of 13.75 mm; the case, 37 mm, comes
      out at the same scale to within 2 per cent. Lengths are measured from
      the pinion, which sits 7 px above the opening's centre in this
@@ -11045,7 +11126,7 @@ function caseSpecRows(){
       <div><span>Bezel</span><b>Ø${f(K.bezelOD)} / Ø${f(K.bezelID)} · ${K.flutes ? K.flutes + " flutes" : "plain" + (K.screws ? ", " + K.screws + " screws" : "")}</b></div>
       <div><span>Bezel band</span><b>${f((K.bezelOD-K.bezelID)/2)} mm a side · ${f(K.land)} land</b></div>
       <div><span>Lug-to-lug</span><b>${f(K.lugToLug)} mm</b></div>
-      ${K.bracelet ? `<div><span>Bracelet</span><b>${f(K.lugWidth)} → ${f(K.clasp)} mm</b></div>` : `<div><span>Strap</span><b>${f(K.lugWidth)} mm</b></div>`}
+      ${K.bracelet ? `<div><span>Bracelet</span><b>${f(K.lugWidth)} → ${f(K.clasp)} mm</b></div>` : `<div><span>Strap</span><b>${f(K.lugWidth)} mm${K.band ? " · " + K.band : ""}</b></div>`}
       <div><span>Total height</span><b>${f(K.height)} mm</b></div>
       <div><span>Visible opening</span><b>Ø${f(K.opening)} mm</b></div>
       <div><span>Glass</span><b>Ø${f(K.glassD)} sapphire${K.cyclops ? ` · cyclops ${f(K.cyclops.w,1)} × ${f(K.cyclops.h,1)}` : ""}</b></div>
@@ -14477,7 +14558,7 @@ const GSTR = {en:{
   /* the third watch; its reference is joined by a hyphen that does not
      break, so a narrow card wraps it after the name, not inside it */
   "card.vernoyRd":"Vernoy RD26‑0172", "card.vernoyRdSub":"Cushion · 36 mm",
-  "case.tk":"Nivada F77 · Time Keeper", "case.tkSub":"37 mm · rubber strap",
+  "case.tk":"Nivada F77 · Time Keeper", "case.tkSub":"38 mm · rubber strap",
   "case.norel":"NOREL", "case.norelSub":"41 mm round · current drawing", "case.vernoy":"Vernoy cushion", "case.vernoySub":"36 mm · strap",
   "case.r3":"NOREL R3", "case.r3Sub":"Earlier drawing", "case.d":"NOREL Concept D", "case.dSub":"Earlier proposal",
   "case.cases":"Case", "case.earlier":"Earlier NOREL drawings", "case.metal":"Metal", "case.finish":"Finish",
@@ -14624,7 +14705,7 @@ GSTR.ar = {
   "card.vernoy":"Vernoy", "card.study":"دراسة تصميم",
   "start.yours":"ساعاتك", "card.tk":"تايم كيبر × نيفادا", "card.tkSub":"فضي وذهبي وردي",
   "card.vernoyRd":"فيرنوي RD26‑0172", "card.vernoyRdSub":"وسادية · 36 ملم",
-  "case.tk":"نيفادا F77 · تايم كيبر", "case.tkSub":"37 ملم · حزام مطاطي",
+  "case.tk":"نيفادا F77 · تايم كيبر", "case.tkSub":"38 ملم · حزام مطاطي",
   "case.norel":"NOREL", "case.norelSub":"دائرية 41 ملم · الرسم الحالي", "case.vernoy":"Vernoy وسادية", "case.vernoySub":"36 ملم · حزام",
   "case.r3":"NOREL R3", "case.r3Sub":"رسم سابق", "case.d":"NOREL Concept D", "case.dSub":"مقترح سابق",
   "case.cases":"القالب", "case.earlier":"رسومات NOREL السابقة", "case.metal":"المعدن", "case.finish":"التشطيب",

@@ -26,7 +26,7 @@ vm.runInContext(
   + '\nthis.r={STYLE_W,FACET,FACET_FLAT,facetHand,f77Plot,f77Weight,f77Lume,f77Hole,F77_LUME};', ctx);
 const { STYLE_W, FACET, FACET_FLAT, facetHand, f77Plot, f77Weight, f77Lume, F77_LUME } = ctx.r;
 
-const R = 13.75;                                  // the F77's open dial radius, mm (27.50 opening)
+const R = 13.75;                                  // a fixture: the 27.50 opening the shares were measured against (the TK case is now 28.00)
 const hour = { style: 'f77', length: 0.59*R, width: 0.50, tail: 0.18*R, lume: true, material: 'polished steel' };
 const minute = { style: 'f77', length: 0.87*R, width: 0.45, tail: 0.18*R, lume: true, material: 'polished steel' };
 const seconds = { style: 'f77-seconds', length: 0.88*R, width: 0.14, tail: 0.27*R, lume: true, material: 'polished steel' };
