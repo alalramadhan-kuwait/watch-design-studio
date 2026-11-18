@@ -1286,6 +1286,7 @@ body.guided .atelier-nav, body.guided #gHideInGuided, body.guided .bar .grp.tool
     <div class="tools" style="flex-direction:column;align-items:stretch;gap:8px">
       <button class="btn key" data-x="png">Export image (PNG)</button>
       <button class="btn" id="mkSheetBtn" title="One A3 page in the maker's layout: the versions at 1:1 with their specification and change marks, the 200% render, the drawings, caseback, buckles, hands and dial, as a PDF.">Maker's sheet (PDF)</button>
+      <button class="btn" id="numArtBtn" title="The numerals as vector artwork, black on white: the ten digits, and the hour figures at 5:1 and 1:1 with their sizes. A4.">Numerals artwork (PDF)</button>
       <button class="btn" id="moreT" style="margin-top:2px">More formats</button>
       <div id="moreBox" style="display:none;flex-direction:column;gap:8px">
         <div class="row" style="gap:6px">
@@ -1331,6 +1332,7 @@ body.guided .atelier-nav, body.guided #gHideInGuided, body.guided .bar .grp.tool
     <div id="mkPick"></div>
     <div class="tools" style="flex-direction:column;align-items:stretch;gap:8px">
       <button class="btn key" id="mkGo">Make the PDF</button>
+      <button class="btn" id="mkNum" title="The numerals as vector artwork, black on white: the ten digits, and the hour figures at 5:1 and 1:1 with their sizes. A4.">Numerals artwork (PDF)</button>
       <button class="btn" id="mkClose">Close</button>
     </div>
   </div>
@@ -2175,7 +2177,7 @@ const APP_BUILD = "__BUILD__";
 /* The version people see, raised with every change that reaches them:
    major for a new way of working, minor for something new to do, patch for
    a fix. Shown on the watch screen, so any screenshot says which it was. */
-const APP_VERSION = "4.9.1";
+const APP_VERSION = "4.10.0";
 const APP_DATE = "__DATE__";
 
 /* Every route that replaces S passes through one of these three, which is
@@ -14443,7 +14445,7 @@ function buildSheetSVG(plan, R, o){
   box("dial", D.x, D.y, D.w, D.h);
   if(R.dial && R.dial.url){ const w = R.dial.wmm*dk;
     out.push(`<image href="${R.dial.url}" x="${sn(dcx - w/2)}" y="${sn(dcy - w/2)}" width="${sn(w)}" height="${sn(w)}" preserveAspectRatio="none"/>`); }
-  out.push(sheetDialCallouts(A, dcx, dcy, D, raster, dk));
+  out.push(sheetDialCallouts(A, dcx, dcy, D, raster, dk, R.numerals && R.numerals.h));
   /* ... and the numerals: their font, set out, and how they are made */
   const NP = G.numerals;
   out.push(`<rect x="${sn(NP.x)}" y="${sn(NP.y)}" width="${sn(NP.w)}" height="${sn(NP.h)}" fill="${SHEET_PANEL}"/>`);
@@ -14484,7 +14486,7 @@ const sheetWrap = (s, size, width, bold, raster) => {
   if(cur) out.push(cur);
   return out;
 };
-function sheetDialCallouts(st, cx, cy, D, raster, k){
+function sheetDialCallouts(st, cx, cy, D, raster, k, numH){
   const T = st.text || {}, nm = st.numerals || {}, ix = st.indices || {}, d = st.dial || {}, g = [];
   k = k || 1;
   const P = (x, y) => [cx + x*k, cy + y*k], rD = (D.dialD || 42)/2;
@@ -14513,7 +14515,7 @@ function sheetDialCallouts(st, cx, cy, D, raster, k){
   if(nN){
     const H = nm.height === undefined ? 0.20 : +nm.height, r = nm.radius || 11;
     right.push({head:`Numerals, ${nN} pcs`, lines:[sheetNumMade(nm), `Font: ${sheetNumFont(nm)}`,
-      `${sn(nm.size || 3, 1)}mm high${nm.tech === "applied" ? `, ${sn(H, 2)}mm thick` : ""}`],
+      `${sn(numH || nm.size || 3, numH ? 2 : 1)}mm high${nm.tech === "applied" ? `, ${sn(H, 2)}mm thick` : ""}`],
       at:hoursOf(["numeral"]).map(h => { const a = h*Math.PI/6; return [(r - (nm.size || 3)*0.3)*Math.sin(a), -(r - (nm.size || 3)*0.3)*Math.cos(a)]; })});
   }
   if(nI){
@@ -14576,7 +14578,8 @@ function sheetNumeralPanel(st, NP, img, raster){
     if(img && img.url){ const w = NP.w - 10, h = w*(img.ar || 1/3);
       out.push(`<image href="${img.url}" x="${sn(NP.x + 5)}" y="${sn(NP.y + 21.6 - h/2)}" width="${sn(w)}" height="${sn(h)}" preserveAspectRatio="none"/>`); }
     const H = nm.height === undefined ? 0.20 : +nm.height;
-    lines = [`Font: ${sheetNumFont(nm)}`, sheetNumMade(nm), `${sn(nm.size || 3, 1)}mm high${nm.tech === "applied" ? `, ${sn(H, 2)}mm thick` : ""}, ${nN} pcs`];
+    const nh = img && img.h;
+    lines = [`Font: ${sheetNumFont(nm)}`, sheetNumMade(nm), `${sn(nh || nm.size || 3, nh ? 2 : 1)}mm high${nm.tech === "applied" ? `, ${sn(H, 2)}mm thick` : ""}, ${nN} pcs`];
   } else if(ix.on){
     lines = [`${sheetCap(sheetHandStyle(ix.style || "baton"))} indexes`, ix.applied !== false ? "Applied" : "Printed", `${sn(ix.length || 2, 1)} x ${sn(ix.width || 0.5, 2)}mm`];
   } else lines = ["No numerals or indexes"];
@@ -14594,6 +14597,94 @@ function sheetHandWarning(st){
   if(st.hHand && Math.abs(st.hHand.length - ref.h) > 0.2) out.push(`Hour hand drawn ${sn(st.hHand.length, 2)} mm, reference says ${sn(ref.h, 2)} mm`);
   if(st.mHand && Math.abs(st.mHand.length - ref.m) > 0.2) out.push(`Minute hand drawn ${sn(st.mHand.length, 2)} mm, reference says ${sn(ref.m, 2)} mm`);
   return out.join(". ");
+}
+/* ---- the numerals artwork: a second PDF for the maker ----
+   One A4 landscape page, black on white like the maker's own artwork
+   sheets: the ten digits large, then the hour figures this dial carries
+   at 5:1 with each one's height and width, and at 1:1. Every figure is the
+   font's own outline (app/font-outlines.json, written from the built-in
+   fonts by tools/font-outlines.py), so the page stays vector and the
+   figures can be cut from it. They are sized exactly as the dial draws
+   them: the font size that makes the digits' ink 0.72 of the numeral size. */
+const NUMART_SET = {"arabic ٠–٩":"٠١٢٣٤٥٦٧٨٩", "persian ۰–۹":"۰۱۲۳۴۵۶۷۸۹", "western 0–9":"0123456789", "roman I–XII":"IVX"};
+/* a run of glyphs at s mm to the em: each glyph's x, the run's advance and
+   its ink box [x0, y0, x1, y1] about the start and the baseline */
+function numArtRun(G, text, s, track){
+  const chars = [...String(text)], parts = [];
+  let x = 0, box = [Infinity, Infinity, -Infinity, -Infinity];
+  chars.forEach((ch, i) => {
+    const g = G[ch]; if(!g) return;
+    parts.push({x, d:g.d});
+    box = [Math.min(box[0], x + g.b[0]*s), Math.min(box[1], g.b[1]*s), Math.max(box[2], x + g.b[2]*s), Math.max(box[3], g.b[3]*s)];
+    x += g.a*s + (i < chars.length - 1 ? (track || 0) : 0);
+  });
+  if(!parts.length) box = [0, 0, 0, 0];
+  return {parts, w:x, box, s};
+}
+/* drawn with its ink centred on cx and its ink top at top */
+const numArtDraw = (run, cx, top, fill) => {
+  const x0 = cx - (run.box[0] + run.box[2])/2, y0 = top - run.box[1];
+  return run.parts.map(q => `<path transform="translate(${sn(x0 + q.x, 3)} ${sn(y0, 3)}) scale(${sn(run.s, 5)})" d="${q.d}" fill="${fill || "#000000"}"/>`).join("");
+};
+/* the figures' metrics as the dial draws them: font size, tracking and the
+   height of the digits' ink */
+function numArtMetrics(st, OUT){
+  const nm = st.numerals || {}, sys = nm.system || "western 0–9", style = sheetNumStyle(nm);
+  const G = OUT && OUT[style] && OUT[style].g;
+  if(!G) return null;
+  const set = sys === "roman I–XII" ? "XII" : (NUMART_SET[sys] || NUMART_SET["western 0–9"]);
+  const u = numArtRun(G, set, 1, 0), mh = u.box[3] - u.box[1];
+  const size = nm.size || 3, fsz = mh > 0 ? size*Math.max(0.6, Math.min(2.4, 0.72/mh)) : size;
+  return {G, sys, fsz, mh, h:fsz*mh, track:(nm.gap === undefined ? 1 : nm.gap)*fsz*0.011};
+}
+function numArtSVG(st, OUT, info, labels){
+  const M0 = numArtMetrics(st, OUT);
+  if(!M0) return null;
+  const nm = st.numerals || {}, {G, sys, fsz, track} = M0, W = 297, M = 14, out = [];
+  const grey = "#6B6B6B", head = (y, t) => out.push(sheetText(M, y, t, {size:3.4, bold:true, fill:grey}));
+  out.push(`<rect x="0" y="0" width="${W}" height="210" fill="#FFFFFF"/>`);
+  out.push(sheetText(M, 18, `Numerals · ${sheetNumFont(nm)}`, {size:7, bold:true}));
+  const sub = [info.brand, info.designNo ? "Design number " + info.designNo : "", info.date ? sheetDateText(info.date) : ""].filter(Boolean).join("  ·  ");
+  if(sub) out.push(sheetText(M, 25.5, sub, {size:3.6}));
+  /* the digits, large: two rows of five, as one size */
+  const chars = [...(NUMART_SET[sys] || NUMART_SET["western 0–9"])].filter(c => G[c]);
+  const rows = chars.length > 5 ? [chars.slice(0, 5), chars.slice(5)] : [chars];
+  const setRun = numArtRun(G, chars.join(""), 1, 0), setH = setRun.box[3] - setRun.box[1] || 0.7;
+  const big = 30/setH, cellW = (W - 2*M)/5;
+  head(34, sys === "roman I–XII" ? "Letters" : "Digits");
+  rows.forEach((r, i) => r.forEach((c, j) => {
+    const run = numArtRun(G, c, big, 0), top = 38 + i*38 - setRun.box[1]*big;
+    /* every digit on one baseline: placed by the set's top, not its own */
+    const x0 = M + cellW*(j + 0.5) - (run.box[0] + run.box[2])/2;
+    out.push(run.parts.map(q => `<path transform="translate(${sn(x0 + q.x, 3)} ${sn(top, 3)}) scale(${sn(big, 5)})" d="${q.d}" fill="#000000"/>`).join(""));
+  }));
+  /* the hour figures this dial carries, at 5:1 and at 1:1 */
+  const plan = sheetPlanOf(st), hours = [1,2,3,4,5,6,7,8,9,10,11,12].filter(h => plan[h % 12] === "numeral");
+  const runs5 = hours.map(h => ({h, r:numArtRun(G, labels[h - 1], fsz*5, track*5), r1:numArtRun(G, labels[h - 1], fsz, track)}));
+  const h5 = Math.max(0.1, ...runs5.map(x => x.r.box[3] - x.r.box[1]));
+  const per = Math.min(6, Math.max(1, Math.ceil(hours.length/2))), cw = (W - 2*M)/per;
+  let y = 38 + rows.length*38 + 4;
+  head(y, "Hour figures, 5:1  (under each: its size on the dial, height × width)");
+  for(let i = 0; i < runs5.length; i += per){
+    const top = y + 4;
+    runs5.slice(i, i + per).forEach((x, j) => {
+      const cx = M + cw*(j + 0.5), b = x.r1.box;
+      out.push(numArtDraw(x.r, cx, top + (h5 - (x.r.box[3] - x.r.box[1]))/2));
+      out.push(sheetText(cx, top + h5 + 4.2, `${sn(b[3] - b[1], 2)} × ${sn(b[2] - b[0], 2)}mm`, {size:2.8, anchor:"middle", fill:grey}));
+    });
+    y = top + h5 + 6;
+  }
+  y += 4;
+  head(y, "Actual size, 1:1");
+  const cw1 = (W - 2*M)/12, h1 = Math.max(0.1, ...runs5.map(x => x.r1.box[3] - x.r1.box[1]));
+  runs5.forEach((x, j) => out.push(numArtDraw(x.r1, M + cw1*(j + 0.5), y + 3.5 + (h1 - (x.r1.box[3] - x.r1.box[1]))/2)));
+  y += 3.5 + h1 + 8;
+  /* what the maker needs beside the shapes */
+  const H = nm.height === undefined ? 0.20 : +nm.height;
+  const facts = [`${sheetNumMade(nm)}  ·  ${hours.length} pcs  ·  digits ${sn(M0.h, 2)}mm high${nm.tech === "applied" ? `  ·  ${sn(H, 2)}mm thick` : ""}`,
+    `Font: ${sheetNumFont(nm)}. Outlines taken from the font, drawn in black; the colour and finish are in the specification.`];
+  facts.forEach((t, i) => out.push(sheetText(M, Math.min(y, 192) + i*5.2, t, {size:3.4})));
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="297mm" height="210mm" viewBox="0 0 297 210">${out.join("")}</svg>`;
 }
 /* SHEET-PURE-END */
 /* ---- the browser's part: the renders, the panels, words drawn as
@@ -14861,6 +14952,9 @@ async function sheetBuild(onStep){
   R.hands = await sheetHandsRaster(A);
   R.dial = await sheetDialRaster(A);
   R.numerals = await sheetNumeralsRaster(A).catch(() => null);
+  /* the figures' true height, from the font's outlines, where it has them */
+  const nmM = numArtMetrics(A, await loadOutlines());
+  if(R.numerals && nmM) R.numerals = Object.assign({}, R.numerals, {h:nmM.h});
   const dr = plan.K.sheet && plan.K.sheet.drawings;
   if(dr){ R.front = await sheetDrawing(dr.front); R.side = await sheetDrawing(dr.side); }
   const words = new Set();
@@ -14902,6 +14996,41 @@ async function sheetPDF(built){
   try{ await doc.svg(host.firstElementChild, {x:0, y:0, width:420, height:297}); }
   finally{ host.remove(); }
   return doc.output("blob");
+}
+
+/* The fonts' outlines, fetched once when a sheet first needs them (and
+   kept by the service worker for offline use). A failed fetch is tried
+   again next time. */
+let fontOutlines = null;
+function loadOutlines(){
+  if(!fontOutlines) fontOutlines = fetch("./app/font-outlines.json").then(r => r.ok ? r.json() : Promise.reject(new Error(r.status)))
+    .catch(() => { fontOutlines = null; return null; });
+  return fontOutlines;
+}
+/* The numerals artwork as an A4 PDF, handed to the Ready sheet like the
+   maker's sheet. Only a font the studio has outlines for can be drawn as
+   vector: the two drawn sets and uploaded fonts are said so, not faked. */
+async function makeNumArtPDF(){
+  const nm = S.numerals || {};
+  if(!nm.on){ toast(sheetSay("na.off", "This design has no numerals")); return; }
+  try{
+    toast(sheetSay("na.making", "Making the numerals PDF…"));
+    ensureSheet(S);
+    const OUT = await loadOutlines(), info = sheetInfo(S, new Date());
+    const labels = Array.from({length:12}, (_, i) => numeralLabel(i + 1, nm.system || "western 0–9"));
+    const svg = numArtSVG(S, OUT, info, labels);
+    if(!svg){ toast(OUT ? sheetSay("na.noFont", "The numerals artwork needs one of the studio's fonts; this one has no outlines here. Send the maker the font file.")
+      : sheetSay("na.offline", "Could not load the font outlines. Try again when online.")); return; }
+    const kit = await loadPdfKit();
+    const doc = new kit.jsPDF({orientation:"landscape", unit:"mm", format:"a4", compress:true, putOnlyUsedFonts:true});
+    doc.setProperties({title:`Numerals ${sheetNumFont(nm)} ${info.designNo || ""}`.trim(), creator:"Watch Design Studio " + APP_VERSION});
+    const host = document.createElement("div");
+    host.style.cssText = "position:fixed;left:-20000px;top:0;width:297px;height:210px;overflow:hidden;pointer-events:none";
+    host.innerHTML = svg; document.body.appendChild(host);
+    try{ await doc.svg(host.firstElementChild, {x:0, y:0, width:297, height:210}); } finally { host.remove(); }
+    const name = sheetFileName(info).replace(/\.pdf$/, "_numerals.pdf");
+    presentOutput(name, doc.output("blob"), "application/pdf");
+  }catch(e){ toast("Could not make the PDF: " + e.message); }
 }
 
 /* ---- the preview, and where it is opened from ---- */
@@ -14976,6 +15105,7 @@ async function makeMakerPDF(){
 (function(){
   const sheet = q("#mkSheet"); if(!sheet) return;
   q("#mkGo").onclick = makeMakerPDF;
+  q("#mkNum").onclick = makeNumArtPDF;
   q("#mkClose").onclick = () => sheet.classList.remove("open");
   q("#mkZoom").onclick = () => { mkZoomed = !mkZoomed; q("#mkPrev").style.width = mkZoomed ? "300%" : "100%";
     q("#mkZoom").textContent = mkZoomed ? sheetSay("mk.zoomOut", "Fit to the screen") : sheetSay("mk.zoomIn", "Zoom in"); };
@@ -14994,6 +15124,7 @@ async function makeMakerPDF(){
     commit(); mkRefresh();
   });
   for(const id of ["#mkSheetBtn", "#open-sheet"]){ const b = q(id); if(b) b.onclick = openMakerSheet; }
+  { const b = q("#numArtBtn"); if(b) b.onclick = makeNumArtPDF; }
 })();
 </script>
 <script>
@@ -16050,6 +16181,7 @@ const GSTR = {en:{
   "mk.versionsNote":"The versions beside this one, and the maker's last version to compare it with, are chosen on the preview.",
   "mk.beside":"Versions beside this one (up to 3)", "mk.none":"No saved versions yet. Save one (Done on the Finish step) to show it beside this design.",
   "mk.base":"Compare Version A with the maker's last version", "mk.noBase":"Nothing (no automatic marks)",
+  "na.off":"This design has no numerals", "na.making":"Making the numerals PDF…", "na.noFont":"The numerals artwork needs one of the studio's fonts; this one has no outlines here. Send the maker the font file.", "na.offline":"Could not load the font outlines. Try again when online.",
   "mk.drawing":"Drawing the sheet…", "mk.making":"Making the PDF…", "mk.zoomIn":"Zoom in", "mk.zoomOut":"Fit to the screen",
   "mk.marks":"Marks and notes on Version A", "mk.auto":"Automatic", "mk.noMark":"No mark", "mk.notePh":"Note, e.g. (same as before)",
   "toast.drawnCase":"Showing the drawing: the photograph cannot show this. “Show the real photo” goes back to it.",
@@ -16208,6 +16340,7 @@ GSTR.ar = {
   "mk.versionsNote":"تختار من المعاينة الإصدارات التي تظهر بجانب هذا التصميم، وآخر إصدار من المصنع للمقارنة.",
   "mk.beside":"إصدارات بجانب هذا التصميم (حتى 3)", "mk.none":"لا توجد إصدارات محفوظة بعد. احفظ إصداراً (تم في خطوة الإنهاء) ليظهر بجانب هذا التصميم.",
   "mk.base":"قارن الإصدار A بآخر إصدار من المصنع", "mk.noBase":"لا شيء (بلا علامات تلقائية)",
+  "na.off":"هذا التصميم بدون أرقام", "na.making":"جارٍ إنشاء ملف الأرقام PDF…", "na.noFont":"رسم الأرقام يحتاج أحد خطوط الستوديو، وهذا الخط ما له رسم هنا. أرسل ملف الخط للمصنع.", "na.offline":"تعذّر تحميل رسم الخطوط. جرّب مرة ثانية وأنت متصل.",
   "mk.drawing":"جارٍ رسم الورقة…", "mk.making":"جارٍ إنشاء ملف PDF…", "mk.zoomIn":"تكبير", "mk.zoomOut":"ملاءمة الشاشة",
   "mk.marks":"علامات وملاحظات على الإصدار A", "mk.auto":"تلقائية", "mk.noMark":"بلا علامة", "mk.notePh":"ملاحظة، مثل (same as before)",
   "toast.drawnCase":"يظهر الرسم الآن: الصورة لا تستطيع إظهار هذا الاختيار. زر «اعرض الصورة الحقيقية» يعيدها.",
@@ -16246,7 +16379,7 @@ GSTR.ar = {
    "Diamond" the stone. */
 const GWORD = {ar:{
   /* the maker's sheet */
-  "Maker's sheet (PDF)":"ورقة المصنع (PDF)", "A3 for the maker":"صفحة A3 للمصنع", "Preview the maker's sheet":"معاينة ورقة المصنع",
+  "Maker's sheet (PDF)":"ورقة المصنع (PDF)", "Numerals (PDF)":"الأرقام (PDF)", "Artwork for the maker":"رسم الأرقام للمصنع", "A3 for the maker":"صفحة A3 للمصنع", "Preview the maker's sheet":"معاينة ورقة المصنع",
   "Design number":"رقم التصميم", "Date":"التاريخ", "Designer":"المصمم", "Brand":"العلامة التجارية", "Movement":"المحرك",
   "Rubber":"مطاط", "Fabric Velcro":"قماش بلاصق", "Leather":"جلد", "Bracelet":"سوار معدني", "Curved":"منحني", "Strap maker":"صانع السير",
   "Buckle":"الإبزيم", "Pin buckle":"إبزيم بدبوس", "Velcro loop":"حلقة لاصقة", "Folding clasp":"قفل قابل للطي",
@@ -17817,7 +17950,7 @@ Object.assign(GWORD.ar, {
       h += `<h3>${gT("fin.check")}</h3>` + checkSummary();
       /* Saving is the footer's "Done", so the tiles are what comes after it */
       h += `<h3>${gT("fin.keep")}</h3><div class="gActions">
-        ${[["export","Export","Image, PDF or file"],["maker","Maker's sheet (PDF)","A3 for the maker"],["share","Share","Send a picture"],["3d","3D view","Turn it in your hand"],["compare","Compare","Side by side"],["spec","Specification","For the factory"]]
+        ${[["export","Export","Image, PDF or file"],["maker","Maker's sheet (PDF)","A3 for the maker"]].concat(S.numerals && S.numerals.on ? [["numart","Numerals (PDF)","Artwork for the maker"]] : []).concat([["share","Share","Send a picture"],["3d","3D view","Turn it in your hand"],["compare","Compare","Side by side"],["spec","Specification","For the factory"]])
           .map(([k, l, s]) => `<button type="button" data-gdo="${k}">${gW(l)}<small>${gW(s)}</small></button>`).join("\n        ")}</div>`;
       return h;
     }
@@ -18339,7 +18472,7 @@ Object.assign(GWORD.ar, {
       if(d.gdo === "hourAll"){ if(pickHour === null) return; const k = S.markers.at[pickHour], cov = coveredHours(S);
         S.markers.at = S.markers.at.map((x, i) => cov.has(i || 12) ? x : k); syncMarkerFlags(S); commit(); paintAll(); return; }
       ({save:()=>click("#save"), export:()=>click("#exp"), share:()=>{ if(document.querySelector("#share")) click("#share"); else click("#exp"); }, "3d":()=>click("#open-relief"),
-        compare:()=>click("#compare"), spec:()=>click('[data-atelier="spec"]'), check:()=>click('[data-atelier="check"]'), maker:()=>openMakerSheet()}[d.gdo] || (()=>{}))();
+        compare:()=>click("#compare"), spec:()=>click('[data-atelier="spec"]'), check:()=>click('[data-atelier="check"]'), maker:()=>openMakerSheet(), numart:()=>makeNumArtPDF()}[d.gdo] || (()=>{}))();
     }
   });
   /* the hand shapes, as the full editor sets them */

@@ -200,6 +200,24 @@ stored in a design file do not change. In the full editor at laptop widths
 the toolbar sits tighter, and on a narrower window it takes a second row
 rather than pushing Share and Export off the screen.
 
+## Numerals artwork for the maker (v4.10.0)
+
+A second PDF beside the maker's sheet: *Numerals (PDF)* on the Finish step
+(الأرقام PDF), *Numerals artwork (PDF)* in the Export sheet and in the
+maker's sheet preview. One A4 landscape page, black on white: the ten
+digits large, then the hour figures this dial carries at 5:1 with each
+one's height and width on the dial, and at 1:1, with the font, how the
+figures are made, their height and thickness. Every figure is the font's
+own outline, so the page is vector and the maker can cut from it.
+
+The outlines come from `app/font-outlines.json`, written from the built-in
+fonts by `tools/font-outlines.py` (fontTools); run it again after adding a
+built-in font. The service worker keeps the file for offline use. The two
+drawn sets and uploaded fonts have no outlines there, so the studio says so
+rather than sending a picture. The figures are sized as the dial draws them
+(the digits' ink is 0.72 of the numeral size), and the maker's sheet now
+gives that true height ("2.9mm high") in place of the size setting.
+
 ## The maker's sheet points at every part (v4.9.1)
 
 The sheet's dial panel moved up into the room under the 200% render and

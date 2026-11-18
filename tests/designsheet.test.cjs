@@ -23,7 +23,7 @@ vm.runInContext(chunk('const PANTONE_FAMS =', 'const pantoneFind') + chunk('cons
   + chunk('const VERNOY_CASE = {', 'const CASE_SPEC = new Proxy')
   + chunk('/* SHEET-PURE-BEGIN */', '/* SHEET-PURE-END */')
   + '\nthis.g={sheetRows,sheetPlan,sheetCompare,sheetInfo,sheetStrap,sheetFileName,buildSheetSVG,caseOutlineDrawing,sheetTextW,sheetMovement,sheetHandWarning,'
-  + 'sheetCasebackRing,sheetFinishes,SHEET_GRID,CASES,TK_NIVADA,NOREL_R4,VERNOY_CASE,deep,clone,nearestPantone};', ctx);
+  + 'sheetCasebackRing,sheetFinishes,numArtSVG,numArtMetrics,SHEET_GRID,CASES,TK_NIVADA,NOREL_R4,VERNOY_CASE,deep,clone,nearestPantone};', ctx);
 const G = ctx.g;
 const BASE_SHEET = vm.runInContext('(' + chunk('  sheet:{designNo:"", date:""', '\n};').replace(/^\s*sheet:/, '') + ')', ctx);
 const load = f => JSON.parse(fs.readFileSync(path.join(root, 'designs', f), 'utf8'));
@@ -303,4 +303,34 @@ test('the numerals panel names the font and how the figures are made', () => {
   // the NOREL: its day and date windows have their own labels
   const n = G.buildSheetSVG(G.sheetPlan(norel(), [], NOW), {}).svg;
   assert.match(n, />Day window</); assert.match(n, />Date window</);
+});
+
+test('the numerals artwork: the font\'s own outlines, black on white, sized as the dial draws them', () => {
+  const OUT = JSON.parse(fs.readFileSync(path.join(root, 'app/font-outlines.json'), 'utf8'));
+  const naskh = OUT['Noto Naskh Arabic'].g;
+  for(const c of '٠١٢٣٤٥٦٧٨٩') assert.ok(naskh[c] && /^M/.test(naskh[c].d), c);
+  // y runs down: a digit's ink sits above its baseline
+  assert.ok(naskh['١'].b[1] < 0 && naskh['١'].b[3] <= 0.001);
+  assert.match(naskh['١'].d, / 0\.243 -0\.009Q/, 'minus signs kept');
+  const st = tk(), A = '٠١٢٣٤٥٦٧٨٩', lab = n => String(n).split('').map(d => A[+d]).join('');
+  const labels = Array.from({length:12}, (_, i) => lab(i + 1));
+  const M = G.numArtMetrics(st, OUT);
+  assert.ok(Math.abs(M.h - 0.72*st.numerals.size) < 1e-9, 'digits\' ink 0.72 of the numeral size, as the dial draws them');
+  const svg = G.numArtSVG(st, OUT, {brand:'NIVADA GRENCHEN', designNo:'103277_4', date:'2026-11-18'}, labels);
+  assert.match(svg, /^<svg xmlns="http:\/\/www.w3.org\/2000\/svg" width="297mm" height="210mm" viewBox="0 0 297 210">/);
+  // ten digits, then twelve figures twice (5:1 and 1:1), three of them two digits long
+  assert.equal((svg.match(/<path /g) || []).length, 10 + 2*15);
+  assert.doesNotMatch(svg, /<image|<filter|<mask|<textPath|letter-spacing|<use /);
+  assert.ok(!/[؀-ۿ]/.test(svg.replace(/d="[^"]*"/g, '')), 'no Arabic as text: it is all outline');
+  assert.match(svg, />Numerals · Noto Naskh Arabic</);
+  assert.match(svg, />Hour figures, 5:1/); assert.match(svg, />Actual size, 1:1</);
+  assert.match(svg, /Applied, shiny rose gold  ·  12 pcs  ·  digits 2.9mm high  ·  0.2mm thick/);
+  // a dial with windows: only the figures it carries
+  const n = norel(); n.numerals.style = 'Noto Naskh Arabic';
+  const sv2 = G.numArtSVG(n, OUT, {brand:'NOREL'}, labels);
+  assert.ok(sv2);
+  // a drawn set or a font with no outlines is not faked
+  const v = tk(); v.numerals.style = 'vernoy'; v.numerals.system = 'western 0–9';
+  assert.equal(G.numArtSVG(v, OUT, {}, labels), null);
+  assert.match(sw, /"\.\/app\/font-outlines\.json"/);
 });
