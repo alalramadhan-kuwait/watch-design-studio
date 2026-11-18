@@ -2175,7 +2175,7 @@ const APP_BUILD = "__BUILD__";
 /* The version people see, raised with every change that reaches them:
    major for a new way of working, minor for something new to do, patch for
    a fix. Shown on the watch screen, so any screenshot says which it was. */
-const APP_VERSION = "4.9.0";
+const APP_VERSION = "4.9.1";
 const APP_DATE = "__DATE__";
 
 /* Every route that replaces S passes through one of these three, which is
@@ -13736,7 +13736,10 @@ const SHEET_GRID = {
   caseback:{cx:182.62, cy:244.80, r:18.43},
   buckles:[{cx:230.24, cy:238.15, capY:254.3}, {cx:273.92, cy:238.30, capY:249.3}],
   hands:{x:299.06, y:222.31, w:52.93, h:52.93},
-  dial:{x:355.96, y:222.31, w:58.75, h:52.93},
+  /* the dial with every part pointed out, in the room above the hands and
+     under the 200% render, and the numerals' own panel where the dial was */
+  dial:{x:299.06, y:165.4, w:115.64, h:53.4, dialD:42},
+  numerals:{x:355.96, y:222.31, w:58.75, h:52.93},
   movement:{x:414.70, y:281.2, size:13*0.26465},
   footer:{y:284.50, h:12.50, textY:292.2, size:15*0.26465, date:7.41, number:68.8, designer:185.3, brandRight:412.59,
           brandSize:18*0.26465, brandTrack:2*0.26465}
@@ -13917,16 +13920,85 @@ function sheetPlanOf(st){
   const nm = st.numerals || {}, ix = st.indices || {};
   return Array.from({length:12}, () => nm.on ? "numeral" : ix.on ? "index" : "none");
 }
-/* The printed lines on the dial, logo first when it is printed. */
-function sheetPrinted(st){
-  const T = st.text || {}, out = [];
-  if(!T.on) return out;
-  const flat = /^(printed|double printed)$/.test(T.logoTech || "printed");
-  if(flat && (!T.logoMark || T.logoMark === "none") && T.logo) out.push(T.logo);
-  if(T.line2On !== false && T.line2) out.push(T.line2);
-  if(T.footOn !== false && T.foot) out.push(T.foot);
-  if(T.splitOn && T.split) out.push(T.split);
+/* The figures' typeface as the maker would order it: a font by its own
+   name, the plain styles by the font they stand for (as STYLE_ALIAS has
+   them), the two drawn sets as drawn. Arabic and Roman figures cannot use
+   a drawn set, so those name the face the dial falls back to. */
+const SHEET_NUM_FONT = {modern:"Barlow Condensed", deco:"Josefin Sans", roman:"Cormorant Garamond", serif:"Cormorant Garamond",
+  vernoy:"Vernoy figures (drawn)", breguet:"Breguet figures (drawn)"};
+function sheetNumStyle(nm){
+  const sys = nm.system || "western 0–9", s = nm.style || "modern";
+  return sys !== "western 0–9" && (s === "vernoy" || s === "breguet") ? (sys === "roman I–XII" ? "Cinzel" : "Amiri") : s;
+}
+const sheetNumFont = nm => { const s = sheetNumStyle(nm); return SHEET_NUM_FONT[s] || s; };
+/* how a numeral is made, in the maker's words: "Applied, shiny rose gold" */
+function sheetNumMade(nm){
+  const t = nm.tech || "printed", col = sheetColourName(nm.color) || "Black";
+  if(t === "applied"){
+    const m = nm.material || "metal";
+    const what = m === "metal" ? "Applied, " + sheetMade(nm.metal, "polished").toLowerCase() : m === "lume" ? "Applied lume" : "Applied " + m;
+    return what + (nm.pave ? `, set with ${nm.paveStone || "diamond"}s` : "");
+  }
+  if(nm.material === "lume" && t === "printed") return "Printed lume";
+  if(t === "double printed") return `${col} double printed (raised ink)`;
+  if(t === "engraved + filled") return `Engraved, filled ${nm.material === "lacquer / enamel" ? "with " + col.toLowerCase() + " enamel" : col.toLowerCase()}`;
+  if(t === "engraved") return "Engraved tone on tone, not filled";
+  if(t === "embossed") return "Embossed (dial pressed up)";
+  return `${col} printed`;
+}
+/* How each line on the dial is made, in the maker's words, and whether the
+   colour is part of the order. */
+const SHEET_LINE_TECH = {
+  "printed":           ink => `${ink} printed`,
+  "double printed":    ink => `${ink} double printed (raised ink)`,
+  "engraved + filled": ink => `Engraved, filled ${ink.toLowerCase()}`,
+  "engraved":          () => "Engraved tone on tone, not filled",
+  "gloss on matte":    () => "Gloss print on matte",
+  "brushed across":    () => "Brushed across the dial grain",
+  "uv ink":            () => "UV ink, shows under UV light"
+};
+const SHEET_LINE_INKED = new Set(["printed", "double printed", "engraved + filled"]);
+/* The dial's lines, each with how it is made and a point on it (dial mm,
+   for the callouts' leaders): a printed logo, the line under it, the line
+   above 6, the words either side of 6, and the minute track. */
+function sheetLines(st){
+  const T = st.text || {}, out = [], tech = t => SHEET_LINE_TECH[t] ? t : "printed";
+  const ink = T.lineColor || T.color;
+  if(T.on){
+    const at = (s, size, y) => [-Math.min(3.2, String(s).length*(size || 0.8)*0.33), (y || 0) - (size || 0.8)*0.35];
+    const flat = /^(printed|double printed)$/.test(T.logoTech || "printed");
+    if(flat && (!T.logoMark || T.logoMark === "none") && T.logo) out.push({t:T.logo, tech:tech(T.logoTech), ink:T.color, p:at(T.logo, T.logoSize || 2, T.logoY)});
+    if(T.line2On !== false && T.line2) out.push({t:T.line2, tech:tech(T.line2Tech), ink, p:at(T.line2, T.line2Size, T.line2Y)});
+    if(T.footOn !== false && T.foot) out.push({t:T.foot, tech:tech(T.footTech), ink, p:at(T.foot, T.footSize, T.footY)});
+    if(T.splitOn && T.split){
+      const r = T.splitR === undefined ? 12.6 : T.splitR, gap = T.splitGap === undefined ? 2.0 : T.splitGap, size = T.splitSize || 0.62;
+      const w0 = String(T.split).split(/\s+/)[0].length*size*0.7, phi = (gap + w0/2)/Math.max(0.5, r);
+      out.push({t:T.split, tech:tech(T.splitTech), ink, p:[-r*Math.sin(phi), r*Math.cos(phi) - size*0.35]});
+    }
+  }
+  const m = st.minute;
+  if(m && m.on){
+    const r = (m.diameter || 29)/2 - 0.4, a = 255*Math.PI/180;
+    out.push({t:"minute track", tech:tech(m.tech), ink:m.color, p:[r*Math.sin(a), -r*Math.cos(a)]});
+  }
   return out;
+}
+/* the lines put together by how they are made (and, where it is part of
+   the order, in what colour), printed first */
+function sheetLineGroups(st){
+  const groups = [];
+  for(const l of sheetLines(st)){
+    const inked = SHEET_LINE_INKED.has(l.tech), ink = inked ? String(l.ink || "").toUpperCase() : "";
+    let g = groups.find(x => x.tech === l.tech && x.ink === ink);
+    if(!g){ g = {tech:l.tech, ink, items:[]}; groups.push(g); }
+    g.items.push(l);
+  }
+  groups.sort((a, b) => (b.tech === "printed") - (a.tech === "printed"));
+  for(const g of groups){
+    g.words = g.items.map(i => i.t);
+    g.desc = SHEET_LINE_TECH[g.tech](sheetColourName(g.ink) || "Black");
+  }
+  return groups;
 }
 
 /* ---- the specification lines ----
@@ -13969,7 +14041,7 @@ function sheetRows(st){
     /* a raised piece says how tall it is; the ordinary 0.20 mm goes unsaid */
     const nH = nm.height === undefined ? 0.20 : +nm.height;
     const tall = nm.tech === "applied" && nH > 0.25 ? `, raised ${sn(nH, 2)}mm thick` : "";
-    row("numerals", "", `${sheetCap(what)}${tall}${nm.pave ? `, set with ${nm.paveStone || "diamond"}s` : ""}, ${nN} pcs`, [nm.system, nm.style, nm.tech, nm.material, nm.size, nm.pave, nN, tall && nH],
+    row("numerals", "", `${sheetCap(what)}${tall}${nm.pave ? `, set with ${nm.paveStone || "diamond"}s` : ""}, ${sheetNumFont(nm)} font, ${nN} pcs`, [nm.system, nm.style, nm.tech, nm.material, nm.size, nm.pave, nN, tall && nH],
       [applied ? nm.metal : String(nm.color || "").toUpperCase()]);
   }
   const nI = count("index") + count("indexAlt");
@@ -13992,10 +14064,10 @@ function sheetRows(st){
   } else if(T.on && mark && !/^(printed|double printed)$/.test(T.logoTech || "printed"))
     row("logo", "", `${sheetCap(T.logoTech)} logo (${mark})`, [mark, T.logoTech], [String(T.color || "").toUpperCase()]);
   else if(T.on && mark) row("logo", "", `${sheetColourName(T.color)} printed logo (${mark})`, [mark, T.logoTech], [String(T.color || "").toUpperCase()]);
-  const printed = sheetPrinted(st);
-  if(st.minute && st.minute.on && (st.minute.tech || "printed") === "printed") printed.push("minute track");
-  if(printed.length){ const ink = T.lineColor || T.color;
-    row("printing", "", `${sheetColourName(ink)} printed: ${printed.join(", ")}`, [printed], [String(ink || "").toUpperCase()]); }
+  /* the lines, one row for each way they are made: printed, engraved and
+     filled, and the rest */
+  sheetLineGroups(st).forEach((g, i) =>
+    row(i === 0 && g.tech === "printed" ? "printing" : "printing " + g.tech + " " + g.ink, "", `${g.desc}: ${g.words.join(", ")}`, [g.words], g.ink ? [g.ink] : []));
   /* calendar */
   if(st.date && st.date.on){ const dt = st.date;
     row("date", "Date:", `${dt.digits === "Arabic-Indic" ? "Arabic-Indic" : "Western"} digits, ${sheetColourName(dt.bg).toLowerCase()} disc at ${dt.at || 3} o'clock${dt.cyclops && dt.cyclops !== "none" ? ", " + dt.cyclops + " cyclops" : ""}`,
@@ -14365,13 +14437,18 @@ function buildSheetSVG(plan, R, o){
   /* ... the dial, with what is applied and printed pointed out. It is drawn
      at the approved design's size, the dial 24.4 mm across (so 0.84 of
      the F77's), which leaves room round it for the callouts ... */
-  const D = G.dial, dcx = D.x + D.w/2, dcy = D.y + 22.2, Kd = caseOf(A), dD = A.dial && A.dial.lock === false ? A.dial.diameter : Kd.dialD;
-  const dk = Math.min(1, 24.4/(dD || 29));
+  const D = G.dial, dcx = D.x + D.w/2, dcy = D.y + D.h/2, Kd = caseOf(A), dD = A.dial && A.dial.lock === false ? A.dial.diameter : Kd.dialD;
+  const dk = D.dialD/(dD || 29);
   out.push(`<rect x="${sn(D.x)}" y="${sn(D.y)}" width="${sn(D.w)}" height="${sn(D.h)}" fill="${SHEET_PANEL}"/>`);
   box("dial", D.x, D.y, D.w, D.h);
   if(R.dial && R.dial.url){ const w = R.dial.wmm*dk;
     out.push(`<image href="${R.dial.url}" x="${sn(dcx - w/2)}" y="${sn(dcy - w/2)}" width="${sn(w)}" height="${sn(w)}" preserveAspectRatio="none"/>`); }
   out.push(sheetDialCallouts(A, dcx, dcy, D, raster, dk));
+  /* ... and the numerals: their font, set out, and how they are made */
+  const NP = G.numerals;
+  out.push(`<rect x="${sn(NP.x)}" y="${sn(NP.y)}" width="${sn(NP.w)}" height="${sn(NP.h)}" fill="${SHEET_PANEL}"/>`);
+  box("numerals", NP.x, NP.y, NP.w, NP.h);
+  out.push(sheetNumeralPanel(A, NP, R.numerals, raster));
   /* the movement, and the footer band */
   const mv = "Movement:  " + inf.movement;
   out.push(sheetText(G.movement.x, G.movement.y, mv, {size:G.movement.size, bold:true, italic:true, anchor:"end"}, raster));
@@ -14393,54 +14470,119 @@ function buildSheetSVG(plan, R, o){
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="420mm" height="297mm" viewBox="0 0 420 297">${out.join("")}</svg>`;
   return {svg, boxes};
 }
-/* The dial panel's callouts: the applied logo, the raised script, the
-   applied indexes (two leaders, to 12 and the next marker round) and the
-   printing, each label in a corner of the panel with a leader to the part. */
+/* The dial panel's callouts: every part of the dial with how it is made.
+   The logo and the lines are listed down the left, grouped by technique,
+   and the markers and the dial down the right; each label carries a
+   leader to the part, or one to each part when several share a technique.
+   The words wrap to the column and shrink together if a column is full. */
+const sheetWrap = (s, size, width, bold, raster) => {
+  const out = []; let cur = "";
+  for(const w of String(s).split(/\s+/).filter(Boolean)){
+    const next = cur ? cur + " " + w : w;
+    if(cur && sheetTextWidth(next, size, bold, raster) > width){ out.push(cur); cur = w; } else cur = next;
+  }
+  if(cur) out.push(cur);
+  return out;
+};
 function sheetDialCallouts(st, cx, cy, D, raster, k){
-  const T = st.text || {}, nm = st.numerals || {}, ix = st.indices || {}, g = [], fs = 11*0.26465, lead = 3.3;
+  const T = st.text || {}, nm = st.numerals || {}, ix = st.indices || {}, d = st.dial || {}, g = [];
   k = k || 1;
-  const P = (x, y) => [cx + x*k, cy + y*k];
-  const label = (lines, x, y, anchor) => lines.forEach((t, i) => g.push(sheetText(x, y + i*lead, t, {size:fs, anchor}, raster)));
-  const mark = T.logoMark && T.logoMark !== "none" ? T.logoMark : "", applied = T.on && /^applied/.test(T.logoTech || "");
+  const P = (x, y) => [cx + x*k, cy + y*k], rD = (D.dialD || 42)/2;
+  const left = [], right = [];
+  /* the logo */
+  const mark = T.logoMark && T.logoMark !== "none" ? T.logoMark : "", lt = T.logoTech || "printed", applied = T.on && /^applied/.test(lt);
   const shield = /shield/i.test(mark), script = /script/i.test(mark) || (!mark && T.logo);
-  const top = D.y + 4.4;
+  const ly = T.logoY === undefined ? -7 : T.logoY, ls = T.logoSize || 2;
   if(applied && (shield || (mark && !script))){
-    const a = P(0, (T.logoY || -7) - 0.27*(T.logoSize || 2));
-    label(["Applied logo"], cx - 10.8, top);
-    g.push(sheetLeader(a[0], a[1], cx - 10.8 + sheetTextW("Applied logo", fs)*0.62, top + 0.9));
+    const fw = sheetFinish(T.logoFinish).toLowerCase();
+    left.push({head:"Applied logo", lines:[`${sheetCap(sheetMetal(T.logoMetal))}, ${fw}${shield && fw === "shiny" ? " & sandblasted" : ""}`], at:[[0, ly - 0.27*ls]]});
   }
-  let ly = cy - 3.0;
   if(applied && script){
-    const a = P(-1.4, (T.logoY || -7) + 1.3), l1 = `${sheetFinish(T.logoFinish)} ${sheetCap(sheetMetal(T.logoMetal))}`, x = D.x + 2.1;
-    label([l1, "color UP"], x, ly);
-    g.push(sheetLeader(a[0], a[1], x + sheetTextW("color UP", fs) + 0.6, ly + lead - 0.9));
-    ly += 2*lead + 2.2;
+    const word = /Nivada/.test(mark) ? "Nivada" : (T.logo || "");
+    left.push({head:`${word ? word + " " : ""}script logo`, lines:[`Applied (UP), ${sheetMade(T.logoMetal, T.logoFinish).toLowerCase()}`], at:[[-1.4, ly + 1.3]]});
   }
-  /* the markers: what they are made of, to the first two hours round from 12 that carry one */
-  const plan = sheetPlanOf(st), hrs = [];
-  for(const h of [12, 1, 2, 3, 11]){ const k = plan[h % 12]; if((k === "numeral" || k === "index" || k === "indexAlt") && hrs.length < 2 && (hrs.length === 0 || h !== 1)) hrs.push([h, k]); }
-  if(hrs.length){
-    const isNum = hrs[0][1] === "numeral", appliedM = isNum ? nm.tech === "applied" : ix.applied !== false;
-    const words = appliedM ? `${sheetFinish(isNum ? "polished" : "polished")} Applied Indexes` : `${sheetTitle(sheetColourName(isNum ? nm.color : ix.color))} Printed Indexes`;
-    const parts = words.split(" "), l1 = parts.slice(0, 2).join(" "), l2 = parts.slice(2).join(" ");
-    const xr = D.x + D.w - 2.1;
-    label([l1, l2], xr, top, "end");
-    const ex = xr - sheetTextW(l1, fs)*0.55, ey = top + lead + 0.9;
-    for(const [h, k] of hrs){ const r = (k === "numeral" ? nm.radius : ix.radius) || 11, a = h*Math.PI/6, p = P(r*Math.sin(a) + (h === 12 ? 1.0 : 0), -r*Math.cos(a) - (h === 12 ? 0 : 1.0));
-      g.push(sheetLeader(p[0], p[1], ex, ey)); }
+  if(T.on && !applied && mark){
+    const how = /^(printed|double printed)$/.test(lt) ? SHEET_LINE_TECH[lt](sheetColourName(T.color) || "Black") : sheetCap(lt);
+    left.push({head:"Logo", lines:[how], at:[[0, ly]]});
   }
-  const pr = sheetPrinted(st);
-  if(pr.length && T.on){
-    const ink = T.lineColor || T.color, y0 = T.line2On !== false && T.line2 ? T.line2Y : T.footOn !== false && T.foot ? T.footY : (T.logoY || 0);
-    const a = P(-2.2, (y0 || 0) - 0.2), x = D.x + 2.1, t = `${sheetTitle(sheetColourName(ink))} Printed`;
-    label([t], x, ly);
-    g.push(sheetLeader(a[0], a[1], x + sheetTextW(t, fs) + 0.6, ly - 0.9));
+  /* the lines, one label for each way they are made */
+  for(const grp of sheetLineGroups(st)) left.push({head:grp.words.join(" · "), lines:[grp.desc], at:grp.items.map(x => x.p)});
+  /* the markers: two leaders each, to the first hours round from 2 that carry them */
+  const plan = sheetPlanOf(st), hoursOf = kinds => [2, 3, 4, 1, 5].filter(h => kinds.indexOf(plan[h % 12]) >= 0).slice(0, 2);
+  const nN = plan.filter(x => x === "numeral").length, nI = plan.filter(x => x === "index" || x === "indexAlt").length;
+  if(nN){
+    const H = nm.height === undefined ? 0.20 : +nm.height, r = nm.radius || 11;
+    right.push({head:`Numerals, ${nN} pcs`, lines:[sheetNumMade(nm), `Font: ${sheetNumFont(nm)}`,
+      `${sn(nm.size || 3, 1)}mm high${nm.tech === "applied" ? `, ${sn(H, 2)}mm thick` : ""}`],
+      at:hoursOf(["numeral"]).map(h => { const a = h*Math.PI/6; return [(r - (nm.size || 3)*0.3)*Math.sin(a), -(r - (nm.size || 3)*0.3)*Math.cos(a)]; })});
   }
-  /* the caption under the dial */
-  const d = st.dial || {}, cap = [`${sheetTitle(d.finish === "stone" ? (d.stone || "stone") : sheetDialFinish(d))} Dial`];
-  if(pr.length) cap.push("w/ printed details");
-  cap.forEach((t, i) => g.push(sheetText(cx, D.y + 45.3 + i*4.29, t, {size:sheetFit(t, 12*0.26465, D.w - 4, false, raster), anchor:"middle"}, raster)));
+  if(nI){
+    const ap = ix.applied !== false, r = (ix.radius || 12) - (ix.length || 2)*0.3;
+    const how = ap ? (ix.metal ? "Applied, " + sheetMade(ix.metal, "polished").toLowerCase() : `Applied, ${(sheetColourName(ix.color) || "").toLowerCase()}`)
+      : (ix.tech && ix.tech !== "printed" && SHEET_LINE_TECH[ix.tech] ? SHEET_LINE_TECH[ix.tech](sheetColourName(ix.color) || "Black") : `${sheetColourName(ix.color) || "Black"} printed`);
+    right.push({head:`Indexes, ${nI} pcs`, lines:[how, `${sheetCap(sheetHandStyle(ix.style || "baton"))} shape`],
+      at:hoursOf(["index", "indexAlt"]).map(h => { const a = h*Math.PI/6; return [r*Math.sin(a), -r*Math.cos(a)]; })});
+  }
+  /* the calendar windows */
+  if(st.day && st.day.on){ const dy = st.day, cal = (caseOf(st) || {}).calendar || {};
+    const r = cal.dayRin && cal.dayRout ? (cal.dayRin + cal.dayRout)/2 : 10.5;
+    right.push({head:"Day window", lines:[`${dy.lang || "Arabic"} day disc, ${(sheetColourName(dy.bg) || "").toLowerCase()}`], at:[[0.8, -r]]}); }
+  if(st.date && st.date.on){ const dt = st.date, a = (dt.at || 3)*Math.PI/6, r = dt.dist || 9.5;
+    right.push({head:"Date window", lines:[`${dt.digits === "Arabic-Indic" ? "Arabic-Indic" : "Western"} digits, ${(sheetColourName(dt.bg) || "").toLowerCase()} disc`
+      + (dt.cyclops && dt.cyclops !== "none" ? `, ${dt.cyclops} cyclops` : "")], at:[[r*Math.sin(a), -r*Math.cos(a)]]}); }
+  /* the dial itself, pointed at a clear patch at half past four */
+  const fin = d.finish === "stone" ? sheetCap(d.stone || "stone") + " stone" : sheetCap(sheetDialFinish(d));
+  const dcol = d.finish === "stone" ? "" : (sheetColourName(d.color) || "").toLowerCase();
+  right.push({head:"Dial", lines:[`${fin}${dcol ? ", " + dcol : ""}`], at:[[5.6, 5.6]]});
+  /* set out a column: by where its parts sit, top to bottom */
+  const colW = (D.w - 2*rD)/2 - 4.4;
+  const lay = (items, side) => {
+    if(!items.length) return;
+    items.sort((a, b) => (a.at[0] ? a.at[0][1] : 0) - (b.at[0] ? b.at[0][1] : 0));
+    let fs = 11*0.26465*0.92, built, total, lead;
+    for(let n = 0; n < 8; n++){
+      lead = fs*1.2;
+      built = items.map(it => {
+        const rows = sheetWrap(it.head, fs, colW, true, raster).map(t => ({t, bold:true}))
+          .concat(...it.lines.map(l => sheetWrap(l, fs, colW, false, raster).map(t => ({t}))));
+        return {it, rows};
+      });
+      total = built.reduce((a, b) => a + b.rows.length*lead, 0) + fs*0.8*(built.length - 1);
+      if(total <= D.h - 4.4 || fs < 2.0) break;
+      fs *= 0.93;
+    }
+    const x0 = side < 0 ? D.x + 2.2 : cx + rD + 2.2;
+    let y = D.y + (D.h - total)/2 + fs*0.82;
+    for(const b of built){
+      b.rows.forEach((r, i) => g.push(sheetText(x0, y + i*lead, r.t, {size:fs, bold:r.bold}, raster)));
+      const hw = Math.min(colW, sheetTextWidth(b.rows[0].t, fs, true, raster));
+      const ex = side < 0 ? x0 + hw + 0.8 : x0 - 0.8, ey = y - fs*0.32;
+      for(const a of b.it.at){ const p = P(a[0], a[1]); g.push(sheetLeader(p[0], p[1], ex, ey)); }
+      y += b.rows.length*lead + fs*0.8;
+    }
+  };
+  lay(left, -1); lay(right, 1);
   return g.join("");
+}
+/* The numerals' panel: the twelve figures in their own font, as the
+   browser draws them, then the font's name and how they are made. With
+   no numerals it says what the markers are instead. */
+function sheetNumeralPanel(st, NP, img, raster){
+  const nm = st.numerals || {}, ix = st.indices || {}, out = [];
+  const plan = sheetPlanOf(st), nN = plan.filter(x => x === "numeral").length;
+  out.push(sheetText(NP.x + 3.17, NP.y + 6.8, nN ? "Numerals" : "Markers", {size:14*0.26465, bold:true, italic:true}));
+  let lines;
+  if(nN){
+    if(img && img.url){ const w = NP.w - 10, h = w*(img.ar || 1/3);
+      out.push(`<image href="${img.url}" x="${sn(NP.x + 5)}" y="${sn(NP.y + 21.6 - h/2)}" width="${sn(w)}" height="${sn(h)}" preserveAspectRatio="none"/>`); }
+    const H = nm.height === undefined ? 0.20 : +nm.height;
+    lines = [`Font: ${sheetNumFont(nm)}`, sheetNumMade(nm), `${sn(nm.size || 3, 1)}mm high${nm.tech === "applied" ? `, ${sn(H, 2)}mm thick` : ""}, ${nN} pcs`];
+  } else if(ix.on){
+    lines = [`${sheetCap(sheetHandStyle(ix.style || "baton"))} indexes`, ix.applied !== false ? "Applied" : "Printed", `${sn(ix.length || 2, 1)} x ${sn(ix.width || 0.5, 2)}mm`];
+  } else lines = ["No numerals or indexes"];
+  lines.forEach((t, j) => out.push(sheetText(NP.x + NP.w/2, NP.y + 37.6 + j*4.6, t,
+    {size:sheetFit(t, 9*SHEET_PT, NP.w - 4, true, raster), bold:true, italic:true, anchor:"middle"}, raster)));
+  return out.join("");
 }
 /* The hour and minute hand references the maker has given lengths for, so
    a design drawn to other lengths is flagged before the sheet goes out. */
@@ -14635,6 +14777,40 @@ async function sheetDialRaster(st){
     return {url:sheetJPEG(out, 0.9), wmm:vb[2]};
   });
 }
+/* The twelve figures in two rows, in their own font and colour, for the
+   numerals' panel. A font is drawn by the canvas once the page has it; the
+   two drawn sets are paths, so they go through an SVG. Metal is drawn in
+   the metal's colour with a darker edge, so pale steel still reads on the
+   grey panel. */
+async function sheetNumeralsRaster(st){
+  const nm = st.numerals || {};
+  if(!nm.on) return null;
+  return sheetCached(sheetKey("numerals", st), async () => {
+    const sys = nm.system || "western 0–9", style = sheetNumStyle(nm);
+    const MT = nm.tech === "applied" && (nm.material || "metal") === "metal" ? (METALS[nm.metal] || METALS["polished steel"]) : null;
+    const col = MT ? MT.base : nm.material === "lume" ? "#D9E6C4" : nm.color || SHEET_INK, edge = shade(col, 0.45);
+    const W = 1200, H = 400, cv = document.createElement("canvas"); cv.width = W; cv.height = H;
+    const g = cv.getContext("2d"); g.fillStyle = SHEET_PANEL; g.fillRect(0, 0, W, H);
+    const hrs = [12, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], cell = i => [100 + (i % 6)*200, i < 6 ? 115 : 295];
+    if(style === "vernoy" || style === "breguet"){
+      const body = hrs.map((n, i) => { const [x, y] = cell(i);
+        return style === "vernoy" ? vernoyNumeral(String(n), x/10, y/10, 11, col, 0, false, "", nm.gap)
+          : breguetNumeral(String(n), x/10, y/10, 11, col, 0, false, "", nm.gap, 1 + (nm.weight || 0)*3); }).join("");
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 40" width="${W}" height="${H}"><rect width="120" height="40" fill="${SHEET_PANEL}"/>`
+        + `<g stroke="${edge}" stroke-width="0.15">${body}</g></svg>`;
+      const c2 = await svgToPng(svg, W, H, 30000, {canvas:true, bg:SHEET_PANEL});
+      g.drawImage(c2, 0, 0); c2.width = c2.height = 0;
+    } else {
+      const fam = fontFamilyOf(style) || {deco:"'Josefin Sans'", serif:"'Cormorant Garamond'", roman:"'Cormorant Garamond'"}[style] || "'IBM Plex Sans'";
+      const labels = hrs.map(n => numeralLabel(n, sys));
+      try{ await document.fonts.load(`160px ${fam}`, labels.join("")); }catch(e){}
+      g.font = `160px ${fam}, serif`; g.textAlign = "center"; g.textBaseline = "middle";
+      g.lineJoin = "round"; g.strokeStyle = edge; g.lineWidth = 3; g.fillStyle = col;
+      labels.forEach((t, i) => { const [x, y] = cell(i); g.strokeText(t, x, y); g.fillText(t, x, y); });
+    }
+    return {url:sheetJPEG(cv, 0.92), ar:H/W};
+  });
+}
 /* the owner's drawings for a case that has them, as JPEG on white */
 async function sheetDrawing(d){
   if(!d) return null;
@@ -14684,6 +14860,7 @@ async function sheetBuild(onStep){
   const A = plan.versions[0].state;
   R.hands = await sheetHandsRaster(A);
   R.dial = await sheetDialRaster(A);
+  R.numerals = await sheetNumeralsRaster(A).catch(() => null);
   const dr = plan.K.sheet && plan.K.sheet.drawings;
   if(dr){ R.front = await sheetDrawing(dr.front); R.side = await sheetDrawing(dr.side); }
   const words = new Set();

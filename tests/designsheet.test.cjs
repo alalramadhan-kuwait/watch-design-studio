@@ -41,7 +41,7 @@ test('the specification lines are written from the design, in the maker\'s words
     'Case: Stainless steel, vertical brush, polished bevels',
     'Band: Black rubber strap, flat',
     'Dial: Silver white vertical brush dial',
-    'Shiny rose gold applied Arabic-Indic numerals, 12 pcs',
+    'Shiny rose gold applied Arabic-Indic numerals, Noto Naskh Arabic font, 12 pcs',
     'Applied logo rose gold (shiny & sandblasted)',
     'Shiny rose gold UP logo Nivada',
     'Black printed: GRENCHEN, TIME KEEPER, SWISS MADE',
@@ -52,7 +52,7 @@ test('the specification lines are written from the design, in the maker\'s words
   const n = G.sheetRows(norel()), t = n.map(line).join('\n');
   assert.match(t, /Band: Stainless steel bracelet/);
   assert.match(t, /Date: Arabic-Indic digits/); assert.match(t, /Day: Arabic day disc/);
-  assert.match(t, /printed Arabic-Indic numerals, \d+ pcs/);
+  assert.match(t, /printed Arabic-Indic numerals, Noto Naskh Arabic font, \d+ pcs/);
 });
 
 test('Version A reproduces the approved page: the owner\'s mark on the dial and note on the script', () => {
@@ -174,8 +174,8 @@ test('the page: A3 in millimetres, every block inside it, the renders at 1:1 and
   assert.match(svg, />Date: 17 November 2026</); assert.match(svg, />Design number: 103277_4</); assert.match(svg, />Designer: </);
   assert.match(svg, />Movement:  Automatic Soprod P024 \(without Date\)</);
   assert.match(svg, />H\/M.Hands: W36017 \(8.5x12mm\)</); assert.match(svg, />Sec. Hand: find existing \(13mm\)</);
-  assert.match(svg, />Vertical Brush Dial</); assert.match(svg, />w\/ printed details</);
-  for(const t of ['Applied logo', 'Shiny Rose gold', 'color UP', 'Shiny Applied', 'Indexes', 'Black Printed', 'Caseback', 'XX/XX to XX/XX', 'Buckle for rubber', 'Engraved logo'])
+  for(const t of ['Applied logo', 'Nivada script logo', 'Black printed', 'Numerals, 12 pcs', 'Applied, shiny rose gold',
+    'Font: Noto Naskh Arabic', 'Dial', 'Vertical brush, silver white', 'Numerals', 'Caseback', 'XX/XX to XX/XX', 'Buckle for rubber', 'Engraved logo'])
     assert.ok(svg.includes('>' + t + '<'), t);
   assert.equal((svg.match(/y="292.3"[^>]*font-weight="bold"[^>]*>[A-Z]</g) || []).length, 14, 'NIVADA GRENCHEN set one glyph at a time');
   // the owner's two drawings stand in the technical row
@@ -263,4 +263,44 @@ test('offered where the design is finished and exported, in English and Arabic',
   // simple mode's form writes into the design, so the details travel with it and its saved versions
   for(const p of ['sheet.designNo', 'sheet.designer', 'sheet.brand', 'sheet.movement', 'sheet.strap.type', 'sheet.strap.buckle', 'sheet.handRef', 'sheet.secRef', 'sheet.caseback', 'sheet.notes'])
     assert.ok(source.includes(`"${p}"`), p);
+});
+
+test('the dial panel points at every part with how it is made, one label for each technique', () => {
+  const st = tk(); st.text.footTech = 'engraved + filled';
+  const rows = G.sheetRows(st).map(r => r.text);
+  assert.ok(rows.includes('Black printed: GRENCHEN, SWISS MADE'), rows.join(' | '));
+  assert.ok(rows.includes('Engraved, filled black: TIME KEEPER'));
+  const { svg, boxes } = G.buildSheetSVG(G.sheetPlan(st, [], NOW), {});
+  // a label wraps to its column, so the heading is read across its lines
+  for(const t of ['Black printed', 'TIME KEEPER', 'Engraved, filled black'])
+    assert.ok(svg.includes('>' + t + '<'), t);
+  assert.match(svg, />GRENCHEN · SWISS( MADE)?</);
+  // the dial panel above the hands, the numerals in the dial's old place, nothing overlapping
+  const by = n => boxes.find(b => b.name === n), over = (a, b) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+  const D = by('dial'), N = by('numerals'), H = by('hands');
+  assert.ok(D && N && H);
+  assert.ok(D.w > 110 && D.y + D.h < H.y && D.y + D.h < N.y, 'the dial panel spans the hands and numerals and sits above them');
+  for(const b of boxes) if(b !== D) assert.ok(!over(D, b), `dial panel clear of ${b.name}`);
+  // every technique a line can take has words for the maker
+  for(const t of ['printed','double printed','engraved + filled','engraved','gloss on matte','brushed across','uv ink']){
+    const s2 = tk(); s2.text.line2Tech = t;
+    assert.ok(G.sheetRows(s2).some(r => /GRENCHEN/.test(r.text) && !/undefined/.test(r.text)), t);
+  }
+});
+
+test('the numerals panel names the font and how the figures are made', () => {
+  const st = tk(); st.numerals.height = 0.5;
+  const { svg } = G.buildSheetSVG(G.sheetPlan(st, [], NOW), {numerals:{url:'data:image/jpeg;base64,AF', ar:1/3}});
+  assert.match(svg, />Font: Noto Naskh Arabic</);
+  assert.match(svg, />Applied, shiny rose gold</);
+  assert.match(svg, />4mm high, 0.5mm thick, 12 pcs</);
+  assert.match(svg, /<image href="data:image\/jpeg;base64,AF"/);
+  // the plain styles are named by the font they stand for; the drawn sets as drawn
+  const name = (style, system) => { const s2 = tk(); Object.assign(s2.numerals, {style, system}); return G.sheetRows(s2).find(r => r.key === 'numerals').text; };
+  assert.match(name('modern', 'western 0–9'), /Barlow Condensed font/);
+  assert.match(name('vernoy', 'western 0–9'), /Vernoy figures \(drawn\) font/);
+  assert.match(name('vernoy', 'arabic ٠–٩'), /Amiri font/);
+  // the NOREL: its day and date windows have their own labels
+  const n = G.buildSheetSVG(G.sheetPlan(norel(), [], NOW), {}).svg;
+  assert.match(n, />Day window</); assert.match(n, />Date window</);
 });

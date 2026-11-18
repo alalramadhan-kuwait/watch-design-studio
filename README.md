@@ -200,6 +200,21 @@ stored in a design file do not change. In the full editor at laptop widths
 the toolbar sits tighter, and on a narrower window it takes a second row
 rather than pushing Share and Export off the screen.
 
+## The maker's sheet points at every part (v4.9.1)
+
+The sheet's dial panel moved up into the room under the 200% render and
+grew to the width of the hands and numerals panels below it. The dial is
+drawn 42 mm across with one label per part: the applied logo, the script,
+each line grouped by how it is made (printed, engraved and filled, tone on
+tone, gloss on matte, brushed across, UV ink, with its colour where the
+colour is part of the order), the numerals or indexes, the day and date
+windows and the dial. Each label has a leader to its part, or one to each
+part when several share a technique. The old dial slot is now a *Numerals*
+panel: the twelve figures in their own font and colour, the font's name,
+how they are made, their height and thickness. The specification list
+names the font and gives one line for each technique
+("Engraved, filled black: TIME KEEPER").
+
 ## Raised applied numerals (v4.9.0)
 
 Simple mode's Markers › Made by tab offers a *Height* for applied numerals:
