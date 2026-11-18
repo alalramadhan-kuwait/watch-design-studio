@@ -319,7 +319,7 @@ test('the numerals artwork: the font\'s own outlines, black on white, sized as t
   const svg = G.numArtSVG(st, OUT, {brand:'NIVADA GRENCHEN', designNo:'103277_4', date:'2026-11-18'}, labels);
   assert.match(svg, /^<svg xmlns="http:\/\/www.w3.org\/2000\/svg" width="297mm" height="210mm" viewBox="0 0 297 210">/);
   // ten digits, then twelve figures twice (5:1 and 1:1), three of them two digits long
-  assert.equal((svg.match(/<path /g) || []).length, 10 + 2*15);
+  assert.equal((svg.match(/<path /g) || []).length, 10 + 6 + 2*15, 'ten digits and 10, 11, 12 large, then twelve figures twice');
   assert.doesNotMatch(svg, /<image|<filter|<mask|<textPath|letter-spacing|<use /);
   assert.ok(!/[؀-ۿ]/.test(svg.replace(/d="[^"]*"/g, '')), 'no Arabic as text: it is all outline');
   assert.match(svg, />Numerals · Noto Naskh Arabic</);

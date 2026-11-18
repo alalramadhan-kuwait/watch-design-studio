@@ -205,7 +205,7 @@ rather than pushing Share and Export off the screen.
 A second PDF beside the maker's sheet: *Numerals (PDF)* on the Finish step
 (الأرقام PDF), *Numerals artwork (PDF)* in the Export sheet and in the
 maker's sheet preview. One A4 landscape page, black on white: the ten
-digits large, then the hour figures this dial carries at 5:1 with each
+digits large with 10, 11 and 12 as set on the dial (v4.10.1), then the hour figures this dial carries at 5:1 with each
 one's height and width on the dial, and at 1:1, with the font, how the
 figures are made, their height and thickness. Every figure is the font's
 own outline, so the page is vector and the maker can cut from it.

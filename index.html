@@ -2177,7 +2177,7 @@ const APP_BUILD = "__BUILD__";
 /* The version people see, raised with every change that reaches them:
    major for a new way of working, minor for something new to do, patch for
    a fix. Shown on the watch screen, so any screenshot says which it was. */
-const APP_VERSION = "4.10.0";
+const APP_VERSION = "4.10.1";
 const APP_DATE = "__DATE__";
 
 /* Every route that replaces S passes through one of these three, which is
@@ -14646,24 +14646,31 @@ function numArtSVG(st, OUT, info, labels){
   out.push(sheetText(M, 18, `Numerals · ${sheetNumFont(nm)}`, {size:7, bold:true}));
   const sub = [info.brand, info.designNo ? "Design number " + info.designNo : "", info.date ? sheetDateText(info.date) : ""].filter(Boolean).join("  ·  ");
   if(sub) out.push(sheetText(M, 25.5, sub, {size:3.6}));
-  /* the digits, large: two rows of five, as one size */
-  const chars = [...(NUMART_SET[sys] || NUMART_SET["western 0–9"])].filter(c => G[c]);
-  const rows = chars.length > 5 ? [chars.slice(0, 5), chars.slice(5)] : [chars];
-  const setRun = numArtRun(G, chars.join(""), 1, 0), setH = setRun.box[3] - setRun.box[1] || 0.7;
-  const big = 30/setH, cellW = (W - 2*M)/5;
-  head(34, sys === "roman I–XII" ? "Letters" : "Digits");
-  rows.forEach((r, i) => r.forEach((c, j) => {
-    const run = numArtRun(G, c, big, 0), top = 38 + i*38 - setRun.box[1]*big;
-    /* every digit on one baseline: placed by the set's top, not its own */
-    const x0 = M + cellW*(j + 0.5) - (run.box[0] + run.box[2])/2;
-    out.push(run.parts.map(q => `<path transform="translate(${sn(x0 + q.x, 3)} ${sn(top, 3)}) scale(${sn(big, 5)})" d="${q.d}" fill="#000000"/>`).join(""));
-  }));
-  /* the hour figures this dial carries, at 5:1 and at 1:1 */
+  /* the hour figures this dial carries, measured first: the large block
+     takes the room they leave */
   const plan = sheetPlanOf(st), hours = [1,2,3,4,5,6,7,8,9,10,11,12].filter(h => plan[h % 12] === "numeral");
   const runs5 = hours.map(h => ({h, r:numArtRun(G, labels[h - 1], fsz*5, track*5), r1:numArtRun(G, labels[h - 1], fsz, track)}));
   const h5 = Math.max(0.1, ...runs5.map(x => x.r.box[3] - x.r.box[1]));
-  const per = Math.min(6, Math.max(1, Math.ceil(hours.length/2))), cw = (W - 2*M)/per;
-  let y = 38 + rows.length*38 + 4;
+  const h1 = Math.max(0.1, ...runs5.map(x => x.r1.box[3] - x.r1.box[1]));
+  const per = Math.min(6, Math.max(1, Math.ceil(hours.length/2))), cw = (W - 2*M)/per, n5 = Math.ceil(runs5.length/per);
+  /* the digits, large, as one size: two rows of five, and a third with
+     10, 11 and 12 as they are set on the dial (its spacing, scaled) */
+  const chars = [...(NUMART_SET[sys] || NUMART_SET["western 0–9"])].filter(c => G[c]);
+  const rows = (chars.length > 5 ? [chars.slice(0, 5), chars.slice(5)] : [chars]).map(r => r.map(t => ({t, col:null})));
+  if(sys !== "roman I–XII") rows.push([10, 11, 12].map((h, j) => ({t:labels[h - 1], col:j + 1})));
+  const setRun = numArtRun(G, chars.join(""), 1, 0), setH = setRun.box[3] - setRun.box[1] || 0.7;
+  /* from the next heading to the foot: the 5:1 rows, the 1:1 row, the two lines */
+  const after = n5*(10 + h5) + 4 + 3.5 + h1 + 8 + 5.2 + 2;
+  const rowH = Math.max(12, Math.min(30, (205 - 38 - 2 - after)/rows.length - 8)), pitch = rowH + 8;
+  const big = rowH/setH, cellW = (W - 2*M)/5;
+  head(34, sys === "roman I–XII" ? "Letters" : "Digits, and 10, 11 and 12 as set on the dial");
+  rows.forEach((r, i) => r.forEach((c, j) => {
+    const run = numArtRun(G, c.t, big, track*big/fsz), top = 38 + i*pitch - setRun.box[1]*big;
+    /* every digit on one baseline: placed by the set's top, not its own */
+    const x0 = M + cellW*((c.col === null ? j : c.col) + 0.5) - (run.box[0] + run.box[2])/2;
+    out.push(run.parts.map(q => `<path transform="translate(${sn(x0 + q.x, 3)} ${sn(top, 3)}) scale(${sn(big, 5)})" d="${q.d}" fill="#000000"/>`).join(""));
+  }));
+  let y = 38 + rows.length*pitch + 2;
   head(y, "Hour figures, 5:1  (under each: its size on the dial, height × width)");
   for(let i = 0; i < runs5.length; i += per){
     const top = y + 4;
@@ -14676,14 +14683,14 @@ function numArtSVG(st, OUT, info, labels){
   }
   y += 4;
   head(y, "Actual size, 1:1");
-  const cw1 = (W - 2*M)/12, h1 = Math.max(0.1, ...runs5.map(x => x.r1.box[3] - x.r1.box[1]));
+  const cw1 = (W - 2*M)/12;
   runs5.forEach((x, j) => out.push(numArtDraw(x.r1, M + cw1*(j + 0.5), y + 3.5 + (h1 - (x.r1.box[3] - x.r1.box[1]))/2)));
   y += 3.5 + h1 + 8;
   /* what the maker needs beside the shapes */
   const H = nm.height === undefined ? 0.20 : +nm.height;
   const facts = [`${sheetNumMade(nm)}  ·  ${hours.length} pcs  ·  digits ${sn(M0.h, 2)}mm high${nm.tech === "applied" ? `  ·  ${sn(H, 2)}mm thick` : ""}`,
     `Font: ${sheetNumFont(nm)}. Outlines taken from the font, drawn in black; the colour and finish are in the specification.`];
-  facts.forEach((t, i) => out.push(sheetText(M, Math.min(y, 192) + i*5.2, t, {size:3.4})));
+  facts.forEach((t, i) => out.push(sheetText(M, y + i*5.2, t, {size:3.4})));
   return `<svg xmlns="http://www.w3.org/2000/svg" width="297mm" height="210mm" viewBox="0 0 297 210">${out.join("")}</svg>`;
 }
 /* SHEET-PURE-END */
