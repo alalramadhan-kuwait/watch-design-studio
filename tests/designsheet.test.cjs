@@ -23,7 +23,7 @@ vm.runInContext(chunk('const PANTONE_FAMS =', 'const pantoneFind') + chunk('cons
   + chunk('const VERNOY_CASE = {', 'const CASE_SPEC = new Proxy')
   + chunk('/* SHEET-PURE-BEGIN */', '/* SHEET-PURE-END */')
   + '\nthis.g={sheetRows,sheetPlan,sheetCompare,sheetInfo,sheetStrap,sheetFileName,buildSheetSVG,caseOutlineDrawing,sheetTextW,sheetMovement,sheetHandWarning,'
-  + 'sheetCasebackRing,sheetFinishes,numArtSVG,numArtMetrics,SHEET_GRID,CASES,TK_NIVADA,NOREL_R4,VERNOY_CASE,deep,clone,nearestPantone};', ctx);
+  + 'sheetCasebackRing,sheetFinishes,numArtSVG,numArtMetrics,numArtRun,SHEET_GRID,CASES,TK_NIVADA,NOREL_R4,VERNOY_CASE,deep,clone,nearestPantone};', ctx);
 const G = ctx.g;
 const BASE_SHEET = vm.runInContext('(' + chunk('  sheet:{designNo:"", date:""', '\n};').replace(/^\s*sheet:/, '') + ')', ctx);
 const load = f => JSON.parse(fs.readFileSync(path.join(root, 'designs', f), 'utf8'));
@@ -333,4 +333,31 @@ test('the numerals artwork: the font\'s own outlines, black on white, sized as t
   const v = tk(); v.numerals.style = 'vernoy'; v.numerals.system = 'western 0–9';
   assert.equal(G.numArtSVG(v, OUT, {}, labels), null);
   assert.match(sw, /"\.\/app\/font-outlines\.json"/);
+});
+
+test('the artwork\'s figures are the dial\'s own: its spacing, kerning, stroke and the smaller ١ and ١١', () => {
+  const OUT = JSON.parse(fs.readFileSync(path.join(root, 'app/font-outlines.json'), 'utf8'));
+  // the only kerning among the built-in figures: Vernoy's Roman pairs
+  assert.deepEqual(OUT['Vernoy Radial Roman'].k, {IV:-0.014, IX:-0.014, VI:-0.02, XI:-0.016});
+  assert.equal(Object.keys(OUT).filter(f => OUT[f].k).length, 1);
+  // the dial spaces Arabic and Persian figures glyph by glyph (dx): Chrome sets
+  // no letter-spacing in Arabic script and WebKit does, so this draws alike everywhere
+  assert.match(source, /const spacing = label => !perGlyph \? `letter-spacing="\$\{f\(lsGap,3\)\}"`/);
+  assert.equal((source.match(/\$\{spacing\((numeralLabel\(n, sys\)|label)\)\}/g) || []).length, 4, 'every numeral <text> uses it');
+  assert.doesNotMatch(source, /letter-spacing="\$\{f\(nm\.gap\*fsz\*0\.011,3\)\}"/);
+  // numInfo, asked for by the artwork, tells it what the dial drew with
+  assert.match(source, /Object\.assign\(o\.numInfo, \{style:styleUsed, fsz, scales, gap:lsGap, perGlyph, stroke, drawn:drawnOutline\}\)/);
+  const A = '٠١٢٣٤٥٦٧٨٩', labels = Array.from({length:12}, (_, i) => String(i + 1).split('').map(d => A[+d]).join(''));
+  const st = tk(), M = G.numArtMetrics(st, OUT);
+  const dial = {fsz:M.fsz, gap:0.05, stroke:0.04, scales:{1:0.8, 11:0.8, 2:1, 3:1, 4:1, 5:1, 6:1, 7:1, 8:1, 9:1, 10:1, 12:1}};
+  const svg = G.numArtSVG(st, OUT, {}, labels, dial);
+  assert.match(svg, /stroke="#000000" stroke-width="[\d.]+" stroke-linejoin="round"/, 'the thickness stroke carried over');
+  assert.equal((svg.match(/\(set at 80%\)/g) || []).length, 2, '١ and ١١ at the size the dial sets them');
+  assert.match(svg, /with the dial's 0\.04mm thickening stroke/);
+  // the second digit of ١١ sits one advance plus the dial's gap from the first;
+  // VI is kerned as the browser kerns it
+  const g = OUT['Noto Naskh Arabic'].g, r = G.numArtRun(g, '١١', 5, 0.05);
+  assert.ok(Math.abs(r.parts[1].x - (g['١'].a*5 + 0.05)) < 1e-9);
+  const V = OUT['Vernoy Radial Roman'], rv = G.numArtRun(V.g, 'VI', 1, 0, V.k);
+  assert.ok(Math.abs(rv.parts[1].x - (V.g.V.a - 0.02)) < 1e-9);
 });

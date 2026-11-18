@@ -20,6 +20,58 @@ from fontTools.pens.transformPen import TransformPen
 src = open("index.html", encoding="utf-8").read()
 i = src.index("const BUILTIN_FONTS = {")
 j = src.index("\n};", i)
+def pair_kerning(f, cmap):
+    """Pair kerning between the subset's characters, in em: GPOS pair
+    adjustments (formats 1 and 2) and an old kern table, as a browser
+    applies them between two neighbouring figures."""
+    upm = f["head"].unitsPerEm
+    rev = {}
+    for code, g in cmap.items():
+        rev.setdefault(g, []).append(chr(code))
+    out = {}
+    def put(g1, g2, v):
+        if not v:
+            return
+        for a in rev.get(g1, []):
+            for b in rev.get(g2, []):
+                out[a + b] = out.get(a + b, 0) + v
+    if "GPOS" in f and f["GPOS"].table.LookupList:
+        gpos = f["GPOS"].table
+        used = set()
+        for fr in gpos.FeatureList.FeatureRecord:
+            if fr.FeatureTag == "kern":
+                used.update(fr.Feature.LookupListIndex)
+        for li in sorted(used):
+            lk = gpos.LookupList.Lookup[li]
+            subs = lk.SubTable
+            if lk.LookupType == 9:
+                subs = [x.ExtSubTable for x in subs]
+            for st in subs:
+                if getattr(st, "LookupType", 2) != 2 and lk.LookupType != 9:
+                    continue
+                if not hasattr(st, "Format") or not hasattr(st, "Coverage"):
+                    continue
+                cov = st.Coverage.glyphs
+                if st.Format == 1:
+                    for i, g1 in enumerate(cov):
+                        for pv in st.PairSet[i].PairValueRecord:
+                            v = getattr(pv.Value1, "XAdvance", 0) if pv.Value1 else 0
+                            put(g1, pv.SecondGlyph, v)
+                elif st.Format == 2:
+                    c1, c2 = st.ClassDef1.classDefs, st.ClassDef2.classDefs
+                    for g1 in cov:
+                        k1 = c1.get(g1, 0)
+                        for g2 in rev:
+                            k2 = c2.get(g2, 0)
+                            r = st.Class1Record[k1].Class2Record[k2]
+                            v = getattr(r.Value1, "XAdvance", 0) if r.Value1 else 0
+                            put(g1, g2, v)
+    elif "kern" in f:
+        for t in f["kern"].kernTables:
+            for (g1, g2), v in t.kernTable.items():
+                put(g1, g2, v)
+    return {k: round(v / upm, 4) for k, v in sorted(out.items()) if round(v / upm, 4)}
+
 def num(v):
     t = ("%.4f" % v).rstrip("0").rstrip(".")
     return "0" if t in ("", "-0") else t
@@ -41,6 +93,10 @@ for m in re.finditer(r'\n  "([^"]+)":\{family:"[^"]+",[^}]*?src:"data:font/[a-z0
         b = bp.bounds
         glyphs[chr(code)] = {"a": round(g.width * k, 4), "d": pen.getCommands(),
                              "b": [round(b[0] * k, 4), round(-b[3] * k, 4), round(b[2] * k, 4), round(-b[1] * k, 4)] if b else [0, 0, 0, 0]}
-    out[name] = {"g": glyphs}
+    entry = {"g": glyphs}
+    kern = pair_kerning(f, cmap)
+    if kern:
+        entry["k"] = kern
+    out[name] = entry
 json.dump(out, open("app/font-outlines.json", "w", encoding="utf-8"), ensure_ascii=False, separators=(",", ":"))
 print(len(out), "fonts,", sum(len(v["g"]) for v in out.values()), "glyphs", file=sys.stderr)

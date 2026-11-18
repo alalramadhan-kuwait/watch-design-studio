@@ -2177,7 +2177,7 @@ const APP_BUILD = "__BUILD__";
 /* The version people see, raised with every change that reaches them:
    major for a new way of working, minor for something new to do, patch for
    a fix. Shown on the watch screen, so any screenshot says which it was. */
-const APP_VERSION = "4.10.1";
+const APP_VERSION = "4.10.2";
 const APP_DATE = "__DATE__";
 
 /* Every route that replaces S passes through one of these three, which is
@@ -5961,6 +5961,15 @@ function buildSVG(st, o={}){
       const fsz = (() => { if(drawnOutline) return nm.size;
         const m = inkMetrics(famUsed, sys === "roman I–XII" ? "XII" : (NUM_SYSTEM[sys] || "0123456789"));
         return m && m.h > 0 ? nm.size*Math.max(0.6, Math.min(2.4, 0.72/m.h)) : nm.size; })();
+      /* The space between a figure's digits. Chrome sets no letter-spacing
+         in Arabic script, its digits included, and WebKit does, so ١١ drew
+         differently on a phone and on a computer. Arabic and Persian figures
+         are spaced glyph by glyph instead (dx), which every engine draws
+         alike and the numerals artwork repeats exactly; other figures keep
+         letter-spacing, which every engine honours. */
+      const lsGap = nm.gap*fsz*0.011, perGlyph = sys === "arabic ٠–٩" || sys === "persian ۰–۹";
+      const spacing = label => !perGlyph ? `letter-spacing="${f(lsGap,3)}"`
+        : [...label].length > 1 && lsGap ? `dx="${[...label].map((c, i) => i ? f(lsGap,3) : "0").join(" ")}"` : "";
       /* where to put a figure's text anchor: p, plus (ix, iy) in the
          figure's own frame (which is turned about p when the figures follow
          the radius) */
@@ -6045,6 +6054,15 @@ function buildSVG(st, o={}){
         if(fx.drop) return null;
         return place(n, n === 1 ? fx.na : 360 - fx.na, fx.sc);
       };
+      /* asked for by the numerals artwork: the font size, each figure's
+         scale (١ and ١١ can be set smaller beside a day window), the spacing
+         and the outline stroke the figures are drawn with */
+      if(o.numInfo){
+        const scales = {};
+        for(const n of set){ const PN = placeNum(n, (n%12)*30); scales[n] = PN ? PN.s : 0; }
+        const stroke = MK.cut ? 0 : MK.piece ? (paveOn(st) && MA.metal && !arcSet && !drawnOutline && weight > 0 ? weight : 0) : weight;
+        Object.assign(o.numInfo, {style:styleUsed, fsz, scales, gap:lsGap, perGlyph, stroke, drawn:drawnOutline});
+      }
       /* "Use markers": ١١ and ١ give way to a short baton each, in the
          numerals' own colour or metal, its outer end on the numerals' outer
          edge. Being narrow it clears the window at 30°; on a very wide window
@@ -6129,11 +6147,11 @@ function buildSVG(st, o={}){
             ? (()=>{ const pid = id("numarc");
                 defs.push(`<path id="${pid}" fill="none" d="${arcPath(nm.radius, a, 120)}"/>`);
                 return `<g transform="translate(${f(-p[0],3)},${f(-p[1],3)})"><text font-family="${famUsed}" font-size="${f(fsz,3)}" font-weight="400"
-                 letter-spacing="${f(nm.gap*fsz*0.011,3)}" fill="inherit" dominant-baseline="central"${ligaOff}
+                 ${spacing(numeralLabel(n, sys))} fill="inherit" dominant-baseline="central"${ligaOff}
                  ><textPath href="#${pid}" startOffset="50%" text-anchor="middle">${numeralLabel(n, sys)}</textPath></text></g>`; })()
             : (() => { const ix = PN.ix, iy = PN.iy;
                 return `<text x="${f(ix,3)}" y="${f(iy,3)}" font-family="${famUsed}" font-size="${f(fs,3)}" font-weight="400"
-                 letter-spacing="${f(nm.gap*fsz*0.011,3)}" fill="inherit" text-anchor="middle"
+                 ${spacing(numeralLabel(n, sys))} fill="inherit" text-anchor="middle"
                 ${ligaOff}>${numeralLabel(n, sys)}</text>`; })();
           defs.push(`<g id="${gid}">${glyph}</g>`);
           // the side walls lean away from the dial centre, as they do under a
@@ -6186,12 +6204,12 @@ function buildSVG(st, o={}){
             const pid = id("numarc");
             defs.push(`<path id="${pid}" fill="none" d="${arcPath(nm.radius, a, 120)}"/>`);
             g = `<text font-family="${famUsed}" font-size="${f(fsz,3)}" font-weight="400"
-              letter-spacing="${f(nm.gap*fsz*0.011,3)}" fill="${gFill}" dominant-baseline="central"${gFilt}${ligaOff}
+              ${spacing(label)} fill="${gFill}" dominant-baseline="central"${gFilt}${ligaOff}
               ><textPath href="#${pid}" startOffset="50%" text-anchor="middle">${label}</textPath></text>`;
           } else {
           const ix = PN.ix, iy = PN.iy;
           g = `<text x="${f(p[0]+ix,3)}" y="${f(p[1]+iy,3)}" font-family="${famUsed}" font-size="${f(fs,3)}" font-weight="400"
-            letter-spacing="${f(nm.gap*fsz*0.011,3)}" fill="${gFill}" text-anchor="middle"${gFilt}${ligaOff}>${label}</text>`;
+            ${spacing(label)} fill="${gFill}" text-anchor="middle"${gFilt}${ligaOff}>${label}</text>`;
           }
         }
         if(MK.cut){
@@ -14575,8 +14593,11 @@ function sheetNumeralPanel(st, NP, img, raster){
   out.push(sheetText(NP.x + 3.17, NP.y + 6.8, nN ? "Numerals" : "Markers", {size:14*0.26465, bold:true, italic:true}));
   let lines;
   if(nN){
-    if(img && img.url){ const w = NP.w - 10, h = w*(img.ar || 1/3);
-      out.push(`<image href="${img.url}" x="${sn(NP.x + 5)}" y="${sn(NP.y + 21.6 - h/2)}" width="${sn(w)}" height="${sn(h)}" preserveAspectRatio="none"/>`); }
+    const vw = NP.w - 10, vh = vw*(img && img.ar || 1/3);
+    /* the figures from the font's outlines, as vector, where it has them */
+    const vec = img && img.draw ? img.draw(NP.x + 5, NP.y + 21.6 - vh/2, vw, vh) : "";
+    if(vec) out.push(vec);
+    else if(img && img.url) out.push(`<image href="${img.url}" x="${sn(NP.x + 5)}" y="${sn(NP.y + 21.6 - vh/2)}" width="${sn(vw)}" height="${sn(vh)}" preserveAspectRatio="none"/>`);
     const H = nm.height === undefined ? 0.20 : +nm.height;
     const nh = img && img.h;
     lines = [`Font: ${sheetNumFont(nm)}`, sheetNumMade(nm), `${sn(nh || nm.size || 3, nh ? 2 : 1)}mm high${nm.tech === "applied" ? `, ${sn(H, 2)}mm thick` : ""}, ${nN} pcs`];
@@ -14609,38 +14630,65 @@ function sheetHandWarning(st){
 const NUMART_SET = {"arabic ٠–٩":"٠١٢٣٤٥٦٧٨٩", "persian ۰–۹":"۰۱۲۳۴۵۶۷۸۹", "western 0–9":"0123456789", "roman I–XII":"IVX"};
 /* a run of glyphs at s mm to the em: each glyph's x, the run's advance and
    its ink box [x0, y0, x1, y1] about the start and the baseline */
-function numArtRun(G, text, s, track){
+function numArtRun(G, text, s, track, K){
   const chars = [...String(text)], parts = [];
   let x = 0, box = [Infinity, Infinity, -Infinity, -Infinity];
   chars.forEach((ch, i) => {
     const g = G[ch]; if(!g) return;
     parts.push({x, d:g.d});
     box = [Math.min(box[0], x + g.b[0]*s), Math.min(box[1], g.b[1]*s), Math.max(box[2], x + g.b[2]*s), Math.max(box[3], g.b[3]*s)];
-    x += g.a*s + (i < chars.length - 1 ? (track || 0) : 0);
+    /* the font's own kerning to the next figure, as the browser applies it */
+    x += g.a*s + (i < chars.length - 1 ? (track || 0) + (K && K[ch + chars[i + 1]] || 0)*s : 0);
   });
   if(!parts.length) box = [0, 0, 0, 0];
   return {parts, w:x, box, s};
 }
-/* drawn with its ink centred on cx and its ink top at top */
-const numArtDraw = (run, cx, top, fill) => {
+/* drawn with its ink centred on cx and its ink top at top. sw is the
+   dial's outline stroke in em: a "Thickness" above 0 is a black stroke
+   round each figure (it thickens it), below 0 a white one (it thins it),
+   exactly as the dial strokes the figure in its ink or in the dial. */
+const numArtStroke = sw => !sw ? "" : ` stroke="${sw > 0 ? "#000000" : "#FFFFFF"}" stroke-width="${sn(Math.abs(sw), 5)}" stroke-linejoin="round"`;
+const numArtDraw = (run, cx, top, fill, sw) => {
   const x0 = cx - (run.box[0] + run.box[2])/2, y0 = top - run.box[1];
-  return run.parts.map(q => `<path transform="translate(${sn(x0 + q.x, 3)} ${sn(y0, 3)}) scale(${sn(run.s, 5)})" d="${q.d}" fill="${fill || "#000000"}"/>`).join("");
+  return run.parts.map(q => `<path transform="translate(${sn(x0 + q.x, 3)} ${sn(y0, 3)}) scale(${sn(run.s, 5)})" d="${q.d}" fill="${fill || "#000000"}"${numArtStroke(sw)}/>`).join("");
 };
 /* the figures' metrics as the dial draws them: font size, tracking and the
    height of the digits' ink */
 function numArtMetrics(st, OUT){
   const nm = st.numerals || {}, sys = nm.system || "western 0–9", style = sheetNumStyle(nm);
-  const G = OUT && OUT[style] && OUT[style].g;
+  const G = OUT && OUT[style] && OUT[style].g, K = OUT && OUT[style] && OUT[style].k || null;
   if(!G) return null;
   const set = sys === "roman I–XII" ? "XII" : (NUMART_SET[sys] || NUMART_SET["western 0–9"]);
   const u = numArtRun(G, set, 1, 0), mh = u.box[3] - u.box[1];
   const size = nm.size || 3, fsz = mh > 0 ? size*Math.max(0.6, Math.min(2.4, 0.72/mh)) : size;
-  return {G, sys, fsz, mh, h:fsz*mh, track:(nm.gap === undefined ? 1 : nm.gap)*fsz*0.011};
+  return {G, K, sys, fsz, mh, h:fsz*mh, track:(nm.gap === undefined ? 1 : nm.gap)*fsz*0.011};
 }
-function numArtSVG(st, OUT, info, labels){
+/* The twelve figures in two rows of six, from the outlines, fitted to a
+   box: the maker's sheet's numerals panel. Each keeps its shape and its
+   spacing exactly as the dial sets it; only the size is the panel's. */
+function numArtSpecimen(st, OUT, labels, dial, x, y, w, h, fill, edge){
+  const M0 = numArtMetrics(st, OUT);
+  if(!M0) return "";
+  const {G, K} = M0, fsz = dial && dial.fsz > 0 ? dial.fsz : M0.fsz, track = dial && Number.isFinite(dial.gap) ? dial.gap : M0.track;
+  const stroke = dial ? +dial.stroke || 0 : 0, order = [12, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
+  const unit = order.map(n => numArtRun(G, labels[n - 1], fsz, track, K));
+  const hh = Math.max(...unit.map(r => r.box[3] - r.box[1])), ww = Math.max(...unit.map(r => r.box[2] - r.box[0]));
+  const k = Math.min((h/2 - 1.5)/hh, (w/6*0.82)/ww);
+  return order.map((n, i) => {
+    const run = numArtRun(G, labels[n - 1], fsz*k, track*k, K), cx = x + w/6*(i % 6 + 0.5), rowTop = y + (i < 6 ? 0 : h/2) + (h/2 - hh*k)/2;
+    return numArtDraw(run, cx, rowTop + (hh*k - (run.box[3] - run.box[1]))/2, fill, stroke/fsz)
+      .replace(/stroke="#000000"/g, `stroke="${fill}"`) + (edge ? numArtDraw(run, cx, rowTop + (hh*k - (run.box[3] - run.box[1]))/2, "none", 0.012).replace(/stroke="#000000"/g, `stroke="${edge}"`) : "");
+  }).join("");
+}
+/* dial: what buildSVG drew the figures with (its numInfo): the font size,
+   each figure's scale, the spacing and the outline stroke. Without it the
+   same is worked out here, every figure at full size. */
+function numArtSVG(st, OUT, info, labels, dial){
   const M0 = numArtMetrics(st, OUT);
   if(!M0) return null;
-  const nm = st.numerals || {}, {G, sys, fsz, track} = M0, W = 297, M = 14, out = [];
+  const nm = st.numerals || {}, {G, K, sys} = M0, W = 297, M = 14, out = [];
+  const fsz = dial && dial.fsz > 0 ? dial.fsz : M0.fsz, track = dial && Number.isFinite(dial.gap) ? dial.gap : M0.track;
+  const stroke = dial ? +dial.stroke || 0 : 0, scaleOf = h => dial && dial.scales && dial.scales[h] > 0 ? dial.scales[h] : 1;
   const grey = "#6B6B6B", head = (y, t) => out.push(sheetText(M, y, t, {size:3.4, bold:true, fill:grey}));
   out.push(`<rect x="0" y="0" width="${W}" height="210" fill="#FFFFFF"/>`);
   out.push(sheetText(M, 18, `Numerals · ${sheetNumFont(nm)}`, {size:7, bold:true}));
@@ -14649,7 +14697,10 @@ function numArtSVG(st, OUT, info, labels){
   /* the hour figures this dial carries, measured first: the large block
      takes the room they leave */
   const plan = sheetPlanOf(st), hours = [1,2,3,4,5,6,7,8,9,10,11,12].filter(h => plan[h % 12] === "numeral");
-  const runs5 = hours.map(h => ({h, r:numArtRun(G, labels[h - 1], fsz*5, track*5), r1:numArtRun(G, labels[h - 1], fsz, track)}));
+  /* a figure's spacing is the dial's, whatever its scale: the dial gives
+     it in millimetres from the full font size */
+  const runs5 = hours.map(h => { const k = scaleOf(h);
+    return {h, k, sw:stroke/(fsz*k), r:numArtRun(G, labels[h - 1], fsz*k*5, track*5, K), r1:numArtRun(G, labels[h - 1], fsz*k, track, K)}; });
   const h5 = Math.max(0.1, ...runs5.map(x => x.r.box[3] - x.r.box[1]));
   const h1 = Math.max(0.1, ...runs5.map(x => x.r1.box[3] - x.r1.box[1]));
   const per = Math.min(6, Math.max(1, Math.ceil(hours.length/2))), cw = (W - 2*M)/per, n5 = Math.ceil(runs5.length/per);
@@ -14665,31 +14716,31 @@ function numArtSVG(st, OUT, info, labels){
   const big = rowH/setH, cellW = (W - 2*M)/5;
   head(34, sys === "roman I–XII" ? "Letters" : "Digits, and 10, 11 and 12 as set on the dial");
   rows.forEach((r, i) => r.forEach((c, j) => {
-    const run = numArtRun(G, c.t, big, track*big/fsz), top = 38 + i*pitch - setRun.box[1]*big;
+    const run = numArtRun(G, c.t, big, track*big/fsz, K), top = 38 + i*pitch - setRun.box[1]*big;
     /* every digit on one baseline: placed by the set's top, not its own */
     const x0 = M + cellW*((c.col === null ? j : c.col) + 0.5) - (run.box[0] + run.box[2])/2;
-    out.push(run.parts.map(q => `<path transform="translate(${sn(x0 + q.x, 3)} ${sn(top, 3)}) scale(${sn(big, 5)})" d="${q.d}" fill="#000000"/>`).join(""));
+    out.push(run.parts.map(q => `<path transform="translate(${sn(x0 + q.x, 3)} ${sn(top, 3)}) scale(${sn(big, 5)})" d="${q.d}" fill="#000000"${numArtStroke(stroke/fsz)}/>`).join(""));
   }));
   let y = 38 + rows.length*pitch + 2;
   head(y, "Hour figures, 5:1  (under each: its size on the dial, height × width)");
   for(let i = 0; i < runs5.length; i += per){
     const top = y + 4;
     runs5.slice(i, i + per).forEach((x, j) => {
-      const cx = M + cw*(j + 0.5), b = x.r1.box;
-      out.push(numArtDraw(x.r, cx, top + (h5 - (x.r.box[3] - x.r.box[1]))/2));
-      out.push(sheetText(cx, top + h5 + 4.2, `${sn(b[3] - b[1], 2)} × ${sn(b[2] - b[0], 2)}mm`, {size:2.8, anchor:"middle", fill:grey}));
+      const cx = M + cw*(j + 0.5), b = x.r1.box, e = stroke;   // the stroke adds half its width all round
+      out.push(numArtDraw(x.r, cx, top + (h5 - (x.r.box[3] - x.r.box[1]))/2, "#000000", x.sw));
+      out.push(sheetText(cx, top + h5 + 4.2, `${sn(b[3] - b[1] + e, 2)} × ${sn(b[2] - b[0] + e, 2)}mm${x.k < 0.999 ? ` (set at ${Math.round(x.k*100)}%)` : ""}`, {size:2.8, anchor:"middle", fill:grey}));
     });
     y = top + h5 + 6;
   }
   y += 4;
   head(y, "Actual size, 1:1");
   const cw1 = (W - 2*M)/12;
-  runs5.forEach((x, j) => out.push(numArtDraw(x.r1, M + cw1*(j + 0.5), y + 3.5 + (h1 - (x.r1.box[3] - x.r1.box[1]))/2)));
+  runs5.forEach((x, j) => out.push(numArtDraw(x.r1, M + cw1*(j + 0.5), y + 3.5 + (h1 - (x.r1.box[3] - x.r1.box[1]))/2, "#000000", x.sw)));
   y += 3.5 + h1 + 8;
   /* what the maker needs beside the shapes */
   const H = nm.height === undefined ? 0.20 : +nm.height;
-  const facts = [`${sheetNumMade(nm)}  ·  ${hours.length} pcs  ·  digits ${sn(M0.h, 2)}mm high${nm.tech === "applied" ? `  ·  ${sn(H, 2)}mm thick` : ""}`,
-    `Font: ${sheetNumFont(nm)}. Outlines taken from the font, drawn in black; the colour and finish are in the specification.`];
+  const facts = [`${sheetNumMade(nm)}  ·  ${hours.length} pcs  ·  digits ${sn(fsz*M0.mh + stroke, 2)}mm high${nm.tech === "applied" ? `  ·  ${sn(H, 2)}mm thick` : ""}`,
+    `Font: ${sheetNumFont(nm)}. Outlines taken from the font${stroke ? `, with the dial's ${sn(Math.abs(stroke), 2)}mm ${stroke > 0 ? "thickening" : "thinning"} stroke` : ""}, drawn in black; the colour and finish are in the specification.`];
   facts.forEach((t, i) => out.push(sheetText(M, y + i*5.2, t, {size:3.4})));
   return `<svg xmlns="http://www.w3.org/2000/svg" width="297mm" height="210mm" viewBox="0 0 297 210">${out.join("")}</svg>`;
 }
@@ -14960,8 +15011,17 @@ async function sheetBuild(onStep){
   R.dial = await sheetDialRaster(A);
   R.numerals = await sheetNumeralsRaster(A).catch(() => null);
   /* the figures' true height, from the font's outlines, where it has them */
-  const nmM = numArtMetrics(A, await loadOutlines());
-  if(R.numerals && nmM) R.numerals = Object.assign({}, R.numerals, {h:nmM.h});
+  const OUTL = await loadOutlines(), nmM = numArtMetrics(A, OUTL);
+  if(R.numerals && nmM){
+    const ni = {};
+    try{ sheetWith(A, () => buildSVG(A, {scope:"dial", guides:false, material:false, tag:"na", numInfo:ni})); }catch(e){}
+    const nmA = A.numerals, labels = Array.from({length:12}, (_, i) => numeralLabel(i + 1, nmA.system || "western 0–9"));
+    const MT = nmA.tech === "applied" && (nmA.material || "metal") === "metal" ? (METALS[nmA.metal] || METALS["polished steel"]) : null;
+    const col = MT ? MT.base : nmA.material === "lume" ? "#D9E6C4" : nmA.color || SHEET_INK;
+    const dialNI = ni.fsz && !ni.drawn ? ni : null;
+    R.numerals = Object.assign({}, R.numerals, {h:(dialNI ? dialNI.fsz : nmM.fsz)*nmM.mh + (dialNI ? +dialNI.stroke || 0 : 0),
+      draw:(x, y, w, h) => numArtSpecimen(A, OUTL, labels, dialNI, x, y, w, h, col, shade(col, 0.45))});
+  }
   const dr = plan.K.sheet && plan.K.sheet.drawings;
   if(dr){ R.front = await sheetDrawing(dr.front); R.side = await sheetDrawing(dr.side); }
   const words = new Set();
@@ -15025,7 +15085,10 @@ async function makeNumArtPDF(){
     ensureSheet(S);
     const OUT = await loadOutlines(), info = sheetInfo(S, new Date());
     const labels = Array.from({length:12}, (_, i) => numeralLabel(i + 1, nm.system || "western 0–9"));
-    const svg = numArtSVG(S, OUT, info, labels);
+    const dial = {};
+    try{ buildSVG(S, {scope:"dial", guides:false, material:false, tag:"na", numInfo:dial}); }catch(e){}
+    if(dial.drawn){ toast(sheetSay("na.noFont", "The numerals artwork needs one of the studio's fonts; this one has no outlines here. Send the maker the font file.")); return; }
+    const svg = numArtSVG(S, OUT, info, labels, dial.fsz ? dial : null);
     if(!svg){ toast(OUT ? sheetSay("na.noFont", "The numerals artwork needs one of the studio's fonts; this one has no outlines here. Send the maker the font file.")
       : sheetSay("na.offline", "Could not load the font outlines. Try again when online.")); return; }
     const kit = await loadPdfKit();

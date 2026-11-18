@@ -200,6 +200,26 @@ stored in a design file do not change. In the full editor at laptop widths
 the toolbar sits tighter, and on a narrower window it takes a second row
 rather than pushing Share and Export off the screen.
 
+## The artwork's figures are the dial's own (v4.10.2)
+
+Checked pixel by pixel: every built-in font, all twelve hour figures, at
+spacing 1, 12 and -10 and with a Thickness stroke, drawn as the dial draws
+them (SVG text) and as the artwork does (outlines) at 300 px type. No pixel
+differs by more than 2 px of anti-aliasing (about 0.03 mm on a real figure).
+To get there:
+
+- **Spacing in Arabic and Persian figures.** Chrome sets no letter-spacing in
+  Arabic script, its digits included; WebKit does. So ١١ had a gap on an
+  iPhone that it did not have on a computer. The dial now spaces those
+  figures glyph by glyph (`dx`), which both draw alike, and the artwork uses
+  the same gap. Western and Roman figures keep `letter-spacing`.
+- **Kerning.** `tools/font-outlines.py` now writes each font's pair kerning
+  (`k`); only Vernoy Radial Roman has any (IV, IX, VI, XI).
+- **What the dial drew with.** `buildSVG(st, {numInfo:{}})` reports the font
+  size, each figure's scale (١ and ١١ can be set smaller beside a day window),
+  the spacing and the Thickness stroke; the artwork and the maker's sheet's
+  numerals panel (now vector, from the outlines) use them.
+
 ## Numerals artwork for the maker (v4.10.0)
 
 A second PDF beside the maker's sheet: *Numerals (PDF)* on the Finish step
