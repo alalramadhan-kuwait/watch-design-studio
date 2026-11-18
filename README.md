@@ -220,15 +220,19 @@ To get there:
   the spacing and the Thickness stroke; the artwork and the maker's sheet's
   numerals panel (now vector, from the outlines) use them.
 
-## Numerals artwork for the maker (v4.10.0)
+## Numerals artwork for the maker (v4.10.0, font only since v4.10.3)
 
 A second PDF beside the maker's sheet: *Numerals (PDF)* on the Finish step
 (الأرقام PDF), *Numerals artwork (PDF)* in the Export sheet and in the
-maker's sheet preview. One A4 landscape page, black on white: the ten
-digits large with 10, 11 and 12 as set on the dial (v4.10.1), then the hour figures this dial carries at 5:1 with each
-one's height and width on the dial, and at 1:1, with the font, how the
-figures are made, their height and thickness. Every figure is the font's
-own outline, so the page is vector and the maker can cut from it.
+maker's sheet preview. One A4 landscape page, black on white, like the
+maker's own artwork sheets: the font and nothing else. The ten digits in
+two rows of five and 10, 11 and 12 under them, spread across the page so
+each reads on its own, as large as the page allows, with only the font's
+name, brand, design number and date at the top. No sizes and no heights:
+those are in the specification and the maker's sheet. The glyphs are the
+font's outlines untouched (no Thickness stroke, no shrinking); 10, 11 and 12
+take the dial's spacing between their two digits. The page is vector, so
+the maker can cut from it.
 
 The outlines come from `app/font-outlines.json`, written from the built-in
 fonts by `tools/font-outlines.py` (fontTools); run it again after adding a

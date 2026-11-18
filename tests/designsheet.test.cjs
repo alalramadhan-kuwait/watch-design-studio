@@ -315,16 +315,19 @@ test('the numerals artwork: the font\'s own outlines, black on white, sized as t
   const st = tk(), A = '٠١٢٣٤٥٦٧٨٩', lab = n => String(n).split('').map(d => A[+d]).join('');
   const labels = Array.from({length:12}, (_, i) => lab(i + 1));
   const M = G.numArtMetrics(st, OUT);
-  assert.ok(Math.abs(M.h - 0.72*st.numerals.size) < 1e-9, 'digits\' ink 0.72 of the numeral size, as the dial draws them');
+  assert.ok(Math.abs(M.h - 0.72*st.numerals.size) < 1e-9, 'digits\' ink 0.72 of the numeral size, as the dial draws them (the maker\'s sheet\'s height)');
   const svg = G.numArtSVG(st, OUT, {brand:'NIVADA GRENCHEN', designNo:'103277_4', date:'2026-11-18'}, labels);
   assert.match(svg, /^<svg xmlns="http:\/\/www.w3.org\/2000\/svg" width="297mm" height="210mm" viewBox="0 0 297 210">/);
-  // ten digits, then twelve figures twice (5:1 and 1:1), three of them two digits long
-  assert.equal((svg.match(/<path /g) || []).length, 10 + 6 + 2*15, 'ten digits and 10, 11, 12 large, then twelve figures twice');
+  // the font only, as the maker's own artwork sheet: ten digits, then 10, 11 and 12
+  assert.equal((svg.match(/<path /g) || []).length, 10 + 6, 'ten digits and 10, 11, 12, nothing else');
   assert.doesNotMatch(svg, /<image|<filter|<mask|<textPath|letter-spacing|<use /);
   assert.ok(!/[؀-ۿ]/.test(svg.replace(/d="[^"]*"/g, '')), 'no Arabic as text: it is all outline');
   assert.match(svg, />Numerals · Noto Naskh Arabic</);
-  assert.match(svg, />Hour figures, 5:1/); assert.match(svg, />Actual size, 1:1</);
-  assert.match(svg, /Applied, shiny rose gold  ·  12 pcs  ·  digits 2.9mm high  ·  0.2mm thick/);
+  // no sizes and no heights on it: those are the specification's
+  const words = [...svg.matchAll(/>([^<]+)</g)].map(m => m[1]).join(' | ');
+  assert.doesNotMatch(words, /mm|high|thick|5:1|1:1/, words);
+  assert.match(words, /^Numerals · Noto Naskh Arabic \| NIVADA GRENCHEN  ·  Design number 103277_4  ·  18 November 2026$/);
+  assert.doesNotMatch(svg, / stroke=/, 'the glyphs untouched');
   // a dial with windows: only the figures it carries
   const n = norel(); n.numerals.style = 'Noto Naskh Arabic';
   const sv2 = G.numArtSVG(n, OUT, {brand:'NOREL'}, labels);
@@ -351,9 +354,7 @@ test('the artwork\'s figures are the dial\'s own: its spacing, kerning, stroke a
   const st = tk(), M = G.numArtMetrics(st, OUT);
   const dial = {fsz:M.fsz, gap:0.05, stroke:0.04, scales:{1:0.8, 11:0.8, 2:1, 3:1, 4:1, 5:1, 6:1, 7:1, 8:1, 9:1, 10:1, 12:1}};
   const svg = G.numArtSVG(st, OUT, {}, labels, dial);
-  assert.match(svg, /stroke="#000000" stroke-width="[\d.]+" stroke-linejoin="round"/, 'the thickness stroke carried over');
-  assert.equal((svg.match(/\(set at 80%\)/g) || []).length, 2, '١ and ١١ at the size the dial sets them');
-  assert.match(svg, /with the dial's 0\.04mm thickening stroke/);
+  assert.doesNotMatch(svg, / stroke=|set at/, 'the artwork is the font itself: no thickness stroke, no shrinking');
   // the second digit of ١١ sits one advance plus the dial's gap from the first;
   // VI is kerned as the browser kerns it
   const g = OUT['Noto Naskh Arabic'].g, r = G.numArtRun(g, '١١', 5, 0.05);

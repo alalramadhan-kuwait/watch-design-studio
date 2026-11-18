@@ -1286,7 +1286,7 @@ body.guided .atelier-nav, body.guided #gHideInGuided, body.guided .bar .grp.tool
     <div class="tools" style="flex-direction:column;align-items:stretch;gap:8px">
       <button class="btn key" data-x="png">Export image (PNG)</button>
       <button class="btn" id="mkSheetBtn" title="One A3 page in the maker's layout: the versions at 1:1 with their specification and change marks, the 200% render, the drawings, caseback, buckles, hands and dial, as a PDF.">Maker's sheet (PDF)</button>
-      <button class="btn" id="numArtBtn" title="The numerals as vector artwork, black on white: the ten digits, and the hour figures at 5:1 and 1:1 with their sizes. A4.">Numerals artwork (PDF)</button>
+      <button class="btn" id="numArtBtn" title="The numerals font as vector artwork, black on white: the ten digits and 10, 11 and 12. A4.">Numerals artwork (PDF)</button>
       <button class="btn" id="moreT" style="margin-top:2px">More formats</button>
       <div id="moreBox" style="display:none;flex-direction:column;gap:8px">
         <div class="row" style="gap:6px">
@@ -1332,7 +1332,7 @@ body.guided .atelier-nav, body.guided #gHideInGuided, body.guided .bar .grp.tool
     <div id="mkPick"></div>
     <div class="tools" style="flex-direction:column;align-items:stretch;gap:8px">
       <button class="btn key" id="mkGo">Make the PDF</button>
-      <button class="btn" id="mkNum" title="The numerals as vector artwork, black on white: the ten digits, and the hour figures at 5:1 and 1:1 with their sizes. A4.">Numerals artwork (PDF)</button>
+      <button class="btn" id="mkNum" title="The numerals font as vector artwork, black on white: the ten digits and 10, 11 and 12. A4.">Numerals artwork (PDF)</button>
       <button class="btn" id="mkClose">Close</button>
     </div>
   </div>
@@ -2177,7 +2177,7 @@ const APP_BUILD = "__BUILD__";
 /* The version people see, raised with every change that reaches them:
    major for a new way of working, minor for something new to do, patch for
    a fix. Shown on the watch screen, so any screenshot says which it was. */
-const APP_VERSION = "4.10.2";
+const APP_VERSION = "4.10.3";
 const APP_DATE = "__DATE__";
 
 /* Every route that replaces S passes through one of these three, which is
@@ -14680,69 +14680,42 @@ function numArtSpecimen(st, OUT, labels, dial, x, y, w, h, fill, edge){
       .replace(/stroke="#000000"/g, `stroke="${fill}"`) + (edge ? numArtDraw(run, cx, rowTop + (hh*k - (run.box[3] - run.box[1]))/2, "none", 0.012).replace(/stroke="#000000"/g, `stroke="${edge}"`) : "");
   }).join("");
 }
-/* dial: what buildSVG drew the figures with (its numInfo): the font size,
-   each figure's scale, the spacing and the outline stroke. Without it the
-   same is worked out here, every figure at full size. */
+/* The page is the font and nothing else, as the maker's own artwork
+   sheets are: the digits in two rows of five and 10, 11 and 12 under them,
+   black on white, as large as the page allows, with the font's name at the
+   top. No sizes and no heights: the specification and the maker's sheet
+   carry those. The glyphs are the font's outlines untouched; 10, 11 and 12
+   take the dial's spacing between their two digits (dial.gap, from its
+   numInfo), which is how they are composed. */
 function numArtSVG(st, OUT, info, labels, dial){
   const M0 = numArtMetrics(st, OUT);
   if(!M0) return null;
-  const nm = st.numerals || {}, {G, K, sys} = M0, W = 297, M = 14, out = [];
-  const fsz = dial && dial.fsz > 0 ? dial.fsz : M0.fsz, track = dial && Number.isFinite(dial.gap) ? dial.gap : M0.track;
-  const stroke = dial ? +dial.stroke || 0 : 0, scaleOf = h => dial && dial.scales && dial.scales[h] > 0 ? dial.scales[h] : 1;
-  const grey = "#6B6B6B", head = (y, t) => out.push(sheetText(M, y, t, {size:3.4, bold:true, fill:grey}));
-  out.push(`<rect x="0" y="0" width="${W}" height="210" fill="#FFFFFF"/>`);
-  out.push(sheetText(M, 18, `Numerals · ${sheetNumFont(nm)}`, {size:7, bold:true}));
+  const nm = st.numerals || {}, {G, K, sys} = M0, W = 297, H = 210, M = 14, out = [];
+  const gapEm = (dial && Number.isFinite(dial.gap) ? dial.gap : M0.track)/(dial && dial.fsz > 0 ? dial.fsz : M0.fsz);
+  out.push(`<rect x="0" y="0" width="${W}" height="${H}" fill="#FFFFFF"/>`);
+  out.push(sheetText(M, 16, `Numerals · ${sheetNumFont(nm)}`, {size:5, bold:true}));
   const sub = [info.brand, info.designNo ? "Design number " + info.designNo : "", info.date ? sheetDateText(info.date) : ""].filter(Boolean).join("  ·  ");
-  if(sub) out.push(sheetText(M, 25.5, sub, {size:3.6}));
-  /* the hour figures this dial carries, measured first: the large block
-     takes the room they leave */
-  const plan = sheetPlanOf(st), hours = [1,2,3,4,5,6,7,8,9,10,11,12].filter(h => plan[h % 12] === "numeral");
-  /* a figure's spacing is the dial's, whatever its scale: the dial gives
-     it in millimetres from the full font size */
-  const runs5 = hours.map(h => { const k = scaleOf(h);
-    return {h, k, sw:stroke/(fsz*k), r:numArtRun(G, labels[h - 1], fsz*k*5, track*5, K), r1:numArtRun(G, labels[h - 1], fsz*k, track, K)}; });
-  const h5 = Math.max(0.1, ...runs5.map(x => x.r.box[3] - x.r.box[1]));
-  const h1 = Math.max(0.1, ...runs5.map(x => x.r1.box[3] - x.r1.box[1]));
-  const per = Math.min(6, Math.max(1, Math.ceil(hours.length/2))), cw = (W - 2*M)/per, n5 = Math.ceil(runs5.length/per);
-  /* the digits, large, as one size: two rows of five, and a third with
-     10, 11 and 12 as they are set on the dial (its spacing, scaled) */
+  if(sub) out.push(sheetText(M, 22, sub, {size:3.2, fill:"#6B6B6B"}));
   const chars = [...(NUMART_SET[sys] || NUMART_SET["western 0–9"])].filter(c => G[c]);
   const rows = (chars.length > 5 ? [chars.slice(0, 5), chars.slice(5)] : [chars]).map(r => r.map(t => ({t, col:null})));
-  if(sys !== "roman I–XII") rows.push([10, 11, 12].map((h, j) => ({t:labels[h - 1], col:j + 1})));
+  /* 10, 11 and 12 across the page in thirds, well apart, so each reads as
+     a figure of its own and not as one long number */
+  if(sys !== "roman I–XII") rows.push([10, 11, 12].map((h, j) => ({t:labels[h - 1], col:(2*j + 1)*5/6 - 0.5})));
+  /* one size for all: the set's height fills a row, and the widest figure
+     still leaves room either side of it */
   const setRun = numArtRun(G, chars.join(""), 1, 0), setH = setRun.box[3] - setRun.box[1] || 0.7;
-  /* from the next heading to the foot: the 5:1 rows, the 1:1 row, the two lines */
-  const after = n5*(10 + h5) + 4 + 3.5 + h1 + 8 + 5.2 + 2;
-  const rowH = Math.max(12, Math.min(30, (205 - 38 - 2 - after)/rows.length - 8)), pitch = rowH + 8;
-  const big = rowH/setH, cellW = (W - 2*M)/5;
-  head(34, sys === "roman I–XII" ? "Letters" : "Digits, and 10, 11 and 12 as set on the dial");
+  const cellW = (W - 2*M)/5, widthOf = c => { const r = numArtRun(G, c.t, 1, gapEm, K); return r.box[2] - r.box[0]; };
+  const wide = Math.max(...rows.flat().map(c => widthOf(c)/(c.col === null ? 1 : 1.1)));
+  const top0 = 32, gapY = 12, rowH = (H - top0 - 14 - gapY*(rows.length - 1))/rows.length;
+  const big = Math.min(rowH/setH, cellW*0.80/wide), used = setH*big;
+  const y0 = top0 + (H - top0 - 14 - (used*rows.length + gapY*(rows.length - 1)))/2;
   rows.forEach((r, i) => r.forEach((c, j) => {
-    const run = numArtRun(G, c.t, big, track*big/fsz, K), top = 38 + i*pitch - setRun.box[1]*big;
-    /* every digit on one baseline: placed by the set's top, not its own */
+    const run = numArtRun(G, c.t, big, gapEm*big, K), top = y0 + i*(used + gapY) - setRun.box[1]*big;
+    /* every figure on one baseline: placed by the set's top, not its own */
     const x0 = M + cellW*((c.col === null ? j : c.col) + 0.5) - (run.box[0] + run.box[2])/2;
-    out.push(run.parts.map(q => `<path transform="translate(${sn(x0 + q.x, 3)} ${sn(top, 3)}) scale(${sn(big, 5)})" d="${q.d}" fill="#000000"${numArtStroke(stroke/fsz)}/>`).join(""));
+    out.push(run.parts.map(q => `<path transform="translate(${sn(x0 + q.x, 3)} ${sn(top, 3)}) scale(${sn(big, 5)})" d="${q.d}" fill="#000000"/>`).join(""));
   }));
-  let y = 38 + rows.length*pitch + 2;
-  head(y, "Hour figures, 5:1  (under each: its size on the dial, height × width)");
-  for(let i = 0; i < runs5.length; i += per){
-    const top = y + 4;
-    runs5.slice(i, i + per).forEach((x, j) => {
-      const cx = M + cw*(j + 0.5), b = x.r1.box, e = stroke;   // the stroke adds half its width all round
-      out.push(numArtDraw(x.r, cx, top + (h5 - (x.r.box[3] - x.r.box[1]))/2, "#000000", x.sw));
-      out.push(sheetText(cx, top + h5 + 4.2, `${sn(b[3] - b[1] + e, 2)} × ${sn(b[2] - b[0] + e, 2)}mm${x.k < 0.999 ? ` (set at ${Math.round(x.k*100)}%)` : ""}`, {size:2.8, anchor:"middle", fill:grey}));
-    });
-    y = top + h5 + 6;
-  }
-  y += 4;
-  head(y, "Actual size, 1:1");
-  const cw1 = (W - 2*M)/12;
-  runs5.forEach((x, j) => out.push(numArtDraw(x.r1, M + cw1*(j + 0.5), y + 3.5 + (h1 - (x.r1.box[3] - x.r1.box[1]))/2, "#000000", x.sw)));
-  y += 3.5 + h1 + 8;
-  /* what the maker needs beside the shapes */
-  const H = nm.height === undefined ? 0.20 : +nm.height;
-  const facts = [`${sheetNumMade(nm)}  ·  ${hours.length} pcs  ·  digits ${sn(fsz*M0.mh + stroke, 2)}mm high${nm.tech === "applied" ? `  ·  ${sn(H, 2)}mm thick` : ""}`,
-    `Font: ${sheetNumFont(nm)}. Outlines taken from the font${stroke ? `, with the dial's ${sn(Math.abs(stroke), 2)}mm ${stroke > 0 ? "thickening" : "thinning"} stroke` : ""}, drawn in black; the colour and finish are in the specification.`];
-  facts.forEach((t, i) => out.push(sheetText(M, y + i*5.2, t, {size:3.4})));
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="297mm" height="210mm" viewBox="0 0 297 210">${out.join("")}</svg>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}mm" height="${H}mm" viewBox="0 0 ${W} ${H}">${out.join("")}</svg>`;
 }
 /* SHEET-PURE-END */
 /* ---- the browser's part: the renders, the panels, words drawn as
