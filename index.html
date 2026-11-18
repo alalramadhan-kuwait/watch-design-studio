@@ -2175,7 +2175,7 @@ const APP_BUILD = "__BUILD__";
 /* The version people see, raised with every change that reaches them:
    major for a new way of working, minor for something new to do, patch for
    a fix. Shown on the watch screen, so any screenshot says which it was. */
-const APP_VERSION = "4.8.0";
+const APP_VERSION = "4.9.0";
 const APP_DATE = "__DATE__";
 
 /* Every route that replaces S passes through one of these three, which is
@@ -3499,6 +3499,20 @@ const NUM_MAKE_DEF = {
      it the way an applied part does */
   "embossed":          {relief: 0.58,  depth:0.58, dialFace:true}
 };
+/* Applied figures come in three heights. 0.20 mm is the ordinary piece;
+   0.35 and 0.50 are thicker blanks, still clear of the minute hand on the
+   SW240 at the usual hand height (0.90 mm under it). */
+const NUM_HEIGHTS = [[0.20,"Standard"],[0.35,"High"],[0.50,"Extra high"]];
+/* The room the minute hand leaves over an applied figure, from the same
+   hand-fit table the gem check uses. Under 0.20 mm is too tight to make. */
+function numClear(st){
+  const nm = st.numerals || {};
+  const H = nm.height === undefined ? 0.20 : +nm.height;
+  const fh = SW240_HAND_FIT[st.handSet && st.handSet.fitHeight] ? +st.handSet.fitHeight : 4;
+  const under = SW240_HAND_FIT[fh].m - gemDialT(st) - HAND_BLADE.m;
+  const clear = under - H - (nm.pave ? 0.15 : 0);
+  return {H, under, clear, tight: clear < 0.20};
+}
 const NUM_MATERIAL = ["ink","metal","lacquer / enamel","lume","stone","mother of pearl","sapphire / glass"];
 const NUM_MATERIAL_DEF = {
   "ink":              {hi:0.12, lo:0.48},
@@ -10742,7 +10756,7 @@ const SCHEMA = {
     ...(NUM_MAKE_DEF[S.numerals.tech]?.soft
         ? [N("numerals.edgeLight","Edge light",0,1,.05,"")] : []),
     ...(NUM_MAKE_DEF[S.numerals.tech]?.piece
-        ? [N("numerals.height","Piece height",0.04,0.60,.01),
+        ? [N("numerals.height","Piece height",0.04,0.70,.01),
            N("numerals.bevel","Bevel",0,0.20,.005)] : []),
     /* diamond-set: applied metal figures only */
     ...(S.numerals.tech === "applied" && S.numerals.material === "metal"
@@ -13952,7 +13966,10 @@ function sheetRows(st){
   if(nN){
     const sys = SHEET_SYSTEM[nm.system] || "numerals", applied = nm.tech === "applied" && nm.material !== "paint";
     const what = applied ? `${sheetMade(nm.metal, "polished")} applied ${sys}` : `${sheetColourName(nm.color)} ${nm.tech || "printed"} ${sys}`;
-    row("numerals", "", `${sheetCap(what)}${nm.pave ? `, set with ${nm.paveStone || "diamond"}s` : ""}, ${nN} pcs`, [nm.system, nm.style, nm.tech, nm.material, nm.size, nm.pave, nN],
+    /* a raised piece says how tall it is; the ordinary 0.20 mm goes unsaid */
+    const nH = nm.height === undefined ? 0.20 : +nm.height;
+    const tall = nm.tech === "applied" && nH > 0.25 ? `, raised ${sn(nH, 2)}mm thick` : "";
+    row("numerals", "", `${sheetCap(what)}${tall}${nm.pave ? `, set with ${nm.paveStone || "diamond"}s` : ""}, ${nN} pcs`, [nm.system, nm.style, nm.tech, nm.material, nm.size, nm.pave, nN, tall && nH],
       [applied ? nm.metal : String(nm.color || "").toUpperCase()]);
   }
   const nI = count("index") + count("indexAlt");
@@ -15827,6 +15844,8 @@ const GSTR = {en:{
   "mk.paveNone":"No stones fit these figures yet: make them thicker or larger. ",
   "mk.paveAdvice": mm => `At ${mm} mm only bold figures can be set; ask Blue Creations. 4 mm figures set more easily.`,
   "mk.underWindows":"Figures under the day and date windows are left off, as on a real dial.",
+  "mk.height": (mm, cl) => `Each figure stands ${mm} mm off the dial. The minute hand clears it by ${cl} mm.`,
+  "mk.heightTight": (mm, cl) => `At ${mm} mm the minute hand clears the figures by only ${cl} mm; 0.20 mm is the least to make. Choose a lower height or higher hands.`,
   "gem.emerald":"Emerald is brittle and usually oiled: tsavorite (green garnet) or lab emerald is the practical green, and a bezel holds it most safely.",
   "gem.summary": (n, size, ct, h, clear, lab) => `${n} stone${n === 1 ? "" : "s"} · ${size} · ≈ ${ct} ct · stands ${h} mm`
     + (clear != null ? ` · ${clear} mm under the minute hand` : "") + (lab ? " · lab-grown" : ""),
@@ -15983,6 +16002,8 @@ GSTR.ar = {
   "mk.paveNone":"لا يتسع أي حجر لهذه الأرقام بعد: اجعلها أعرض أو أكبر. ",
   "mk.paveAdvice": mm => `بمقاس ${mm} ملم لا تُرصّع إلا الأرقام العريضة، فاسأل Blue Creations. الأرقام بمقاس 4 ملم أسهل في الترصيع.`,
   "mk.underWindows":"الأرقام التي تقع تحت نافذتي اليوم والتاريخ تُحذف، كما في الميناء الحقيقي.",
+  "mk.height": (mm, cl) => `كل رقم مرتفع ${mm} ملم عن الميناء، وعقرب الدقائق يمر فوقه بفراغ ${cl} ملم.`,
+  "mk.heightTight": (mm, cl) => `بارتفاع ${mm} ملم يمر عقرب الدقائق فوق الأرقام بفراغ ${cl} ملم فقط، وأقل فراغ ممكن 0.20 ملم. اختر ارتفاعاً أقل أو عقارب أعلى.`,
   "gem.emerald":"الزمرد هش وغالباً معالج بالزيت: التسافوريت (العقيق الأخضر) أو الزمرد المصنّع مخبرياً هو الأخضر العملي، والترصيع بإطار يحفظه أكثر.",
   "gem.summary": (n, size, ct, h, clear, lab) => `${arCount(n, "حجر واحد", "حجران", "أحجار", "حجراً")} · ${size} · ≈ ${ct} قيراط · ارتفاعه ${h} ملم`
     + (clear != null ? ` · ${clear} ملم تحت عقرب الدقائق` : "") + (lab ? " · مصنّع مخبرياً" : ""),
@@ -16117,7 +16138,7 @@ const GWORD = {ar:{
   "Font":"الخط", "Engraved":"محفور", "Embossed":"نافر", "Debossed":"غائر",
   /* calendar */
   "Day window at 12":"نافذة اليوم عند 12", "Arabic":"عربي", "English":"إنجليزي", "Both together":"عربي وإنجليزي", "Alternating":"بالتناوب",
-  "Window width":"عرض النافذة", "Narrow":"ضيقة", "Standard":"قياسية", "Wide":"عريضة",
+  "Extra high":"مرتفع جداً", "High":"مرتفع", "height:Standard":"عادي", "Window width":"عرض النافذة", "Narrow":"ضيقة", "Standard":"قياسية", "Wide":"عريضة",
   "Move them aside":"أزحهما جانباً", "Make them smaller":"صغّرهما", "Use markers":"ضع مؤشرين", "Leave them off":"احذفهما", "Let them touch":"اتركهما متلامسين",
   "Day font":"خط اليوم", "Arabic font":"الخط العربي", "English font":"الخط الإنجليزي", "In the window":"في النافذة", "Day disc":"قرص اليوم",
   "Day lettering":"لون كتابة اليوم", "Window edge":"حافة النافذة", "Bevelled cut":"قطع مشطوف", "Applied frame":"إطار مركّب",
@@ -17441,6 +17462,16 @@ Object.assign(GWORD.ar, {
           if(drawn) h += `<p class="gNote">${gT("mk.drawnPave")}</p>`;
           if(n.tech === "applied" && n.material === "metal") h += `<h3>${gW("Metal")}</h3>` + chips44("numerals.metal", [["polished steel","Steel"],["white gold","White gold"],["yellow gold","Gold"],["rose gold","Rose gold"],["blackened steel","Black"]], n.metal || "polished steel");
           else h += printingBlock("numerals");
+          /* How proud an applied figure stands. The usual piece is 0.20 mm;
+             a deeper cut piece reads as a raised block with walls you can
+             see. The minute hand passes over every figure, so the room left
+             under it is said with the choice. */
+          if(n.tech === "applied"){
+            const nh = n.height === undefined ? 0.20 : +n.height;
+            h += `<h3>${gW("Height")}</h3>` + chips44("numerals.height", NUM_HEIGHTS.map(([v, l]) => [v, gW(l, "height")]), NUM_HEIGHTS.some(x => Math.abs(x[0] - nh) < 0.005) ? NUM_HEIGHTS.find(x => Math.abs(x[0] - nh) < 0.005)[0] : nh);
+            const cl = numClear(S);
+            h += `<p class="gNote"${cl.tight ? ` style="color:var(--g-warn-ink)"` : ""}>${gT(cl.tight ? "mk.heightTight" : "mk.height", nh.toFixed(2), cl.clear.toFixed(2))}</p>`;
+          }
           if(pave){
             h += `<h3>${gW("Stones")}</h3>` + stoneChips("numerals.paveStone", [["diamond","Diamond"],["black diamond","Black diamond"],["blue sapphire","Sapphire"],["ruby","Ruby"]], n.paveStone || "diamond");
             h += slider("numerals.paveD", "Stone size", 0.70, 1.00, 0.05, n.paveD || 0.80);

@@ -200,6 +200,17 @@ stored in a design file do not change. In the full editor at laptop widths
 the toolbar sits tighter, and on a narrower window it takes a second row
 rather than pushing Share and Export off the screen.
 
+## Raised applied numerals (v4.9.0)
+
+Simple mode's Markers › Made by tab offers a *Height* for applied numerals:
+Standard 0.20 mm, High 0.35 mm, Extra high 0.50 mm (Arabic: عادي، مرتفع،
+مرتفع جداً). It sets `numerals.height`, the piece height the drawing, the 3D
+view and the full editor's *Piece height* slider (now up to 0.70 mm) already
+use, so the walls and shadow grow with it. A note under the choice gives the
+room the minute hand leaves over the figures on the SW240 (`numClear`), and
+turns to a warning under 0.20 mm. The maker's sheet adds "raised X mm thick"
+to the numerals line when the piece is taller than 0.25 mm.
+
 ## The maker's sheet (v4.8.0)
 
 One A3 landscape PDF in the maker's own layout: Nivada Grenchen's design
