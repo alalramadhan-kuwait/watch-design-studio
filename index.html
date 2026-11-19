@@ -2177,7 +2177,7 @@ const APP_BUILD = "__BUILD__";
 /* The version people see, raised with every change that reaches them:
    major for a new way of working, minor for something new to do, patch for
    a fix. Shown on the watch screen, so any screenshot says which it was. */
-const APP_VERSION = "4.10.3";
+const APP_VERSION = "4.10.4";
 const APP_DATE = "__DATE__";
 
 /* Every route that replaces S passes through one of these three, which is
@@ -15682,7 +15682,7 @@ body.guided .stage.gPhoto{ background:#fff }
 .gSteps button{ flex:none; display:flex; align-items:center; gap:5px; position:relative;
   border:1px solid var(--ds-border); background:var(--ds-panel); color:var(--ds-text-2);
   border-radius:999px; padding:6px 11px 6px 6px; font:500 12.5px/1 var(--sans); cursor:pointer; white-space:nowrap }
-.gSteps button b{ display:inline-grid; place-items:center; width:18px; height:18px; border-radius:50%;
+.gSteps button b{ display:inline-grid; place-items:center; width:20px; height:20px; border-radius:50%;
   background:var(--ds-panel-2); color:var(--ds-text-2); font-size:10.5px }
 .gSteps button.on{ background:var(--ds-text); color:var(--ds-panel); border-color:var(--ds-text) }
 .gSteps button.on b{ background:var(--ds-brand); color:#15181C }
@@ -15988,11 +15988,12 @@ body:not(.guided) #gStartMore{ display:none }
   .gProgBar{ flex:1; min-width:0; display:flex; gap:3px }
   .gProgBar button{ flex:1 1 0; min-width:0; height:44px; border:0; background:none; padding:0; position:relative; cursor:pointer;
     display:grid; place-items:center }
-  .gProgBar button b{ display:grid; place-items:center; width:100%; height:20px; border-radius:6px; background:var(--ds-fill, rgba(120,120,128,.14));
+  .gProgBar button b{ display:grid; place-items:center; width:100%; height:30px; border-radius:8px; background:var(--ds-fill, rgba(120,120,128,.14));
     font:600 12px/1 var(--sans); color:var(--ds-text-2) }
+  .gProgBar button b svg{ display:block }
   .gProgBar button.done b{ background:var(--ds-brand); color:#15181C }
   .gProgBar button.on b{ background:var(--ds-text); color:var(--ds-panel) }
-  .gProgBar button.warn::after{ top:6px; right:-2px; width:8px; height:8px }
+  .gProgBar button.warn::after{ top:3px; right:-2px; width:8px; height:8px }
   .gTabs{ margin:2px 14px 6px }
   .gTabRow{ margin:2px 14px 6px; gap:6px }
   .gH2 .gMoreTop{ display:none }
@@ -17056,6 +17057,20 @@ Object.assign(GWORD.ar, {
      the Start step used to offer (your watches, continuing, starting from
      something else) is at the top of it. */
   const STEPS = ["case","dial","markers","hands","text","calendar","finish"].map(k => ({k, get t(){ return gT("step." + k); }, get lead(){ return gT("lead." + k); }}));
+  /* One picture per step, so the steps can be told apart at a glance rather
+     than by their numbers: the case with its lugs, the dial's brushed face,
+     the hour markers, the hands, lettering, the calendar and a finishing
+     flag. Line drawings in the text colour, the same in either language. */
+  const STEP_ICON = {
+    case:'<rect x="6.5" y="6.5" width="11" height="11" rx="3.4"/><path d="M9 6.5V3h6v3.5M9 17.5V21h6v-3.5"/><path d="M17.5 11h1.6v2h-1.6"/>',
+    dial:'<circle cx="12" cy="12" r="8.5"/><path d="M8.2 8.4l7.4 7.4M7 11.9l5.1 5.1M11.9 7l5.1 5.1"/>',
+    markers:'<circle cx="12" cy="12" r="8.5"/><path d="M12 5.4v2.6M12 16v2.6M5.4 12H8M16 12h2.6"/><circle cx="12" cy="12" r=".9" fill="currentColor" stroke="none"/>',
+    hands:'<path d="M12 12L7.4 6.6" stroke-width="3"/><path d="M12 12l7.8 4.2" stroke-width="1.7"/><circle cx="12" cy="12" r="2.1" fill="currentColor" stroke="none"/>',
+    text:'<path d="M4.5 18.5L9.2 6h1.6l4.7 12.5M6.4 14h7.2"/><path d="M15.8 18.5V12m0 0c0-1.4 1-2.2 2.2-2.2s2.2.8 2.2 2.2v6.5M15.8 15.2h4.4"/>',
+    calendar:'<rect x="4" y="5.5" width="16" height="14.5" rx="2.2"/><path d="M4 10h16M8.5 3.5v3.6M15.5 3.5v3.6"/><path d="M11 13.2l1.4-.9v5"/>',
+    finish:'<path d="M6 21V4"/><path d="M6 4.6c3.2-1.6 5.4 1.4 8.6 0 1.4-.6 2.6-.6 3.4-.3v8.6c-.8-.3-2-.3-3.4.3-3.2 1.4-5.4-1.6-8.6 0"/>'
+  };
+  const stepIcon = (k, px) => `<svg viewBox="0 0 24 24" width="${px || 18}" height="${px || 18}" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${STEP_ICON[k] || ""}</svg>`;
 
   /* ---- building blocks ---- */
   const esc2 = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -18334,10 +18349,10 @@ Object.assign(GWORD.ar, {
     const fa = document.activeElement, fk = fa && body.contains(fa) && fa.dataset ? (fa.dataset.gtext || fa.dataset.gpfind) : null;
     const fsel = fk && fa.selectionStart != null ? [fa.selectionStart, fa.selectionEnd] : null, fattr = fk && fa.dataset.gtext ? "data-gtext" : "data-gpfind";
     const cls = i => [i === step ? "on" : seen(i) ? "done" : "", warnNow[STEPS[i].k] ? "warn" : ""].join(" ").trim();
-    stepsEl.innerHTML = STEPS.map((s,i) => `<button type="button" role="tab" aria-selected="${i===step}" data-gstep="${i}" class="${cls(i)}"><b>${seen(i) && i !== step ? "✓" : i+1}</b>${s.t}</button>`).join("");
+    stepsEl.innerHTML = STEPS.map((s,i) => `<button type="button" role="tab" aria-selected="${i===step}" data-gstep="${i}" class="${cls(i)}"><b>${stepIcon(s.k, 13)}</b>${s.t}</button>`).join("");
     const s = STEPS[step];
     progEl.innerHTML = `<button type="button" class="gProgLbl" data-glist="1" aria-label="${esc2(gT("prog.aria", s.t, step+1, STEPS.length))}">${gT("prog", s.t, step+1, STEPS.length)}</button>`
-      + `<div class="gProgBar">${STEPS.map((x,i) => `<button type="button" data-gstep="${i}" class="${cls(i)}" aria-label="${esc2(x.t)}${warnNow[x.k] ? " — " + esc2(warnNow[x.k][0].text) : ""}"><b>${i+1}</b></button>`).join("")}</div>`;
+      + `<div class="gProgBar">${STEPS.map((x,i) => `<button type="button" data-gstep="${i}" class="${cls(i)}" aria-label="${esc2(x.t)}${warnNow[x.k] ? " — " + esc2(warnNow[x.k][0].text) : ""}" title="${esc2(x.t)}"><b>${stepIcon(x.k, 19)}</b></button>`).join("")}</div>`;
     const tabs = tabsNow(), tab = curTab();
     tabsEl.hidden = !tabs.length;
     const wt = warnTab[s.k] || {}, wTabs = new Set((warnNow[s.k] || []).map(w => wt[w.fix] || w.tab).filter(Boolean));
@@ -18380,7 +18395,7 @@ Object.assign(GWORD.ar, {
     l.innerHTML = `<header>${gT("steps.all")}<button type="button" data-glist="0" aria-label="${gT("steps.close")}">✕</button></header><ol>${STEPS.map((x,i) => {
       const w = warnNow[x.k], c = i === step ? "on" : seen(i) ? "done" : "";
       const sub = w ? `<small class="w">⚠ ${esc2(w[0].text)}</small>` : `<small>${i === step ? gT("steps.here") : seen(i) ? gT("steps.done") : esc2(x.lead)}</small>`;
-      return `<li><button type="button" data-gstep="${i}" class="${c}"><b>${seen(i) && i !== step ? "✓" : i+1}</b><span>${esc2(x.t)}${sub}</span></button></li>`; }).join("")}</ol>`;
+      return `<li><button type="button" data-gstep="${i}" class="${c}"><b>${stepIcon(x.k, 17)}</b><span>${esc2(x.t)}${sub}</span></button></li>`; }).join("")}</ol>`;
   }
   const origPaintAll = paintAll;
   /* Every change is remembered as "worked on now", so a reload goes back to

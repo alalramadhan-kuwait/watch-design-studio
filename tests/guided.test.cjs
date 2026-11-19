@@ -134,10 +134,21 @@ test('the design check is put in plain words, on the step that fixes it', () => 
   assert.deepEqual(unworded, []);
 });
 
-test('simple mode is version 4.10.3 and the drawing code is not touched by its preview', () => {
-  assert.match(source, /const APP_VERSION = "4\.10\.3";/);
+test('simple mode is version 4.10.4 and the drawing code is not touched by its preview', () => {
+  assert.match(source, /const APP_VERSION = "4\.10\.4";/);
   // the preview's seconds-hand change is undone whatever happens while drawing
   const v = chunk('function viewSVG(){', 'function viewSVGOf(){');
   assert.match(v, /finally\{ S\.meta\.time = t; S\.sHand\.on = on; \}/);
   assert.doesNotMatch(chunk('function exportPlan(', '\n}\n'), /WatchGuidePreview/, 'exports never ask for the preview');
+});
+
+test('each step has its own icon in the step bar, the step tabs and the list, not a number', () => {
+  const keys = chunk('const STEPS = [', ']').match(/"(\w+)"/g).map(s => s.slice(1, -1));
+  const icons = chunk('const STEP_ICON = {', '\n  };');
+  for (const k of keys) assert.match(icons, new RegExp(`\\n    ${k}:'<`), k);
+  assert.equal(keys.length, 7);
+  assert.match(source, /<b>\$\{stepIcon\(x\.k, 19\)\}<\/b><\/button>/, 'the phone\'s step bar');
+  assert.match(source, /<b>\$\{stepIcon\(s\.k, 13\)\}<\/b>\$\{s\.t\}/, 'the step tabs');
+  assert.match(source, /<b>\$\{stepIcon\(x\.k, 17\)\}<\/b><span>/, 'the list of steps');
+  assert.doesNotMatch(source, /<b>\$\{i\+1\}<\/b><\/button>/);
 });

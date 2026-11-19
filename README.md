@@ -200,6 +200,16 @@ stored in a design file do not change. In the full editor at laptop widths
 the toolbar sits tighter, and on a narrower window it takes a second row
 rather than pushing Share and Export off the screen.
 
+## Step icons (v4.10.4)
+
+Simple mode's seven steps are shown by a picture each instead of a number:
+the case with its lugs, the dial's brushed face, the hour markers, the hands,
+lettering (Aa), the calendar and a finishing flag. They replace the numbers
+in the phone's step bar, the desktop step tabs and the list of all steps
+(STEP_ICON, line drawings in the text colour). A step done is still gold,
+the one open dark, and one with something to look at still has the orange
+dot; the step's name is the button's label for VoiceOver and its tooltip.
+
 ## The artwork's figures are the dial's own (v4.10.2)
 
 Checked pixel by pixel: every built-in font, all twelve hour figures, at
