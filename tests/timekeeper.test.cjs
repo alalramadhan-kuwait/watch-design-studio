@@ -241,7 +241,7 @@ test('the split line is drawn without a filter, and is offered in the full edito
   assert.match(source, /for\(const p of splitLine\(tx\)\)\{\n\s+const hh/);
   // the full editor
   const schema = chunk('const SCHEMA = {', '\nlet swGroup');
-  for (const k of ['text.splitOn', 'text.split"', 'text.splitFont', 'text.splitSize', 'text.splitR', 'text.splitGap', 'text.splitCurve'])
+  for (const k of ['text.splitOn', 'text.split"', 'text.splitFont', 'text.splitCapMM', 'text.splitR', 'text.splitGap', 'text.splitCurve'])
     assert.ok(schema.includes('"' + k.replace(/"$/, '') + '"'), k + ' in the schema');
   // simple mode's Text step, with its words in English and Arabic
   const guide = chunk('/* GUIDED MODE — see the stylesheet note above.', '</script>');

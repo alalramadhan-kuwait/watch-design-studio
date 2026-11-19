@@ -2171,6 +2171,14 @@ const deep = (a,b)=>{const o=clone(a);for(const k in b){o[k]=(b[k]&&typeof b[k]=
 const VIRTUAL = {
   widthMM:{get:h => +((+h.width || 0)*handDrawnK(h.style)).toFixed(3),
            set:(h, v) => { h.width = +(v/handDrawnK(h.style)).toFixed(5); }},
+  /* The numerals' height is the height of the figures' ink on the dial;
+     their "size" is the font size the dial derives it from, which drew a
+     "4.0" as 2.9 mm figures. Text lines likewise: the height of their
+     capitals (of the writing itself when it is Arabic), not the font size. */
+  heightMM:{get:n => +((+n.size || 0)*numFigureK(n)).toFixed(3), set:(n, v) => { n.size = +(v/numFigureK(n)).toFixed(4); }},
+  line2CapMM:{get:t => +((+t.line2Size || 0)*lineCapK(t.line2, t.line2Font)).toFixed(3), set:(t, v) => { t.line2Size = +(v/lineCapK(t.line2, t.line2Font)).toFixed(4); }},
+  footCapMM:{get:t => +((+t.footSize || 0)*lineCapK(t.foot, t.footFont)).toFixed(3), set:(t, v) => { t.footSize = +(v/lineCapK(t.foot, t.footFont)).toFixed(4); }},
+  splitCapMM:{get:t => +((+t.splitSize || 0)*lineCapK(t.split, t.splitFont)).toFixed(3), set:(t, v) => { t.splitSize = +(v/lineCapK(t.split, t.splitFont)).toFixed(4); }},
   /* the date's digit height: the one set, or the one the window gives */
   digitHUi:{get:d => d.digitH > 0 ? d.digitH : dateAutoDigitH(d), set:(d, v) => { d.digitH = +v; }},
   /* the date window's edge: a bevelled cut, an applied frame, or the thin
@@ -2200,7 +2208,7 @@ const APP_BUILD = "__BUILD__";
 /* The version people see, raised with every change that reaches them:
    major for a new way of working, minor for something new to do, patch for
    a fix. Shown on the watch screen, so any screenshot says which it was. */
-const APP_VERSION = "4.11.3";
+const APP_VERSION = "4.11.4";
 const APP_DATE = "__DATE__";
 
 /* Every route that replaces S passes through one of these three, which is
@@ -8000,7 +8008,7 @@ function gemChecks(st, pave){
     add(ok, "Diamond-set numerals",
       (total !== null ? `${total} stones of Ø${mm(d)} mm, about ${gf(total*0.0037*Math.pow(d, 3), 2)} ct. ` : "")
       + (few.length ? `${few.map(x => x.label).join(" ")} get${few.length > 1 ? "" : "s"} fewer than 2 stones: the strokes are too thin to hold a ${mm(d)} mm stone and its bead walls (${mm(d + 0.24)} mm). ` : "")
-      + (nm.size < 4.0 ? `At ${mm(nm.size)} mm the figures can be set only as one row, and only as a bold, purpose-drawn set; loops such as ٩ and ٥ close up. 4.0 mm figures set more easily. ` : "")
+      + (nm.size < 4.0 ? (k => `At ${mm(nm.size*k)} mm high the figures can be set only as one row, and only as a bold, purpose-drawn set; loops such as ٩ and ٥ close up. Figures ${mm(4.0*k)} mm high or more set more easily. `)(typeof numFigureK === "function" ? numFigureK(nm) : 0.72) : "")
       + `Ask ${makerOf(st)} whether they can make it, who redraws the figures, and the cost and lead time.`, "numerals");
   }
   /* G10 */
@@ -10575,6 +10583,25 @@ function dayPair(dy, i, rin, rout, arcLen, scaleD, defs, id){
    (or A-Z) and the digits, at the weight a printed disc is set in. They are
    embedded so the window looks the same on every phone and in every export,
    instead of falling back to whatever Arabic font the device happens to have. */
+/* How tall the numerals' figures are drawn for a size of 1: the dial sets
+   the font so the digits' ink is 0.72 of the size (within 0.6–2.4 of the
+   font's own proportion); the two drawn sets are drawn at the size. */
+function numFigureK(nm){
+  const style = typeof sheetNumStyle === "function" ? sheetNumStyle(nm) : nm.style, sys = nm.system || "western 0–9";
+  if(style === "vernoy" || style === "breguet") return 1;
+  const fam = fontFamilyOf(style) || {modern:"'IBM Plex Sans',Helvetica,sans-serif", deco:"'Josefin Sans','IBM Plex Sans',sans-serif",
+    serif:"'Cormorant Garamond',Georgia,serif", roman:"'Cormorant Garamond',Georgia,serif"}[nm.style] || "'IBM Plex Sans',sans-serif";
+  const m = typeof inkMetrics === "function" ? inkMetrics(fam, sys === "roman I–XII" ? "XII" : (NUM_SYSTEM[sys] || "0123456789")) : null;
+  if(!m || !(m.h > 0)) return 0.72;
+  return Math.max(0.6, Math.min(2.4, 0.72/m.h))*m.h;
+}
+/* the height of a text line's capitals for a font size of 1, or of the
+   writing itself when it is Arabic */
+function lineCapK(text, font){
+  const fam = letterFam(font, "sans", null), ar = typeof hasArabic === "function" && hasArabic(text || "");
+  const m = typeof inkMetrics === "function" ? inkMetrics(fam, ar ? String(text) : "H") : null;
+  return m && m.h > 0 ? m.h : 0.70;
+}
 /* The height of the date's digits as the window draws them when no digit
    height is set: 0.78 of the window (0.95 for Arabic-Indic) as the font
    size, times the ink height of the font's figures. */
@@ -10892,7 +10919,7 @@ const SCHEMA = {
     {t:"facepick", p:"numerals.style", l:"Font / style"},
     {t:"font"},
     SEL("numerals.set","Which numerals",["all","even","quarters","1212"]),
-    N("numerals.size","Size",1,7,.05),
+    N("numerals.heightMM","Figure height",.7,5,.05),
     N("numerals.weight","Thickness",-0.10,0.45,.01),
     N("numerals.gap","Spacing",-24,20,.5,""),
     N("numerals.radius","Position from centre",3,22),
@@ -10986,13 +11013,13 @@ const SCHEMA = {
       ...(cart ? [GRP("Cartouche", LOGO_CART_FIELDS[cart](T))] : []),
       GRP("Supporting text",[
         TG("text.line2On","Second line"),
-        ...(T.line2On ? [TX("text.line2","Text"), SEL("text.line2Font","Font",LINE_FONTS), N("text.line2Size","Size",.4,3,.05),
+        ...(T.line2On ? [TX("text.line2","Text"), SEL("text.line2Font","Font",LINE_FONTS), N("text.line2CapMM","Letter height",.25,2,.02),
                          N("text.line2Y","Vertical position",-18,18)] : []),
         TG("text.footOn","Footer"),
-        ...(T.footOn ? [TX("text.foot","Text"), SEL("text.footFont","Font",LINE_FONTS), N("text.footSize","Size",.4,3,.05),
+        ...(T.footOn ? [TX("text.foot","Text"), SEL("text.footFont","Font",LINE_FONTS), N("text.footCapMM","Letter height",.25,2,.02),
                         N("text.footY","Vertical position",-18,18)] : []),
         TG("text.splitOn","Split either side of 6"),
-        ...(T.splitOn ? [TX("text.split","Text"), SEL("text.splitFont","Font",LINE_FONTS), N("text.splitSize","Size",.3,2,.05),
+        ...(T.splitOn ? [TX("text.split","Text"), SEL("text.splitFont","Font",LINE_FONTS), N("text.splitCapMM","Letter height",.2,1.4,.02),
                          N("text.splitR","Distance from centre",4,16,.05), N("text.splitGap","Space either side of 6",0,6,.05),
                          CK("text.splitCurve","Lean with the curve")] : []),
         SUB("Decorative lines",[
@@ -16319,7 +16346,7 @@ const GSTR = {en:{
   "mk.drawnPave":"Diamond-set needs one of the font styles, not a drawn outline.",
   "mk.paveCount": (n, ct) => `≈ ${n} stones, ${ct} ct. `,
   "mk.paveNone":"No stones fit these figures yet: make them thicker or larger. ",
-  "mk.paveAdvice": mm => `At ${mm} mm only bold figures can be set; ask Blue Creations. 4 mm figures set more easily.`,
+  "mk.paveAdvice": (mm, easy) => `At ${mm} mm high only bold figures can be set; ask Blue Creations. Figures ${easy || "2.9"} mm high set more easily.`,
   "mk.underWindows":"Figures under the day and date windows are left off, as on a real dial.",
   "date.digitNote":"The height of the digits' ink in mm. They are centred in the window and made smaller if they would come within 0.3 mm of its sides.",
   "mk.height": (mm, cl) => `Each figure stands ${mm} mm off the dial. The minute hand clears it by ${cl} mm.`,
@@ -16490,7 +16517,7 @@ GSTR.ar = {
   "mk.drawnPave":"الترصيع بالألماس يحتاج أحد الخطوط، لا شكلاً مرسوماً.",
   "mk.paveCount": (n, ct) => `≈ ${arCount(n, "حجر واحد", "حجران", "أحجار", "حجراً")}، ${ct} قيراط. `,
   "mk.paveNone":"لا يتسع أي حجر لهذه الأرقام بعد: اجعلها أعرض أو أكبر. ",
-  "mk.paveAdvice": mm => `بمقاس ${mm} ملم لا تُرصّع إلا الأرقام العريضة، فاسأل Blue Creations. الأرقام بمقاس 4 ملم أسهل في الترصيع.`,
+  "mk.paveAdvice": (mm, easy) => `بارتفاع ${mm} ملم لا تُرصّع إلا الأرقام العريضة، فاسأل Blue Creations. الأرقام بارتفاع ${easy || "2.9"} ملم أسهل في الترصيع.`,
   "mk.underWindows":"الأرقام التي تقع تحت نافذتي اليوم والتاريخ تُحذف، كما في الميناء الحقيقي.",
   "date.digitNote":"ارتفاع الأرقام بالملم. تتوسط النافذة، وتصغر تلقائياً إذا اقتربت أقل من 0.3 ملم من جوانبها.",
   "mk.height": (mm, cl) => `كل رقم مرتفع ${mm} ملم عن الميناء، وعقرب الدقائق يمر فوقه بفراغ ${cl} ملم.`,
@@ -16636,7 +16663,7 @@ const GWORD = {ar:{
   "Extra high":"مرتفع جداً", "High":"مرتفع", "height:Standard":"عادي", "Window width":"عرض النافذة", "Narrow":"ضيقة", "Standard":"قياسية", "Wide":"عريضة",
   "Move them aside":"أزحهما جانباً", "Make them smaller":"صغّرهما", "Use markers":"ضع مؤشرين", "Leave them off":"احذفهما", "Let them touch":"اتركهما متلامسين",
   "Day font":"خط اليوم", "Arabic font":"الخط العربي", "English font":"الخط الإنجليزي", "In the window":"في النافذة", "Day disc":"قرص اليوم",
-  "Day lettering":"لون كتابة اليوم", "Window edge":"حافة النافذة", "Thin line":"خط رفيع", "Digit height":"ارتفاع الأرقام", "Bevelled cut":"قطع مشطوف", "Applied frame":"إطار مركّب",
+  "Day lettering":"لون كتابة اليوم", "Window edge":"حافة النافذة", "Figure height":"ارتفاع الرقم", "Letter height":"ارتفاع الحروف", "Thin line":"خط رفيع", "Digit height":"ارتفاع الأرقام", "Bevelled cut":"قطع مشطوف", "Applied frame":"إطار مركّب",
   "All seven days in the window":"أيام الأسبوع السبعة في النافذة", "The disc in order":"القرص بالترتيب",
   "Date window at 3":"نافذة التاريخ عند 3", "Magnifier":"المكبّر", "Digits":"الأرقام", "Date font":"خط التاريخ", "Date disc":"قرص التاريخ",
   "Date digits colour":"لون أرقام التاريخ", "Frame":"الإطار", "All window settings":"كل إعدادات النوافذ",
@@ -16883,7 +16910,7 @@ const G_MORE = {
     {id:"cross", t:"Crosshair", src:"cross", on:"cross.on", onLabel:"Show the crosshair", paths:["cross.length","cross.width","cross.color"]},
     {id:"sub", t:"Sub-dial", src:"sub", on:"sub.on", onLabel:"Show the sub-dial", paths:["sub.at","sub.dist","sub.diameter","sub.color","sub.ring","sub.track"]}],
   markers:[
-    {id:"layout", t:"Numeral layout", src:"numerals", show:"numerals.on", paths:["numerals.system","numerals.set","numerals.size","numerals.gap",
+    {id:"layout", t:"Numeral layout", src:"numerals", show:"numerals.on", paths:["numerals.system","numerals.set","numerals.heightMM","numerals.gap",
       "numerals.radius","numerals.orient","numerals.align","numerals.arc","numerals.slant"]},
     {id:"made", t:"How the numerals are made", src:"numerals", show:"numerals.on", paths:["numerals.tech","numerals.material","numerals.metal",
       "numerals.metalTex","numerals.edgeLight","numerals.height","numerals.bevel"]},
@@ -16952,7 +16979,7 @@ const G_MORE_LABEL = {
   "act:borderDel:#":"Remove this band", "act:borderAdd":"Add a band",
   "cross.length":"Arm length", "cross.width":"Line width", "cross.color":"Colour",
   "sub.at":"Position", "sub.dist":"Distance from centre", "sub.diameter":"Diameter", "sub.color":"Colour", "sub.ring":"Track colour", "sub.track":"Show the track",
-  "numerals.system":"Numerals", "numerals.set":"Which hours", "numerals.size":"Size", "numerals.gap":"Spacing", "numerals.radius":"Distance from centre",
+  "numerals.system":"Numerals", "numerals.set":"Which hours", "numerals.heightMM":"Figure height", "numerals.gap":"Spacing", "numerals.radius":"Distance from centre",
   "numerals.orient":"Direction", "numerals.align":"Line up by", "numerals.arc":"Follow the curve", "numerals.slant":"Slant",
   "numerals.tech":"Made by", "numerals.material":"Material", "numerals.metal":"Metal", "numerals.metalTex":"Use the loaded metal texture",
   "numerals.edgeLight":"Edge light", "numerals.height":"Thickness of the piece", "numerals.bevel":"Bevel",
@@ -17986,7 +18013,7 @@ Object.assign(GWORD.ar, {
             h += `<h3>${gW("Stones")}</h3>` + stoneChips("numerals.paveStone", [["diamond","Diamond"],["black diamond","Black diamond"],["blue sapphire","Sapphire"],["ruby","Ruby"]], n.paveStone || "diamond");
             h += slider("numerals.paveD", "Stone size", 0.70, 1.00, 0.05, n.paveD || 0.80);
             const pv = PAVE_STATS && PAVE_STATS.sig === paveSig(S) ? PAVE_STATS : null, d = n.paveD || 0.80;
-            h += `<p class="gNote">${pv ? (pv.total ? gT("mk.paveCount", pv.total, (pv.total*0.0037*Math.pow(d, 3)).toFixed(2)) : gT("mk.paveNone")) : ""}${gT("mk.paveAdvice", n.size.toFixed(1))}</p>`;
+            h += `<p class="gNote">${pv ? (pv.total ? gT("mk.paveCount", pv.total, (pv.total*0.0037*Math.pow(d, 3)).toFixed(2)) : gT("mk.paveNone")) : ""}${gT("mk.paveAdvice", get(S, "numerals.heightMM").toFixed(1), (4.0*numFigureK(n)).toFixed(1))}</p>`;
           }
         }
         if(showIx){
@@ -18000,7 +18027,7 @@ Object.assign(GWORD.ar, {
       if(tab === "size"){
         let h = "";
         if(showNum){
-          h += slider("numerals.size", "Size", 1.6, 5.5, 0.05, n.size)
+          h += slider("numerals.heightMM", "Figure height", 1.0, 4.0, 0.05, get(S, "numerals.heightMM"))
             + slider("numerals.radius", "Distance from centre", 8, 14.5, 0.05, n.radius);
           /* thickness thickens a printed figure's ink; an applied piece is cut
              to its outline and ignores it, except a diamond-set one, whose
@@ -18068,12 +18095,12 @@ Object.assign(GWORD.ar, {
         /* how each line is made, as compact chips under its other settings */
         const madeChips = k => `<div class="gH3"><h3>${gW("Made by")}</h3></div>` + chips(k, LINE_TECH, LINE_TECH_IDS.indexOf(T[k.split(".")[1]]) > 0 ? T[k.split(".")[1]] : "printed").replace('<div class="gChips">', '<div class="gChips gMade">');
         let h = `<h3>${gT("text.under")}</h3>` + textIn("text.line2", gT("text.field"), T.line2On === false ? "" : T.line2, gT("text.eg", gT("eg.line2")), true);
-        if(T.line2On !== false && T.line2) h += slider("text.line2Size", "Size", 0.4, 2, 0.05, T.line2Size) + slider("text.line2Y", "Position", -12, 14, 0.1, T.line2Y, "pos") + toggle("text.line2Curve", "Follow the curve", !!T.line2Curve) + lineFace("text.line2Font", T.line2) + madeChips("text.line2Tech");
+        if(T.line2On !== false && T.line2) h += slider("text.line2CapMM", "Letter height", 0.25, 1.5, 0.02, get(S, "text.line2CapMM")) + slider("text.line2Y", "Position", -12, 14, 0.1, T.line2Y, "pos") + toggle("text.line2Curve", "Follow the curve", !!T.line2Curve) + lineFace("text.line2Font", T.line2) + madeChips("text.line2Tech");
         h += `<h3>${gT("text.above6")}</h3>` + textIn("text.foot", gT("text.field"), T.footOn === false ? "" : T.foot, gT("text.eg", gT("eg.foot")), true);
-        if(T.footOn !== false && T.foot) h += slider("text.footSize", "Size", 0.4, 2, 0.05, T.footSize) + slider("text.footY", "Position", -12, 15, 0.1, T.footY, "pos") + toggle("text.footCurve", "Follow the curve", !!T.footCurve) + lineFace("text.footFont", T.foot) + madeChips("text.footTech");
+        if(T.footOn !== false && T.foot) h += slider("text.footCapMM", "Letter height", 0.25, 1.5, 0.02, get(S, "text.footCapMM")) + slider("text.footY", "Position", -12, 15, 0.1, T.footY, "pos") + toggle("text.footCurve", "Follow the curve", !!T.footCurve) + lineFace("text.footFont", T.foot) + madeChips("text.footTech");
         /* two words either side of the 6, near the edge: typing them turns the line on, clearing it turns it off */
         h += `<h3>${gT("text.split6")}</h3>` + textIn("text.split", gT("text.field"), T.splitOn ? T.split : "", gT("text.eg", gT("eg.split")), true);
-        if(T.splitOn && T.split) h += slider("text.splitSize", "Size", 0.3, 1.5, 0.05, T.splitSize) + slider("text.splitR", "Distance from centre", 8, 14, 0.1, T.splitR)
+        if(T.splitOn && T.split) h += slider("text.splitCapMM", "Letter height", 0.2, 1.2, 0.02, get(S, "text.splitCapMM")) + slider("text.splitR", "Distance from centre", 8, 14, 0.1, T.splitR)
           + slider("text.splitGap", "Space either side of 6", 0, 5, 0.05, T.splitGap) + toggle("text.splitCurve", "Lean with the curve", T.splitCurve !== false) + lineFace("text.splitFont", T.split) + madeChips("text.splitTech");
         /* The lines that are only seen by the light get the light itself,
            to turn round and watch them come and go; UV ink gets the lamp. */

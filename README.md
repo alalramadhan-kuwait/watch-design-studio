@@ -200,6 +200,19 @@ stored in a design file do not change. In the full editor at laptop widths
 the toolbar sits tighter, and on a narrower window it takes a second row
 rather than pushing Share and Export off the screen.
 
+## Sizes as heights on the dial (v4.11.4)
+
+The numerals' **Figure height** is the height of the figures' ink (the dial
+sets the font so the digits are 0.72 of the stored size, within 0.6–2.4 of
+the font's own proportion: `numFigureK`); a size of 4.0 is 2.90 mm figures.
+The text lines' **Letter height** is the height of their capitals, or of the
+writing itself when it is Arabic (`lineCapK`). Both in simple mode, the More
+sheets and the full editor, as virtual fields (`heightMM`, `line2CapMM`,
+`footCapMM`, `splitCapMM`); the design keeps its font sizes, so saved designs
+draw exactly as before. The figure height agrees with the numerals artwork's
+outline measurement to 0.001 mm. The logo's size stays the height of the whole
+mark.
+
 ## Typed values in simple mode (v4.11.3)
 
 The figure beside every slider in simple mode, on the steps and in the More

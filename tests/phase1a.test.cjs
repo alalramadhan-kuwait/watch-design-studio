@@ -64,3 +64,13 @@ test('the figure beside every guided slider can be tapped to type an exact value
   // 16 px so iOS does not zoom into the field
   assert.match(source, /\.gSlIn\{ font:600 16px\/1\.3 var\(--sans\)/);
 });
+
+test('sizes are shown as heights on the dial: the figures\' ink, the letters\' capitals', () => {
+  for (const k of ['heightMM', 'line2CapMM', 'footCapMM', 'splitCapMM']) assert.match(chunk('const VIRTUAL = {', '\n};'), new RegExp('\\n  ' + k + ':\\{get:'));
+  assert.match(source, /function numFigureK\(nm\)\{/);
+  assert.match(chunk('function numFigureK(nm){', '\n}\n'), /return Math\.max\(0\.6, Math\.min\(2\.4, 0\.72\/m\.h\)\)\*m\.h;/, 'the dial\'s own rule for the font size');
+  assert.match(source, /slider\("numerals\.heightMM", "Figure height", 1\.0, 4\.0, 0\.05, get\(S, "numerals\.heightMM"\)\)/);
+  assert.match(source, /slider\("text\.footCapMM", "Letter height", 0\.25, 1\.5, 0\.02, get\(S, "text\.footCapMM"\)\)/);
+  assert.match(source, /N\("numerals\.heightMM","Figure height",\.7,5,\.05\)/);
+  assert.doesNotMatch(source, /slider\("numerals\.size", "Size"/);
+});
