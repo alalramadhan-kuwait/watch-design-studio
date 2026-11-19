@@ -2213,7 +2213,7 @@ const APP_BUILD = "__BUILD__";
 /* The version people see, raised with every change that reaches them:
    major for a new way of working, minor for something new to do, patch for
    a fix. Shown on the watch screen, so any screenshot says which it was. */
-const APP_VERSION = "4.14.0";
+const APP_VERSION = "4.15.0";
 const APP_DATE = "__DATE__";
 
 /* Every route that replaces S passes through one of these three, which is
@@ -3657,8 +3657,8 @@ const MFINISH = {
    so it appears through changing reflection and vanishes if you flatten
    the light — which is exactly how a real engine-turned dial behaves.
    --------------------------------------------------------------------- */
-const GUIL_PATTERNS = ["clous","orge","soleil","cercles","vagues","flamme","panier","damier","tapisserie","perlage","geneva","ecaille","chevron","linen","hammered"];
-const GUIL_LABEL = {clous:"clous de Paris (hobnail)", orge:"grain d'orge (barleycorn)",
+const GUIL_PATTERNS = ["clous","nid","orge","soleil","cercles","vagues","flamme","panier","damier","tapisserie","perlage","geneva","ecaille","chevron","linen","hammered"];
+const GUIL_LABEL = {clous:"clous de Paris (hobnail)", nid:"nid d'abeille (honeycomb)", orge:"grain d'orge (barleycorn)",
   soleil:"soleil (radial channels)", cercles:"cercles (concentric)", vagues:"vagues (waves)",
   flamme:"flammé (spiral)", panier:"panier (basket)", damier:"damier (checker)", tapisserie:"tapisserie (stepped squares)", perlage:"perlage (overlapping circles)", geneva:"Geneva waves", ecaille:"écaille (fish scales)", chevron:"chevron", linen:"linen weave", hammered:"hammered relief"};
 const wrap1 = u => u - Math.floor(u);
@@ -3672,6 +3672,7 @@ function guilFeature(P, r){
     case "cercles":
     case "vagues": return P.pitch;
     case "clous":
+    case "nid":
     case "orge":   return P.cell;
     case "panier": return P.cell;
     case "damier": return P.cell;
@@ -3746,6 +3747,23 @@ function guilFieldRaw(P, ux, uy, r, a){
       return -Math.max(0,1-d*d)*c*tw*.14;
     }
 
+    case "nid": {                         // six planar facets per cell: a honeycomb
+      /* Hexagonal pyramids on a hexagonal lattice, cell = the distance across
+         the flats, turned by the lay as a clous de Paris is. Each point finds
+         the nearer of the two offset centre grids, and its height falls with
+         the hexagonal distance from that centre, reaching the floor on the
+         six walls. */
+      const c = P.cell;
+      let gx = ux/c, gy = uy/c;
+      const lay = P.lay || 0;
+      if(lay){ const la = lay*Math.PI/180, cs = Math.cos(la), sn = Math.sin(la), x = gx; gx = x*cs - gy*sn; gy = x*sn + gy*cs; }
+      const R3 = 1.7320508, mod = (v, m) => v - m*Math.floor(v/m);
+      const ax = mod(gx, 1) - 0.5, ay = mod(gy, R3) - R3/2;
+      const bx = mod(gx - 0.5, 1) - 0.5, by = mod(gy - R3/2, R3) - R3/2;
+      const [qx, qy] = ax*ax + ay*ay < bx*bx + by*by ? [Math.abs(ax), Math.abs(ay)] : [Math.abs(bx), Math.abs(by)];
+      const hd = Math.max(qx, qx*0.5 + qy*0.8660254);            // 0 at the centre, 0.5 on the flats
+      return (0.5 - hd)*c*tw*(P.facet || 1);
+    }
     case "clous": {                       // four planar facets per cell
       const c = P.cell;
       /* The lay. A clous de Paris is turned on a rose engine whose grid can be
@@ -10764,7 +10782,7 @@ const SCHEMA = {
       N("dial.paveD","Pavé stone size",0.7,1.5,.05), SEL("dial.paveMetal","Pavé bed metal",["white gold","yellow gold","rose gold"])] : [])];
     if(S.dial.finish === "guilloche") return base.concat([
       SEL("dial.pattern","Guilloché pattern",GUIL_PATTERNS),
-      ...(S.dial.pattern === "clous"
+      ...(S.dial.pattern === "clous" || S.dial.pattern === "nid"
           ? [N("dial.lay","Lay angle",0,90,1,"°"),
              N("dial.facet","Facet contrast",0.2,2.0,.05,"×")] : []),
       N("dial.wall","Groove wall angle",8,55,1,"°"),
@@ -10853,7 +10871,7 @@ const SCHEMA = {
               SEL(k+".pattern","Pattern",["same as dial"].concat(GUIL_PATTERNS)),
               ...(z.pattern && z.pattern !== "same as dial" ? [
                 N(k+".cell","Cell size",0.25,2.20,.05), N(k+".pitch","Groove pitch",0.12,1.20,.02),
-                ...(z.pattern === "clous" ? [
+                ...(z.pattern === "clous" || z.pattern === "nid" ? [
                   N(k+".lay","Lay angle",0,90,1,"°"),
                   N(k+".facet","Facet contrast",0.2,2.0,.05,"×")] : []),
                 N(k+".rays","Ray count",40,420,4,""), N(k+".waveAmp","Wave amplitude",0,1.2,.01),
@@ -10922,7 +10940,7 @@ const SCHEMA = {
     }},
   chapter:{title:"Chapter ring", hint:"Outer band carrying the minute track.", fields:[
     N("chapter.outerD","Outer diameter",8,44), N("chapter.innerD","Inner diameter",4,42),
-    C("chapter.color","Colour"), SEL("chapter.finish","Finish",["flat","matte","gloss","sunburst","grained","enamel"]),
+    C("chapter.color","Colour"), SEL("chapter.finish","Finish",["flat","matte","gloss","sunburst","grained","enamel","brushedsteel"]),
     CK("chapter.separator","Separator lines"), C("chapter.sepColor","Separator colour")]},
   minute:{title:"Minute track", hint:"60 divisions. Diameter is the centre line of the track.", fields:()=>[
     N("minute.diameter","Track diameter",6,44),
@@ -15516,6 +15534,7 @@ async function makeMakerPDF(){
   const technique=(id,name,category,description,patch,layer='dial')=>({id,name,category,description,patch,layer});
   const patternDescriptions={
     clous:'Small pyramidal facets catch the light. Adjust cell size, lay angle and facet contrast.',
+    nid:'Hexagonal pyramids on a honeycomb lattice. Adjust cell size, lay angle and facet contrast.',
     orge:'Interlocking elongated grains with a softly raised centre.',
     soleil:'Radial channels sweep outward from the centre. Tune the ray count and wall angle.',
     cercles:'Concentric cuts create a restrained, circular rhythm. Tune groove pitch.',
@@ -17217,7 +17236,7 @@ const G_MORE_OPT = {
   "minute.tech=engraved":"Engraved, tone on tone", "indices.tech=engraved":"Engraved, tone on tone",
   "minute.fiveStyle=inward":"Run inward", "minute.fiveStyle=plain":"Plain", "minute.fiveStyle=flared":"Flared",
   sandblasted:"Sandblasted", metallic:"Metallic", flat:"Flat", line:"Line", ring:"Ring",
-  "same as dial":"Same as the dial", clous:"Clous de Paris", orge:"Grain d'orge", soleil:"Soleil", cercles:"Circles", vagues:"Waves",
+  "same as dial":"Same as the dial", clous:"Clous de Paris", nid:"Honeycomb", orge:"Grain d'orge", soleil:"Soleil", cercles:"Circles", vagues:"Waves",
   flamme:"Flammé", panier:"Basket", damier:"Checker", tapisserie:"Stepped squares", perlage:"Perlage", geneva:"Geneva waves",
   ecaille:"Fish scales", chevron:"Chevron", linen:"Linen", hammered:"Hammered",
   rhodium:"Rhodium", brass:"Brass", auto:"Automatic", manual:"Set by hand",
@@ -17323,7 +17342,7 @@ Object.assign(GWORD.ar, {
   "Hour":"الساعة", "Minute":"الدقيقة", "Second":"الثانية", "Light":"الإضاءة", "Light height":"ارتفاع الضوء", "Detail":"الدقة",
   /* values */
   "Sandblasted":"مرمّل", "Circular brushed":"مصقول دائرياً", "Flat":"مسطّح", "Line":"خط", "Same as the dial":"مثل الميناء",
-  "Clous de Paris":"مسامير باريس", "Grain d'orge":"حبّة الشعير", "Soleil":"أشعة الشمس", "Circles":"دوائر", "Waves":"أمواج", "Flammé":"لهب",
+  "Clous de Paris":"مسامير باريس", "Honeycomb":"خلية النحل", "Grain d'orge":"حبّة الشعير", "Soleil":"أشعة الشمس", "Circles":"دوائر", "Waves":"أمواج", "Flammé":"لهب",
   "Basket":"سلّة", "Checker":"رقعة شطرنج", "Stepped squares":"مربعات متدرّجة", "Perlage":"دوائر متداخلة", "Geneva waves":"أمواج جنيف",
   "Fish scales":"قشور السمك", "Chevron":"شيفرون", "Linen":"نسيج الكتان", "Hammered":"مطروق",
   "Rhodium":"روديوم", "Brass":"نحاس", "Set by hand":"يدوي", "Persian":"فارسية",

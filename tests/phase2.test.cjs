@@ -33,3 +33,13 @@ test('minute track (v4.14.0): width rail to rail, rail and tick weights, five-mi
   assert.match(source, /"Minute track in view":\["dial","Part of the minute track is hidden under the rehaut\."\]/);
   assert.match(source, /chips\("minute\.fiveStyle", \[\["inward","Run inward"\],\["plain","Plain"\],\["flared","Flared"\]\]/);
 });
+
+test('honeycomb guilloché and a brushed-steel chapter ring (v4.15.0)', () => {
+  assert.match(source, /const GUIL_PATTERNS = \["clous","nid","orge",/);
+  assert.match(source, /nid:"nid d'abeille \(honeycomb\)"/);
+  const g = chunk('    case "nid": {', '    case "clous": {');
+  assert.match(g, /const hd = Math\.max\(qx, qx\*0\.5 \+ qy\*0\.8660254\);/, 'the hexagonal distance');
+  assert.match(g, /return \(0\.5 - hd\)\*c\*tw\*\(P\.facet \|\| 1\);/);
+  assert.match(source, /S\.dial\.pattern === "clous" \|\| S\.dial\.pattern === "nid"/, 'lay and facet offered as for clous');
+  assert.match(source, /SEL\("chapter\.finish","Finish",\["flat","matte","gloss","sunburst","grained","enamel","brushedsteel"\]\)/);
+});

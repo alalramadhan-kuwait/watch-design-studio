@@ -200,6 +200,14 @@ stored in a design file do not change. In the full editor at laptop widths
 the toolbar sits tighter, and on a narrower window it takes a second row
 rather than pushing Share and Export off the screen.
 
+## Honeycomb guilloché, brushed-steel chapter ring (v4.15.0)
+
+**Nid d'abeille (honeycomb)** joins the guilloché patterns: hexagonal pyramids
+on a hexagonal lattice, the cell the distance across the flats, with the lay
+angle and facet contrast clous de Paris has (`guilFieldRaw` case "nid"). For
+the dial and any dial zone. The chapter ring can be **brushed steel**, drawn
+as the dial's own brushed steel.
+
 ## Minute track settings (v4.14.0)
 
 A railroad's **Track width** is its width rail to rail (`trackWMM`; its old
