@@ -200,6 +200,15 @@ stored in a design file do not change. In the full editor at laptop widths
 the toolbar sits tighter, and on a narrower window it takes a second row
 rather than pushing Share and Export off the screen.
 
+## Track numbers (v4.26.0)
+
+Dial › Minute track › **Track numbers**: *5 to 60* every five minutes, or *1 to
+12*, round the track (`minute.nums`), as a sports watch's flange carries them.
+They read along the edge, turned so the lower half stays upright, leave the gap
+at 6 clear, and have their own height (0.80 mm unless set), radius and colour.
+The specification says so, the dial artwork carries them in the track's ink,
+and a check keeps them 0.30 mm inside the opening.
+
 ## The review's last open points (v4.25.0)
 
 - **Date and the movement**: a date window on the F77's Soprod P024 without

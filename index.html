@@ -2236,7 +2236,7 @@ const APP_BUILD = "__BUILD__";
 /* The version people see, raised with every change that reaches them:
    major for a new way of working, minor for something new to do, patch for
    a fix. Shown on the watch screen, so any screenshot says which it was. */
-const APP_VERSION = "4.25.1";
+const APP_VERSION = "4.26.0";
 const APP_DATE = "__DATE__";
 
 /* Every route that replaces S passes through one of these three, which is
@@ -5826,6 +5826,19 @@ function buildSVG(st, o={}){
       }
       if(mtech) body.push(madeBy(mtech, body.splice(mtFrom).join(""), {ink:mt.color, size:Math.max(0.5, t*6), stroke:true}));
       if(trackFx) body.push(`</g>`);
+      /* Numbers round the track, every five minutes (5 to 60) or the hours,
+         read along the edge and turned so the lower half stays upright, as
+         a sports watch's flange carries them. Off unless chosen. */
+      if(mt.nums === "minutes" || mt.nums === "hours"){
+        const nr = mt.numR > 0 ? +mt.numR : r + t + 0.55, nsz = mt.numSize > 0 ? +mt.numSize : 0.80;
+        const famN = letterFam(mt.numFont || "sans", "sans", defs), nc = mt.numColor || mt.color;
+        for(let i = 0; i < 12; i++){
+          const a = i*30; if(inGap(a)) continue;
+          const lab = mt.nums === "hours" ? String(i || 12) : String(i ? i*5 : 60);
+          const rot = a > 90 && a < 270 ? a + 180 : a, p = pt(nr, a);
+          body.push(`<text x="0" y="0" transform="translate(${f(p[0],3)},${f(p[1],3)}) rotate(${f(rot,2)})" font-family="${famN}" font-size="${f(nsz,3)}" fill="${nc}" text-anchor="middle" dominant-baseline="central">${lab}</text>`);
+        }
+      }
     }
     // hour track
     const ht = st.hour;
@@ -11084,6 +11097,8 @@ const SCHEMA = {
     CK("chapter.separator","Separator lines"), C("chapter.sepColor","Separator colour")]},
   minute:{title:"Minute track", hint:"60 divisions. Diameter is the centre line of the track.", fields:()=>[
     N("minute.diameter","Track diameter",6,44),
+    SEL("minute.nums","Track numbers",["none","minutes","hours"]),
+    ...(S.minute.nums === "minutes" || S.minute.nums === "hours" ? [N("minute.numSize","Number height",.4,1.6,.02), N("minute.numR","Numbers from centre",6,16,.05), C("minute.numColor","Number colour")] : []),
     S.minute.style === "railroad" ? N("minute.trackWMM","Track width (rail to rail)",.16,2.4,.02) : N("minute.thickness","Thickness",.08,1.2,.02),
     ...(S.minute.style === "railroad" ? [N("minute.railW","Rail weight (0 = automatic)",0,.2,.005), N("minute.tickW","Minute tick weight (0 = automatic)",0,.25,.005)] : []),
     ...(S.minute.style === "railroad" ? [SEL("minute.fiveStyle","Five-minute marks",["inward","plain","flared"])] : []),
@@ -15171,7 +15186,7 @@ function sheetSpec(st){
   const mt = st.minute;
   if(mt && mt.on){
     const w = mt.style === "railroad" ? 2*mt.thickness : mt.thickness;
-    add("Minute track", `${mt.style}, ${mt.tech || "printed"}${mt.fives ? ", stronger five-minute marks" : ""}`, mt.color, `centre Ø${mm(mt.diameter)}mm, ${mt.style === "dots" ? "dot" : "track"} ${mm(w)}mm`);
+    add("Minute track", `${mt.style}, ${mt.tech || "printed"}${mt.fives ? ", stronger five-minute marks" : ""}${mt.nums === "minutes" || mt.nums === "hours" ? `, numbered ${mt.nums === "hours" ? "1 to 12" : "5 to 60"}` : ""}`, mt.color, `centre Ø${mm(mt.diameter)}mm, ${mt.style === "dots" ? "dot" : "track"} ${mm(w)}mm${mt.nums === "minutes" || mt.nums === "hours" ? `; numbers ${mm(mt.numSize > 0 ? mt.numSize : 0.8)}mm high on r ${mm(mt.numR > 0 ? mt.numR : mt.diameter/2 + mt.thickness + 0.55)}mm` : ""}`);
   }
   const ht = st.hour;
   if(ht && ht.on) add("Hour track", `${ht.style}`, ht.color, `Ø${mm(ht.diameter)}mm, ${mm(ht.thickness)}mm`);
@@ -16117,6 +16132,8 @@ async function makeMakerPDF(){
       if(bands.length>1) add(!clash.length,'Lines of writing apart',clash.length?`${clash.join('; ')}: keep 0.15 mm between them, or move one. Moving the logo carries the line under it.`:'Every line of writing clears the next by 0.15 mm or more.','text');
       if(T.splitOn&&T.split){ const R=(T.splitR===undefined?12.6:+T.splitR)+cap(+T.splitSize||0,T.split,T.splitFont)/2; add(R<=r-0.30,'Lettering clear of the opening',`“${T.split}” reaches R${f(R,2)} mm; the opening is R${f(r,2)} mm${R<=r-0.30?'':', so keep 0.30 mm: bring it in'}.`,'text'); }
     }
+    { const mt=st.minute||{}; if(mt.on&&(mt.nums==='minutes'||mt.nums==='hours')){ const R=(mt.numR>0?+mt.numR:mt.diameter/2+mt.thickness+0.55)+(mt.numSize>0?+mt.numSize:0.8)*0.55;
+      add(R<=r-0.30,'Track numbers in view',`The numbers reach R${f(R,2)} mm; the opening is R${f(r,2)} mm${R<=r-0.30?'':', so keep 0.30 mm: bring them in or make them smaller'}.`,'minute'); } }
     if(st.date&&st.date.on&&st.date.big)add(!!(cal&&cal.bigDate),'Big date movement',cal&&cal.bigDate?`The ${CASE_SPEC.movement} carries a big-date module.`:`A big date needs separate tens and units discs, from a big-date module; the ${CASE_SPEC.movement||'movement'} has ${cal?'one date ring':'no date mechanism'}. Ask the maker for a movement with a big-date module${cal?', or use one window':''}.`,'date');
     if(cal&&st.date&&st.date.on&&!st.date.big){
       add(st.date.w<=cal.dateW+1e-6&&st.date.h<=cal.dateH+1e-6,'Date window size',`${f(st.date.w,2)} × ${f(st.date.h,2)} mm against the movement's ${f(cal.dateW,2)} × ${f(cal.dateH,2)} mm aperture; larger shows the ring edge or the next date.`,'date');
@@ -17379,7 +17396,7 @@ const GWORD = {ar:{
   "Extra high":"مرتفع جداً", "High":"مرتفع", "height:Standard":"عادي", "Window width":"عرض النافذة", "Narrow":"ضيقة", "Standard":"قياسية", "Wide":"عريضة",
   "Move them aside":"أزحهما جانباً", "Make them smaller":"صغّرهما", "Use markers":"ضع مؤشرين", "Leave them off":"احذفهما", "Let them touch":"اتركهما متلامسين",
   "Day font":"خط اليوم", "Arabic font":"الخط العربي", "English font":"الخط الإنجليزي", "In the window":"في النافذة", "Day disc":"قرص اليوم",
-  "Day lettering":"لون كتابة اليوم", "Window edge":"حافة النافذة", "Lume colour":"لون المادة المضيئة", "Lume fill":"تعبئة مضيئة", "Green-white":"أبيض مخضر", "Old radium":"راديوم قديم", "Vintage cream":"كريمي عتيق", "Five-minute marks":"علامات الخمس دقائق", "Run inward":"ممتدة للداخل", "Flared":"متسعة", "Gap at 6":"فراغ عند ٦", "Track width":"عرض المسار", "Rail weight":"وزن الخط", "Tick weight":"وزن العلامة", "Turn this hour":"اتجاه هذه الساعة", "Toward the centre":"نحو المركز", "On point":"على رأسه", "Across":"بالعرض", "Size of this hour":"حجم هذه الساعة", "Figure height":"ارتفاع الرقم", "Letter height":"ارتفاع الحروف", "Thin line":"خط رفيع", "Digit height":"ارتفاع الأرقام", "Bevelled cut":"قطع مشطوف", "Applied frame":"إطار مركّب", "Keep off the watch":"أسماء ممنوعة على الساعة", "The line under it moves with the logo":"السطر اللي تحته يتحرك مع الشعار", "Dial artwork (PDF)":"رسومات الميناء (PDF)", "Plan, inks and stones":"المخطط والأحبار والأحجار", "Show the colour as made":"اعرض اللون مثل ما ينصنع", "Drawn bezel":"البيزل المرسوم", "As Nivada's drawing":"مثل رسمة نيفادا", "As the prototype":"مثل النموذج", "Hand heights":"ارتفاعات العقارب", "I have the maker's hand heights":"عندي ارتفاعات العقارب من المصنّع", "Windows":"النوافذ", "One window":"نافذة وحدة", "Big date":"تاريخ كبير", "Centre bar":"الفاصل الوسطي", "Dates 1 to 9":"التواريخ من ١ إلى ٩",
+  "Day lettering":"لون كتابة اليوم", "Window edge":"حافة النافذة", "Lume colour":"لون المادة المضيئة", "Lume fill":"تعبئة مضيئة", "Green-white":"أبيض مخضر", "Old radium":"راديوم قديم", "Vintage cream":"كريمي عتيق", "Five-minute marks":"علامات الخمس دقائق", "Run inward":"ممتدة للداخل", "Flared":"متسعة", "Gap at 6":"فراغ عند ٦", "Track width":"عرض المسار", "Rail weight":"وزن الخط", "Tick weight":"وزن العلامة", "Turn this hour":"اتجاه هذه الساعة", "Toward the centre":"نحو المركز", "On point":"على رأسه", "Across":"بالعرض", "Size of this hour":"حجم هذه الساعة", "Figure height":"ارتفاع الرقم", "Letter height":"ارتفاع الحروف", "Thin line":"خط رفيع", "Digit height":"ارتفاع الأرقام", "Bevelled cut":"قطع مشطوف", "Applied frame":"إطار مركّب", "Keep off the watch":"أسماء ممنوعة على الساعة", "Track numbers":"أرقام المسار", "5 to 60":"٥ إلى ٦٠", "1 to 12":"١ إلى ١٢", "Number height":"ارتفاع الأرقام", "Numbers from centre":"بُعد الأرقام عن المركز", "The line under it moves with the logo":"السطر اللي تحته يتحرك مع الشعار", "Dial artwork (PDF)":"رسومات الميناء (PDF)", "Plan, inks and stones":"المخطط والأحبار والأحجار", "Show the colour as made":"اعرض اللون مثل ما ينصنع", "Drawn bezel":"البيزل المرسوم", "As Nivada's drawing":"مثل رسمة نيفادا", "As the prototype":"مثل النموذج", "Hand heights":"ارتفاعات العقارب", "I have the maker's hand heights":"عندي ارتفاعات العقارب من المصنّع", "Windows":"النوافذ", "One window":"نافذة وحدة", "Big date":"تاريخ كبير", "Centre bar":"الفاصل الوسطي", "Dates 1 to 9":"التواريخ من ١ إلى ٩",
   "All seven days in the window":"أيام الأسبوع السبعة في النافذة", "The disc in order":"القرص بالترتيب",
   "Date window at 3":"نافذة التاريخ عند 3", "Magnifier":"المكبّر", "Digits":"الأرقام", "Date font":"خط التاريخ", "Date disc":"قرص التاريخ",
   "Date digits colour":"لون أرقام التاريخ", "Frame":"الإطار", "All window settings":"كل إعدادات النوافذ",
@@ -17422,6 +17439,7 @@ const G_CHECK_AR = {
   "Date and the movement":"هالمحرك ما فيه قرص تاريخ، فالنافذة بتبين المحرك.",
   "Lines of writing apart":"سطرين من الكتابة داخلين في بعض.",
   "Lettering clear of the opening":"الكتابة اللي على الطرف قريبة واجد من فتحة القالب.",
+  "Track numbers in view":"أرقام مسار الدقائق قريبة واجد من فتحة القالب.",
   "Names kept off the watch":"اسم من قائمة الأسماء الممنوعة موجود على الميناء أو في اسم نمط مختار.",
   "Date window position":"نافذة التاريخ ليست حيث يُظهر المحرك التاريخ.",
   "Cyclops coverage":"المكبّر لا يغطي التاريخ كله.",
@@ -17448,7 +17466,7 @@ const GLOSS_OPT = {matte:"Matte", gloss:"Gloss", sunburst:"Sunburst", guilloche:
   "double printed":"Raised print", "applied metal":"Applied metal", "polished steel":"Steel", "blued steel":"Blued steel",
   "blackened steel":"Black", "yellow gold":"Gold",
   "gloss on matte":"Gloss on matte", "brushed across":"Brushed across the grain", "uv ink":"UV ink",
-  single:"One window", big:"Big date", zero:"With a 0 (0 7)", blank:"Tens blank (  7)"};
+  single:"One window", big:"Big date", minutes:"5 to 60", hours:"1 to 12", zero:"With a 0 (0 7)", blank:"Tens blank (  7)"};
 const glossOpt = o => typeof o !== "string" ? o : (GLOSS_OPT[o] || (/^[a-z]/.test(o) ? o[0].toUpperCase() + o.slice(1) : o));
 
 /* Where to pick up after a reload. Back within half an hour, the step you
@@ -17573,6 +17591,7 @@ const G_CHECK_WORDS = {
   "Date and the movement":["calendar","This movement has no date disc, so a window would show the movement."],
   "Lines of writing apart":["text","Two lines of writing run into each other."],
   "Lettering clear of the opening":["text","The lettering round the edge comes too close to the opening."],
+  "Track numbers in view":["dial","The numbers round the track come too close to the opening."],
   "Names kept off the watch":["text","A name on the research avoid-list is on the dial or in a style's name."],
   "Date window position":["calendar","The date window is not where the movement shows the date."],
   "Cyclops coverage":["calendar","The magnifier doesn't cover the whole date."],
@@ -18716,6 +18735,12 @@ Object.assign(GWORD.ar, {
       if(S.minute.on && S.minute.style === "railroad") h += `<h3>${gW("Five-minute marks")}</h3>` + chips("minute.fiveStyle", [["inward","Run inward"],["plain","Plain"],["flared","Flared"]], S.minute.fiveStyle || "inward")
         + slider("minute.trackWMM", "Track width", 0.16, 2.4, 0.02, get(S, "minute.trackWMM"));
       if(S.minute.on) h += slider("minute.gap6", "Gap at 6", 0, 60, 1, +S.minute.gap6 || 0, "deg");
+      if(S.minute.on){
+        const nmode = S.minute.nums === "minutes" || S.minute.nums === "hours" ? S.minute.nums : "none";
+        h += `<h3>${gW("Track numbers")}</h3>` + chips("minute.nums", [["none","None"],["minutes","5 to 60"],["hours","1 to 12"]], nmode);
+        if(nmode !== "none") h += slider("minute.numSize", "Number height", 0.4, 1.6, 0.02, S.minute.numSize > 0 ? +S.minute.numSize : 0.80)
+          + slider("minute.numR", "Numbers from centre", 9, 14.5, 0.05, S.minute.numR > 0 ? +S.minute.numR : +(S.minute.diameter/2 + S.minute.thickness + 0.55).toFixed(2));
+      }
       if(S.minute.on) h += printingBlock("minute");
       return h + more("dial", "All dial settings");
     },

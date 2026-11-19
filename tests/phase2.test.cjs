@@ -201,3 +201,17 @@ test('closing the review (v4.25.0): a date on the no-date P024, lines of writing
   assert.match(source, /S\.text\.line2Follow !== false\) S\.text\.line2Y = \+\(\(\+S\.text\.line2Y \|\| 0\) \+ dy\)\.toFixed\(3\);/);
   assert.match(source, /\(s\.k === "text" && S\.sHand && S\.sHand\.on \? `<p class="gNote">\$\{gT\("text\.secHidden"\)\}<\/p>` : ""\)/);
 });
+
+test('track numbers (v4.26.0): 5 to 60 or 1 to 12 round the minute track, upright in the lower half, checked against the opening', () => {
+  const m = chunk('      if(mt.nums === "minutes" || mt.nums === "hours"){', '\n    // hour track');
+  assert.match(m, /const lab = mt\.nums === "hours" \? String\(i \|\| 12\) : String\(i \? i\*5 : 60\);/);
+  assert.match(m, /const rot = a > 90 && a < 270 \? a \+ 180 : a, p = pt\(nr, a\);/);
+  assert.match(m, /if\(inGap\(a\)\) continue;/, 'none in the gap at 6');
+  assert.match(source, /chips\("minute\.nums", \[\["none","None"\],\["minutes","5 to 60"\],\["hours","1 to 12"\]\], nmode\)/);
+  assert.match(source, /SEL\("minute\.nums","Track numbers",\["none","minutes","hours"\]\)/);
+  assert.match(source, /add\(R<=r-0\.30,'Track numbers in view',/);
+  assert.match(source, /, numbered \$\{mt\.nums === "hours" \? "1 to 12" : "5 to 60"\}/);
+  // the turn: upright at 12 and 6, reading down at 3 and up at 9
+  const rot = a => a > 90 && a < 270 ? a + 180 : a;
+  assert.deepEqual([0, 90, 180, 270].map(rot), [0, 90, 360, 270]);
+});
