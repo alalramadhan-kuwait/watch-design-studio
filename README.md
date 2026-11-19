@@ -200,6 +200,19 @@ stored in a design file do not change. In the full editor at laptop widths
 the toolbar sits tighter, and on a narrower window it takes a second row
 rather than pushing Share and Export off the screen.
 
+## The review's last open points (v4.25.0)
+
+- **Date and the movement**: a date window on the F77's Soprod P024 without
+  date is flagged (it would show the movement); a date needs the P024's date
+  version, and Nivada to say where its disc shows.
+- **Lines of writing apart**: the logo, the line under it and the line above 6
+  must clear each other by 0.15 mm.
+- **Lettering clear of the opening**: the text either side of 6 keeps 0.30 mm
+  inside the case opening.
+- Moving the logo now carries **the line under it** (GRENCHEN) by the same
+  amount; Text › Logo can set it apart (`text.line2Follow`).
+- The Text step says why the **seconds hand** is out of the picture there.
+
 ## Dial artwork for the maker (v4.24.0)
 
 **Dial artwork (PDF)**, in Export and in Finish, is what a dial maker quotes,

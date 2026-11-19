@@ -2236,7 +2236,7 @@ const APP_BUILD = "__BUILD__";
 /* The version people see, raised with every change that reaches them:
    major for a new way of working, minor for something new to do, patch for
    a fix. Shown on the watch screen, so any screenshot says which it was. */
-const APP_VERSION = "4.24.0";
+const APP_VERSION = "4.25.0";
 const APP_DATE = "__DATE__";
 
 /* Every route that replaces S passes through one of these three, which is
@@ -16103,6 +16103,20 @@ async function makeMakerPDF(){
     { const av = st.sheet && st.sheet.research && typeof st.sheet.research.avoid === "string" ? st.sheet.research.avoid.split(/[,،\n]/).map(w => w.trim()).filter(w => w.length > 1) : [];
       if(av.length){ const hits = researchHits(st, av);
         add(!hits.length, 'Names kept off the watch', hits.length ? hits.map(h => `“${h.w}” in ${h.where}`).join("; ") + ". Change it, or take the name off the list." : `None of ${av.map(w => "“" + w + "”").join(", ")} is on the dial or in the styles chosen.`, 'text'); } }
+    /* a date window over a movement without a date disc shows the movement */
+    { const mv=(typeof caseOf==='function'&&caseOf(st).movement)||'';
+      if(st.date&&st.date.on&&!st.date.big&&!cal&&/without date/i.test(mv))add(false,'Date and the movement',`The ${mv} has no date disc, so a window would show the movement. A date needs its date version; ${typeof makerOf==='function'?makerOf(st):'the maker'} to give where its disc shows.`,'date'); }
+    /* the lines of writing one above the other must not run into each other,
+       and lettering round the edge keeps 0.30 mm from the opening */
+    if(st.text&&st.text.on!==false){ const T=st.text, cap=(sz,tx,fn)=>sz*(typeof lineCapK==='function'?lineCapK(tx,fn):0.72), bands=[];
+      if(T.logo||T.logoMark) bands.push(['the logo',+T.logoY||0,+T.logoSize||0]);
+      if(T.line2On!==false&&T.line2) bands.push([`“${T.line2}”`,+T.line2Y||0,cap(+T.line2Size||0,T.line2,T.line2Font)]);
+      if(T.footOn!==false&&T.foot) bands.push([`“${T.foot}”`,+T.footY||0,cap(+T.footSize||0,T.foot,T.footFont)]);
+      const clash=[];
+      for(let i=0;i<bands.length;i++)for(let j=i+1;j<bands.length;j++){ const a=bands[i],b=bands[j],gap=Math.abs(a[1]-b[1])-(a[2]+b[2])/2; if(gap<0.15) clash.push(`${a[0]} and ${b[0]} (${gap<0?'overlap by '+f(-gap,2):f(gap,2)+' mm apart'})`); }
+      if(bands.length>1) add(!clash.length,'Lines of writing apart',clash.length?`${clash.join('; ')}: keep 0.15 mm between them, or move one. Moving the logo carries the line under it.`:'Every line of writing clears the next by 0.15 mm or more.','text');
+      if(T.splitOn&&T.split){ const R=(T.splitR===undefined?12.6:+T.splitR)+cap(+T.splitSize||0,T.split,T.splitFont)/2; add(R<=r-0.30,'Lettering clear of the opening',`“${T.split}” reaches R${f(R,2)} mm; the opening is R${f(r,2)} mm${R<=r-0.30?'':', so keep 0.30 mm: bring it in'}.`,'text'); }
+    }
     if(st.date&&st.date.on&&st.date.big)add(!!(cal&&cal.bigDate),'Big date movement',cal&&cal.bigDate?`The ${CASE_SPEC.movement} carries a big-date module.`:`A big date needs separate tens and units discs, from a big-date module; the ${CASE_SPEC.movement||'movement'} has ${cal?'one date ring':'no date mechanism'}. Ask the maker for a movement with a big-date module${cal?', or use one window':''}.`,'date');
     if(cal&&st.date&&st.date.on&&!st.date.big){
       add(st.date.w<=cal.dateW+1e-6&&st.date.h<=cal.dateH+1e-6,'Date window size',`${f(st.date.w,2)} × ${f(st.date.h,2)} mm against the movement's ${f(cal.dateW,2)} × ${f(cal.dateH,2)} mm aperture; larger shows the ring edge or the next date.`,'date');
@@ -16938,6 +16952,7 @@ const GSTR = {en:{
   "prog": (name, n, total) => `<b>${name}</b><span> · <i>step </i>${n} of ${total}</span>`,
   "prog.aria": (name, n, total) => `${name}, step ${n} of ${total}. Show all steps`,
   "find.ph":"Find a setting", "find.none":"Nothing by that name in this design.",
+  "text.secHidden":"The seconds hand is left out of the picture on this step, so the lettering under it can be read. It is back on the next step.",
   "col.rendered":(hx, dl) => `As typed, and on the render under the studio light: ${hx} (${dl} in lightness).`,
   "col.asMade":"Raises the light so the render shows the paint as it is, not as a lamp darkens it. The maker's sheet always gives the colour typed.",
   "case.bezelNote":"How the drawn case shows the bezel when the photograph is off: round, as Nivada's front drawing has it, or eight-sided, as the prototype and the photograph are.",
@@ -17130,6 +17145,7 @@ GSTR.ar = {
   "prog": (name, n, total) => `<b>${name}</b><span> · <i>الخطوة </i>${n} من ${total}</span>`,
   "prog.aria": (name, n, total) => `${name}، الخطوة ${n} من ${total}. عرض كل الخطوات`,
   "find.ph":"ابحث عن إعداد", "find.none":"ما في شي بهالاسم في هالتصميم.",
+  "text.secHidden":"عقرب الثواني مخفي من الصورة في هالخطوة عشان تنقرا الكتابة اللي تحته. ويرجع في الخطوة الجاية.",
   "col.rendered":(hx, dl) => `اللون مثل ما انكتب، ومثل ما يطلع في الصورة تحت إضاءة الاستوديو: ${hx} (${dl} في درجة الفتاحة).`,
   "col.asMade":"يرفع الإضاءة عشان الصورة تبين الصبغ على حقيقته، مو مثل ما يغمّقه الضوء. ورقة المصنّع دايماً تعطي اللون المكتوب.",
   "case.bezelNote":"شكل البيزل في القالب المرسوم لما تكون الصورة مطفية: دائري مثل رسمة نيفادا، أو ثماني مثل النموذج والصورة.",
@@ -17363,7 +17379,7 @@ const GWORD = {ar:{
   "Extra high":"مرتفع جداً", "High":"مرتفع", "height:Standard":"عادي", "Window width":"عرض النافذة", "Narrow":"ضيقة", "Standard":"قياسية", "Wide":"عريضة",
   "Move them aside":"أزحهما جانباً", "Make them smaller":"صغّرهما", "Use markers":"ضع مؤشرين", "Leave them off":"احذفهما", "Let them touch":"اتركهما متلامسين",
   "Day font":"خط اليوم", "Arabic font":"الخط العربي", "English font":"الخط الإنجليزي", "In the window":"في النافذة", "Day disc":"قرص اليوم",
-  "Day lettering":"لون كتابة اليوم", "Window edge":"حافة النافذة", "Lume colour":"لون المادة المضيئة", "Lume fill":"تعبئة مضيئة", "Green-white":"أبيض مخضر", "Old radium":"راديوم قديم", "Vintage cream":"كريمي عتيق", "Five-minute marks":"علامات الخمس دقائق", "Run inward":"ممتدة للداخل", "Flared":"متسعة", "Gap at 6":"فراغ عند ٦", "Track width":"عرض المسار", "Rail weight":"وزن الخط", "Tick weight":"وزن العلامة", "Turn this hour":"اتجاه هذه الساعة", "Toward the centre":"نحو المركز", "On point":"على رأسه", "Across":"بالعرض", "Size of this hour":"حجم هذه الساعة", "Figure height":"ارتفاع الرقم", "Letter height":"ارتفاع الحروف", "Thin line":"خط رفيع", "Digit height":"ارتفاع الأرقام", "Bevelled cut":"قطع مشطوف", "Applied frame":"إطار مركّب", "Keep off the watch":"أسماء ممنوعة على الساعة", "Dial artwork (PDF)":"رسومات الميناء (PDF)", "Plan, inks and stones":"المخطط والأحبار والأحجار", "Show the colour as made":"اعرض اللون مثل ما ينصنع", "Drawn bezel":"البيزل المرسوم", "As Nivada's drawing":"مثل رسمة نيفادا", "As the prototype":"مثل النموذج", "Hand heights":"ارتفاعات العقارب", "I have the maker's hand heights":"عندي ارتفاعات العقارب من المصنّع", "Windows":"النوافذ", "One window":"نافذة وحدة", "Big date":"تاريخ كبير", "Centre bar":"الفاصل الوسطي", "Dates 1 to 9":"التواريخ من ١ إلى ٩",
+  "Day lettering":"لون كتابة اليوم", "Window edge":"حافة النافذة", "Lume colour":"لون المادة المضيئة", "Lume fill":"تعبئة مضيئة", "Green-white":"أبيض مخضر", "Old radium":"راديوم قديم", "Vintage cream":"كريمي عتيق", "Five-minute marks":"علامات الخمس دقائق", "Run inward":"ممتدة للداخل", "Flared":"متسعة", "Gap at 6":"فراغ عند ٦", "Track width":"عرض المسار", "Rail weight":"وزن الخط", "Tick weight":"وزن العلامة", "Turn this hour":"اتجاه هذه الساعة", "Toward the centre":"نحو المركز", "On point":"على رأسه", "Across":"بالعرض", "Size of this hour":"حجم هذه الساعة", "Figure height":"ارتفاع الرقم", "Letter height":"ارتفاع الحروف", "Thin line":"خط رفيع", "Digit height":"ارتفاع الأرقام", "Bevelled cut":"قطع مشطوف", "Applied frame":"إطار مركّب", "Keep off the watch":"أسماء ممنوعة على الساعة", "The line under it moves with the logo":"السطر اللي تحته يتحرك مع الشعار", "Dial artwork (PDF)":"رسومات الميناء (PDF)", "Plan, inks and stones":"المخطط والأحبار والأحجار", "Show the colour as made":"اعرض اللون مثل ما ينصنع", "Drawn bezel":"البيزل المرسوم", "As Nivada's drawing":"مثل رسمة نيفادا", "As the prototype":"مثل النموذج", "Hand heights":"ارتفاعات العقارب", "I have the maker's hand heights":"عندي ارتفاعات العقارب من المصنّع", "Windows":"النوافذ", "One window":"نافذة وحدة", "Big date":"تاريخ كبير", "Centre bar":"الفاصل الوسطي", "Dates 1 to 9":"التواريخ من ١ إلى ٩",
   "All seven days in the window":"أيام الأسبوع السبعة في النافذة", "The disc in order":"القرص بالترتيب",
   "Date window at 3":"نافذة التاريخ عند 3", "Magnifier":"المكبّر", "Digits":"الأرقام", "Date font":"خط التاريخ", "Date disc":"قرص التاريخ",
   "Date digits colour":"لون أرقام التاريخ", "Frame":"الإطار", "All window settings":"كل إعدادات النوافذ",
@@ -17403,6 +17419,9 @@ const G_CHECK_AR = {
   "Date window envelope":"نافذة التاريخ تمتد تحت الإطار.",
   "Date window size":"نافذة التاريخ أكبر من تاريخ المحرك.",
   "Big date movement":"التاريخ الكبير يحتاج محرك فيه وحدة تاريخ كبير.",
+  "Date and the movement":"هالمحرك ما فيه قرص تاريخ، فالنافذة بتبين المحرك.",
+  "Lines of writing apart":"سطرين من الكتابة داخلين في بعض.",
+  "Lettering clear of the opening":"الكتابة اللي على الطرف قريبة واجد من فتحة القالب.",
   "Names kept off the watch":"اسم من قائمة الأسماء الممنوعة موجود على الميناء أو في اسم نمط مختار.",
   "Date window position":"نافذة التاريخ ليست حيث يُظهر المحرك التاريخ.",
   "Cyclops coverage":"المكبّر لا يغطي التاريخ كله.",
@@ -17551,6 +17570,9 @@ const G_CHECK_WORDS = {
   "Date window envelope":["calendar","The date window runs under the bezel."],
   "Date window size":["calendar","The date window is bigger than the movement's date."],
   "Big date movement":["calendar","A big date needs a movement with a big-date module."],
+  "Date and the movement":["calendar","This movement has no date disc, so a window would show the movement."],
+  "Lines of writing apart":["text","Two lines of writing run into each other."],
+  "Lettering clear of the opening":["text","The lettering round the edge comes too close to the opening."],
   "Names kept off the watch":["text","A name on the research avoid-list is on the dial or in a style's name."],
   "Date window position":["calendar","The date window is not where the movement shows the date."],
   "Cyclops coverage":["calendar","The magnifier doesn't cover the whole date."],
@@ -18841,6 +18863,7 @@ Object.assign(GWORD.ar, {
         h += `<h3>${gW("Logo made by")}</h3>` + chips("text.logoTech", techs, T.logoTech || "printed");
         if(T.logoTech === "applied metal") h += `<h3>${gW("Logo metal")}</h3>` + chips("text.logoMetal", [["polished steel","Steel"],["white gold","White gold"],["yellow gold","Gold"],["rose gold","Rose gold"],["blackened steel","Black"]], T.logoMetal || "polished steel");
         h += slider("text.logoSize", "Logo size", 0.8, isMark ? 8 : 3.5, 0.05, T.logoSize) + slider("text.logoY", "Logo position", -12, 12, 0.1, T.logoY, "pos");
+        if(T.line2 && T.line2On !== false) h += toggle("text.line2Follow", "The line under it moves with the logo", T.line2Follow !== false);
         return h + more("text", "All text settings");
       }
       if(tab === "lines"){
@@ -19140,6 +19163,9 @@ Object.assign(GWORD.ar, {
     /* the classic colours named ombré are ombré */
     else if(path === "dial.color"){ S.dial.color = v; const cl = classicOf(v); if(cl && /ombré/.test(cl[0]) && !(S.dial.ombre > 0)) S.dial.ombre = 0.7; }
     else if(path === "minute.style"){ if(v === "none") S.minute.on = false; else { S.minute.on = true; S.minute.style = v; } }
+    /* the line under the logo goes where the logo goes, unless set apart */
+    else if(path === "text.logoY"){ const dy = +v - (+S.text.logoY || 0); S.text.logoY = +v;
+      if(S.text.line2 && S.text.line2On !== false && S.text.line2Follow !== false) S.text.line2Y = +((+S.text.line2Y || 0) + dy).toFixed(3); }
     else if(path === "case.model"){ const from = S.case.model; S.case.model = v; applyCaseModel(from, v); }
     else if(path === "num.make"){ const [t, m, pv] = v.split("|"); S.numerals.tech = t; S.numerals.material = m; if(m === "metal" && !S.numerals.metal) S.numerals.metal = "polished steel";
       S.numerals.pave = pv === "pave"; }
@@ -19344,7 +19370,8 @@ Object.assign(GWORD.ar, {
        so they would snap back to their start and hide what was just tapped:
        keep each where it was, and on a new step bring the choice into view */
     const rowsX = [...body.querySelectorAll(".gCards, .gChips, .gSw.row")].map(r => r.scrollLeft);
-    body.innerHTML = `<div class="gH2"><h2>${s.t}</h2>${hasSheet(s.k) ? `<button type="button" class="gMoreTop" data-gsheet="1"></button>` : ""}</div><p class="gLead">${s.lead}</p>` + stepWarnings(s.k) + VIEW[s.k](tab);
+    body.innerHTML = `<div class="gH2"><h2>${s.t}</h2>${hasSheet(s.k) ? `<button type="button" class="gMoreTop" data-gsheet="1"></button>` : ""}</div><p class="gLead">${s.lead}</p>` + stepWarnings(s.k)
+      + (s.k === "text" && S.sHand && S.sHand.on ? `<p class="gNote">${gT("text.secHidden")}</p>` : "") + VIEW[s.k](tab);
     body.dataset.view = view; if(same) body.scrollTop = scroll;
     downEdge();
     body.querySelectorAll(".gCards, .gChips, .gSw.row").forEach((r, i) => {

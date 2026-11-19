@@ -191,3 +191,13 @@ test('production artwork (v4.24.0): a dimensioned plan, a separation per ink, th
   assert.match(source, /id="dialArtBtn"/); assert.match(source, /id="inkLayersBtn"/);
   assert.match(source, /\["dialart","Dial artwork \(PDF\)","Plan, inks and stones"\]/);
 });
+
+test('closing the review (v4.25.0): a date on the no-date P024, lines of writing apart, lettering clear of the opening, the logo carries its line', () => {
+  assert.match(source, /if\(st\.date&&st\.date\.on&&!st\.date\.big&&!cal&&\/without date\/i\.test\(mv\)\)add\(false,'Date and the movement',/);
+  assert.match(source, /gap=Math\.abs\(a\[1\]-b\[1\]\)-\(a\[2\]\+b\[2\]\)\/2; if\(gap<0\.15\)/);
+  assert.match(source, /add\(R<=r-0\.30,'Lettering clear of the opening',/);
+  for (const t of ['Date and the movement', 'Lines of writing apart', 'Lettering clear of the opening']) assert.ok(source.split(`"${t}":`).length >= 3, t + ' has its plain sentence and its Arabic');
+  assert.match(source, /else if\(path === "text\.logoY"\)\{ const dy = \+v - \(\+S\.text\.logoY \|\| 0\); S\.text\.logoY = \+v;/);
+  assert.match(source, /S\.text\.line2Follow !== false\) S\.text\.line2Y = \+\(\(\+S\.text\.line2Y \|\| 0\) \+ dy\)\.toFixed\(3\);/);
+  assert.match(source, /\(s\.k === "text" && S\.sHand && S\.sHand\.on \? `<p class="gNote">\$\{gT\("text\.secHidden"\)\}<\/p>` : ""\)/);
+});
