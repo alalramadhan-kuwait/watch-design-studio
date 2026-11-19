@@ -215,3 +215,23 @@ test('track numbers (v4.26.0): 5 to 60 or 1 to 12 round the minute track, uprigh
   const rot = a => a > 90 && a < 270 ? a + 180 : a;
   assert.deepEqual([0, 90, 180, 270].map(rot), [0, 90, 360, 270]);
 });
+
+test('painted hands (v4.27.0): a lacquered colour of the hand\'s own, kept when the file is opened again', () => {
+  // a material of its own, its colours from the hand's colour; not offered as a metal
+  assert.match(source, /"painted": +\{core:"#888888", dark:"#101112", lite:"#FFFFFF", spec:0\.34\}/);
+  assert.match(source, /const HAND_MATERIALS = Object\.keys\(HAND_MATERIAL\)\.filter\(k => k !== "painted"\);/);
+  assert.match(source, /if\(h\.paint && !h\.material && \/\^#\[0-9a-f\]\{6\}\$\/i\.test\(h\.color \|\| ""\)\) return "painted";/);
+  assert.match(source, /if\(m === "painted"\) return h\.color;/);
+  // only a hand marked painted: older colour hands draw as they always did
+  assert.match(source, /const handPainted = h => !!h && !!h\.paint && !h\.material/);
+  // stored as an empty metal, which opening the file does not fill back in with steel
+  assert.match(source, /S\.sHand\.material = ""; S\.sHand\.color = c; S\.sHand\.paint = true;/);
+  assert.match(source, /S\[k\]\.material = ""; S\[k\]\.color = c; S\[k\]\.paint = true;/);
+  // the choices, and a metal clears the mark without touching a painted seconds
+  assert.match(source, /chips\("sHand\.material", METALS6\.concat\(\[\["flame blue","Flame blue"\],\["gilt","Gilt"\],\["painted","Painted"\]\]\)/);
+  assert.match(source, /swatches\("sHand\.color", HAND_PAINT, sh\.color, \{row:true\}\)/);
+  assert.match(source, /if\(S\[k\] && !\(k === "sHand" && handPainted\(S\[k\]\)\)\)\{ S\[k\]\.material = v; delete S\[k\]\.paint; \}/);
+  assert.match(source, /const HAND_SHARE = \[[^\]]*"paint"\];/);
+  // the sheet says painted, and keeps a PANTONE name as written
+  assert.match(source, /return h\.paint \? `\$\{nm\} painted/);
+});

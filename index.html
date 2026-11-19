@@ -2236,7 +2236,7 @@ const APP_BUILD = "__BUILD__";
 /* The version people see, raised with every change that reaches them:
    major for a new way of working, minor for something new to do, patch for
    a fix. Shown on the watch screen, so any screenshot says which it was. */
-const APP_VERSION = "4.26.0";
+const APP_VERSION = "4.27.0";
 const APP_DATE = "__DATE__";
 
 /* Every route that replaces S passes through one of these three, which is
@@ -9330,9 +9330,15 @@ const HAND_MATERIAL = {
      highlight is a soft band rather than a chrome line. */
   "blued steel":     {core:"#26355E", dark:"#080D22", lite:"#8296C6", spec:0.42},
   "flame blue":      {core:"#25467F", dark:"#08122E", lite:"#B9CBF0", spec:0.62},
-  "gilt":            {core:"#B08A3C", dark:"#32230A", lite:"#F6E2A6", spec:0.85}
+  "gilt":            {core:"#B08A3C", dark:"#32230A", lite:"#F6E2A6", spec:0.85},
+  /* Paint is not metal: a lacquered colour, its edges a shade of itself and
+     its gloss a soft band, not a mirror. Its colour is the hand's own. */
+  "painted":         {core:"#888888", dark:"#101112", lite:"#FFFFFF", spec:0.34}
 };
-const HAND_MATERIALS = Object.keys(HAND_MATERIAL);
+const HAND_MATERIALS = Object.keys(HAND_MATERIAL).filter(k => k !== "painted");
+/* the material's colours, a painted hand's taken from its own colour */
+const handMatSpec = (mat, core) => mat === "painted" && /^#[0-9a-f]{6}$/i.test(core || "")
+  ? Object.assign({}, HAND_MATERIAL.painted, {core, dark:shade(core, 0.62), lite:tint(core, 0.50)}) : (HAND_MATERIAL[mat] || HAND_MATERIAL["polished steel"]);
 
 /* The cross-section, as a gradient across the hand, built in the hand's own
    frame and flipped by which flank the light is on so it stays right as the
@@ -9340,9 +9346,9 @@ const HAND_MATERIALS = Object.keys(HAND_MATERIAL);
    1 straight down the width) — a hand pointing at the light shows its length,
    not its width, and goes quiet. */
 function handMaterialFill(ctx, mat, halfW, lit, t, opts){
-  const m = HAND_MATERIAL[mat];
-  if(!m || !ctx) return null;
   const o = opts || {};
+  const m = HAND_MATERIAL[mat] ? handMatSpec(mat, o.core) : null;
+  if(!m || !ctx) return null;
   const amt = 0.35 + 0.65*Math.min(1, Math.max(0, t));       // never entirely flat
   const core = o.core || m.core;
   const dark = mix(core, m.dark, 0.55 + 0.40*amt);
@@ -9366,6 +9372,7 @@ function handMaterialFill(ctx, mat, halfW, lit, t, opts){
    one hard-coded navy and everything else took the raw hand colour — so a
    hand could be any colour you liked and still not be made of anything. */
 function handMat(h){
+  if(h.paint && !h.material && /^#[0-9a-f]{6}$/i.test(h.color || "")) return "painted";
   if(h.material && HAND_MATERIAL[h.material]) return h.material;
   if(h.finish === "blued") return "blued steel";
   return "polished steel";
@@ -9374,6 +9381,7 @@ function handMat(h){
    chosen colour — gilt, a black hand — without losing its cross-section. */
 function handCore(h){
   const m = handMat(h);
+  if(m === "painted") return h.color;
   if(h.material && HAND_MATERIAL[h.material]) return HAND_MATERIAL[m].core;
   if(h.finish === "blued") return HAND_MATERIAL["blued steel"].core;
   return h.color && h.color !== "#FFFFFF" ? h.color : HAND_MATERIAL["polished steel"].core;
@@ -9615,7 +9623,7 @@ function f77Rails(h, P, L, T, W, q, gTop, floor){
 }
 function facetHand(h, prof, W, ctx){
   const L = h.length, T = h.tail || 0;
-  const MAT = handMat(h), MM = HAND_MATERIAL[MAT] || HAND_MATERIAL["polished steel"], core = handCore(h);
+  const MAT = handMat(h), core = handCore(h), MM = handMatSpec(MAT, core);
   const flat = FACET_FLAT.has(h.style);
   /* the share of each half-width that is flat table; an F77 hand is mostly
      table, with only a narrow bevel down each outer edge */
@@ -9946,7 +9954,7 @@ function handPath(h, ctx){
       const stemTop = cy + R - sw*0.3;
       const stem = facetHand(Object.assign({}, h, {style:"baton", lume:false}), [[T,.22],[stemTop,.22]], W, ctx);
       const tip  = facetHand(Object.assign({}, h, {style:"dauphine", lume:false}), [[cy - R + sw*0.3,.20],[-L,0]], W, ctx);
-      const MMm = HAND_MATERIAL[handMat(h)] || HAND_MATERIAL["polished steel"], core = handCore(h);
+      const core = handCore(h), MMm = handMatSpec(handMat(h), core);
       let ringFill = mix(core, MMm.lite, .5);
       if(ctx){
         const ar = (ctx.angle||0)*Math.PI/180, lxl = ctx.lx*Math.cos(ar) + ctx.ly*Math.sin(ar), lyl = -ctx.lx*Math.sin(ar) + ctx.ly*Math.cos(ar);
@@ -10088,7 +10096,10 @@ function handLength(h, k, st){
   return Math.max(0.5, lm * (h.reachTrim != null ? h.reachTrim : 0.97));
 }
 
-const HAND_SHARE = ["style","finish","material","color","lume","taper","waist","pommePos"];
+const HAND_SHARE = ["style","finish","material","color","lume","taper","waist","pommePos","paint"];
+/* a painted hand: a colour of its own and no metal */
+const handPainted = h => !!h && !!h.paint && !h.material && /^#[0-9a-f]{6}$/i.test(h.color || "");
+const HAND_PAINT = [["#F2701E","Orange"],["#D7262E","Red"],["#F2C230","Yellow"],["#2F6FD6","Blue"],["#2E8B57","Green"],["#F2F2EF","White"],["#16181B","Black"]];
 const HAND_SCALE = ["width","pommeD","ringW","tipW"];
 const handScale = k => k==="hHand" ? 1
                     : k==="mHand" ? (S.handSet.minuteScale||0.8)
@@ -14351,7 +14362,10 @@ const sheetHandStyle = s => SHEET_HAND[s] || String(s || "").replace(/-/g, " ");
 const sheetMade = (metal, finish) => `${sheetFinish(finish)} ${sheetMetal(metal)}`;
 function sheetHandWords(h){
   const m = h.material || (h.color && sheetIsHex(h.color) ? null : "polished steel");
-  return m ? sheetMade(m, h.finish) : `${sheetCap(sheetColourName(h.color).toLowerCase())}${h.finish === "polished" ? ", shiny" : ""}`;
+  const cn = sheetColourName(h.color);
+  if(m) return sheetMade(m, h.finish);
+  const nm = /^pantone /i.test(cn) ? cn : sheetCap(cn.toLowerCase());
+  return h.paint ? `${nm} painted${h.finish === "polished" ? ", gloss" : h.finish === "matte" ? ", matte" : ""}` : `${nm}${h.finish === "polished" ? ", shiny" : ""}`;
 }
 function sheetPlanOf(st){
   if(typeof hourPlan === "function"){ try{ return hourPlan(st).map(p => p.kind); }catch(e){} }
@@ -15230,7 +15244,7 @@ function sheetSpec(st){
   for(const [k, label] of [["hHand", "Hour hand"], ["mHand", "Minute hand"], ["sHand", "Seconds hand"]]){
     const h = st[k]; if(!h || h.on === false) continue;
     const L = typeof handLength === "function" ? handLength(h, k, st) : h.length, W = (h.width || 0)*(typeof handDrawnK === "function" ? handDrawnK(h.style) : 1);
-    add(label, `${sheetHandStyle(h.style)}, ${sheetHandWords(h).toLowerCase()}${h.lume ? ", lume" : ""}${h.tail ? `, tail ${mm(h.tail)}mm` : ""}`, h.material ? "" : h.color, `${mm(L)}mm long, ${mm(W)}mm wide`);
+    add(label, `${sheetHandStyle(h.style)}, ${(w_ => /^pantone /i.test(w_) ? w_ : w_.toLowerCase())(sheetHandWords(h))}${h.lume ? ", lume" : ""}${h.tail ? `, tail ${mm(h.tail)}mm` : ""}`, h.material ? "" : h.color, `${mm(L)}mm long, ${mm(W)}mm wide`);
   }
   /* the hand stack the clearances were worked from, when the maker gave it */
   { const hk = st.handSet && st.handSet.stack;
@@ -17396,7 +17410,7 @@ const GWORD = {ar:{
   "Extra high":"مرتفع جداً", "High":"مرتفع", "height:Standard":"عادي", "Window width":"عرض النافذة", "Narrow":"ضيقة", "Standard":"قياسية", "Wide":"عريضة",
   "Move them aside":"أزحهما جانباً", "Make them smaller":"صغّرهما", "Use markers":"ضع مؤشرين", "Leave them off":"احذفهما", "Let them touch":"اتركهما متلامسين",
   "Day font":"خط اليوم", "Arabic font":"الخط العربي", "English font":"الخط الإنجليزي", "In the window":"في النافذة", "Day disc":"قرص اليوم",
-  "Day lettering":"لون كتابة اليوم", "Window edge":"حافة النافذة", "Lume colour":"لون المادة المضيئة", "Lume fill":"تعبئة مضيئة", "Green-white":"أبيض مخضر", "Old radium":"راديوم قديم", "Vintage cream":"كريمي عتيق", "Five-minute marks":"علامات الخمس دقائق", "Run inward":"ممتدة للداخل", "Flared":"متسعة", "Gap at 6":"فراغ عند ٦", "Track width":"عرض المسار", "Rail weight":"وزن الخط", "Tick weight":"وزن العلامة", "Turn this hour":"اتجاه هذه الساعة", "Toward the centre":"نحو المركز", "On point":"على رأسه", "Across":"بالعرض", "Size of this hour":"حجم هذه الساعة", "Figure height":"ارتفاع الرقم", "Letter height":"ارتفاع الحروف", "Thin line":"خط رفيع", "Digit height":"ارتفاع الأرقام", "Bevelled cut":"قطع مشطوف", "Applied frame":"إطار مركّب", "Keep off the watch":"أسماء ممنوعة على الساعة", "Track numbers":"أرقام المسار", "5 to 60":"٥ إلى ٦٠", "1 to 12":"١ إلى ١٢", "Number height":"ارتفاع الأرقام", "Numbers from centre":"بُعد الأرقام عن المركز", "The line under it moves with the logo":"السطر اللي تحته يتحرك مع الشعار", "Dial artwork (PDF)":"رسومات الميناء (PDF)", "Plan, inks and stones":"المخطط والأحبار والأحجار", "Show the colour as made":"اعرض اللون مثل ما ينصنع", "Drawn bezel":"البيزل المرسوم", "As Nivada's drawing":"مثل رسمة نيفادا", "As the prototype":"مثل النموذج", "Hand heights":"ارتفاعات العقارب", "I have the maker's hand heights":"عندي ارتفاعات العقارب من المصنّع", "Windows":"النوافذ", "One window":"نافذة وحدة", "Big date":"تاريخ كبير", "Centre bar":"الفاصل الوسطي", "Dates 1 to 9":"التواريخ من ١ إلى ٩",
+  "Day lettering":"لون كتابة اليوم", "Window edge":"حافة النافذة", "Lume colour":"لون المادة المضيئة", "Lume fill":"تعبئة مضيئة", "Green-white":"أبيض مخضر", "Old radium":"راديوم قديم", "Vintage cream":"كريمي عتيق", "Five-minute marks":"علامات الخمس دقائق", "Run inward":"ممتدة للداخل", "Flared":"متسعة", "Gap at 6":"فراغ عند ٦", "Track width":"عرض المسار", "Rail weight":"وزن الخط", "Tick weight":"وزن العلامة", "Turn this hour":"اتجاه هذه الساعة", "Toward the centre":"نحو المركز", "On point":"على رأسه", "Across":"بالعرض", "Size of this hour":"حجم هذه الساعة", "Figure height":"ارتفاع الرقم", "Letter height":"ارتفاع الحروف", "Thin line":"خط رفيع", "Digit height":"ارتفاع الأرقام", "Bevelled cut":"قطع مشطوف", "Applied frame":"إطار مركّب", "Keep off the watch":"أسماء ممنوعة على الساعة", "Painted":"مصبوغ", "Paint colour":"لون الصبغ", "Blue":"أزرق", "Track numbers":"أرقام المسار", "5 to 60":"٥ إلى ٦٠", "1 to 12":"١ إلى ١٢", "Number height":"ارتفاع الأرقام", "Numbers from centre":"بُعد الأرقام عن المركز", "The line under it moves with the logo":"السطر اللي تحته يتحرك مع الشعار", "Dial artwork (PDF)":"رسومات الميناء (PDF)", "Plan, inks and stones":"المخطط والأحبار والأحجار", "Show the colour as made":"اعرض اللون مثل ما ينصنع", "Drawn bezel":"البيزل المرسوم", "As Nivada's drawing":"مثل رسمة نيفادا", "As the prototype":"مثل النموذج", "Hand heights":"ارتفاعات العقارب", "I have the maker's hand heights":"عندي ارتفاعات العقارب من المصنّع", "Windows":"النوافذ", "One window":"نافذة وحدة", "Big date":"تاريخ كبير", "Centre bar":"الفاصل الوسطي", "Dates 1 to 9":"التواريخ من ١ إلى ٩",
   "All seven days in the window":"أيام الأسبوع السبعة في النافذة", "The disc in order":"القرص بالترتيب",
   "Date window at 3":"نافذة التاريخ عند 3", "Magnifier":"المكبّر", "Digits":"الأرقام", "Date font":"خط التاريخ", "Date disc":"قرص التاريخ",
   "Date digits colour":"لون أرقام التاريخ", "Frame":"الإطار", "All window settings":"كل إعدادات النوافذ",
@@ -18852,7 +18866,9 @@ Object.assign(GWORD.ar, {
       if(tab === "shape"){
         const styles = [["day-date","Day-date"],["royal-oak","Royal Oak"],["f77","Nivada F77"],["dauphine","Dauphine"],["baton","Baton"],["sword","Sword"],["leaf","Leaf"],["feuille","Feuille"],["alpha","Alpha"],["pencil","Pencil"],["obelisque","Obelisk"],["syringe","Syringe"],["pomme-ouverte","Breguet"],["mercedes","Mercedes"]];
         let h = `<div class="gCards">${styles.map(([v,l]) => `<button type="button" class="gCard ${hh.style===v?"on":""}" data-ghand="${v}"><div class="gPic">${handPic(v)}</div><div class="gName">${gW(l)}</div></button>`).join("")}</div>`;
-        h += `<h3>${gW("Metal")}</h3>` + chips("hands.material", METALS6, hh.material || "polished steel");
+        const hp = handPainted(hh);
+        h += `<h3>${gW("Metal")}</h3>` + chips("hands.material", METALS6.concat([["painted","Painted"]]), hp ? "painted" : hh.material || "polished steel");
+        if(hp) h += `<h3>${gW("Paint colour")}</h3>` + swatches("hands.color", HAND_PAINT, hh.color, {row:true});
         h += toggle("hands.lume", "Lume strip", !!hh.lume);
         if(hh.lume || S.mHand.lume) h += `<h3>${gW("Lume colour")}</h3>` + swatches("lume.color", LUME_COLOURS.map(([c, n]) => [c || "#E9EFDF", n]), (S.lume && S.lume.color) || "#E9EFDF", {row:true, noAny:true});
         return h + more("hands", "All hand settings");
@@ -18863,7 +18879,9 @@ Object.assign(GWORD.ar, {
         h += `<div class="gCards">${[["dd",gT("sec.long")],["ro","Royal Oak"],["f77","Nivada F77"],["needle","Needle"],["lollipop","Lollipop"],["arrow","Arrow"],["match","Matching"]].map(([v,l]) =>
           `<button type="button" class="gCard ${v===curTip?"on":""}" data-gsec="${v}"><div class="gPic">${secPic(v)}</div><div class="gName">${gW(l)}</div></button>`).join("")}</div>`;
         if(sh.style === "stick") h += `<h3>${gW("Counterweight")}</h3>` + chips("sHand.secTail", [["disc","Disc"],["ring","Ring"],["none","None"]], sh.secTail || "disc");
-        h += `<h3>${gW("Seconds hand metal")}</h3>` + chips("sHand.material", METALS6.concat([["flame blue","Flame blue"],["gilt","Gilt"]]), sh.material || "polished steel");
+        const sp = handPainted(sh);
+        h += `<h3>${gW("Seconds hand metal")}</h3>` + chips("sHand.material", METALS6.concat([["flame blue","Flame blue"],["gilt","Gilt"],["painted","Painted"]]), sp ? "painted" : sh.material || "polished steel");
+        if(sp) h += `<h3>${gW("Paint colour")}</h3>` + swatches("sHand.color", HAND_PAINT, sh.color, {row:true});
       }
       return h + more("hands", "All hand settings");
     },
@@ -19183,7 +19201,16 @@ Object.assign(GWORD.ar, {
     const K0 = caseOf(S), photoOn = S.tpl.on && tplAvail(S);
     if(hasPhoto(K0) && photoOn && /^(case\.(material|finish|strap|strapColor)|ui\.metal)$/.test(path) && !photoShows(K0, path, v)){ S.tpl.on = false; drawn = true; photoAuto = true; }
     if(path === "tpl.on") photoAuto = false;
-    if(path === "hands.material"){ for(const k of ["hHand","mHand","sHand"]) if(S[k]) S[k].material = v; }
+    /* Painted: no metal (an empty one, so opening the file again does not
+       fill it back in with steel), the hand in a lacquered colour of its own. The hour
+       and minute hands go together (the seconds keeps its own, as it is
+       usually the one in colour); a colour already chosen is kept. */
+    if(path === "hands.material" && v === "painted"){ const c = handPainted(S.hHand) ? S.hHand.color : "#16181B";
+      for(const k of ["hHand","mHand"]) if(S[k]){ S[k].material = ""; S[k].color = c; S[k].paint = true; } }
+    else if(path === "sHand.material" && v === "painted"){ if(S.sHand){ const c = handPainted(S.sHand) ? S.sHand.color : "#F2701E"; S.sHand.material = ""; S.sHand.color = c; S.sHand.paint = true; } }
+    else if(path === "hands.color"){ for(const k of ["hHand","mHand"]) if(S[k]){ S[k].color = v; S[k].material = ""; S[k].paint = true; } }
+    else if(path === "hands.material"){ for(const k of ["hHand","mHand","sHand"]) if(S[k] && !(k === "sHand" && handPainted(S[k]))){ S[k].material = v; delete S[k].paint; } }
+    else if(path === "sHand.material"){ if(S.sHand){ S.sHand.material = v; delete S.sHand.paint; } }
     else if(path === "ui.metal"){ if(/^two:/.test(v)){ S.case.material = LUX_STEEL; S.case.twoTone = v.slice(4); } else { S.case.material = v; S.case.twoTone = "none"; } }
     /* the classic colours named ombré are ombré */
     else if(path === "dial.color"){ S.dial.color = v; const cl = classicOf(v); if(cl && /ombré/.test(cl[0]) && !(S.dial.ombre > 0)) S.dial.ombre = 0.7; }

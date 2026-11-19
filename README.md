@@ -200,6 +200,19 @@ stored in a design file do not change. In the full editor at laptop widths
 the toolbar sits tighter, and on a narrower window it takes a second row
 rather than pushing Share and Export off the screen.
 
+## Painted hands (v4.27.0)
+
+Hands › Shape › Metal and Hands › Seconds › Seconds hand metal now end in
+**Painted**: no metal, a lacquered colour of the hand's own, chosen from
+orange, red, yellow, blue, green, white and black or any colour ("+ Any").
+A painted hand has its own material (its edges a shade of its colour, a soft
+gloss rather than a metal's mirror), so orange reads as orange, not copper; its
+lume still shows. The hour and minute hands are painted together; the seconds
+on its own, and choosing a metal for the others leaves a painted seconds as it
+is. It is stored as an empty metal with `paint: true`, so opening the file
+again keeps it. The maker's sheet says "PANTONE 158 C painted, gloss".
+Colour hands from older files, without the mark, draw as they always did.
+
 ## Track numbers (v4.26.0)
 
 Dial › Minute track › **Track numbers**: *5 to 60* every five minutes, or *1 to
