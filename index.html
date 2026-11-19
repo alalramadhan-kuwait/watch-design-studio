@@ -1595,6 +1595,7 @@ const BASE = {
   /* fitHeight: the SW240-1 hand fitting height (Sellita p.20), 4 standard */
   /* linked by shape only, the seconds hand left out: a width or a length
      set on one hand stays on that hand */
+  lume:{color:""},
   handSet:{link:"style only", minuteScale:0.80, secondsScale:0.52, includeSeconds:false, fitHeight:4},
   /* where the built-in case photograph's opening is (BUILTIN_CASE_CAL). Every
      preset, reference design and opened file starts from these, so a stale
@@ -2208,7 +2209,7 @@ const APP_BUILD = "__BUILD__";
 /* The version people see, raised with every change that reaches them:
    major for a new way of working, minor for something new to do, patch for
    a fix. Shown on the watch screen, so any screenshot says which it was. */
-const APP_VERSION = "4.12.0";
+const APP_VERSION = "4.13.0";
 const APP_DATE = "__DATE__";
 
 /* Every route that replaces S passes through one of these three, which is
@@ -4716,7 +4717,14 @@ const LINE_BRUSHED_FINISH = new Set(["brushed","brushedsteel"]);
 /* UV ink: its colour in the dial maker's artwork, its glow and core under
    the lamp, and the dark violet the rest of the watch goes under it */
 const UV_ART = "#6E5BFF", UV_GLOW = "#8FD8FF", UV_CORE = "#EAF8FF", UV_DARK = "#1A1233";
+/* The lume colour of the design being drawn: one paint for every hand,
+   marker and plot. Unset (every older design), each part keeps the
+   green-white it always had. */
+let LUME_NOW = null;
+const lumeC = def => LUME_NOW || def;
+const LUME_COLOURS = [["","Green-white"],["#E7D7A8","Old radium"],["#EFE6CB","Vintage cream"],["#F3F3EE","White"],["#D7E8F1","Ice blue"],["#CFE6C6","Jade"]];
 function buildSVG(st, o={}){
+  LUME_NOW = st.lume && /^#[0-9a-f]{6}$/i.test(st.lume.color || "") ? st.lume.color : null;
   const scope = o.scope||"full";               // full | dial | hands
   const c = st.case, d = st.dial;
   const K = caseOf(st);
@@ -5731,7 +5739,8 @@ function buildSVG(st, o={}){
       const laI = ((st.render && st.render.az) || 135)*Math.PI/180;
       if(ix.on) for(let i=0;i<12;i++){
         const k = plan[i].kind; if(k !== "index" && k !== "indexAlt") continue;
-        body.push(indexShape(k === "indexAlt" ? Object.assign({}, ix, {style:ix.altStyle || "double"}) : ix, i*30, id, defs, laI));
+        const ixK = k === "indexAlt" ? Object.assign({}, ix, {style:ix.altStyle || "double"}) : ix;
+        body.push(indexShape(ixK, i*30, id, defs, laI) + indexLume(ixK, i*30));
       }
     }else if(ix.on){
       const numeralPositions = nm.on ? numeralSet(nm.set) : [];
@@ -5740,7 +5749,7 @@ function buildSVG(st, o={}){
         const a = i*360/ix.count, hr = a/30;
         if(Number.isInteger(hr) && covered.has(hr === 0 ? 12 : hr)) continue;
         if(ix.skipNumerals && numeralPositions.includes(i===0?12:i)) continue;
-        body.push(indexShape(ix, a, id, defs, ((st.render && st.render.az) || 135)*Math.PI/180));
+        body.push(indexShape(ix, a, id, defs, ((st.render && st.render.az) || 135)*Math.PI/180) + indexLume(ix, a));
       }
     }
     /* Printed batons made another way — cut, tone on tone, gloss or UV ink —
@@ -8747,9 +8756,27 @@ function f77Index(ix, a, la, MT, roof){
   }
   if(ix.lume){
     const cy = y0 - W*F77_IX.plotOut, rl = W*F77_IX.plotL, rt = W*F77_IX.plotT;
-    s += `<path data-relief="lume" d="M${P(-rt,cy)} A${f(rt,3)} ${f(rl,3)} 0 1 0 ${P(rt,cy)} A${f(rt,3)} ${f(rl,3)} 0 1 0 ${P(-rt,cy)}Z" fill="${F77_LUME}" stroke="${shade(F77_LUME,0.35)}" stroke-width="0.02"/>`;
+    s += `<path data-relief="lume" d="M${P(-rt,cy)} A${f(rt,3)} ${f(rl,3)} 0 1 0 ${P(rt,cy)} A${f(rt,3)} ${f(rl,3)} 0 1 0 ${P(-rt,cy)}Z" fill="${(typeof lumeC === "function" ? lumeC(F77_LUME) : F77_LUME)}" stroke="${shade((typeof lumeC === "function" ? lumeC(F77_LUME) : F77_LUME),0.35)}" stroke-width="0.02"/>`;
   }
   return s;
+}
+/* A lume fill in an applied marker of any shape (the F77 style has its own
+   plots): an insert down the middle of a baton, one in each bar of a double,
+   a smaller copy of a dagger, triangle or diamond, a disc in a dot. */
+function indexLume(ix, a){
+  if(!ix.lume || ix.style === "f77" || ix.style === "box" || ix.style === "cone") return "";
+  const r = ix.radius, L = ix.length, W = ix.width, c = (typeof lumeC === "function" ? lumeC("#E9EFDF") : "#E9EFDF"), e = ` fill="${c}" stroke="${shade(c, 0.35)}" stroke-width="0.02"`;
+  const bar = x => `<rect x="${f(x - W*0.25,3)}" y="${f(-L*0.36,3)}" width="${f(W*0.5,3)}" height="${f(L*0.72,3)}" rx="${f(W*0.18,3)}"${e}/>`;
+  let s;
+  switch(ix.style){
+    case "dot":      s = `<circle r="${f(W*0.55,3)}"${e}/>`; break;
+    case "double":   s = bar(-W*1.4) + bar(W*1.4); break;
+    case "diamond":  s = `<path d="M0 ${f(-L*0.28,3)} L${f(W*0.55,3)} 0 L0 ${f(L*0.28,3)} L${f(-W*0.55,3)} 0 Z"${e}/>`; break;
+    case "triangle": s = `<path d="M0 ${f(-L*0.22,3)} L${f(W*0.5,3)} ${f(L*0.3,3)} L${f(-W*0.5,3)} ${f(L*0.3,3)} Z"${e}/>`; break;
+    case "dagger":   s = `<path d="M0 ${f(-L*0.3,3)} L${f(W*0.5,3)} ${f(-L*0.08,3)} L${f(W*0.3,3)} ${f(L*0.32,3)} L${f(-W*0.3,3)} ${f(L*0.32,3)} L${f(-W*0.5,3)} ${f(-L*0.08,3)} Z"${e}/>`; break;
+    default:         s = bar(0);
+  }
+  return `<g transform="rotate(${a}) translate(0,${-r})">${s}</g>`;
 }
 /* An index in metal (indices.metal): the same shapes, painted in the
    metal's own colours along the light, and an applied one casts the
@@ -9481,7 +9508,7 @@ function facetHand(h, prof, W, ctx){
     const c = roLume(L, W), wl = 0.03, rect = (hw, y0, y1, x0) => `M${q(x0 ?? -hw, y0)} L${q(hw, y0)} L${q(hw, y1)} L${q(x0 ?? -hw, y1)}Z`;
     if(c.y0 - c.y1 > W*0.5){
       out += `<path data-relief="skip" d="${rect(c.hw + wl, c.y0 + wl, c.y1 - wl)}" fill="${mix(core, dark, .62)}"/>`;
-      out += `<path data-relief="lume" d="${rect(c.hw, c.y0, c.y1)}" fill="#E9EFDF"/>`;
+      out += `<path data-relief="lume" d="${rect(c.hw, c.y0, c.y1)}" fill="${(typeof lumeC === "function" ? lumeC("#E9EFDF") : "#E9EFDF")}"/>`;
       out += `<path data-relief="skip" d="${rect(sgn*c.hw, c.y0, c.y1, sgn*(c.hw - 0.05))}" fill="${dark}" fill-opacity=".22"/>`;
       out += `<path data-relief="skip" d="M${q(-sgn*(c.hw + wl*0.5), c.y0)} L${q(-sgn*(c.hw + wl*0.5), c.y1)}" fill="none" stroke="${lite}" stroke-opacity=".6" stroke-width="0.018"/>`;
     }
@@ -9507,7 +9534,7 @@ function facetHand(h, prof, W, ctx){
     const ys = [-L*0.24].concat(pts.map(p => p[0])).concat([-L*0.86]).filter((y,i,a) => a.indexOf(y) === i).sort((a,b) => b-a);
     const lw = y => Math.max(0, at(y)*0.52 - 0.04);
     const ld = `M${ys.map(y => q(lw(y), y)).join(" L")} L${ys.slice().reverse().map(y => q(-lw(y), y)).join(" L")}Z`;
-    out += `<path d="${ld}" fill="#E9EFDF" stroke="${mix(core, dark, .5)}" stroke-opacity=".45" stroke-width="0.03"/>`;
+    out += `<path d="${ld}" fill="${(typeof lumeC === "function" ? lumeC("#E9EFDF") : "#E9EFDF")}" stroke="${mix(core, dark, .5)}" stroke-opacity=".45" stroke-width="0.03"/>`;
   }
   if(h.style === "stick"){
     /* A seconds hand's own details: a counterweight at the tail, and at the
@@ -9525,7 +9552,7 @@ function facetHand(h, prof, W, ctx){
     }
     if(h.secTip === "lollipop"){
       const r = Math.max(0.40, Math.min(0.68, W*1.9)), cy = -L*0.80;
-      out += `<circle cy="${f(cy,3)}" r="${f(r,3)}" fill="#E9EFDF" stroke="${metalFill}" stroke-width="${f(rim,3)}"/>`
+      out += `<circle cy="${f(cy,3)}" r="${f(r,3)}" fill="${(typeof lumeC === "function" ? lumeC("#E9EFDF") : "#E9EFDF")}" stroke="${metalFill}" stroke-width="${f(rim,3)}"/>`
            + `<circle cy="${f(cy,3)}" r="${f(r + rim/2,3)}" fill="none" stroke="${edge}" stroke-opacity=".5" stroke-width="0.02"/>`;
     } else if(h.secTip === "arrow"){
       const hw = Math.max(0.30, W*1.5), len = Math.max(0.8, hw*2.6);
@@ -9559,7 +9586,7 @@ function handPath(h, ctx){
   if(FACET[h.style]){ const W0 = h.width*(STYLE_W[h.style] || 1); return facetHand(h, FACET[h.style](L, T, W0), W0, ctx); }
   const W = h.width*(STYLE_W[h.style] || 1);
   const F = handCore(h);
-  const lume = h.lume ? `<rect x="${-W*0.28}" y="${-L*0.8}" width="${W*0.56}" height="${L*0.42}" fill="#D8E4C8" rx="${W*0.2}"/>` : "";
+  const lume = h.lume ? `<rect x="${-W*0.28}" y="${-L*0.8}" width="${W*0.56}" height="${L*0.42}" fill="${(typeof lumeC === "function" ? lumeC("#D8E4C8") : "#D8E4C8")}" rx="${W*0.2}"/>` : "";
 
   /* A polished steel hand is a flat top with a chamfer down each flank, so
      one edge catches the light and the other goes dark. That cross-section
@@ -9643,7 +9670,7 @@ function handPath(h, ctx){
            + ` fill="none" stroke="${edgeLite}" stroke-opacity="0.8" stroke-width="${f(ring*0.34,3)}" stroke-linecap="round"/>`;
     }
     else if(k.pomme==="full")
-      out += `<circle cy="${f(g.pc,3)}" r="${f(g.pr,3)}" fill="${h.lume?"#D8E4C8":FILL}" stroke="${edgeDark}" stroke-opacity=".5" stroke-width="${f(ring*0.4,3)}"/>`;
+      out += `<circle cy="${f(g.pc,3)}" r="${f(g.pr,3)}" fill="${h.lume?(typeof lumeC === "function" ? lumeC("#D8E4C8") : "#D8E4C8"):FILL}" stroke="${edgeDark}" stroke-opacity=".5" stroke-width="${f(ring*0.4,3)}"/>`;
     else {
       /* A faceted pomme is turned then cut, so the head is a low dome of flat
          facets rising to a small table. Each facet is a separate plane, so it
@@ -9658,7 +9685,7 @@ function handPath(h, ctx){
       const ar2 = ctx ? (ctx.angle||0)*Math.PI/180 : 0;
       const Lx = ctx ? (ctx.lx*Math.cos(ar2) + ctx.ly*Math.sin(ar2)) : 0.7;
       const Ly = ctx ? (-ctx.lx*Math.sin(ar2) + ctx.ly*Math.cos(ar2)) : -0.7;
-      const base = h.lume ? "#D8E4C8" : F;
+      const base = h.lume ? (typeof lumeC === "function" ? lumeC("#D8E4C8") : "#D8E4C8") : F;
       out += `<circle cy="${f(cy,3)}" r="${f(r,3)}" fill="${shade(base,0.35)}"/>`;
       for(let i2=0; i2<N; i2++){
         const o0 = P(r, i2), o1 = P(r, i2+1);
@@ -9758,7 +9785,7 @@ function handPath(h, ctx){
       const spoke = deg => { const a2 = deg*Math.PI/180; return `<path d="M0 ${f(cy,3)} L${f(R*Math.cos(a2),3)} ${f(cy+R*Math.sin(a2),3)}" stroke="${spokeCol}" stroke-width="${f(sw*0.8,3)}" stroke-linecap="round"/>`; };
       const edge = mix(core, MMm.dark, .8);
       return stem + tip
-        + (h.lume ? `<circle cy="${f(cy,3)}" r="${f(R,3)}" fill="#E9EFDF"/>` : "")
+        + (h.lume ? `<circle cy="${f(cy,3)}" r="${f(R,3)}" fill="${(typeof lumeC === "function" ? lumeC("#E9EFDF") : "#E9EFDF")}"/>` : "")
         + spoke(-90) + spoke(30) + spoke(150)
         + `<circle cy="${f(cy,3)}" r="${f(R,3)}" fill="none" stroke="${ringFill}" stroke-width="${f(sw*1.15,3)}"/>`
         + `<circle cy="${f(cy,3)}" r="${f(R+sw*0.58,3)}" fill="none" stroke="${edge}" stroke-opacity=".5" stroke-width="0.025"/>`
@@ -10898,7 +10925,8 @@ const SCHEMA = {
     ...(!S.indices.applied && !(S.indices.metal && METALS[S.indices.metal]) && INDEX_TECH_STYLES.has(S.indices.style || "baton")
         ? [SEL("indices.tech","Made by",["printed","engraved + filled","engraved","gloss on matte"])] : []),
     /* the F77 MK1's lume plots beyond each marker; the owner's dial has none */
-    ...(S.indices.style === "f77" ? [CK("indices.lume","Lume plots")] : [])]},
+    ...(S.indices.style !== "box" && S.indices.style !== "cone" ? [CK("indices.lume", S.indices.style === "f77" ? "Lume plots" : "Lume fill")] : []),
+    SEL("lume.color","Lume colour",LUME_COLOURS.map(x => x[0]))]},
   /* Each hour on its own: what it carries. 12 and 3 under the NOREL's
      windows stay empty whatever is chosen here. */
   markers:{title:"Hour by hour", get hint(){ return Math.round(S.indices.count || 12) !== 12
@@ -14971,6 +14999,12 @@ function sheetSpec(st){
     const L = typeof handLength === "function" ? handLength(h, k, st) : h.length, W = (h.width || 0)*(typeof handDrawnK === "function" ? handDrawnK(h.style) : 1);
     add(label, `${sheetHandStyle(h.style)}, ${sheetHandWords(h).toLowerCase()}${h.lume ? ", lume" : ""}${h.tail ? `, tail ${mm(h.tail)}mm` : ""}`, h.material ? "" : h.color, `${mm(L)}mm long, ${mm(W)}mm wide`);
   }
+  /* the lume, wherever it is used */
+  const lumed = [["hHand","hour hand"],["mHand","minute hand"],["sHand","seconds hand"]].filter(([k]) => st[k] && st[k].on !== false && st[k].lume).map(x => x[1])
+    .concat(plan.some(x => x === "index" || x === "indexAlt") && ix.lume ? ["indexes"] : []);
+  if(lumed.length){ const lc = st.lume && /^#[0-9a-f]{6}$/i.test(st.lume.color || "") ? st.lume.color : "#E9EFDF";
+    const nm2 = (typeof LUME_COLOURS !== "undefined" && (LUME_COLOURS.find(x => (x[0] || "#E9EFDF").toUpperCase() === lc.toUpperCase()) || [])[1]) || "custom";
+    add("Lume", `${nm2} lume on the ${lumed.join(", ")}`, lc, ""); }
   if(!K.bracelet && st.case && st.case.strap !== false) add("Strap", `${(sheetOf(st).strap || {}).type || "strap"}`, st.case.strapColor, "");
   const sh = sheetOf(st);
   if(sh.notes) add("Notes", sh.notes, "", "");
@@ -16788,7 +16822,7 @@ const GWORD = {ar:{
   "Extra high":"مرتفع جداً", "High":"مرتفع", "height:Standard":"عادي", "Window width":"عرض النافذة", "Narrow":"ضيقة", "Standard":"قياسية", "Wide":"عريضة",
   "Move them aside":"أزحهما جانباً", "Make them smaller":"صغّرهما", "Use markers":"ضع مؤشرين", "Leave them off":"احذفهما", "Let them touch":"اتركهما متلامسين",
   "Day font":"خط اليوم", "Arabic font":"الخط العربي", "English font":"الخط الإنجليزي", "In the window":"في النافذة", "Day disc":"قرص اليوم",
-  "Day lettering":"لون كتابة اليوم", "Window edge":"حافة النافذة", "Figure height":"ارتفاع الرقم", "Letter height":"ارتفاع الحروف", "Thin line":"خط رفيع", "Digit height":"ارتفاع الأرقام", "Bevelled cut":"قطع مشطوف", "Applied frame":"إطار مركّب",
+  "Day lettering":"لون كتابة اليوم", "Window edge":"حافة النافذة", "Lume colour":"لون المادة المضيئة", "Lume fill":"تعبئة مضيئة", "Green-white":"أبيض مخضر", "Old radium":"راديوم قديم", "Vintage cream":"كريمي عتيق", "Figure height":"ارتفاع الرقم", "Letter height":"ارتفاع الحروف", "Thin line":"خط رفيع", "Digit height":"ارتفاع الأرقام", "Bevelled cut":"قطع مشطوف", "Applied frame":"إطار مركّب",
   "All seven days in the window":"أيام الأسبوع السبعة في النافذة", "The disc in order":"القرص بالترتيب",
   "Date window at 3":"نافذة التاريخ عند 3", "Magnifier":"المكبّر", "Digits":"الأرقام", "Date font":"خط التاريخ", "Date disc":"قرص التاريخ",
   "Date digits colour":"لون أرقام التاريخ", "Frame":"الإطار", "All window settings":"كل إعدادات النوافذ",
@@ -18143,7 +18177,8 @@ Object.assign(GWORD.ar, {
         }
         if(showIx){
           h += toggle("indices.applied", "Raised (applied)", ix.applied);
-          if(ix.style === "f77") h += toggle("indices.lume", "Lume plots", !!ix.lume);
+          if(ix.style !== "box" && ix.style !== "cone") h += toggle("indices.lume", ix.style === "f77" ? "Lume plots" : "Lume fill", !!ix.lume);
+          if(ix.lume) h += `<h3>${gW("Lume colour")}</h3>` + swatches("lume.color", LUME_COLOURS.map(([c, n]) => [c || "#E9EFDF", n]), (S.lume && S.lume.color) || "#E9EFDF", {row:true, noAny:true});
           h += `<h3>${gW("Index finish")}</h3>` + chips44("indices.metal", [[null,"Colour"],["polished steel","Steel"],["white gold","White gold"],["yellow gold","Gold"],["rose gold","Rose gold"],["blackened steel","Black"]], ix.metal || null);
           if(!ix.metal) h += printingBlock("indices");
         }
@@ -18177,6 +18212,7 @@ Object.assign(GWORD.ar, {
         let h = `<div class="gCards">${styles.map(([v,l]) => `<button type="button" class="gCard ${hh.style===v?"on":""}" data-ghand="${v}"><div class="gPic">${handPic(v)}</div><div class="gName">${gW(l)}</div></button>`).join("")}</div>`;
         h += `<h3>${gW("Metal")}</h3>` + chips("hands.material", METALS6, hh.material || "polished steel");
         h += toggle("hands.lume", "Lume strip", !!hh.lume);
+        if(hh.lume || S.mHand.lume) h += `<h3>${gW("Lume colour")}</h3>` + swatches("lume.color", LUME_COLOURS.map(([c, n]) => [c || "#E9EFDF", n]), (S.lume && S.lume.color) || "#E9EFDF", {row:true, noAny:true});
         return h + more("hands", "All hand settings");
       }
       let h = toggle("sHand.on", "Seconds hand", S.sHand.on);

@@ -200,6 +200,17 @@ stored in a design file do not change. In the full editor at laptop widths
 the toolbar sits tighter, and on a narrower window it takes a second row
 rather than pushing Share and Export off the screen.
 
+## Lume colour, and lume in every applied marker (v4.13.0)
+
+One lume colour for the whole watch (`lume.color`: green-white, old radium,
+vintage cream, white, ice blue, jade), on the Hands and Markers steps when
+lume is on and in the full editor; every hand, marker and plot paints with it
+(`lumeC`). Lume fill is offered for every applied marker shape, not only the
+F77's plots: an insert down a baton, one in each bar of a double, a smaller
+copy of a dagger, triangle or diamond, a disc in a dot (`indexLume`). The
+maker's sheet specification has a Lume row. Unset, every part keeps the
+green-white it always had, so saved designs draw as before.
+
 ## The maker's sheet with its data (v4.12.0)
 
 Page 1 keeps the maker's approved layout, corrected:

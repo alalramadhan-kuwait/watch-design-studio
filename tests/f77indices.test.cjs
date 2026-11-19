@@ -40,8 +40,8 @@ test('offered wherever an index shape is chosen, in English and Arabic', () => {
   assert.match(chunk('const MARKER_PRESETS = [', '];'), /\["special6", "Special 6"\],\n  \["f77", "F77 dial"\],\n  \["custom", "Each hour…"\]/);
   assert.match(source, /"F77 dial":"ميناء نيفادا F77"/); assert.match(source, /"Lume plots":"نقاط مضيئة"/);
   // the lume plots: a switch in simple mode and a box in the full editor, for the F77 only
-  assert.match(source, /if\(ix\.style === "f77"\) h \+= toggle\("indices\.lume", "Lume plots", !!ix\.lume\);/);
-  assert.match(source, /\.\.\.\(S\.indices\.style === "f77" \? \[CK\("indices\.lume","Lume plots"\)\] : \[\]\)/);
+  assert.match(source, /if\(ix\.style !== "box" && ix\.style !== "cone"\) h \+= toggle\("indices\.lume", ix\.style === "f77" \? "Lume plots" : "Lume fill", !!ix\.lume\);/);
+  assert.match(source, /CK\("indices\.lume", S\.indices\.style === "f77" \? "Lume plots" : "Lume fill"\)/);
 });
 
 test('the measured size and place, as shares of the opening, in steel', () => {
