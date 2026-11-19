@@ -2189,6 +2189,11 @@ const VIRTUAL = {
                set:(m, v) => { if(PICKED_HOUR == null) return; m.tune = m.tune || {}; m.tune[PICKED_HOUR] = Object.assign({}, m.tune[PICKED_HOUR], {s:+v}); }},
   /* the date's digit height: the one set, or the one the window gives */
   digitHUi:{get:d => d.digitH > 0 ? d.digitH : dateAutoDigitH(d), set:(d, v) => { d.digitH = +v; }},
+  /* one window or a big date; turning a big date on widens the opening to
+     two windows and a bar, turning it off gives the single width back */
+  bigUi:{get:d => d.big ? "big" : "single",
+         set:(d, v) => { if(v === "big" && !d.big){ d.wSingle = d.w; d.big = true; d.w = Math.max(d.w, +(2*Math.max(2.0, d.h*0.9) + Math.max(0.3, +d.bar > 0 ? +d.bar : 0.8)).toFixed(2)); }
+                         else if(v !== "big" && d.big){ delete d.big; if(d.wSingle > 0) d.w = d.wSingle; delete d.wSingle; } }},
   /* the date window's edge: a bevelled cut, an applied frame, or the thin
      line every design had before (frame width 0.14) */
   edgeUi:{get:d => d.edge === "bevel" ? "bevel" : (d.frameW || 0) > 0.2 ? "frame" : "line",
@@ -2216,7 +2221,7 @@ const APP_BUILD = "__BUILD__";
 /* The version people see, raised with every change that reaches them:
    major for a new way of working, minor for something new to do, patch for
    a fix. Shown on the watch screen, so any screenshot says which it was. */
-const APP_VERSION = "4.17.0";
+const APP_VERSION = "4.18.0";
 const APP_DATE = "__DATE__";
 
 /* Every route that replaces S passes through one of these three, which is
@@ -6439,8 +6444,17 @@ function buildSVG(st, o={}){
     if(dt.on){
       const p = pt(dt.dist, dt.at*30);
       const fw = dt.frameW === undefined ? 0.14 : dt.frameW;
-      const num = String(dt.shown || 31);
-      const digits = dt.digits === "Arabic-Indic" ? num.replace(/\d/g, n => "٠١٢٣٤٥٦٧٨٩"[n]) : num;
+      /* A big date is two windows in one opening: the tens on one disc,
+         the units on another, a bar between them. dt.w stays the width of
+         the whole opening, so every check that measures it still does. */
+      const big = !!dt.big, bar = big ? dateBar(dt) : 0, W1 = big ? +((dt.w - bar)/2).toFixed(3) : dt.w;
+      const num = big ? String(dt.shown || 31).padStart(2, "0") : String(dt.shown || 31);
+      const toAr = s => dt.digits === "Arabic-Indic" ? s.replace(/\d/g, n => "٠١٢٣٤٥٦٧٨٩"[n]) : s;
+      const digits = toAr(num);
+      const parts = big ? [num[0] === "0" && dt.zero === "blank" ? "" : toAr(num[0]), toAr(num[1])] : [digits];
+      const xs = big ? [-(W1 + bar)/2, (W1 + bar)/2] : [0];
+      const atX = (x, s) => big ? `<g transform="translate(${f(x,3)},0)">${s}</g>` : s;
+      const each = fn => xs.map((x, i) => atX(x, fn(i))).join("");
       const ar = dt.digits === "Arabic-Indic";
       const TF = DAY_FONTS[dayFontOf(ar ? dt.fontAr : dt.fontEn, ar)];
       defs.push(`<style>@font-face{font-family:'${TF.family}';src:url(${TF.src});}</style>`);
@@ -6451,17 +6465,17 @@ function buildSVG(st, o={}){
       const famDt = `'${TF.family}',${ar ? "'Geeza Pro'" : "'IBM Plex Sans'"},sans-serif`;
       let dText;
       if(dt.digitH > 0){
-        const mSet = inkMetrics(`'${TF.family}'`, ar ? "٠١٢٣٤٥٦٧٨٩" : "0123456789"), mNum = inkMetrics(`'${TF.family}'`, digits);
+        const mSet = inkMetrics(`'${TF.family}'`, ar ? "٠١٢٣٤٥٦٧٨٩" : "0123456789"), ms = parts.map(t => t ? inkMetrics(`'${TF.family}'`, t) : null);
         const kh = mSet && mSet.h > 0 ? mSet.h : 0.70;
         let fs = Math.min(dt.digitH, dt.h - 0.3)/kh;
-        const room = dt.w - 0.6, wide = mNum && mNum.w > 0 ? mNum.w*fs : 0;   // at least 0.3 mm clear each side
+        const room = W1 - 0.6, wide = Math.max(0, ...ms.map(m => m && m.w > 0 ? m.w*fs : 0));   // at least 0.3 mm clear each side
         if(wide > room) fs *= room/wide;
-        const cy = mNum ? -mNum.cy*fs : fs*kh/2;
-        dText = `<text x="0" y="${f(cy,3)}" font-family="${famDt}" font-weight="400" font-size="${f(fs,3)}" fill="${dt.text}" text-anchor="middle">${digits}</text>`;
-      } else dText = `<text x="0" y="${ar ? 0.02 : 0.08}" font-family="${famDt}" font-weight="400"
-          font-size="${f(dt.h*(ar ? 0.95 : 0.78),2)}" fill="${dt.text}" text-anchor="middle" dominant-baseline="central">${digits}</text>`;
-      const win = `<rect x="${-dt.w/2}" y="${-dt.h/2}" width="${dt.w}" height="${dt.h}" fill="${dt.bg}" rx="0.15"/>
-        ${dText}`;
+        dText = parts.map((t, i) => { if(!t) return ""; const m = ms[i], cy = m ? -m.cy*fs : fs*kh/2;
+          return `<text x="0" y="${f(cy,3)}" font-family="${famDt}" font-weight="400" font-size="${f(fs,3)}" fill="${dt.text}" text-anchor="middle">${t}</text>`; });
+      } else dText = parts.map(t => t ? `<text x="0" y="${ar ? 0.02 : 0.08}" font-family="${famDt}" font-weight="400"
+          font-size="${f(dt.h*(ar ? 0.95 : 0.78),2)}" fill="${dt.text}" text-anchor="middle" dominant-baseline="central">${t}</text>` : "");
+      const win = each(i => `<rect x="${-W1/2}" y="${-dt.h/2}" width="${W1}" height="${dt.h}" fill="${dt.bg}" rx="0.15"/>
+        ${dText[i]}`);
       /* A framed date window is a polished metal surround: its outer face
          bright on the side toward the light, then a bevel stepping down to
          the disc, lit the other way round. */
@@ -6475,28 +6489,28 @@ function buildSVG(st, o={}){
           <stop offset="0" stop-color="${shade(dt.frame,0.45)}"/><stop offset="1" stop-color="${tint(dt.frame,0.75)}"/></linearGradient>`);
         const R0 = Math.min(fw*0.9, (dt.h+2*fw)/4), R1 = Math.max(0.08, R0 - fw + bev);
         frame = `<rect x="${f(-W2,3)}" y="${f(-H2,3)}" width="${f(W2*2,3)}" height="${f(H2*2,3)}" rx="${f(R0,3)}" fill="url(#${ga})" stroke="${shade(dt.frame,0.55)}" stroke-opacity=".6" stroke-width="0.03"/>`
-              + `<rect x="${f(-dt.w/2-bev,3)}" y="${f(-dt.h/2-bev,3)}" width="${f(dt.w+2*bev,3)}" height="${f(dt.h+2*bev,3)}" rx="${f(R1,3)}" fill="url(#${gb})"/>`;
+              + each(() => `<rect x="${f(-W1/2-bev,3)}" y="${f(-dt.h/2-bev,3)}" width="${f(W1+2*bev,3)}" height="${f(dt.h+2*bev,3)}" rx="${f(R1,3)}" fill="url(#${gb})"/>`);
       }
       /* A bevelled cut, as the day window has: no frame, the opening cut
          through the dial with a polished chamfer on its four sides, each
          sloping down to the disc and taking the light its own way. Without
          it a frameless window was a flat patch on the dial. */
       if(dt.edge === "bevel"){
-        const bw = dt.bevel === undefined ? 0.22 : dt.bevel, X = dt.w/2, Y = dt.h/2;
+        const bw = dt.bevel === undefined ? 0.22 : dt.bevel, X = W1/2, Y = dt.h/2;
         const laB = ((st.render && st.render.az) || 135)*Math.PI/180, Lx = Math.cos(laB), Ly = Math.sin(laB);
         const base = mix(st.dial.color, "#E4E6E8", 0.38);
         const lit = (nx, ny) => { const k = nx*Lx + ny*Ly; return k > 0 ? tint(base, 0.18 + 0.55*k) : shade(base, 0.10 + 0.42*(-k)); };
         const q = (x, y) => `${f(x,3)} ${f(y,3)}`;
-        frame = `<path d="M${q(-X-bw,-Y-bw)} L${q(X+bw,-Y-bw)} L${q(X,-Y)} L${q(-X,-Y)}Z" fill="${lit(0, 1)}"/>`
+        frame = each(() => `<path d="M${q(-X-bw,-Y-bw)} L${q(X+bw,-Y-bw)} L${q(X,-Y)} L${q(-X,-Y)}Z" fill="${lit(0, 1)}"/>`
               + `<path d="M${q(-X-bw,Y+bw)} L${q(X+bw,Y+bw)} L${q(X,Y)} L${q(-X,Y)}Z" fill="${lit(0, -1)}"/>`
               + `<path d="M${q(-X-bw,-Y-bw)} L${q(-X,-Y)} L${q(-X,Y)} L${q(-X-bw,Y+bw)}Z" fill="${lit(1, 0)}"/>`
               + `<path d="M${q(X+bw,-Y-bw)} L${q(X,-Y)} L${q(X,Y)} L${q(X+bw,Y+bw)}Z" fill="${lit(-1, 0)}"/>`
-              + `<rect x="${f(-X-bw,3)}" y="${f(-Y-bw,3)}" width="${f(dt.w+2*bw,3)}" height="${f(dt.h+2*bw,3)}" fill="none" stroke="${shade(st.dial.color, 0.55)}" stroke-opacity=".55" stroke-width="0.03"/>`;
+              + `<rect x="${f(-X-bw,3)}" y="${f(-Y-bw,3)}" width="${f(W1+2*bw,3)}" height="${f(dt.h+2*bw,3)}" fill="none" stroke="${shade(st.dial.color, 0.55)}" stroke-opacity=".55" stroke-width="0.03"/>`);
       }
-      const line = fw > 0.2 || dt.edge === "bevel" ? "" : `<rect x="${-dt.w/2}" y="${-dt.h/2}" width="${dt.w}" height="${dt.h}" fill="none" stroke="${dt.frame}" stroke-width="${fw}" rx="0.15"/>`;
+      const line = fw > 0.2 || dt.edge === "bevel" ? "" : each(() => `<rect x="${-W1/2}" y="${-dt.h/2}" width="${W1}" height="${dt.h}" fill="none" stroke="${dt.frame}" stroke-width="${fw}" rx="0.15"/>`);
       /* the date disc is under the dial: its upper edge sits in the shadow of the cut */
-      const recess = `<rect x="${f(-dt.w/2,3)}" y="${f(-dt.h/2,3)}" width="${f(dt.w,3)}" height="0.26" fill="#000" fill-opacity=".14" rx="0.12"/>`
-                   + `<rect x="${f(-dt.w/2,3)}" y="${f(-dt.h/2,3)}" width="0.18" height="${f(dt.h,3)}" fill="#000" fill-opacity=".08" rx="0.1"/>`;
+      const recess = each(() => `<rect x="${f(-W1/2,3)}" y="${f(-dt.h/2,3)}" width="${f(W1,3)}" height="0.26" fill="#000" fill-opacity=".14" rx="0.12"/>`
+                   + `<rect x="${f(-W1/2,3)}" y="${f(-dt.h/2,3)}" width="0.18" height="${f(dt.h,3)}" fill="#000" fill-opacity=".08" rx="0.1"/>`);
       body.push(`<g transform="translate(${f(p[0],3)},${f(p[1],3)})">${frame}${win}${recess}${line}</g>`);
       /* The cyclops magnifies the date in place: what sits under the lens is
          drawn again, larger, and clipped to the lens. */
@@ -10702,6 +10716,13 @@ function lineCapK(text, font){
 /* The height of the date's digits as the window draws them when no digit
    height is set: 0.78 of the window (0.95 for Arabic-Indic) as the font
    size, times the ink height of the font's figures. */
+/* a big date's centre bar, and the size of the whole window from outside
+   its frame or bevel: what the dial maker cuts, what the case must clear */
+function dateBar(dt){ return Math.max(0.3, Math.min(+dt.bar > 0 ? +dt.bar : 0.8, (dt.w || 0)*0.3)); }
+function dateOuter(dt){
+  const e = dt.edge === "bevel" ? (dt.bevel === undefined ? 0.22 : +dt.bevel) : (dt.frameW || 0) > 0.2 ? +dt.frameW : 0;
+  return {w:+((dt.w || 0) + 2*e).toFixed(2), h:+((dt.h || 0) + 2*e).toFixed(2), e};
+}
 function dateAutoDigitH(dt){
   const ar = dt.digits === "Arabic-Indic", TF = DAY_FONTS[dayFontOf(ar ? dt.fontAr : dt.fontEn, ar)];
   const m = TF && typeof inkMetrics === "function" ? inkMetrics(`'${TF.family}'`, ar ? "٠١٢٣٤٥٦٧٨٩" : "0123456789") : null;
@@ -11074,7 +11095,9 @@ const SCHEMA = {
       return K ? `The ${CASE_SPEC.movement} date ring shows through ${f(K.dateW)} × ${f(K.dateH)} mm, centred ${f(K.dateC)} mm from the centre at 3. A larger window shows the ring edge or the next date.` : ""; },
     fields:()=>[
     N("date.at","Position (hour)",1,12,1,"h"), N("date.dist","Distance from centre",2,18),
-    N("date.w","Width",1.5,8,.05), N("date.h","Height",1.2,6,.05),
+    SEL("date.bigUi","Windows",["single","big"]),
+    N("date.w",S.date.big ? "Width (both windows)" : "Width",1.5,10,.05), N("date.h","Height",1.2,6,.05),
+    ...(S.date.big ? [N("date.bar","Centre bar",.3,1.5,.05), SEL("date.zero","Dates 1 to 9",["zero","blank"])] : []),
     N("date.frameW","Frame width",0,1.6,.05),
     SEL("date.edgeUi","Window edge",["line","frame","bevel"]),
     ...(S.date.edge === "bevel" ? [N("date.bevel","Bevel width",.1,.5,.02)] : []),
@@ -14369,8 +14392,8 @@ function sheetRows(st){
     row(i === 0 && g.tech === "printed" ? "printing" : "printing " + g.tech + " " + g.ink, "", `${g.desc}: ${g.words.join(", ")}`, [g.words], g.ink ? [g.ink] : []));
   /* calendar */
   if(st.date && st.date.on){ const dt = st.date;
-    row("date", "Date:", `${dt.digits === "Arabic-Indic" ? "Arabic-Indic" : "Western"} digits, ${sheetColourName(dt.bg).toLowerCase()} disc at ${dt.at || 3} o'clock${dt.cyclops && dt.cyclops !== "none" ? ", " + dt.cyclops + " cyclops" : ""}${dt.digitH > 0 ? `, digits ${sn(dt.digitH, 2)}mm high` : ""}${dt.edge === "bevel" ? ", bevelled window (no frame)" : (dt.frameW || 0) > 0.2 ? `, applied frame ${sn(dt.frameW, 2)}mm` : ""}`,
-      [dt.digits, dt.at, dt.cyclops, dt.frameW, dt.edge, dt.digitH], [String(dt.bg || "").toUpperCase(), String(dt.text || "").toUpperCase()]); }
+    row("date", "Date:", `${dt.big ? `big date, tens and units discs, ${sn(dateBar(dt), 2)}mm centre bar; ` : ""}${dt.digits === "Arabic-Indic" ? "Arabic-Indic" : "Western"} digits, ${sheetColourName(dt.bg).toLowerCase()} disc${dt.big ? "s" : ""} at ${dt.at || 3} o'clock${dt.cyclops && dt.cyclops !== "none" ? ", " + dt.cyclops + " cyclops" : ""}${dt.digitH > 0 ? `, digits ${sn(dt.digitH, 2)}mm high` : ""}${dt.edge === "bevel" ? ", bevelled window (no frame)" : (dt.frameW || 0) > 0.2 ? `, applied frame ${sn(dt.frameW, 2)}mm` : ""}`,
+      [dt.digits, dt.at, dt.cyclops, dt.frameW, dt.edge, dt.digitH, dt.big], [String(dt.bg || "").toUpperCase(), String(dt.text || "").toUpperCase()]); }
   if(st.day && st.day.on){ const dy = st.day;
     row("day", "Day:", `${dy.lang || "Arabic"} day disc, ${sheetColourName(dy.bg).toLowerCase()}`, [dy.lang, dy.arc, dy.edge], [String(dy.bg || "").toUpperCase(), String(dy.text || "").toUpperCase()]); }
   /* hands */
@@ -14831,7 +14854,7 @@ function sheetDialCallouts(st, cx, cy, D, raster, k, numH){
     const r = cal.dayRin && cal.dayRout ? (cal.dayRin + cal.dayRout)/2 : 10.5;
     right.push({head:"Day window", lines:[`${dy.lang || "Arabic"} day disc, ${(sheetColourName(dy.bg) || "").toLowerCase()}`], at:[[0.8, -r]]}); }
   if(st.date && st.date.on){ const dt = st.date, a = (dt.at || 3)*Math.PI/6, r = dt.dist || 9.5;
-    right.push({head:"Date window", lines:[`${dt.digits === "Arabic-Indic" ? "Arabic-Indic" : "Western"} digits, ${(sheetColourName(dt.bg) || "").toLowerCase()} disc`
+    right.push({head:dt.big ? "Big date" : "Date window", lines:[`${dt.digits === "Arabic-Indic" ? "Arabic-Indic" : "Western"} digits, ${(sheetColourName(dt.bg) || "").toLowerCase()} disc`
       + (dt.cyclops && dt.cyclops !== "none" ? `, ${dt.cyclops} cyclops` : "")], at:[[r*Math.sin(a), -r*Math.cos(a)]]}); }
   /* the dial itself, pointed at a clear patch at half past four */
   const fin = d.finish === "stone" ? sheetCap(d.stone || "stone") + " stone" : sheetCap(sheetDialFinish(d));
@@ -15075,8 +15098,9 @@ function sheetSpec(st){
   const dt = st.date;
   if(dt && dt.on){
     const edge = dt.edge === "bevel" ? "bevelled cut" : (dt.frameW || 0) > 0.2 ? `applied frame ${mm(dt.frameW)}mm` : "thin printed line";
-    add("Date window", `${dt.digits === "Arabic-Indic" ? "Arabic-Indic" : "Western"} digits${dt.digitH > 0 ? ` ${mm(dt.digitH)}mm high` : ""}, ${edge}; disc ${String(dt.bg || "").toUpperCase()}`, dt.text,
-      `${mm(dt.w)} × ${mm(dt.h)}mm at ${dt.at || 3} o'clock, centre r ${mm(dt.dist)}mm`);
+    const o = dateOuter(dt);
+    add(dt.big ? "Big date" : "Date window", `${dt.big ? `two windows, tens and units discs, centre bar ${mm(dateBar(dt))}mm; ` : ""}${dt.digits === "Arabic-Indic" ? "Arabic-Indic" : "Western"} digits${dt.digitH > 0 ? ` ${mm(dt.digitH)}mm high` : ""}, ${edge}; disc ${String(dt.bg || "").toUpperCase()}`, dt.text,
+      `${mm(dt.w)} × ${mm(dt.h)}mm${o.e ? ` (${mm(o.w)} × ${mm(o.h)}mm outside)` : ""} at ${dt.at || 3} o'clock, centre r ${mm(dt.dist)}mm`);
   }
   const dy = st.day;
   if(dy && dy.on) add("Day window", `${dy.lang || "Arabic"} day disc, ${dy.edge === "frame" ? "applied frame" : "bevelled cut"}; disc ${String(dy.bg || "").toUpperCase()}`, dy.text, `${mm(dy.arc, 1)}° at 12`);
@@ -15711,7 +15735,8 @@ async function makeMakerPDF(){
     if(st.date.on)add(Math.hypot(st.date.dist+Math.max(st.date.w,st.date.h)/2,Math.min(st.date.w,st.date.h)/2)<=r,'Date window envelope','Conservative outer-corner estimate; verify movement date alignment separately.','date');
     /* A movement calendar is fixed, so the windows are checked against it. */
     const cal=(typeof caseOf==='function')?caseOf(st).calendar:null;
-    if(cal&&st.date&&st.date.on){
+    if(st.date&&st.date.on&&st.date.big)add(!!(cal&&cal.bigDate),'Big date movement',cal&&cal.bigDate?`The ${CASE_SPEC.movement} carries a big-date module.`:`A big date needs separate tens and units discs, from a big-date module; the ${CASE_SPEC.movement||'movement'} has ${cal?'one date ring':'no date mechanism'}. Ask the maker for a movement with a big-date module${cal?', or use one window':''}.`,'date');
+    if(cal&&st.date&&st.date.on&&!st.date.big){
       add(st.date.w<=cal.dateW+1e-6&&st.date.h<=cal.dateH+1e-6,'Date window size',`${f(st.date.w,2)} × ${f(st.date.h,2)} mm against the movement's ${f(cal.dateW,2)} × ${f(cal.dateH,2)} mm aperture; larger shows the ring edge or the next date.`,'date');
       add(Math.abs(st.date.dist-cal.dateC)<.05&&st.date.at===3,'Date window position',`At ${st.date.at} o'clock, ${f(st.date.dist,2)} mm from centre; the movement shows the date at 3, ${f(cal.dateC,2)} mm out.`,'date');
       const cyc=caseOf(st).cyclops,mag=parseFloat(st.date.cyclops)||1;
@@ -16597,6 +16622,9 @@ const GSTR = {en:{
   "mk.paveAdvice": (mm, easy) => `At ${mm} mm high only bold figures can be set; ask Blue Creations. Figures ${easy || "2.9"} mm high set more easily.`,
   "mk.underWindows":"Figures under the day and date windows are left off, as on a real dial.",
   "date.digitNote":"The height of the digits' ink in mm. They are centred in the window and made smaller if they would come within 0.3 mm of its sides.",
+  "date.bigNote":"Tens and units each turn on their own disc, side by side under one opening. It needs a movement with a big-date module; the design check says whether yours has one.",
+  "date.outer":(w, h, ow, oh) => `Opening ${w} × ${h} mm; ${ow} × ${oh} mm from outside the frame or bevel.`,
+  "date.opening":(w, h) => `Opening ${w} × ${h} mm.`,
   "mk.height": (mm, cl) => `Each figure stands ${mm} mm off the dial. The minute hand clears it by ${cl} mm.`,
   "mk.heightTight": (mm, cl) => `At ${mm} mm the minute hand clears the figures by only ${cl} mm; 0.20 mm is the least to make. Choose a lower height or higher hands.`,
   "gem.emerald":"Emerald is brittle and usually oiled: tsavorite (green garnet) or lab emerald is the practical green, and a bezel holds it most safely.",
@@ -16768,6 +16796,9 @@ GSTR.ar = {
   "mk.paveAdvice": (mm, easy) => `بارتفاع ${mm} ملم لا تُرصّع إلا الأرقام العريضة، فاسأل Blue Creations. الأرقام بارتفاع ${easy || "2.9"} ملم أسهل في الترصيع.`,
   "mk.underWindows":"الأرقام التي تقع تحت نافذتي اليوم والتاريخ تُحذف، كما في الميناء الحقيقي.",
   "date.digitNote":"ارتفاع الأرقام بالملم. تتوسط النافذة، وتصغر تلقائياً إذا اقتربت أقل من 0.3 ملم من جوانبها.",
+  "date.bigNote":"العشرات والآحاد كل واحد على قرص خاص، جنب بعض تحت فتحة وحدة. يحتاج محرك فيه وحدة تاريخ كبير؛ فحص التصميم يبيّن إذا محركك فيه.",
+  "date.outer":(w, h, ow, oh) => `الفتحة ${w} × ${h} ملم؛ ومن برّا الإطار أو الشطف ${ow} × ${oh} ملم.`,
+  "date.opening":(w, h) => `الفتحة ${w} × ${h} ملم.`,
   "mk.height": (mm, cl) => `كل رقم مرتفع ${mm} ملم عن الميناء، وعقرب الدقائق يمر فوقه بفراغ ${cl} ملم.`,
   "mk.heightTight": (mm, cl) => `بارتفاع ${mm} ملم يمر عقرب الدقائق فوق الأرقام بفراغ ${cl} ملم فقط، وأقل فراغ ممكن 0.20 ملم. اختر ارتفاعاً أقل أو عقارب أعلى.`,
   "gem.emerald":"الزمرد هش وغالباً معالج بالزيت: التسافوريت (العقيق الأخضر) أو الزمرد المصنّع مخبرياً هو الأخضر العملي، والترصيع بإطار يحفظه أكثر.",
@@ -16911,7 +16942,7 @@ const GWORD = {ar:{
   "Extra high":"مرتفع جداً", "High":"مرتفع", "height:Standard":"عادي", "Window width":"عرض النافذة", "Narrow":"ضيقة", "Standard":"قياسية", "Wide":"عريضة",
   "Move them aside":"أزحهما جانباً", "Make them smaller":"صغّرهما", "Use markers":"ضع مؤشرين", "Leave them off":"احذفهما", "Let them touch":"اتركهما متلامسين",
   "Day font":"خط اليوم", "Arabic font":"الخط العربي", "English font":"الخط الإنجليزي", "In the window":"في النافذة", "Day disc":"قرص اليوم",
-  "Day lettering":"لون كتابة اليوم", "Window edge":"حافة النافذة", "Lume colour":"لون المادة المضيئة", "Lume fill":"تعبئة مضيئة", "Green-white":"أبيض مخضر", "Old radium":"راديوم قديم", "Vintage cream":"كريمي عتيق", "Five-minute marks":"علامات الخمس دقائق", "Run inward":"ممتدة للداخل", "Flared":"متسعة", "Gap at 6":"فراغ عند ٦", "Track width":"عرض المسار", "Rail weight":"وزن الخط", "Tick weight":"وزن العلامة", "Turn this hour":"اتجاه هذه الساعة", "Toward the centre":"نحو المركز", "On point":"على رأسه", "Across":"بالعرض", "Size of this hour":"حجم هذه الساعة", "Figure height":"ارتفاع الرقم", "Letter height":"ارتفاع الحروف", "Thin line":"خط رفيع", "Digit height":"ارتفاع الأرقام", "Bevelled cut":"قطع مشطوف", "Applied frame":"إطار مركّب",
+  "Day lettering":"لون كتابة اليوم", "Window edge":"حافة النافذة", "Lume colour":"لون المادة المضيئة", "Lume fill":"تعبئة مضيئة", "Green-white":"أبيض مخضر", "Old radium":"راديوم قديم", "Vintage cream":"كريمي عتيق", "Five-minute marks":"علامات الخمس دقائق", "Run inward":"ممتدة للداخل", "Flared":"متسعة", "Gap at 6":"فراغ عند ٦", "Track width":"عرض المسار", "Rail weight":"وزن الخط", "Tick weight":"وزن العلامة", "Turn this hour":"اتجاه هذه الساعة", "Toward the centre":"نحو المركز", "On point":"على رأسه", "Across":"بالعرض", "Size of this hour":"حجم هذه الساعة", "Figure height":"ارتفاع الرقم", "Letter height":"ارتفاع الحروف", "Thin line":"خط رفيع", "Digit height":"ارتفاع الأرقام", "Bevelled cut":"قطع مشطوف", "Applied frame":"إطار مركّب", "Windows":"النوافذ", "One window":"نافذة وحدة", "Big date":"تاريخ كبير", "Centre bar":"الفاصل الوسطي", "Dates 1 to 9":"التواريخ من ١ إلى ٩",
   "All seven days in the window":"أيام الأسبوع السبعة في النافذة", "The disc in order":"القرص بالترتيب",
   "Date window at 3":"نافذة التاريخ عند 3", "Magnifier":"المكبّر", "Digits":"الأرقام", "Date font":"خط التاريخ", "Date disc":"قرص التاريخ",
   "Date digits colour":"لون أرقام التاريخ", "Frame":"الإطار", "All window settings":"كل إعدادات النوافذ",
@@ -16950,6 +16981,7 @@ const G_CHECK_AR = {
   "Diamond-set numerals":"الأرقام أصغر أو أرفع من أن تُرصّع بالأحجار.",
   "Date window envelope":"نافذة التاريخ تمتد تحت الإطار.",
   "Date window size":"نافذة التاريخ أكبر من تاريخ المحرك.",
+  "Big date movement":"التاريخ الكبير يحتاج محرك فيه وحدة تاريخ كبير.",
   "Date window position":"نافذة التاريخ ليست حيث يُظهر المحرك التاريخ.",
   "Cyclops coverage":"المكبّر لا يغطي التاريخ كله.",
   "Day window arc":"نافذة اليوم أعرض من قرص اليوم.",
@@ -16974,7 +17006,8 @@ const GLOSS_OPT = {matte:"Matte", gloss:"Gloss", sunburst:"Sunburst", guilloche:
   "royal-oak":"Royal Oak", "ro-seconds":"Royal Oak seconds", "f77":"Nivada F77", "f77-seconds":"Nivada F77 seconds",
   "double printed":"Raised print", "applied metal":"Applied metal", "polished steel":"Steel", "blued steel":"Blued steel",
   "blackened steel":"Black", "yellow gold":"Gold",
-  "gloss on matte":"Gloss on matte", "brushed across":"Brushed across the grain", "uv ink":"UV ink"};
+  "gloss on matte":"Gloss on matte", "brushed across":"Brushed across the grain", "uv ink":"UV ink",
+  single:"One window", big:"Big date", zero:"With a 0 (0 7)", blank:"Tens blank (  7)"};
 const glossOpt = o => typeof o !== "string" ? o : (GLOSS_OPT[o] || (/^[a-z]/.test(o) ? o[0].toUpperCase() + o.slice(1) : o));
 
 /* Where to pick up after a reload. Back within half an hour, the step you
@@ -17095,6 +17128,7 @@ const G_CHECK_WORDS = {
   "Diamond-set numerals":["markers","The numerals are too small or thin to set with stones."],
   "Date window envelope":["calendar","The date window runs under the bezel."],
   "Date window size":["calendar","The date window is bigger than the movement's date."],
+  "Big date movement":["calendar","A big date needs a movement with a big-date module."],
   "Date window position":["calendar","The date window is not where the movement shows the date."],
   "Cyclops coverage":["calendar","The magnifier doesn't cover the whole date."],
   "Day window arc":["calendar","The day window is wider than the day disc."],
@@ -18421,6 +18455,12 @@ Object.assign(GWORD.ar, {
       let h = cal ? "" : `<p class="gNote">${gT("day.noCal")}</p>`;
       h += toggle("date.on", "Date window at 3", S.date.on);
       if(S.date.on){
+        h += `<h3>${gW("Windows")}</h3>` + chips("date.bigUi", [["single","One window"],["big","Big date"]], S.date.big ? "big" : "single");
+        if(S.date.big){
+          h += slider("date.bar", "Centre bar", 0.3, 1.5, 0.05, dateBar(S.date));
+          h += `<h3>${gW("Dates 1 to 9")}</h3>` + chips("date.zero", [["zero","0 7"],["blank","  7"]], S.date.zero === "blank" ? "blank" : "zero");
+          h += `<p class="gNote">${gT("date.bigNote")}</p>`;
+        }
         h += `<h3>${gW("Magnifier")}</h3>` + chips("date.cyclops", [["none","None"],["2.0×","2×"],["2.2×","2.2×"],["2.5×","2.5×"]], S.date.cyclops || "none");
         h += `<h3>${gW("Digits")}</h3>` + chips("date.digits", [["Western","1 2 3"],["Arabic-Indic","١ ٢ ٣"]], S.date.digits || "Western");
         const dar = S.date.digits === "Arabic-Indic", n31 = String(S.date.shown || 31);
@@ -18432,6 +18472,7 @@ Object.assign(GWORD.ar, {
         if(dEdge === "bevel") h += slider("date.bevel", "Bevel width", 0.1, 0.5, 0.02, S.date.bevel === undefined ? 0.22 : S.date.bevel);
         h += slider("date.digitHUi", "Digit height", 0.6, 4, 0.05, S.date.digitH > 0 ? S.date.digitH : dateAutoDigitH(S.date));
         h += `<p class="gNote">${gT("date.digitNote")}</p>`;
+        { const o = dateOuter(S.date); h += `<p class="gNote">${o.e ? gT("date.outer", gf(S.date.w, 2), gf(S.date.h, 2), gf(o.w, 2), gf(o.h, 2)) : gT("date.opening", gf(S.date.w, 2), gf(S.date.h, 2))}</p>`; }
       }
       return h + more("date", "All window settings");
     },

@@ -34,10 +34,11 @@ test('the drawing: digits by their ink, 0.3 mm clear of the sides, the bevel lit
   const d = chunk('    // date window', '      /* The cyclops magnifies');
   assert.match(d, /if\(dt\.digitH > 0\)\{/);
   assert.match(d, /let fs = Math\.min\(dt\.digitH, dt\.h - 0\.3\)\/kh;/);
-  assert.match(d, /const room = dt\.w - 0\.6, wide = mNum && mNum\.w > 0 \? mNum\.w\*fs : 0;/);
+  assert.match(d, /const room = W1 - 0\.6, wide = Math\.max\(0, \.\.\.ms\.map\(m => m && m\.w > 0 \? m\.w\*fs : 0\)\);/, 'per window: the whole width, or each half of a big date');
+  assert.match(d, /const big = !!dt\.big, bar = big \? dateBar\(dt\) : 0, W1 = big \? \+\(\(dt\.w - bar\)\/2\)\.toFixed\(3\) : dt\.w;/);
   assert.match(d, /if\(wide > room\) fs \*= room\/wide;/);
   // without a digit height, exactly the old text
-  assert.match(d, /font-size="\$\{f\(dt\.h\*\(ar \? 0\.95 : 0\.78\),2\)\}" fill="\$\{dt\.text\}" text-anchor="middle" dominant-baseline="central">\$\{digits\}<\/text>`;/);
+  assert.match(d, /font-size="\$\{f\(dt\.h\*\(ar \? 0\.95 : 0\.78\),2\)\}" fill="\$\{dt\.text\}" text-anchor="middle" dominant-baseline="central">\$\{t\}<\/text>` : ""\);/);
   assert.match(d, /if\(dt\.edge === "bevel"\)\{/);
   assert.match(d, /const line = fw > 0\.2 \|\| dt\.edge === "bevel" \? "" :/);
   // the guided Date step and the full editor offer both

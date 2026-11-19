@@ -200,6 +200,22 @@ stored in a design file do not change. In the full editor at laptop widths
 the toolbar sits tighter, and on a narrower window it takes a second row
 rather than pushing Share and Export off the screen.
 
+## Big date (v4.18.0)
+
+In the Date step, **Windows → Big date** splits the opening into two windows
+side by side, the tens on one disc and the units on another, with a **centre
+bar** between them (0.8 mm unless set, at most 30% of the opening). With an
+applied frame the bar is frame metal; with a bevelled cut each window is cut
+on its own and the bar is dial. Dates 1 to 9 show a **0** in the tens window
+or leave it **blank**. `date.w` stays the width of the whole opening, so every
+fit check still measures it; turning the big date on widens a narrow window
+to two of at least 2 mm and turning it off gives the single width back
+(`date.wSingle`). The design check adds **Big date movement**: a big date
+needs a movement with a big-date module, and the single-ring size and position
+rows no longer judge it. Under the digit height, the step now gives the
+opening's size and, with a frame or bevel, the size from outside it; the
+specification lists both. Designs without a big date draw exactly as before.
+
 ## Carré stones and the invisible setting (v4.17.0)
 
 A seventh gem card, **Carré**: a square step cut (twelve step facets round a
