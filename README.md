@@ -200,6 +200,22 @@ stored in a design file do not change. In the full editor at laptop widths
 the toolbar sits tighter, and on a narrower window it takes a second row
 rather than pushing Share and Export off the screen.
 
+## Export, and the F77's bezel (v4.22.0)
+
+- **Image size** is this device's choice and is kept (`wds:exportPx`), across
+  designs and reloads. Without a choice a phone exports at 2400 px (was 1600,
+  soft for 0.08 mm lines) and a computer at 3000. Sizes: Small 1200, Medium
+  2000, Large 2400, Largest 3000; the Export sheet says the size in use.
+- **File names** come from the design's name: accents kept as their letters
+  ("Huit Carrés" → huit-carres), Arabic kept as Arabic, and the photograph or
+  front view saved as `name.png` rather than `name-template.png`.
+- **The drawn F77's bezel**: Case › Metal and strap › Drawn bezel. *As Nivada's
+  drawing* (the near-round ring, as asked in v4.7.0, and the default) or *As
+  the prototype*: eight-sided, as the prototype and the photograph are,
+  measured off the photograph (17.75 mm to each flat, corners cut from 7.60,
+  a 0.70 polished chamfer whose eight faces each take the light). It only
+  changes the drawn case; the photograph is the prototype either way.
+
 ## Research board (v4.21.0)
 
 Finish › **Research** keeps the research behind a design in its file

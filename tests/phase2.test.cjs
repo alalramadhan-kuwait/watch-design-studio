@@ -136,3 +136,16 @@ test('research board (v4.21.0): references in the design file, on the specificat
   // a link opens apart from the studio, never as a script
   assert.match(source, /<a href="\$\{esc2\(\/\^https\?:\\\/\\\/\/i\.test\(r\.url\) \? r\.url : "https:\/\/" \+ r\.url\)\}" target="_blank" rel="noopener noreferrer"/);
 });
+
+test('export polish (v4.22.0): the image size kept on the device, 2400 px on a phone, files named after the design', () => {
+  assert.match(source, /const EXPORT_PX_KEY = "wds:exportPx";/);
+  assert.match(source, /return S\.exportPx \|\| mine \|\| \(isTouch \? 2400 : 3000\);/);
+  assert.doesNotMatch(source, /S\.exportPx \|\| \(isTouch \? 1600 : 3000\)/, 'no stray default left');
+  assert.match(source, /<button class="btn" data-px="3000" style="flex:1">Largest<\/button>/);
+  const slugSrc = source.match(/const slug = \(\) => ([\s\S]+?\|\| "watch");/)[1];
+  const slugOf = name => new Function('S', 'return ' + slugSrc)({meta:{name}});
+  assert.equal(slugOf('Time Keeper × Nivada — Huit Carrés'), 'time-keeper-nivada-huit-carres');
+  assert.equal(slugOf('ساعة تايم كيبر'), 'ساعة-تايم-كيبر');
+  assert.equal(slugOf('***'), 'watch');
+  assert.match(source, /const pngName = kind => kind === "template" \|\| kind === "front" \? `\$\{slug\(\)\}\.png` : `\$\{slug\(\)\}-\$\{kind\}\.png`;/);
+});

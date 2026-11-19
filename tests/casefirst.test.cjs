@@ -119,5 +119,7 @@ test('the F77 is drawn to Nivada\'s front drawing, with the sheet\'s figures', (
   assert.match(source, /\(K\.outline === "f77" \? f77Case : roundCase\)\(\);/);
   const fn = chunk('  const f77Case = () => {', '  /* ---------------- CASE + STRAP (RD26-0172');
   assert.doesNotMatch(fn, /filter=/, 'no SVG filters');
-  assert.doesNotMatch(fn, /octa/, 'no octagon any more');
+  // Nivada's drawing unless the prototype's eight-sided bezel is asked for
+  assert.match(fn, /const O = c\.bezelShape === "prototype" \? Z\.oct : null/);
+  assert.equal(Z.oct.a, 17.75); assert.equal(Z.oct.h, 7.6);
 });

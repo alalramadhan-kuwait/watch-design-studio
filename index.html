@@ -1292,7 +1292,8 @@ body.guided .atelier-nav, body.guided #gHideInGuided, body.guided .bar .grp.tool
         <div class="row" style="gap:6px">
           <button class="btn" data-px="1200" style="flex:1">Small</button>
           <button class="btn" data-px="2000" style="flex:1">Medium</button>
-          <button class="btn" data-px="3000" style="flex:1">Large</button>
+          <button class="btn" data-px="2400" style="flex:1">Large</button>
+          <button class="btn" data-px="3000" style="flex:1">Largest</button>
         </div>
         <button class="btn" data-x="svg">Artwork — SVG</button>
         <button class="btn" data-x="dial">Dial artwork — SVG</button>
@@ -1530,7 +1531,13 @@ const TK_NIVADA = {
      The strap is the photograph's, taken in with the lug blocks: 22.50
      wide at the lugs, 18.40 at 32.6 mm from the centre. */
   outline:"f77",
-  f77:{bezel:{rx:19.00, ry:18.55, chRx:18.30, chRy:17.98, flat:30.96},
+  /* Drawn, the bezel is Nivada's front drawing (rx/ry), as asked. The
+     prototype's is eight-sided, as is the owner's photograph (measured at
+     21.78 px/mm): 17.75 out to each flat at 12, 3, 6 and 9, the corners cut
+     from 7.60 either side of the axes, a polished chamfer 0.70 wide, the
+     brushed case showing as a shoulder round it. case.bezelShape
+     "prototype" draws that (oct); the flanks stay the drawing's. */
+  f77:{bezel:{rx:19.00, ry:18.55, chRx:18.30, chRy:17.98, flat:30.96, oct:{a:17.75, h:7.60, ch:0.70}},
        body:{top:18.55, lugEnd:23.10, lugOut:11.40, polish:{to:9.20, c:[12.80, 13.10]}},
        lugIn:7.15, screws:{r:17.06, top:23.8, side:22.2, d:1.50},
        crown:{x0:19.15, xb:19.55, x1:22.35, collar:5.05}, strap:{w0:11.25, w1:9.20, y1:32.6}},
@@ -2227,7 +2234,7 @@ const APP_BUILD = "__BUILD__";
 /* The version people see, raised with every change that reaches them:
    major for a new way of working, minor for something new to do, patch for
    a fix. Shown on the watch screen, so any screenshot says which it was. */
-const APP_VERSION = "4.21.0";
+const APP_VERSION = "4.22.0";
 const APP_DATE = "__DATE__";
 
 /* Every route that replaces S passes through one of these three, which is
@@ -5108,14 +5115,30 @@ function buildSVG(st, o={}){
     /* the lug blocks' flat tops catch the light along their ends */
     for(const sy of [-1, 1])
       body.push(`<path d="M${P(-XO + 0.1, sy*E)}L${P(-L - 0.05, sy*E)}M${P(L + 0.05, sy*E)}L${P(XO - 0.1, sy*E)}" stroke="${tint(M0,0.9)}" stroke-opacity=".75" stroke-width="0.18"/>`);
-    /* --- the bezel: a near-round ring, its polished chamfer outside, the
+    /* --- the bezel: the octagon (or the drawing's near-round ring), its polished chamfer outside, the
        brushed top inside that --- */
     const ell = (rx, ry) => `M${P(-rx, 0)}A${f(rx*k,3)} ${f(ry*k,3)} 0 1 0 ${P(rx, 0)}A${f(rx*k,3)} ${f(ry*k,3)} 0 1 0 ${P(-rx, 0)}Z`;
     const rbi = Math.max(opening/2 + 0.6, K.bezelID/2*k), rf = Z.flat/2*k;
     const hole = r => ` M0 ${f(-r,3)}A${f(r,3)} ${f(r,3)} 0 1 0 0 ${f(r,3)}A${f(r,3)} ${f(r,3)} 0 1 0 0 ${f(-r,3)}Z`;
-    const outer = ell(Z.rx, Z.ry), inner = ell(Z.chRx, Z.chRy);
+    /* an octagon a out to its flats, the corners cut from h either side of each axis */
+    const oct = (a, h) => `M${P(-h, -a)}L${P(h, -a)}L${P(a, -h)}L${P(a, h)}L${P(h, a)}L${P(-h, a)}L${P(-a, h)}L${P(-a, -h)}Z`;
+    const O = c.bezelShape === "prototype" ? Z.oct : null, oIn = O ? [O.a - O.ch, O.h - O.ch*Math.tan(Math.PI/8)] : null;
+    const outer = O ? oct(O.a, O.h) : ell(Z.rx, Z.ry), inner = O ? oct(oIn[0], oIn[1]) : ell(Z.chRx, Z.chRy);
     const gCh = lgr(`<stop offset="0" stop-color="${tint(MG,0.98)}"/><stop offset="0.3" stop-color="${tint(MG,0.75)}"/><stop offset="0.6" stop-color="${shade(MG,0.45)}"/><stop offset="0.8" stop-color="${shade(MG,0.2)}"/><stop offset="1" stop-color="${tint(MG,0.6)}"/>`);
     body.push(`<path d="${outer}" fill="url(#${gCh})" stroke="${shade(MG,0.62)}" stroke-opacity=".75" stroke-width="0.08"/>`);
+    /* the octagon's chamfer is eight flat polished faces, each lit by how
+       squarely it faces the light (the light comes from opposite az) */
+    if(O){
+      const vx = (a, h) => [[-h,-a],[h,-a],[a,-h],[a,h],[h,a],[-h,a],[-a,h],[-a,-h]];
+      const vo = vx(O.a, O.h), vi = vx(oIn[0], oIn[1]), Lr = la*Math.PI/180, Lx = -Math.cos(Lr), Ly = -Math.sin(Lr);
+      let facets = "";
+      for(let i = 0; i < 8; i++){
+        const j = (i + 1) % 8, mx = (vo[i][0] + vo[j][0])/2, my = (vo[i][1] + vo[j][1])/2, mr = Math.hypot(mx, my), kk = (mx*Lx + my*Ly)/mr;
+        const col = kk > 0 ? tint(MG, 0.30 + 0.62*kk) : shade(MG, 0.06 + 0.40*(-kk));
+        facets += `<path d="M${P(vo[i][0], vo[i][1])}L${P(vo[j][0], vo[j][1])}L${P(vi[j][0], vi[j][1])}L${P(vi[i][0], vi[i][1])}Z" fill="${col}"/>`;
+      }
+      body.push(facets + `<path d="${outer}" fill="none" stroke="${shade(MG,0.62)}" stroke-opacity=".75" stroke-width="0.08"/>`);
+    }
     const GB = gemBezelSpec(st);
     const gBz = lgr(st3(tint(MG,0.30), tint(MG,0.05), shade(MG,0.14)));
     body.push(`<path d="${inner}${hole(rf)}" fill="url(#${gBz})" fill-rule="evenodd" stroke="${shade(MG,0.45)}" stroke-opacity=".40" stroke-width="0.05"/>`);
@@ -12831,7 +12854,9 @@ q("#exp").onclick=()=>{
                 template:"the dial composited on your case photograph"}[v.kind];
   q("#expWhat").textContent = `Render and artwork follow what you are looking at — currently ${what}. `
     + (v.vector ? "Artwork exports as clean production vector with no preview effects."
-                : "The composite contains a photograph, so artwork exports the vector watch instead.");
+                : "The composite contains a photograph, so artwork exports the vector watch instead.")
+    + ` Images are ${exportSide()} px.`;
+  markPx();
   q("#expSheet").classList.add("open");
 };
 q("#openJson").onchange = e => {
@@ -12907,10 +12932,20 @@ q("#outCopy").onclick = async ()=>{
   catch(e){ toast("Could not copy — use Save to device"); }
 };
 qa("[data-x]").forEach(b=>b.onclick=()=>doExport(b.dataset.x));
+/* The image size is this device's choice, kept across designs and
+   reloads; a design that carries its own size keeps it. 2400 px on a
+   phone (a 0.08 mm line is still two pixels) and 3000 on a computer. */
+const EXPORT_PX_KEY = "wds:exportPx";
+function exportSide(){
+  let mine = 0; try{ mine = +localStorage.getItem(EXPORT_PX_KEY) || 0; }catch(e){}
+  return S.exportPx || mine || (isTouch ? 2400 : 3000);
+}
+const markPx = () => { const sd = exportSide(); qa("[data-px]").forEach(x => x.classList.toggle("on", +x.dataset.px === sd)); };
 qa("[data-px]").forEach(b=>b.onclick=()=>{
   S.exportPx = +b.dataset.px;
-  qa("[data-px]").forEach(x=>x.classList.toggle("on", x === b));
-  toast("Image size set to " + b.dataset.px + " px");
+  try{ localStorage.setItem(EXPORT_PX_KEY, String(+b.dataset.px)); }catch(e){}
+  markPx();
+  toast("Image size set to " + b.dataset.px + " px, here from now on");
 });
 
 function currentView(){
@@ -13080,11 +13115,11 @@ function pngSize(side, big){
 }
 function exportPlan(o){
   const v = currentView(), big = v.kind === "template";
-  const side = S.exportPx || (isTouch ? 1600 : 3000);
+  const side = exportSide();
   const matPx = Math.min((o && o.share) ? SHARE_MAT_PX : 1200, Math.round(side*0.55));
   const svg = currentSVG(big ? {matPx} : {px:side, matPx, measure:measureOn});
   const {W, H} = pngSize(side, big);
-  return {svg, W, H, name:`${slug()}-${v.kind}.png`};
+  return {svg, W, H, name:pngName(v.kind)};
 }
 /* iOS only opens the share sheet from a live tap, and rendering finishes long
    after that tap expires. So the image is prepared quietly in the background
@@ -13124,12 +13159,17 @@ function dl(name, data, type){
   const blob = data instanceof Blob ? data : new Blob([data],{type});
   presentOutput(name, blob, type);
 }
-const slug = ()=>S.meta.name.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");
+/* A file is named after the design: accents kept as their letters (Huit
+   Carrés is huit-carres), Arabic kept as Arabic, and the photograph view
+   named for the watch rather than for the view ("-template" said nothing). */
+const slug = () => String((S.meta && S.meta.name) || "").normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
+  .replace(/[^\p{L}\p{N}]+/gu, "-").replace(/^-+|-+$/g, "").slice(0, 80) || "watch";
+const pngName = kind => kind === "template" || kind === "front" ? `${slug()}.png` : `${slug()}-${kind}.png`;
 async function doExport(kind){
   const v = currentView();
   if(kind === "png"){
     const big = v.kind === "template";
-    const side = S.exportPx || (isTouch ? 1600 : 3000);
+    const side = exportSide();
     const matPx = Math.min(1200, Math.round(side*0.55));
     const svg = currentSVG(big ? {matPx} : {px:side, matPx, measure:measureOn});
     const {W, H} = pngSize(side, big);
@@ -13146,7 +13186,7 @@ async function doExport(kind){
       try{
         const blob = await svgToPng(sv, w2, h2);
         q("#expSheet").classList.remove("open");
-        dl(`${slug()}-${v.kind}.png`, blob, "image/png");
+        dl(pngName(v.kind), blob, "image/png");
         if(note) toast("Saved " + note);
         return;
       }catch(err){ lastWhy = err.message; }
@@ -16609,6 +16649,7 @@ const GSTR = {en:{
   "prog": (name, n, total) => `<b>${name}</b><span> · <i>step </i>${n} of ${total}</span>`,
   "prog.aria": (name, n, total) => `${name}, step ${n} of ${total}. Show all steps`,
   "find.ph":"Find a setting", "find.none":"Nothing by that name in this design.",
+  "case.bezelNote":"How the drawn case shows the bezel when the photograph is off: round, as Nivada's front drawing has it, or eight-sided, as the prototype and the photograph are.",
   "rs.title":"Research", "rs.fold":"Close the research", "rs.unfold":"Research behind the design",
   "rs.sum":(n, a) => `${n} reference${n === 1 ? "" : "s"} · ${a} name${a === 1 ? "" : "s"} to keep off`,
   "rs.del":"Remove this reference", "rs.titlePh":"Title, e.g. Ref. 2526, 1953", "rs.idPh":"Research id, e.g. R12", "rs.urlPh":"Link (auction, archive, article)",
@@ -16798,6 +16839,7 @@ GSTR.ar = {
   "prog": (name, n, total) => `<b>${name}</b><span> · <i>الخطوة </i>${n} من ${total}</span>`,
   "prog.aria": (name, n, total) => `${name}، الخطوة ${n} من ${total}. عرض كل الخطوات`,
   "find.ph":"ابحث عن إعداد", "find.none":"ما في شي بهالاسم في هالتصميم.",
+  "case.bezelNote":"شكل البيزل في القالب المرسوم لما تكون الصورة مطفية: دائري مثل رسمة نيفادا، أو ثماني مثل النموذج والصورة.",
   "rs.title":"البحث", "rs.fold":"إغلاق البحث", "rs.unfold":"البحث وراء التصميم",
   "rs.sum":(n, a) => `${n} مرجع · ${a} اسم ممنوع`,
   "rs.del":"احذف هالمرجع", "rs.titlePh":"العنوان، مثلاً Ref. 2526، 1953", "rs.idPh":"رقم البحث، مثلاً R12", "rs.urlPh":"الرابط (مزاد، أرشيف، مقال)",
@@ -17028,7 +17070,7 @@ const GWORD = {ar:{
   "Extra high":"مرتفع جداً", "High":"مرتفع", "height:Standard":"عادي", "Window width":"عرض النافذة", "Narrow":"ضيقة", "Standard":"قياسية", "Wide":"عريضة",
   "Move them aside":"أزحهما جانباً", "Make them smaller":"صغّرهما", "Use markers":"ضع مؤشرين", "Leave them off":"احذفهما", "Let them touch":"اتركهما متلامسين",
   "Day font":"خط اليوم", "Arabic font":"الخط العربي", "English font":"الخط الإنجليزي", "In the window":"في النافذة", "Day disc":"قرص اليوم",
-  "Day lettering":"لون كتابة اليوم", "Window edge":"حافة النافذة", "Lume colour":"لون المادة المضيئة", "Lume fill":"تعبئة مضيئة", "Green-white":"أبيض مخضر", "Old radium":"راديوم قديم", "Vintage cream":"كريمي عتيق", "Five-minute marks":"علامات الخمس دقائق", "Run inward":"ممتدة للداخل", "Flared":"متسعة", "Gap at 6":"فراغ عند ٦", "Track width":"عرض المسار", "Rail weight":"وزن الخط", "Tick weight":"وزن العلامة", "Turn this hour":"اتجاه هذه الساعة", "Toward the centre":"نحو المركز", "On point":"على رأسه", "Across":"بالعرض", "Size of this hour":"حجم هذه الساعة", "Figure height":"ارتفاع الرقم", "Letter height":"ارتفاع الحروف", "Thin line":"خط رفيع", "Digit height":"ارتفاع الأرقام", "Bevelled cut":"قطع مشطوف", "Applied frame":"إطار مركّب", "Keep off the watch":"أسماء ممنوعة على الساعة", "Hand heights":"ارتفاعات العقارب", "I have the maker's hand heights":"عندي ارتفاعات العقارب من المصنّع", "Windows":"النوافذ", "One window":"نافذة وحدة", "Big date":"تاريخ كبير", "Centre bar":"الفاصل الوسطي", "Dates 1 to 9":"التواريخ من ١ إلى ٩",
+  "Day lettering":"لون كتابة اليوم", "Window edge":"حافة النافذة", "Lume colour":"لون المادة المضيئة", "Lume fill":"تعبئة مضيئة", "Green-white":"أبيض مخضر", "Old radium":"راديوم قديم", "Vintage cream":"كريمي عتيق", "Five-minute marks":"علامات الخمس دقائق", "Run inward":"ممتدة للداخل", "Flared":"متسعة", "Gap at 6":"فراغ عند ٦", "Track width":"عرض المسار", "Rail weight":"وزن الخط", "Tick weight":"وزن العلامة", "Turn this hour":"اتجاه هذه الساعة", "Toward the centre":"نحو المركز", "On point":"على رأسه", "Across":"بالعرض", "Size of this hour":"حجم هذه الساعة", "Figure height":"ارتفاع الرقم", "Letter height":"ارتفاع الحروف", "Thin line":"خط رفيع", "Digit height":"ارتفاع الأرقام", "Bevelled cut":"قطع مشطوف", "Applied frame":"إطار مركّب", "Keep off the watch":"أسماء ممنوعة على الساعة", "Drawn bezel":"البيزل المرسوم", "As Nivada's drawing":"مثل رسمة نيفادا", "As the prototype":"مثل النموذج", "Hand heights":"ارتفاعات العقارب", "I have the maker's hand heights":"عندي ارتفاعات العقارب من المصنّع", "Windows":"النوافذ", "One window":"نافذة وحدة", "Big date":"تاريخ كبير", "Centre bar":"الفاصل الوسطي", "Dates 1 to 9":"التواريخ من ١ إلى ٩",
   "All seven days in the window":"أيام الأسبوع السبعة في النافذة", "The disc in order":"القرص بالترتيب",
   "Date window at 3":"نافذة التاريخ عند 3", "Magnifier":"المكبّر", "Digits":"الأرقام", "Date font":"خط التاريخ", "Date disc":"قرص التاريخ",
   "Date digits colour":"لون أرقام التاريخ", "Frame":"الإطار", "All window settings":"كل إعدادات النوافذ",
@@ -18297,6 +18339,9 @@ Object.assign(GWORD.ar, {
           h += `<p class="gNote">${gT("case.gemNote", B.n, B.ct.toFixed(2), B.metal)}</p>`;
         }
       }
+      /* the F77 drawn with Nivada's drawing's bezel, or the prototype's eight-sided one */
+      if(K.outline === "f77") h += `<h3>${gW("Drawn bezel")}</h3>` + chips("case.bezelShape", [["drawing","As Nivada's drawing"],["prototype","As the prototype"]], S.case.bezelShape === "prototype" ? "prototype" : "drawing")
+        + `<p class="gNote">${gT("case.bezelNote")}</p>`;
       h += toggle("case.strap", K.bracelet ? "Show the bracelet" : "Show the strap", S.case.strap);
       if(!K.bracelet && S.case.strap) h += `<h3>${gW("Strap colour")}</h3>` + swatches("case.strapColor", [["#4E3629","Brown"],["#1E1E20","Black"],["#1E2B45","Navy"],["#A0744A","Tan"],["#2F3B2E","Green"],["#7A2433","Burgundy"]], S.case.strapColor, {row:true});
       if(hasPhoto(K)){ h += toggle("tpl.on", "Show as a photograph", S.tpl.on); if(S.tpl.on) h += `<p class="gNote">${gT(K.photoParts ? "case.photoGold" : "case.photoNote")}</p>`; }
