@@ -21,9 +21,10 @@ vm.runInContext(chunk('const PANTONE_FAMS =', 'const pantoneFind') + chunk('cons
   + 'const clone = o => JSON.parse(JSON.stringify(o));\n'
   + chunk('const deep = (a,b)=>', '\n') + '\n'
   + chunk('const VERNOY_CASE = {', 'const CASE_SPEC = new Proxy')
+  + chunk('const STYLE_W = {', '/* Supplied hand artwork')
   + chunk('/* SHEET-PURE-BEGIN */', '/* SHEET-PURE-END */')
   + '\nthis.g={sheetRows,sheetPlan,sheetCompare,sheetInfo,sheetStrap,sheetFileName,buildSheetSVG,caseOutlineDrawing,sheetTextW,sheetMovement,sheetHandWarning,'
-  + 'sheetCasebackRing,sheetFinishes,numArtSVG,numArtMetrics,numArtRun,SHEET_GRID,CASES,TK_NIVADA,NOREL_R4,VERNOY_CASE,deep,clone,nearestPantone};', ctx);
+  + 'sheetCasebackRing,sheetFinishes,sheetStoneText,sheetHoursOf,buildSpecSVG,numArtSVG,numArtMetrics,numArtRun,SHEET_GRID,CASES,TK_NIVADA,NOREL_R4,VERNOY_CASE,deep,clone,nearestPantone};', ctx);
 const G = ctx.g;
 const BASE_SHEET = vm.runInContext('(' + chunk('  sheet:{designNo:"", date:""', '\n};').replace(/^\s*sheet:/, '') + ')', ctx);
 const load = f => JSON.parse(fs.readFileSync(path.join(root, 'designs', f), 'utf8'));
@@ -173,7 +174,7 @@ test('the page: A3 in millimetres, every block inside it, the renders at 1:1 and
   const F = by('footer'); assert.equal(F.y, 284.5); assert.equal(F.y + F.h, 297);
   assert.match(svg, />Date: 17 November 2026</); assert.match(svg, />Design number: 103277_4</); assert.match(svg, />Designer: </);
   assert.match(svg, />Movement:  Automatic Soprod P024 \(without Date\)</);
-  assert.match(svg, />H\/M.Hands: W36017 \(8.5x12mm\)</); assert.match(svg, />Sec. Hand: find existing \(13mm\)</);
+  assert.match(svg, />H\/M.Hands: W36017 \(8.5x12mm, 1\/0.84 wide\)</); assert.match(svg, />Sec. Hand: find existing \(13mm\)</);
   for(const t of ['Applied logo', 'Nivada script logo', 'Black printed', 'Numerals, 12 pcs', 'Applied, shiny rose gold',
     'Font: Noto Naskh Arabic', 'Dial', 'Vertical brush, silver white', 'Numerals', 'Caseback', 'XX/XX to XX/XX', 'Buckle for rubber', 'Engraved logo'])
     assert.ok(svg.includes('>' + t + '<'), t);
@@ -361,4 +362,25 @@ test('the artwork\'s figures are the dial\'s own: its spacing, kerning, stroke a
   assert.ok(Math.abs(r.parts[1].x - (g['١'].a*5 + 0.05)) < 1e-9);
   const V = OUT['Vernoy Radial Roman'], rv = G.numArtRun(V.g, 'VI', 1, 0, V.k);
   assert.ok(Math.abs(rv.parts[1].x - (V.g.V.a - 0.02)) < 1e-9);
+});
+
+test('the maker\'s sheet has its data: one row per stone, pieces counted, real hand sizes, and a page 2 specification', () => {
+  // the jewellery F77: four baguettes and eight princess stones, not "12 × baguette Ø1.5"
+  const plan = ['gem','gemAlt','gemAlt','gem','gemAlt','gemAlt','gem','gemAlt','gemAlt','gem','gemAlt','gemAlt'];
+  assert.deepEqual([...G.sheetHoursOf(plan, 'gem')], [12, 3, 6, 9]);
+  assert.equal(G.sheetStoneText({cut:'baguette', n:1, L:2.8, W:1.0, stone:'diamond', setting:'bezel', metal:'white gold'}, G.sheetHoursOf(plan, 'gem')),
+    '4 × baguette diamond 2.8 × 1mm at 12, 3, 6, 9, bezel-set in white gold');
+  assert.equal(G.sheetStoneText({cut:'princess', n:1, s:1.2, stone:'diamond', setting:'bezel', metal:'white gold'}, G.sheetHoursOf(plan, 'gemAlt')),
+    '8 × princess diamond 1.2mm square at 1, 2, 4, 5, 7, 8, 10, 11, bezel-set in white gold');
+  // the rows use them, one per definition
+  assert.match(source, /for\(const \[kind, key\] of \[\["gem", "gems"\], \["gemAlt", "gemsAlt"\]\]\)\{/);
+  assert.match(source, /const pcs = count\("index"\)\*\(ix\.style === "double" \? 2 : 1\) \+ count\("indexAlt"\)\*/);
+  // page 2: every part with its colour code and its size
+  const spec = G.buildSpecSVG(G.sheetPlan(tk(), [], NOW));
+  assert.match(spec, /^<svg xmlns="http:\/\/www.w3.org\/2000\/svg"[^>]* width="420mm" height="297mm"/);
+  for (const t of ['Specification · NIVADA GRENCHEN · 103277_4', 'Dial', 'Numerals', 'Logo', 'Text above 6', 'Hour hand', 'Minute hand', 'Strap'])
+    assert.ok(spec.includes('>' + t + '<'), t);
+  assert.match(spec, />#DDDFE1</, 'the dial colour as hex');
+  assert.match(spec, />(nearest )?\d{3,4} C<|>Cool Gray/, 'and its Pantone');
+  assert.doesNotMatch(spec, /<filter|<mask|<textPath|letter-spacing/);
 });

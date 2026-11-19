@@ -200,6 +200,24 @@ stored in a design file do not change. In the full editor at laptop widths
 the toolbar sits tighter, and on a narrower window it takes a second row
 rather than pushing Share and Export off the screen.
 
+## The maker's sheet with its data (v4.12.0)
+
+Page 1 keeps the maker's approved layout, corrected:
+- **Stones:** one row per stone definition with cut, size, count, hours,
+  setting and carats ("4 × baguette diamond 2.8 × 1mm at 12, 3, 6, 9,
+  bezel-set in white gold, ≈0.09 ct" and "8 × princess …"), where it printed
+  "12 × baguette diamond Ø1.5mm" for every gem dial.
+- **Indexes:** pieces counted, a double index as two.
+- **Hands:** lengths as drawn to 0.1 mm and widths at their widest; rounded to
+  the half millimetre, 8.3 and 13.2 read 8.5 and 13.
+
+**Page 2, the specification** (`sheetSpec`, `buildSpecSVG`): one row per part
+(case, dial, each dial zone, chapter ring, minute and hour tracks, numerals,
+indexes, stones, logo, each text line, date and day windows, the three hands,
+strap, notes) with its colour as hex and the nearest Pantone, and its size and
+place in millimetres on the dial (figure and letter heights, radii, track
+widths, window sizes). The preview shows both pages; the PDF has both.
+
 ## Sizes as heights on the dial (v4.11.4)
 
 The numerals' **Figure height** is the height of the figures' ink (the dial

@@ -2208,7 +2208,7 @@ const APP_BUILD = "__BUILD__";
 /* The version people see, raised with every change that reaches them:
    major for a new way of working, minor for something new to do, patch for
    a fix. Shown on the watch screen, so any screenshot says which it was. */
-const APP_VERSION = "4.11.4";
+const APP_VERSION = "4.12.0";
 const APP_DATE = "__DATE__";
 
 /* Every route that replaces S passes through one of these three, which is
@@ -14238,11 +14238,17 @@ function sheetRows(st){
   if(nI){
     const applied = ix.applied !== false, metal = ix.metal;
     const what = applied ? (metal ? `${sheetMade(metal, "polished")} applied indexes` : `${sheetColourName(ix.color)} applied indexes`) : `${sheetColourName(ix.color)} printed indexes`;
-    row("indices", "", `${sheetCap(what)}, ${ix.style || "baton"}, ${nI} pcs`, [ix.style, ix.applied, ix.length, ix.width, nI], [metal || String(ix.color || "").toUpperCase()]);
+    /* a double index is two pieces to the maker */
+    const pcs = count("index")*(ix.style === "double" ? 2 : 1) + count("indexAlt")*((ix.altStyle || "double") === "double" ? 2 : 1);
+    const alt = count("indexAlt") ? `, ${ix.altStyle || "double"} at ${sheetHoursOf(plan, "indexAlt").join(", ")}` : "";
+    row("indices", "", `${sheetCap(what)}, ${ix.style || "baton"}${alt}, ${pcs} pcs`, [ix.style, ix.altStyle, ix.applied, ix.length, ix.width, pcs], [metal || String(ix.color || "").toUpperCase()]);
   }
-  const nG = count("gem") + count("gemAlt");
-  if(nG){ const g = st.gem || {};
-    row("gems", "", `${nG} × ${g.cut || "round"} ${g.stone || "diamond"} Ø${sn(g.d || 1.5, 2)}mm in ${g.metal || "white gold"} ${g.setting || "bezel"} settings`, [g.cut, g.stone, g.d, g.setting, g.n, nG], [g.metal]); }
+  /* one row for each stone the dial carries: cut, size, count, hours,
+     setting and carats, so the stones can be ordered from the sheet */
+  for(const [kind, key] of [["gem", "gems"], ["gemAlt", "gemsAlt"]]){
+    if(!count(kind)) continue;
+    row(key, "", sheetStoneText(st[kind] || {}, sheetHoursOf(plan, kind)), [kind, (st[kind] || {}).cut, (st[kind] || {}).stone, sheetHoursOf(plan, kind).join()], [(st[kind] || {}).metal]);
+  }
   /* logo: the Nivada mark is an applied shield over a raised script */
   const mark = T.logoMark && T.logoMark !== "none" ? T.logoMark : "", applied = /^applied/.test(T.logoTech || "");
   if(T.on && applied){
@@ -14621,8 +14627,12 @@ function buildSheetSVG(plan, R, o){
   out.push(sheetText(H.x + 3.17, H.y + 6.8, "Hands", {size:14*0.26465, bold:true, italic:true}));
   const r5 = v => sn(Math.round((+v || 0)*2)/2, 1);
   const hh = A.hHand || {}, mh = A.mHand || {}, shd = A.sHand || {};
-  const hl = [`H/M.Hands: ${inf.handRef || sheetCap(sheetHandStyle(hh.style))} (${r5(hh.length)}x${r5(mh.length)}mm)`];
-  if(shd.on) hl.push(`Sec. Hand: ${inf.secRef || "find existing"} (${r5(shd.length)}mm)`);
+  /* the lengths as drawn and the widths at their widest, to 0.1 mm: rounded
+     to the half millimetre, 8.3 and 13.2 used to read 8.5 and 13 */
+  const hLen = h => typeof handLength === "function" ? handLength(h, h === hh ? "hHand" : h === mh ? "mHand" : "sHand", A) : h.length;
+  const hWid = h => (h.width || 0)*(typeof handDrawnK === "function" ? handDrawnK(h.style) : 1);
+  const hl = [`H/M.Hands: ${inf.handRef || sheetCap(sheetHandStyle(hh.style))} (${sn(hLen(hh), 1)}x${sn(hLen(mh), 1)}mm, ${sn(hWid(hh), 2)}/${sn(hWid(mh), 2)} wide)`];
+  if(shd.on) hl.push(`Sec. Hand: ${inf.secRef || "find existing"} (${sn(hLen(shd), 1)}mm)`);
   hl.forEach((t, j) => out.push(sheetText(H.x + H.w/2, H.y + 44.6 + j*4.6, t, {size:sheetFit(t, 9*SHEET_PT, H.w - 4, true, raster), bold:true, italic:true, anchor:"middle"}, raster)));
   /* ... the dial, with what is applied and printed pointed out. It is drawn
      at the approved design's size, the dial 24.4 mm across (so 0.84 of
@@ -14887,6 +14897,113 @@ function numArtSVG(st, OUT, info, labels, dial){
   }));
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}mm" height="${H}mm" viewBox="0 0 ${W} ${H}">${out.join("")}</svg>`;
 }
+/* the hours (1 to 12) a plan gives a kind of marker */
+const sheetHoursOf = (plan, kind) => [12,1,2,3,4,5,6,7,8,9,10,11].filter(h => plan[h % 12] === kind);
+/* one stone definition, in the words a setter orders by */
+function sheetStoneText(g, hours){
+  const cut = g.cut || "round", n = (g.n || 1)*hours.length, per = g.n > 1 ? ` (${g.n} per hour)` : "";
+  const size = cut === "round" ? `Ø${sn(g.d || 1.5, 2)}mm` : cut === "baguette" ? `${sn(g.L || 2.6, 2)} × ${sn(g.W || 1.1, 2)}mm` : `${sn(g.s || 1.2, 2)}mm square`;
+  const name = {round:"round brilliant", baguette:"baguette", princess:"princess"}[cut] || cut;
+  const ct = typeof gemCarats === "function" ? gemCarats(Object.assign({n:1, d:1.5, L:2.6, W:1.1, s:1.2}, g))*hours.length : null;
+  return `${n} × ${name} ${g.origin === "lab" ? "lab-grown " : ""}${g.stone || "diamond"} ${size}${per} at ${hours.join(", ")}, ${g.setting || "bezel"}-set in ${g.metal || "white gold"}${ct ? `, ≈${sn(ct, 2)} ct` : ""}`;
+}
+/* ---- page 2: the specification ----
+   Everything the page-1 layout has no room for, one row per part: what it
+   is, its colour as hex and the nearest Pantone, and its size and place in
+   millimetres. Built from the design, so it cannot disagree with it. */
+function sheetSpec(st){
+  const K = caseOf(st), d = st.dial || {}, T = st.text || {}, nm = st.numerals || {}, ix = st.indices || {}, out = [];
+  const plan = sheetPlanOf(st), add = (part, spec, hex, size) => out.push({part, spec, hex:/^#[0-9a-f]{6}$/i.test(hex || "") ? String(hex).toUpperCase() : "", size:size || ""});
+  const mm = (v, k) => v == null || !Number.isFinite(+v) ? "?" : sn(+v, k == null ? 2 : k);
+  add("Case", `${K.model || "Case"}, ${sheetCaseMetal(st).toLowerCase()}, ${st.case && st.case.finish || "as drawn"} (unchanged)`, "", `opening Ø${mm(K.opening)}mm`);
+  const dialD = d.lock === false ? d.diameter : K.dialD;
+  add("Dial", `${d.finish === "stone" ? (d.stone || "stone") + " stone" : sheetDialFinish(d)}${d.dome > 0 ? `, domed ${mm(d.dome)}` : ""}${d.ombre > 0 ? ", ombré to the edge" : ""}`, d.finish === "stone" ? "" : d.color,
+    `Ø${mm(dialD)} × ${mm(K.dialT || 0.4)}mm`);
+  const sc = st.sector;
+  if(sc && sc.on && Array.isArray(sc.zones)) sc.zones.filter(z => z.on !== false).forEach((z, i) =>
+    add(`Dial zone ${i + 1}`, `${z.finish || "matte"}${z.edge && z.edge !== "none" ? `, ${z.edge} edge` : ""}`, z.color, `Ø${mm(z.innerD)}–${mm(z.outerD)}mm`));
+  const ch = st.chapter;
+  if(ch && ch.on && ch.innerD < (K.opening || 99)) add("Chapter ring", `${ch.finish || "flat"}${ch.separator ? ", with a separating line" : ""}`, ch.color, `Ø${mm(ch.innerD)}–${mm(Math.min(ch.outerD, K.opening || ch.outerD))}mm visible`);
+  const mt = st.minute;
+  if(mt && mt.on){
+    const w = mt.style === "railroad" ? 2*mt.thickness : mt.thickness;
+    add("Minute track", `${mt.style}, ${mt.tech || "printed"}${mt.fives ? ", stronger five-minute marks" : ""}`, mt.color, `centre Ø${mm(mt.diameter)}mm, ${mt.style === "dots" ? "dot" : "track"} ${mm(w)}mm`);
+  }
+  const ht = st.hour;
+  if(ht && ht.on) add("Hour track", `${ht.style}`, ht.color, `Ø${mm(ht.diameter)}mm, ${mm(ht.thickness)}mm`);
+  const nN = plan.filter(x => x === "numeral").length;
+  if(nN){
+    const fh = typeof numFigureK === "function" ? (nm.size || 3)*numFigureK(nm) : null;
+    const H = nm.height === undefined ? 0.20 : +nm.height;
+    add("Numerals", `${SHEET_SYSTEM[nm.system] || "numerals"}, ${sheetNumFont(nm)} font, ${sheetNumMade(nm)}${nm.tech === "applied" ? `, ${mm(H)}mm thick` : ""}; ${nN} pcs at ${sheetHoursOf(plan, "numeral").join(", ")}`,
+      nm.tech === "applied" && (nm.material || "metal") === "metal" ? "" : nm.color, `figures ${fh ? mm(fh) : mm(nm.size)}mm high, centred r ${mm(nm.radius)}mm`);
+  }
+  const nI = plan.filter(x => x === "index" || x === "indexAlt").length;
+  if(nI){
+    const pcs = plan.filter(x => x === "index").length*(ix.style === "double" ? 2 : 1) + plan.filter(x => x === "indexAlt").length*((ix.altStyle || "double") === "double" ? 2 : 1);
+    add("Indexes", `${ix.style || "baton"}${plan.indexOf("indexAlt") >= 0 ? `, ${ix.altStyle || "double"} at ${sheetHoursOf(plan, "indexAlt").join(", ")}` : ""}, ${ix.applied !== false ? ("applied " + (ix.metal ? sheetMade(ix.metal, "polished").toLowerCase() : "")).trim() : (ix.tech || "printed")}${ix.lume ? ", lume" : ""}; ${pcs} pcs`,
+      ix.metal ? "" : ix.color, `${mm(ix.length)} × ${mm(ix.width)}mm, centred r ${mm(ix.radius)}mm`);
+  }
+  for(const [kind, label] of [["gem", "Stones"], ["gemAlt", "Accent stones"]]) if(plan.indexOf(kind) >= 0) add(label, sheetStoneText(st[kind] || {}, sheetHoursOf(plan, kind)), "", "");
+  if(T.on){
+    const mark = T.logoMark && T.logoMark !== "none" ? T.logoMark : (T.logo || "");
+    add("Logo", `${mark}, ${T.logoTech || "printed"}${/^applied/.test(T.logoTech || "") ? ", " + sheetMade(T.logoMetal, T.logoFinish).toLowerCase() : ""}`, /^applied/.test(T.logoTech || "") ? "" : T.color,
+      `${mm(T.logoSize)}mm high, centre ${mm(-(T.logoY || 0))}mm ${(T.logoY || 0) <= 0 ? "above" : "below"} the centre`);
+    const ink = T.lineColor || T.color;
+    const lineRow = (on, text, tech, size, y, font, label) => { if(!on || !text) return;
+      const cap = typeof lineCapK === "function" ? size*lineCapK(text, font) : null;
+      add(label, `“${text}”, ${tech || "printed"}`, SHEET_LINE_INKED.has(tech || "printed") ? ink : "", `letters ${cap ? mm(cap) : mm(size)}mm high, ${mm(Math.abs(y || 0))}mm ${(y || 0) <= 0 ? "above" : "below"} the centre`); };
+    lineRow(T.line2On !== false, T.line2, T.line2Tech, T.line2Size, T.line2Y, T.line2Font, "Text under the logo");
+    lineRow(T.footOn !== false, T.foot, T.footTech, T.footSize, T.footY, T.footFont, "Text above 6");
+    if(T.splitOn && T.split){ const cap = typeof lineCapK === "function" ? T.splitSize*lineCapK(T.split, T.splitFont) : null;
+      add("Text either side of 6", `“${T.split}”, ${T.splitTech || "printed"}`, SHEET_LINE_INKED.has(T.splitTech || "printed") ? ink : "", `letters ${cap ? mm(cap) : mm(T.splitSize)}mm high, at r ${mm(T.splitR === undefined ? 12.6 : T.splitR)}mm`); }
+  }
+  const dt = st.date;
+  if(dt && dt.on){
+    const edge = dt.edge === "bevel" ? "bevelled cut" : (dt.frameW || 0) > 0.2 ? `applied frame ${mm(dt.frameW)}mm` : "thin printed line";
+    add("Date window", `${dt.digits === "Arabic-Indic" ? "Arabic-Indic" : "Western"} digits${dt.digitH > 0 ? ` ${mm(dt.digitH)}mm high` : ""}, ${edge}; disc ${String(dt.bg || "").toUpperCase()}`, dt.text,
+      `${mm(dt.w)} × ${mm(dt.h)}mm at ${dt.at || 3} o'clock, centre r ${mm(dt.dist)}mm`);
+  }
+  const dy = st.day;
+  if(dy && dy.on) add("Day window", `${dy.lang || "Arabic"} day disc, ${dy.edge === "frame" ? "applied frame" : "bevelled cut"}; disc ${String(dy.bg || "").toUpperCase()}`, dy.text, `${mm(dy.arc, 1)}° at 12`);
+  for(const [k, label] of [["hHand", "Hour hand"], ["mHand", "Minute hand"], ["sHand", "Seconds hand"]]){
+    const h = st[k]; if(!h || h.on === false) continue;
+    const L = typeof handLength === "function" ? handLength(h, k, st) : h.length, W = (h.width || 0)*(typeof handDrawnK === "function" ? handDrawnK(h.style) : 1);
+    add(label, `${sheetHandStyle(h.style)}, ${sheetHandWords(h).toLowerCase()}${h.lume ? ", lume" : ""}${h.tail ? `, tail ${mm(h.tail)}mm` : ""}`, h.material ? "" : h.color, `${mm(L)}mm long, ${mm(W)}mm wide`);
+  }
+  if(!K.bracelet && st.case && st.case.strap !== false) add("Strap", `${(sheetOf(st).strap || {}).type || "strap"}`, st.case.strapColor, "");
+  const sh = sheetOf(st);
+  if(sh.notes) add("Notes", sh.notes, "", "");
+  return out;
+}
+function buildSpecSVG(plan, o){
+  o = o || {}; const raster = o.raster || null;
+  const st = plan.versions[0].state, inf = plan.info, rows = sheetSpec(st), out = [];
+  const X = [14, 72, 300, 352], size = 3.1, lead = 4.1, W = 420;
+  out.push(sheetText(14, 20, `Specification${inf.brand ? " · " + inf.brand : ""}${inf.designNo ? " · " + inf.designNo : ""}`, {size:6, bold:true}, raster));
+  out.push(sheetText(14, 27, `Version A, ${sheetDateText(inf.date)}. Colours as hex, with the nearest Pantone; sizes in millimetres on the dial.`, {size:3.2, fill:"#555555"}, raster));
+  const head = ["Part", "Specification", "Colour", "Size and position"];
+  let y = 38;
+  out.push(`<rect x="10" y="${sn(y - 5)}" width="${W - 20}" height="7" fill="${SHEET_PANEL}"/>`);
+  head.forEach((t, i) => out.push(sheetText(X[i], y, t, {size, bold:true}, raster)));
+  y += 6;
+  for(const r of rows){
+    const spec = sheetWrap(r.spec, size, X[2] - X[1] - 4, false, raster), where = sheetWrap(r.size, size, W - 14 - X[3], false, raster);
+    const n = Math.max(1, spec.length, where.length, r.hex ? 2 : 1);
+    if(y + n*lead > 288) break;
+    out.push(sheetText(X[0], y + 3, r.part, {size, bold:true}, raster));
+    spec.forEach((t, i) => out.push(sheetText(X[1], y + 3 + i*lead, t, {size}, raster)));
+    if(r.hex){
+      out.push(`<rect x="${X[2]}" y="${sn(y)}" width="6" height="4" fill="${r.hex}" stroke="#9A9C9C" stroke-width="0.15"/>`);
+      out.push(sheetText(X[2] + 8, y + 3, r.hex, {size}, raster));
+      out.push(sheetText(X[2], y + 3 + lead, typeof nearestPantone === "function" ? sheetSwatchName(r.hex) : "", {size:size*0.9, fill:"#555555"}, raster));
+    }
+    where.forEach((t, i) => out.push(sheetText(X[3], y + 3 + i*lead, t, {size}, raster)));
+    y += n*lead + 2.2;
+    out.push(`<line x1="10" y1="${sn(y - 1.2)}" x2="${W - 10}" y2="${sn(y - 1.2)}" stroke="#D0D0D0" stroke-width="0.15"/>`);
+  }
+  return `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="420mm" height="297mm" viewBox="0 0 420 297"><rect width="420" height="297" fill="#FFFFFF"/>${out.join("")}</svg>`;
+}
 /* SHEET-PURE-END */
 /* ---- the browser's part: the renders, the panels, words drawn as
    pictures, the preview and the PDF ---- */
@@ -15150,7 +15267,7 @@ async function sheetBuild(onStep){
   const words = new Set();
   const raster = (t, size, o) => { words.add(t); return rasterLabel(t, size, o); };
   const page = buildSheetSVG(plan, R, {raster});
-  return {plan, R, svg:page.svg, boxes:page.boxes, words:[...words]};
+  return {plan, R, svg:page.svg, spec:buildSpecSVG(plan, {raster}), boxes:page.boxes, words:[...words]};
 }
 function ensureSheet(st){
   if(!st) return st;
@@ -15185,6 +15302,13 @@ async function sheetPDF(built){
   host.innerHTML = built.svg; document.body.appendChild(host);
   try{ await doc.svg(host.firstElementChild, {x:0, y:0, width:420, height:297}); }
   finally{ host.remove(); }
+  /* page 2: the specification table */
+  const spec = built.spec || buildSpecSVG(built.plan, {raster:(t, size, o) => rasterLabel(t, size, o)});
+  doc.addPage("a3", "landscape");
+  const host2 = document.createElement("div");
+  host2.style.cssText = host.style.cssText; host2.innerHTML = spec; document.body.appendChild(host2);
+  try{ await doc.svg(host2.firstElementChild, {x:0, y:0, width:420, height:297}); }
+  finally{ host2.remove(); }
   return doc.output("blob");
 }
 
@@ -15266,7 +15390,8 @@ async function mkRefresh(){
     const b = await sheetBuild(t => { if(run === mkRun) what.textContent = t; });
     if(run !== mkRun) return;
     mkBuilt = b;
-    prev.innerHTML = b.svg.replace(/ width="420mm" height="297mm"/, ' style="display:block;width:100%;height:auto"');
+    prev.innerHTML = b.svg.replace(/ width="420mm" height="297mm"/, ' style="display:block;width:100%;height:auto"')
+      + (b.spec ? b.spec.replace(/ width="420mm" height="297mm"/, ' style="display:block;width:100%;height:auto;margin-top:10px;border-top:1px solid #ddd"') : "");
     const warn = sheetHandWarning(S), inf = b.plan.info;
     what.textContent = `${b.plan.fileName} · A3 landscape · ${b.plan.versions.length} version${b.plan.versions.length > 1 ? "s" : ""}`
       + (b.plan.baseline ? ` · A compared with “${b.plan.baseline}”` : "") + (warn ? ` · ${warn}` : "") + (inf.designNo ? "" : " · no design number yet");
