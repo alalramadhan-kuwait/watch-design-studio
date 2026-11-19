@@ -2236,7 +2236,7 @@ const APP_BUILD = "__BUILD__";
 /* The version people see, raised with every change that reaches them:
    major for a new way of working, minor for something new to do, patch for
    a fix. Shown on the watch screen, so any screenshot says which it was. */
-const APP_VERSION = "4.27.0";
+const APP_VERSION = "4.28.0";
 const APP_DATE = "__DATE__";
 
 /* Every route that replaces S passes through one of these three, which is
@@ -3641,10 +3641,16 @@ function mVnoise(x, y){
   return mHash(xi,yi)*(1-u)*(1-v) + mHash(xi+1,yi)*u*(1-v) + mHash(xi,yi+1)*(1-u)*v + mHash(xi+1,yi+1)*u*v;
 }
 
+/* the granular finish's contrast: how hard each grain is cut, how far
+   light and dark go, and how bright the glint of a light one */
+let GRAN_SHARP = 3, GRAN_K = 1.3, GRAN_G = 2.2;
 const MFINISH = {
   matte:       {rough:0.88, metal:0.00, aniso:0.00, groove:"none",   coat:0.00, grain:0.030, dish:0.015},
   grained:     {rough:0.74, metal:0.04, aniso:0.00, groove:"none",   coat:0.05, grain:0.075, dish:0.015},
   sandblasted: {rough:0.82, metal:0.30, aniso:0.00, groove:"none",   coat:0.02, grain:0.095, dish:0.015},
+  /* fine hard grain, as a granular sports dial: grains of about 0.07 mm, each
+     lighter or darker than the next, the light ones catching the light */
+  granular:    {rough:0.62, metal:0.06, aniso:0.00, groove:"none",   coat:0.08, grain:0,     dish:0.012, granite:1, granSize:0.07},
   brushed:     {rough:0.34, metal:0.88, aniso:0.82, groove:"linear", coat:0.04, grain:0.050, dish:0.015},
   /* Brushed steel (simple mode's "Brushed steel"): drawn by brushSteelK
      below rather than by the light model, so the grain shows as grain at
@@ -4543,6 +4549,20 @@ function renderDialPixels(opt){
         ny += Math.sin(th)*sMix*0.55;
         rghMod *= 1 + Math.abs(sMix)*1.1;
       }
+      /* Granular: grains sized in mm (the same at any picture size), each a
+         little lighter or darker than its neighbours, the light ones glinting,
+         and each tilting the surface a touch so the grain takes the light. */
+      let granK = 1, granG = 0;
+      if(M.granite > 0){
+        const gs = M.granSize > 0 ? M.granSize : 0.07, ga = Math.min(1.5, M.granite);
+        const n1 = mVnoise(ux/gs, uy/gs), n2 = mVnoise(ux/(gs*0.5) + 17.3, uy/(gs*0.5) - 9.1);
+        /* the two scales together, sharpened, so each grain is distinctly
+           light or dark rather than a soft ripple */
+        const gn = Math.max(0, Math.min(1, 0.5 + (0.5*n1 + 0.5*n2 - 0.5)*GRAN_SHARP));
+        granK = Math.max(0.10, 1 + ga*GRAN_K*(gn - 0.5));
+        granG = ga*Math.max(0, gn - 0.72)*GRAN_G;
+        nx += (n1 - 0.5)*ga*0.35; ny += (n2 - 0.5)*ga*0.35;
+      }
       if(M.grain > 0 && M.groove === "none"){
         const gN = (mVnoise(x*0.9, y*0.9) - 0.5) + 0.5*(mVnoise(x*2.7, y*2.7) - 0.5);
         nx += gN*M.grain*1.2; ny += gN*M.grain*0.9;
@@ -4660,12 +4680,13 @@ function renderDialPixels(opt){
       const coatSpec = M.coat*G.coatScale*Math.pow(Math.max(0, hx*nx+hy*ny+hz*nz), 3000)*2.2;
 
       for(let c=0; c<3; c++){
-        const alb = stone ? mSrgb2lin(stone.c[c])
-                  : albedoTex ? mSrgb2lin(albedoTex[i+c]/255) : kd[c];
+        const alb = (stone ? mSrgb2lin(stone.c[c])
+                  : albedoTex ? mSrgb2lin(albedoTex[i+c]/255) : kd[c])*granK;
         const Fc = (F0[c] + (1 - F0[c])*fr)*wRefl;
         const Fs = F0[c] + (1 - F0[c])*Math.pow(1 - Math.max(0, hx*vx+hy*vy+hz*vz), 5);
         let v = alb*irr + Fc*(env*eGain + ring) + Fs*spec*wRefl + coatSpec*(0.04 + 0.96*fr);
         if(stone && stone.spark) v += spec*0.9;
+        if(granG > 0) v += granG*(0.05 + 0.6*spec);
         if(SLAB){
           if(FAM.coat) v += FAM.coat*Math.pow(Math.max(0, hx*nx+hy*ny+hz*nz), 2200)*1.6*(0.04+0.96*fr);
           if(slabSpark) v += slabSpark*spec*1.5;                       // mineral inclusions flash
@@ -4711,7 +4732,7 @@ let _matLast = null;
 function materialURL(color, finish, mode, az, el, px, guil, stone, surf, brush, made){
   if(typeof document === "undefined") return null;      // headless: no material
   const key = [color, finish + (finish === "brushedsteel" ? ":" + brushDirOf(brush) : ""), mode, az, el, px, CASE_SPEC.dialD, made ? "made" : "",
-               surf ? [surf.dome, surf.satin].join(".") : "-",
+               surf ? [surf.dome, surf.satin, surf.granSize, surf.granite].join(".") : "-",
                guil && Object.values(guil).join(","),
                stone && [stone.type, stone.slab, stone.scale, stone.rot, stone.offX,
                          stone.offY, stone.bump, stone.contrast, stone.tint,
@@ -4769,7 +4790,7 @@ function renderedDialHex(st){
 /* map the app's finish names onto the material model */
 const MAT_FINISH = {flat:"matte", matte:"matte", gloss:"gloss", lacquer:"lacquer",
   enamel:"enamel", sunburst:"sunburst", guilloche:"guilloche", brushed:"brushed", brushedsteel:"brushedsteel",
-  grained:"grained", sandblasted:"sandblasted", stone:"stone", metallic:"metallic",
+  grained:"grained", sandblasted:"sandblasted", granular:"granular", stone:"stone", metallic:"metallic",
   circular:"circular", mop:"mop"};
 
 /* =====================================================================
@@ -4843,10 +4864,11 @@ function buildSVG(st, o={}){
     const surf = {};
     if(st.dial.dome)  surf.dome  = st.dial.dome;
     if(st.dial.satin) surf.satin = st.dial.satin;
+    if(finish === "granular"){ if(st.dial.granSize > 0) surf.granSize = +st.dial.granSize; if(st.dial.granAmt !== undefined && st.dial.granAmt >= 0) surf.granite = +st.dial.granAmt; }
     const url = materialURL(color, MAT_FINISH[finish] || "matte", matMode,
                             st.render.az, st.render.el, o.matPx || st.render.quality, gu,
                             stoneArgs(st, color),
-                            (surf.dome || surf.satin) ? surf : null, st.dial.brushDir, !!(st.render && st.render.asMade));
+                            (surf.dome || surf.satin || surf.granSize || surf.granite !== undefined) ? surf : null, st.dial.brushDir, !!(st.render && st.render.asMade));
     if(!url) return null;
     const cid = id("mi");
     defs.push(`<clipPath id="${cid}"><path d="${rIn>0?annulus(rOut,rIn):disc(rOut)}" clip-rule="evenodd"/></clipPath>`);
@@ -4911,6 +4933,11 @@ function buildSVG(st, o={}){
       for(let y=-rOut;y<rOut;y+=0.22)
         inner.push(`<line x1="${-rOut}" y1="${f(y,2)}" x2="${rOut}" y2="${f(y,2)}" stroke="${(y*10|0)%2?hi:lo}" stroke-opacity="0.16" stroke-width="0.09"/>`);
       inner.push(vignette(0.22,0.30));
+    } else if(finish==="granular"){
+      const fid=id("t"), gs = st.dial.granSize > 0 ? +st.dial.granSize : 0.07, ga = st.dial.granAmt !== undefined && st.dial.granAmt >= 0 ? +st.dial.granAmt : 1;
+      defs.push(`<filter id="${fid}" x="-20%" y="-20%" width="140%" height="140%"><feTurbulence type="fractalNoise" baseFrequency="${f(0.9/gs,2)}" numOctaves="2" seed="11"/><feColorMatrix type="saturate" values="0"/><feComponentTransfer><feFuncR type="linear" slope="2.2" intercept="-0.6"/><feFuncG type="linear" slope="2.2" intercept="-0.6"/><feFuncB type="linear" slope="2.2" intercept="-0.6"/></feComponentTransfer></filter>`);
+      inner.push(`<circle r="${rOut}" filter="url(#${fid})" opacity="${f(Math.min(0.75, 0.42*ga),2)}" style="mix-blend-mode:overlay"/>`);
+      inner.push(vignette(0.18,0.30));
     } else if(finish==="grained"||finish==="stone"){
       const fid=id("t");
       defs.push(`<filter id="${fid}" x="-20%" y="-20%" width="140%" height="140%"><feTurbulence type="fractalNoise" baseFrequency="${finish==="stone"?0.4:1.6}" numOctaves="3" seed="7"/><feColorMatrix type="saturate" values="0"/></filter>`);
@@ -10939,7 +10966,8 @@ const SCHEMA = {
       C("dial.color","Dial colour"),
       N("dial.dome","Doming (− dished, + domed)",-0.60,0.60,.01,""),
     N("dial.satin","Satin overlay",0,1,.02,""),
-    SEL("dial.finish","Finish",["matte","gloss","sunburst","guilloche","brushedsteel","brushed","grained","sandblasted","enamel","lacquer","stone","metallic","circular","mop"]),
+    SEL("dial.finish","Finish",["matte","gloss","sunburst","guilloche","brushedsteel","brushed","grained","granular","sandblasted","enamel","lacquer","stone","metallic","circular","mop"]),
+    ...(S.dial.finish === "granular" ? [N("dial.granSize","Grain size",.04,.30,.01), N("dial.granAmt","Grain strength",0,1.5,.05,"")] : []),
     N("dial.ombre","Ombré (darker toward the edge)",0,1,.02,""),
     SEL("dial.pave","Pavé (set with diamonds)",["none",...PAVE_ZONES]),
     ...(PAVE_ZONES.indexOf(S.dial.pave) >= 0 ? [SEL("dial.paveStone","Pavé stones",Object.keys(GEM_STONES)),
@@ -14347,7 +14375,7 @@ function sheetCaseMetal(st){
   return n === "Black" ? "Black PVD steel" : "Stainless steel, " + n.toLowerCase() + " colour";
 }
 const SHEET_DIAL_FINISH = {matte:"matte", gloss:"gloss", sunburst:"sunray", guilloche:"guilloché", brushed:"brushed", grained:"grained",
-  sandblasted:"sandblasted", enamel:"enamel", lacquer:"lacquered", metallic:"metallic", circular:"circular brush", mop:"mother-of-pearl", flat:"matte"};
+  sandblasted:"sandblasted", granular:"granular, coarse grain", enamel:"enamel", lacquer:"lacquered", metallic:"metallic", circular:"circular brush", mop:"mother-of-pearl", flat:"matte"};
 function sheetDialFinish(d){
   if(d.finish === "brushedsteel" || d.finish === "brushed") return (d.brushDir === "horizontal" ? "horizontal" : d.brushDir === "circular" ? "circular" : "vertical") + " brush";
   if(d.finish === "guilloche") return "guilloché " + String(d.pattern || "").replace(/-/g, " ");
@@ -16983,6 +17011,7 @@ const GSTR = {en:{
   "prog": (name, n, total) => `<b>${name}</b><span> · <i>step </i>${n} of ${total}</span>`,
   "prog.aria": (name, n, total) => `${name}, step ${n} of ${total}. Show all steps`,
   "find.ph":"Find a setting", "find.none":"Nothing by that name in this design.",
+  "dial.granNote":"A coarse grain, each grain a little lighter or darker than the next and the light ones catching the light, as a granular sports dial. Sized in millimetres, so it is the same in every picture.",
   "text.secHidden":"The seconds hand is left out of the picture on this step, so the lettering under it can be read. It is back on the next step.",
   "col.rendered":(hx, dl) => `As typed, and on the render under the studio light: ${hx} (${dl} in lightness).`,
   "col.asMade":"Raises the light so the render shows the paint as it is, not as a lamp darkens it. The maker's sheet always gives the colour typed.",
@@ -17176,6 +17205,7 @@ GSTR.ar = {
   "prog": (name, n, total) => `<b>${name}</b><span> · <i>الخطوة </i>${n} من ${total}</span>`,
   "prog.aria": (name, n, total) => `${name}، الخطوة ${n} من ${total}. عرض كل الخطوات`,
   "find.ph":"ابحث عن إعداد", "find.none":"ما في شي بهالاسم في هالتصميم.",
+  "dial.granNote":"حبيبات خشنة، كل حبة أفتح أو أغمق شوي من اللي جنبها، والفاتحة تلمع مع الضوء، مثل ميناء الساعات الرياضية المحبّب. مقاسها بالملم، فتطلع نفس الشي في كل صورة.",
   "text.secHidden":"عقرب الثواني مخفي من الصورة في هالخطوة عشان تنقرا الكتابة اللي تحته. ويرجع في الخطوة الجاية.",
   "col.rendered":(hx, dl) => `اللون مثل ما انكتب، ومثل ما يطلع في الصورة تحت إضاءة الاستوديو: ${hx} (${dl} في درجة الفتاحة).`,
   "col.asMade":"يرفع الإضاءة عشان الصورة تبين الصبغ على حقيقته، مو مثل ما يغمّقه الضوء. ورقة المصنّع دايماً تعطي اللون المكتوب.",
@@ -17410,7 +17440,7 @@ const GWORD = {ar:{
   "Extra high":"مرتفع جداً", "High":"مرتفع", "height:Standard":"عادي", "Window width":"عرض النافذة", "Narrow":"ضيقة", "Standard":"قياسية", "Wide":"عريضة",
   "Move them aside":"أزحهما جانباً", "Make them smaller":"صغّرهما", "Use markers":"ضع مؤشرين", "Leave them off":"احذفهما", "Let them touch":"اتركهما متلامسين",
   "Day font":"خط اليوم", "Arabic font":"الخط العربي", "English font":"الخط الإنجليزي", "In the window":"في النافذة", "Day disc":"قرص اليوم",
-  "Day lettering":"لون كتابة اليوم", "Window edge":"حافة النافذة", "Lume colour":"لون المادة المضيئة", "Lume fill":"تعبئة مضيئة", "Green-white":"أبيض مخضر", "Old radium":"راديوم قديم", "Vintage cream":"كريمي عتيق", "Five-minute marks":"علامات الخمس دقائق", "Run inward":"ممتدة للداخل", "Flared":"متسعة", "Gap at 6":"فراغ عند ٦", "Track width":"عرض المسار", "Rail weight":"وزن الخط", "Tick weight":"وزن العلامة", "Turn this hour":"اتجاه هذه الساعة", "Toward the centre":"نحو المركز", "On point":"على رأسه", "Across":"بالعرض", "Size of this hour":"حجم هذه الساعة", "Figure height":"ارتفاع الرقم", "Letter height":"ارتفاع الحروف", "Thin line":"خط رفيع", "Digit height":"ارتفاع الأرقام", "Bevelled cut":"قطع مشطوف", "Applied frame":"إطار مركّب", "Keep off the watch":"أسماء ممنوعة على الساعة", "Painted":"مصبوغ", "Paint colour":"لون الصبغ", "Blue":"أزرق", "Track numbers":"أرقام المسار", "5 to 60":"٥ إلى ٦٠", "1 to 12":"١ إلى ١٢", "Number height":"ارتفاع الأرقام", "Numbers from centre":"بُعد الأرقام عن المركز", "The line under it moves with the logo":"السطر اللي تحته يتحرك مع الشعار", "Dial artwork (PDF)":"رسومات الميناء (PDF)", "Plan, inks and stones":"المخطط والأحبار والأحجار", "Show the colour as made":"اعرض اللون مثل ما ينصنع", "Drawn bezel":"البيزل المرسوم", "As Nivada's drawing":"مثل رسمة نيفادا", "As the prototype":"مثل النموذج", "Hand heights":"ارتفاعات العقارب", "I have the maker's hand heights":"عندي ارتفاعات العقارب من المصنّع", "Windows":"النوافذ", "One window":"نافذة وحدة", "Big date":"تاريخ كبير", "Centre bar":"الفاصل الوسطي", "Dates 1 to 9":"التواريخ من ١ إلى ٩",
+  "Day lettering":"لون كتابة اليوم", "Window edge":"حافة النافذة", "Lume colour":"لون المادة المضيئة", "Lume fill":"تعبئة مضيئة", "Green-white":"أبيض مخضر", "Old radium":"راديوم قديم", "Vintage cream":"كريمي عتيق", "Five-minute marks":"علامات الخمس دقائق", "Run inward":"ممتدة للداخل", "Flared":"متسعة", "Gap at 6":"فراغ عند ٦", "Track width":"عرض المسار", "Rail weight":"وزن الخط", "Tick weight":"وزن العلامة", "Turn this hour":"اتجاه هذه الساعة", "Toward the centre":"نحو المركز", "On point":"على رأسه", "Across":"بالعرض", "Size of this hour":"حجم هذه الساعة", "Figure height":"ارتفاع الرقم", "Letter height":"ارتفاع الحروف", "Thin line":"خط رفيع", "Digit height":"ارتفاع الأرقام", "Bevelled cut":"قطع مشطوف", "Applied frame":"إطار مركّب", "Keep off the watch":"أسماء ممنوعة على الساعة", "Granular":"محبّب خشن", "Grain size":"حجم الحبيبات", "Grain strength":"قوة الحبيبات", "Painted":"مصبوغ", "Paint colour":"لون الصبغ", "Blue":"أزرق", "Track numbers":"أرقام المسار", "5 to 60":"٥ إلى ٦٠", "1 to 12":"١ إلى ١٢", "Number height":"ارتفاع الأرقام", "Numbers from centre":"بُعد الأرقام عن المركز", "The line under it moves with the logo":"السطر اللي تحته يتحرك مع الشعار", "Dial artwork (PDF)":"رسومات الميناء (PDF)", "Plan, inks and stones":"المخطط والأحبار والأحجار", "Show the colour as made":"اعرض اللون مثل ما ينصنع", "Drawn bezel":"البيزل المرسوم", "As Nivada's drawing":"مثل رسمة نيفادا", "As the prototype":"مثل النموذج", "Hand heights":"ارتفاعات العقارب", "I have the maker's hand heights":"عندي ارتفاعات العقارب من المصنّع", "Windows":"النوافذ", "One window":"نافذة وحدة", "Big date":"تاريخ كبير", "Centre bar":"الفاصل الوسطي", "Dates 1 to 9":"التواريخ من ١ إلى ٩",
   "All seven days in the window":"أيام الأسبوع السبعة في النافذة", "The disc in order":"القرص بالترتيب",
   "Date window at 3":"نافذة التاريخ عند 3", "Magnifier":"المكبّر", "Digits":"الأرقام", "Date font":"خط التاريخ", "Date disc":"قرص التاريخ",
   "Date digits colour":"لون أرقام التاريخ", "Frame":"الإطار", "All window settings":"كل إعدادات النوافذ",
@@ -17473,7 +17503,7 @@ const G_CHECK_AR = {
    lower-case words stored in the design file (the stored values do not
    change). Anything not listed is shown with a capital letter. */
 const GLOSS_OPT = {matte:"Matte", gloss:"Gloss", sunburst:"Sunburst", guilloche:"Guilloché", brushed:"Brushed", brushedsteel:"Brushed steel", grained:"Grained",
-  sandblasted:"Sandblasted", enamel:"Enamel", lacquer:"Lacquer", stone:"Stone", metallic:"Metallic", circular:"Circular brushed",
+  sandblasted:"Sandblasted", granular:"Granular", enamel:"Enamel", lacquer:"Lacquer", stone:"Stone", metallic:"Metallic", circular:"Circular brushed",
   mop:"Pearl sheen", "mother of pearl":"Mother of pearl", none:"None", railroad:"Railroad", ticks:"Ticks", dots:"Dots", beads:"Beads", dashes:"Dashes",
   "dd-seconds":"Long needle", "pomme-ouverte":"Breguet", obelisque:"Obelisk", "day-date":"Day-date", "printed":"Printed",
   "royal-oak":"Royal Oak", "ro-seconds":"Royal Oak seconds", "f77":"Nivada F77", "f77-seconds":"Nivada F77 seconds",
@@ -18723,12 +18753,14 @@ Object.assign(GWORD.ar, {
            full editor's "mop" finish is something else, a pearl sheen over the
            dial colour, so it gets its own chip rather than lighting this one. */
         const isMop = d.finish === "stone" && d.stone === "mother of pearl";
-        let h = chips("dial.finish", [["sunburst","Sunburst"],["brushedsteel","Brushed steel"],["matte","Matte"],["guilloche","Guilloché"],["enamel","Enamel"],["lacquer","Lacquer"],["gloss","Gloss"],["grained","Grained"],["stone","Stone"],["nacre","Mother of pearl"]]
+        let h = chips("dial.finish", [["sunburst","Sunburst"],["brushedsteel","Brushed steel"],["matte","Matte"],["guilloche","Guilloché"],["enamel","Enamel"],["lacquer","Lacquer"],["gloss","Gloss"],["grained","Grained"],["granular","Granular"],["stone","Stone"],["nacre","Mother of pearl"]]
           .concat(d.finish === "mop" ? [["mop","Pearl sheen"]] : []), isMop ? "nacre" : d.finish);
         if(d.finish === "stone" && !isMop){
           h += `<h3>${gW("Stone")}</h3>` + chips("ui.stone", STONE_FAMILIES.filter(f => f !== "other" && f !== "mother of pearl" && BUILTIN_STONE[f]).map(f => [f, f[0].toUpperCase() + f.slice(1)]), d.stone);
         }
         /* brushed steel: which way the grain runs (12 to 6 on the Nivada) */
+        if(d.finish === "granular") h += slider("dial.granSize", "Grain size", 0.04, 0.30, 0.01, d.granSize > 0 ? +d.granSize : 0.07)
+          + slider("dial.granAmt", "Grain strength", 0, 1.5, 0.05, d.granAmt >= 0 && d.granAmt !== undefined ? +d.granAmt : 1, "pct") + `<p class="gNote">${gT("dial.granNote")}</p>`;
         if(d.finish === "brushedsteel") h += `<h3>${gW("Direction")}</h3>` + chips("dial.brushDir", [["vertical","Vertical"],["horizontal","Horizontal"],["circular","Circular"]], brushDirOf(d.brushDir));
         if(d.finish === "guilloche") h += `<h3>${gW("Pattern")}</h3>` + chips("dial.pattern", GUIL_PATTERNS.map(p => [p, (GUIL_LABEL[p] || p).replace(/ \(.*/,"")]), d.pattern);
         /* ombré over any surface, and a pavé of small diamonds over all or part of it */

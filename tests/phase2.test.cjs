@@ -154,7 +154,7 @@ test('colour as made (v4.23.0): the lamp\'s darkening undone on request, the ren
   // exposure raised by the flat dial's irradiance, only when asked
   assert.match(source, /const expo = exposure\*\(opt\.asMade \? 1\/\(G\.ambient \+ \(1 - G\.ambient\)\*Math\.max\(0\.05, L\[2\]\)\) : 1\);/);
   assert.match(source, /override: surf \|\| null, brush, asMade:!!made,/);
-  assert.match(source, /\(surf\.dome \|\| surf\.satin\) \? surf : null, st\.dial\.brushDir, !!\(st\.render && st\.render\.asMade\)\);/);
+  assert.match(source, /\(surf\.dome \|\| surf\.satin \|\| surf\.granSize \|\| surf\.granite !== undefined\) \? surf : null, st\.dial\.brushDir, !!\(st\.render && st\.render\.asMade\)\);/);
   assert.match(source, /mode, az, el, px, CASE_SPEC\.dialD, made \? "made" : "",/, 'the cache keeps the two apart');
   // the studio light: 0.30 ambient and the key at 52 degrees light a flat dial at 0.85
   const k = 1 / (0.30 + 0.70 * Math.sin(52 * Math.PI / 180));
@@ -234,4 +234,21 @@ test('painted hands (v4.27.0): a lacquered colour of the hand\'s own, kept when 
   assert.match(source, /const HAND_SHARE = \[[^\]]*"paint"\];/);
   // the sheet says painted, and keeps a PANTONE name as written
   assert.match(source, /return h\.paint \? `\$\{nm\} painted/);
+});
+
+test('granular dial (v4.28.0): a fine hard grain sized in mm, each grain light or dark, the light ones glinting', () => {
+  assert.match(source, /  granular: +\{rough:0\.62, metal:0\.06, aniso:0\.00, groove:"none", +coat:0\.08, grain:0, +dish:0\.012, granite:1, granSize:0\.07\},/);
+  assert.match(source, /let GRAN_SHARP = 3, GRAN_K = 1\.3, GRAN_G = 2\.2;/);
+  // in millimetres, so the same in every picture
+  assert.match(source, /const n1 = mVnoise\(ux\/gs, uy\/gs\), n2 = mVnoise\(ux\/\(gs\*0\.5\) \+ 17\.3, uy\/\(gs\*0\.5\) - 9\.1\);/);
+  assert.match(source, /: albedoTex \? mSrgb2lin\(albedoTex\[i\+c\]\/255\) : kd\[c\]\)\*granK;/);
+  assert.match(source, /if\(granG > 0\) v \+= granG\*\(0\.05 \+ 0\.6\*spec\);/);
+  // the size and strength reach the raster and its cache
+  assert.match(source, /if\(finish === "granular"\)\{ if\(st\.dial\.granSize > 0\) surf\.granSize = \+st\.dial\.granSize;/);
+  assert.match(source, /surf \? \[surf\.dome, surf\.satin, surf\.granSize, surf\.granite\]\.join\("\."\) : "-",/);
+  // offered, named, and drawn in the plain drawing too
+  assert.match(source, /\["grained","Grained"\],\["granular","Granular"\],/);
+  assert.match(source, /slider\("dial\.granSize", "Grain size", 0\.04, 0\.30, 0\.01,/);
+  assert.match(source, /\} else if\(finish==="granular"\)\{/);
+  assert.match(source, /granular:"granular, coarse grain"/);
 });

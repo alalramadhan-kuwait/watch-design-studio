@@ -200,6 +200,19 @@ stored in a design file do not change. In the full editor at laptop widths
 the toolbar sits tighter, and on a narrower window it takes a second row
 rather than pushing Share and Export off the screen.
 
+## Granular dial (v4.28.0)
+
+Dial › Surface › **Granular**: the fine, hard grain of a granular sports dial.
+Each grain (0.07 mm unless set, 0.04–0.30) is distinctly lighter or darker than
+its neighbours, the light ones glinting in the light, and each tilts the
+surface a touch so the grain takes the light as it turns. It is sized in
+millimetres, so the grain is the same in a phone preview and a 3000 px export;
+**Grain size** and **Grain strength** set it. Tuned against the reference
+photograph of a granular dial at the same pixels per millimetre (grain
+contrast within a few levels). The bright grains lift how light the dial reads,
+so a granular dial's paint is a little darker than it looks. The sheet calls it
+"granular, coarse grain". "Grained" is unchanged.
+
 ## Painted hands (v4.27.0)
 
 Hands › Shape › Metal and Hands › Seconds › Seconds hand metal now end in
