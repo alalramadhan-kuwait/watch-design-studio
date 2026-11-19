@@ -200,6 +200,18 @@ stored in a design file do not change. In the full editor at laptop widths
 the toolbar sits tighter, and on a narrower window it takes a second row
 rather than pushing Share and Export off the screen.
 
+## Each hour its own size and turn (v4.16.0)
+
+In "Each hour…", a picked hour carrying an index or a stone gets **Turn this
+hour** (toward the centre, upright, on point at 45° to its radius, across)
+and **Size of this hour** (×0.6–1.6), stored in `markers.tune[i]` as `{s, rot}`.
+A stone keeps its facets lit for the angle it now lies at (`gemOnDial`'s
+`rot`); an index turns about its own centre. The maker's sheet lists the
+hours that differ ("12: 125% size; 1, 2, 4, 5, 7, 8, 10, 11: on point (45°)")
+on page 1 and in the specification. Unset, every hour is as before, so saved
+designs draw exactly as they did. This is what the F77 challenge's jewellery
+designer could not do: square stones on point and a distinct 12.
+
 ## Honeycomb guilloché, brushed-steel chapter ring (v4.15.0)
 
 **Nid d'abeille (honeycomb)** joins the guilloché patterns: hexagonal pyramids

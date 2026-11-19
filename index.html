@@ -2184,6 +2184,9 @@ const VIRTUAL = {
      other track's mark size as it always was */
   trackWMM:{get:m => +((+m.thickness || 0)*(m.style === "railroad" ? 2 : 1)).toFixed(3),
             set:(m, v) => { m.thickness = +(v/(m.style === "railroad" ? 2 : 1)).toFixed(4); }},
+  /* the size of the hour picked in "Each hour…" (PICKED_HOUR) */
+  hourScaleUi:{get:m => (m.tune && PICKED_HOUR != null && m.tune[PICKED_HOUR] && m.tune[PICKED_HOUR].s > 0) ? m.tune[PICKED_HOUR].s : 1,
+               set:(m, v) => { if(PICKED_HOUR == null) return; m.tune = m.tune || {}; m.tune[PICKED_HOUR] = Object.assign({}, m.tune[PICKED_HOUR], {s:+v}); }},
   /* the date's digit height: the one set, or the one the window gives */
   digitHUi:{get:d => d.digitH > 0 ? d.digitH : dateAutoDigitH(d), set:(d, v) => { d.digitH = +v; }},
   /* the date window's edge: a bevelled cut, an applied frame, or the thin
@@ -2213,7 +2216,7 @@ const APP_BUILD = "__BUILD__";
 /* The version people see, raised with every change that reaches them:
    major for a new way of working, minor for something new to do, patch for
    a fix. Shown on the watch screen, so any screenshot says which it was. */
-const APP_VERSION = "4.15.0";
+const APP_VERSION = "4.16.0";
 const APP_DATE = "__DATE__";
 
 /* Every route that replaces S passes through one of these three, which is
@@ -5779,8 +5782,12 @@ function buildSVG(st, o={}){
       const laI = ((st.render && st.render.az) || 135)*Math.PI/180;
       if(ix.on) for(let i=0;i<12;i++){
         const k = plan[i].kind; if(k !== "index" && k !== "indexAlt") continue;
-        const ixK = k === "indexAlt" ? Object.assign({}, ix, {style:ix.altStyle || "double"}) : ix;
-        body.push(indexShape(ixK, i*30, id, defs, laI) + indexLume(ixK, i*30));
+        let ixK = k === "indexAlt" ? Object.assign({}, ix, {style:ix.altStyle || "double"}) : ix;
+        const sc = hourScale(st, i), rot = hourRot(st, i, i*30);
+        if(sc !== 1) ixK = Object.assign({}, ixK, {length:ixK.length*sc, width:ixK.width*sc});
+        const mk = indexShape(ixK, i*30, id, defs, laI) + indexLume(ixK, i*30);
+        if(rot){ const c = pt(ixK.radius, i*30); body.push(`<g transform="rotate(${f(rot,3)} ${f(c[0],3)} ${f(c[1],3)})">${mk}</g>`); }
+        else body.push(mk);
       }
     }else if(ix.on){
       const numeralPositions = nm.on ? numeralSet(nm.set) : [];
@@ -6311,7 +6318,7 @@ function buildSVG(st, o={}){
     if(plan){
       const laG = ((st.render && st.render.az) || 135)*Math.PI/180, gcx = {id, defs, grads:new Map()}, dT = K.dialT || 0.40;
       for(const q of gemPlacements(st)) if(!q.drop)
-        body.push(gemOnDial(q.g, q.a, q.r, laG, q.i*7 + (q.kind === "gemAlt" ? 101 : 0), gcx, dT));
+        body.push(gemOnDial(q.g, q.a, q.r, laG, q.i*7 + (q.kind === "gemAlt" ? 101 : 0), gcx, dT, q.rot));
     }
     tagLayer("gems", gmFrom);
 
@@ -7862,13 +7869,23 @@ function gemDayGap(pts, DW){
    "move" turns a gem at 11 or 1 away from 12 until it is 0.40 clear of the
    framed window, at most 4°, and drops it beyond that; "drop" leaves it
    off when it would come closer; "touch" keeps it at 30°. */
+/* One hour's own size and turn (markers.tune[i]): s scales the marker or
+   stone, rot turns it about its own centre ("upright" stands it straight
+   whatever the hour; 45 sets a square stone on point; 90 lays it across).
+   Unset, every hour is as the shared settings say. */
+let PICKED_HOUR = null;
+const hourTune = (st, i) => (st.markers && st.markers.tune && st.markers.tune[i]) || null;
+const hourScale = (st, i) => { const t = hourTune(st, i); return t && t.s > 0 ? +t.s : 1; };
+const hourRot = (st, i, a) => { const t = hourTune(st, i); if(!t || t.rot == null) return 0; return t.rot === "upright" ? -a : (+t.rot || 0); };
 function gemPlacements(st){
   if(!perHourOn(st)) return [];
   const plan = hourPlan(st), out = [], DW = dayWindow(st), dialT = gemDialT(st);
   const mode = (st.markers && st.markers.dayClear) || "move";
   for(let i = 0; i < 12; i++){
     const k = plan[i].kind; if(k !== "gem" && k !== "gemAlt") continue;
-    const g = gemNorm(k === "gem" ? st.gem : st.gemAlt, k === "gemAlt"), size = gemSize(g), R = gemRadius(st, g, size);
+    const sc = hourScale(st, i), g0 = gemNorm(k === "gem" ? st.gem : st.gemAlt, k === "gemAlt");
+    const g = sc === 1 ? g0 : Object.assign({}, g0, {d:g0.d*sc, L:g0.L*sc, W:g0.W*sc, s:g0.s*sc});
+    const size = gemSize(g), R = gemRadius(st, g, size);
     const ol = gemOutline(g, 32);
     let a = i*30, drop = false, gap = null;
     if(DW && (i === 1 || i === 11)){
@@ -7880,7 +7897,7 @@ function gemPlacements(st){
         if(found === null) drop = true; else a = found;
       }
     }
-    out.push({hour:i || 12, i, kind:k, g, a, r:R.r, clamped:R.clamped, drop, gap, size, H:gemHeight(g, dialT)});
+    out.push({hour:i || 12, i, kind:k, g, a, r:R.r, clamped:R.clamped, drop, gap, size, H:gemHeight(g, dialT), rot:hourRot(st, i, a)});
   }
   return out;
 }
@@ -8268,9 +8285,11 @@ function gemMarkerSVG(g, la, seed, cx, dialT){
 }
 /* One gem marker on the dial at angle a, radius r: its shadow, then the
    setting and stone, lit by the dial's one light. */
-function gemOnDial(g, a, r, la, seed, cx, dialT){
-  const m = gemMarkerSVG(g, la - a*Math.PI/180, seed, cx, dialT);
-  const place = s => `<g transform="rotate(${gf(a, 3)}) translate(0 ${gf(-r)})">${s}</g>`;
+function gemOnDial(g, a, r, la, seed, cx, dialT, rot){
+  /* turned about its own centre, its facets lit for the angle it now lies at */
+  rot = +rot || 0;
+  const m = gemMarkerSVG(g, la - (a + rot)*Math.PI/180, seed, cx, dialT);
+  const place = s => `<g transform="rotate(${gf(a, 3)}) translate(0 ${gf(-r)})${rot ? ` rotate(${gf(rot, 3)})` : ""}">${s}</g>`;
   return gemShadow(place(m.foot), m.H, la) + place(m.body);
 }
 
@@ -14321,6 +14340,7 @@ function sheetRows(st){
     if(!count(kind)) continue;
     row(key, "", sheetStoneText(st[kind] || {}, sheetHoursOf(plan, kind)), [kind, (st[kind] || {}).cut, (st[kind] || {}).stone, sheetHoursOf(plan, kind).join()], [(st[kind] || {}).metal]);
   }
+  { const tt = sheetTuneText(st); if(tt) row("perHour", "", `Per hour: ${tt}`, [tt], []); }
   /* logo: the Nivada mark is an applied shield over a raised script */
   const mark = T.logoMark && T.logoMark !== "none" ? T.logoMark : "", applied = /^applied/.test(T.logoTech || "");
   if(T.on && applied){
@@ -14969,6 +14989,16 @@ function numArtSVG(st, OUT, info, labels, dial){
   }));
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}mm" height="${H}mm" viewBox="0 0 ${W} ${H}">${out.join("")}</svg>`;
 }
+/* the hours whose marker or stone has its own size or turn, for the maker:
+   "12: 125% size; 1, 2, 4, 5, 7, 8, 10, 11: on point (45°)" */
+function sheetTuneText(st){
+  const T = st.markers && st.markers.tune; if(!T) return "";
+  const groups = new Map(), word = r => r === "upright" ? "upright" : +r === 45 ? "on point (45°)" : +r === 90 ? "across" : `turned ${r}°`;
+  for(const i of [0,1,2,3,4,5,6,7,8,9,10,11]){ const t = T[i]; if(!t) continue;
+    const bits = [t.s > 0 && t.s !== 1 ? `${Math.round(t.s*100)}% size` : "", t.rot != null && t.rot !== 0 ? word(t.rot) : ""].filter(Boolean).join(", ");
+    if(bits){ if(!groups.has(bits)) groups.set(bits, []); groups.get(bits).push(i || 12); } }
+  return [...groups].map(([b, hs]) => `${hs.join(", ")}: ${b}`).join("; ");
+}
 /* the hours (1 to 12) a plan gives a kind of marker */
 const sheetHoursOf = (plan, kind) => [12,1,2,3,4,5,6,7,8,9,10,11].filter(h => plan[h % 12] === kind);
 /* one stone definition, in the words a setter orders by */
@@ -15017,6 +15047,7 @@ function sheetSpec(st){
       ix.metal ? "" : ix.color, `${mm(ix.length)} × ${mm(ix.width)}mm, centred r ${mm(ix.radius)}mm`);
   }
   for(const [kind, label] of [["gem", "Stones"], ["gemAlt", "Accent stones"]]) if(plan.indexOf(kind) >= 0) add(label, sheetStoneText(st[kind] || {}, sheetHoursOf(plan, kind)), "", "");
+  { const tt = sheetTuneText(st); if(tt) add("Per hour", tt, "", "sizes relative to the stones and indexes above"); }
   if(T.on){
     const mark = T.logoMark && T.logoMark !== "none" ? T.logoMark : (T.logo || "");
     add("Logo", `${mark}, ${T.logoTech || "printed"}${/^applied/.test(T.logoTech || "") ? ", " + sheetMade(T.logoMetal, T.logoFinish).toLowerCase() : ""}`, /^applied/.test(T.logoTech || "") ? "" : T.color,
@@ -16869,7 +16900,7 @@ const GWORD = {ar:{
   "Extra high":"مرتفع جداً", "High":"مرتفع", "height:Standard":"عادي", "Window width":"عرض النافذة", "Narrow":"ضيقة", "Standard":"قياسية", "Wide":"عريضة",
   "Move them aside":"أزحهما جانباً", "Make them smaller":"صغّرهما", "Use markers":"ضع مؤشرين", "Leave them off":"احذفهما", "Let them touch":"اتركهما متلامسين",
   "Day font":"خط اليوم", "Arabic font":"الخط العربي", "English font":"الخط الإنجليزي", "In the window":"في النافذة", "Day disc":"قرص اليوم",
-  "Day lettering":"لون كتابة اليوم", "Window edge":"حافة النافذة", "Lume colour":"لون المادة المضيئة", "Lume fill":"تعبئة مضيئة", "Green-white":"أبيض مخضر", "Old radium":"راديوم قديم", "Vintage cream":"كريمي عتيق", "Five-minute marks":"علامات الخمس دقائق", "Run inward":"ممتدة للداخل", "Flared":"متسعة", "Gap at 6":"فراغ عند ٦", "Track width":"عرض المسار", "Rail weight":"وزن الخط", "Tick weight":"وزن العلامة", "Figure height":"ارتفاع الرقم", "Letter height":"ارتفاع الحروف", "Thin line":"خط رفيع", "Digit height":"ارتفاع الأرقام", "Bevelled cut":"قطع مشطوف", "Applied frame":"إطار مركّب",
+  "Day lettering":"لون كتابة اليوم", "Window edge":"حافة النافذة", "Lume colour":"لون المادة المضيئة", "Lume fill":"تعبئة مضيئة", "Green-white":"أبيض مخضر", "Old radium":"راديوم قديم", "Vintage cream":"كريمي عتيق", "Five-minute marks":"علامات الخمس دقائق", "Run inward":"ممتدة للداخل", "Flared":"متسعة", "Gap at 6":"فراغ عند ٦", "Track width":"عرض المسار", "Rail weight":"وزن الخط", "Tick weight":"وزن العلامة", "Turn this hour":"اتجاه هذه الساعة", "Toward the centre":"نحو المركز", "On point":"على رأسه", "Across":"بالعرض", "Size of this hour":"حجم هذه الساعة", "Figure height":"ارتفاع الرقم", "Letter height":"ارتفاع الحروف", "Thin line":"خط رفيع", "Digit height":"ارتفاع الأرقام", "Bevelled cut":"قطع مشطوف", "Applied frame":"إطار مركّب",
   "All seven days in the window":"أيام الأسبوع السبعة في النافذة", "The disc in order":"القرص بالترتيب",
   "Date window at 3":"نافذة التاريخ عند 3", "Magnifier":"المكبّر", "Digits":"الأرقام", "Date font":"خط التاريخ", "Date disc":"قرص التاريخ",
   "Date digits colour":"لون أرقام التاريخ", "Frame":"الإطار", "All window settings":"كل إعدادات النوافذ",
@@ -17797,6 +17828,13 @@ Object.assign(GWORD.ar, {
     if(pickHour !== null && !plan[pickHour].covered){
       h += `<p class="gNote" style="margin-bottom:6px"><b>${gT("hr.oclock", pickHour || 12)}</b></p>` + chips44("ui.hourKind", KIND_CHIPS, at[pickHour]);
       h += `<button type="button" class="gMore" style="margin-top:2px" data-gdo="hourAll">${gW("Apply to all free hours")}</button>`;
+      /* this hour's own size and turn, for a marker or a stone */
+      if(["index","indexAlt","gem","gemAlt"].indexOf(at[pickHour]) >= 0){
+        const tu = hourTune(S, pickHour) || {}, cur = tu.rot == null ? "0" : String(tu.rot);
+        h += `<h3>${gW("Turn this hour")}</h3>` + chips44("ui.hourRot", [["0","Toward the centre"],["upright","Upright"],["45","On point"],["90","Across"]], cur);
+        PICKED_HOUR = pickHour;
+        h += slider("markers.hourScaleUi", "Size of this hour", 0.6, 1.6, 0.05, tu.s > 0 ? tu.s : 1, "x");
+      }
     } else h += `<p class="gNote">${gT("hr.tap")}</p>`;
     const covN = coveredHours(S);
     if(covN.size) h += `<p class="gNote">${covN.size > 1 ? gT("hr.covered") : gT("hr.covered1", [...covN][0])}</p>`;
@@ -18896,6 +18934,9 @@ Object.assign(GWORD.ar, {
       if(gs.length) gs.forEach(g => { const p = g.dataset.path || "dial.color"; g.innerHTML = pantoneGrid(p, curOf(p)); }); else paint(); return; }
     if(d.gset === "ui.layout"){ const v = JSON.parse(d.gv); soon(t, () => { eachHour = v === "custom"; applyMarkerPreset(S, v); pickHour = null;
       if(v === "f77") setHand("f77"); else { commit(); paintAll(); } }); return; }
+    if(d.gset === "ui.hourRot"){ if(pickHour === null) return; const v = JSON.parse(d.gv);
+      soon(t, () => { migrateMarkers(S); const T = S.markers.tune = S.markers.tune || {}; T[pickHour] = Object.assign({}, T[pickHour], {rot:v === "0" ? null : v === "upright" ? "upright" : +v});
+        commit(); paintAll(); }); return; }
     if(d.gset === "ui.hourKind"){ if(pickHour === null) return; const v = JSON.parse(d.gv);
       soon(t, () => { migrateMarkers(S); S.markers.at[pickHour] = v; S.markers.perHour = true; syncMarkerFlags(S); commit(); paintAll(); }); return; }
     if(d.ghour !== undefined){ pickHour = +d.ghour === pickHour ? null : +d.ghour; paint(); return; }
