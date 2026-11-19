@@ -252,3 +252,15 @@ test('granular dial (v4.28.0): a fine hard grain sized in mm, each grain light o
   assert.match(source, /\} else if\(finish==="granular"\)\{/);
   assert.match(source, /granular:"granular, coarse grain"/);
 });
+
+test('timing flange (v4.29.0): ticks from the inner or outer edge, fifths between the minutes, and long minute marks on the dial', () => {
+  assert.match(source, /const tSpan = L => tAlign === "inner" \? \[r, r \+ L\] : tAlign === "outer" \? \[r - L, r\] : \[r - L\/2, r \+ L\/2\];/);
+  assert.match(source, /len = five&&mt\.fives \? Math\.max\(mt\.fiveLen, 0\.6\) : \(mt\.tickLen > 0 \? \+mt\.tickLen : Math\.max\(t\*1\.6, 0\.42\)\);/, 'unset, the length is the old one');
+  assert.match(source, /for\(let i = 0; i < 300; i\+\+\)\{ if\(i % 5 === 0\) continue; const a = i\*1\.2; if\(inGap\(a\)\) continue;/);
+  assert.match(source, /else if\(ht\.style==="minuteMarks"\)\{ const L = ht\.len > 0 \? \+ht\.len : 1\.4;/);
+  assert.match(source, /for\(let i=0;i<60;i\+\+\)\{ if\(i%5===0\) continue; const a=i\*6, p0=pt\(r-L,a\), p1=pt\(r,a\);/, 'none where the hours are');
+  assert.match(source, /marksOn:\{get:h => !!h\.on && h\.style === "minuteMarks",/);
+  assert.match(source, /chips\("minute\.tickAlign", \[\["centre","Centre"\],\["inner","Inner edge"\],\["outer","Outer edge"\]\]/);
+  assert.match(source, /toggle\("minute\.fifths", "Fifths between the minutes", !!S\.minute\.fifths\)/);
+  assert.match(source, /toggle\("hour\.marksOn", "Minute marks on the dial", get\(S, "hour\.marksOn"\)\)/);
+});

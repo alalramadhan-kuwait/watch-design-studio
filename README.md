@@ -200,6 +200,20 @@ stored in a design file do not change. In the full editor at laptop widths
 the toolbar sits tighter, and on a narrower window it takes a second row
 rather than pushing Share and Export off the screen.
 
+## Timing flange (v4.29.0)
+
+Dial › Minute track, for a sports watch's flange:
+
+- **Ticks start from** the track's centre (as before), its **inner edge** or its
+  **outer edge** (`minute.tickAlign`), so a scale can hang from the flange's
+  edge with the numbers outside it.
+- **Minute tick length** (`minute.tickLen`); unset, the length is as it was.
+- **Fifths between the minutes** (`minute.fifths`): four fine ticks in each
+  minute, a timing scale, with their own length.
+- **Minute marks on the dial**: long marks at every minute between the hours,
+  printed on the dial inside the flange (the hour track's new *Minute marks*
+  style, `hour.style "minuteMarks"`), with their length, place and width.
+
 ## Granular dial (v4.28.0)
 
 Dial › Surface › **Granular**: the fine, hard grain of a granular sports dial.

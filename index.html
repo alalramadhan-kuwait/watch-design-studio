@@ -2200,6 +2200,10 @@ const VIRTUAL = {
   digitHUi:{get:d => d.digitH > 0 ? d.digitH : dateAutoDigitH(d), set:(d, v) => { d.digitH = +v; }},
   /* one window or a big date; turning a big date on widens the opening to
      two windows and a bar, turning it off gives the single width back */
+  /* the dial's long minute marks, which are the hour track drawn at every
+     minute: on, they start 1.4 mm long just inside the minute track */
+  marksOn:{get:h => !!h.on && h.style === "minuteMarks",
+           set:(h, v) => { if(v){ h.on = true; h.style = "minuteMarks"; if(!(h.len > 0)) h.len = 1.4; if(!(h.thickness > 0) || h.thickness > 0.3) h.thickness = 0.12; } else h.on = false; }},
   /* the maker's hand heights, entered on a movement whose stack the
      studio does not know; switched on, they start from Sellita's standard */
   stackOn:{get:hs => !!hs.stack, set:(hs, v) => { if(v) hs.stack = hs.stack || {h:1.00, m:1.40, s:1.80}; else delete hs.stack; }},
@@ -2236,7 +2240,7 @@ const APP_BUILD = "__BUILD__";
 /* The version people see, raised with every change that reaches them:
    major for a new way of working, minor for something new to do, patch for
    a fix. Shown on the watch screen, so any screenshot says which it was. */
-const APP_VERSION = "4.28.0";
+const APP_VERSION = "4.29.0";
 const APP_DATE = "__DATE__";
 
 /* Every route that replaces S passes through one of these three, which is
@@ -5815,8 +5819,13 @@ function buildSVG(st, o={}){
         body.push(ringMaybeBroken(r + t, rail, tcol, gapR));
         body.push(ringMaybeBroken(r - t, rail, tcol, gapR));
       }
+      /* Ticks may hang from the track's inner or outer edge rather than sit
+         on its centre line, as a timing flange's do; tickLen sets a minute
+         tick's length; fifths puts four fine ticks between the minutes. */
+      const tAlign = mt.tickAlign === "inner" || mt.tickAlign === "outer" ? mt.tickAlign : "centre";
+      const tSpan = L => tAlign === "inner" ? [r, r + L] : tAlign === "outer" ? [r - L, r] : [r - L/2, r + L/2];
       for(let i=0;i<60;i++){
-        const a=i*6, five=i%5===0, len = five&&mt.fives ? Math.max(mt.fiveLen, 0.6) : Math.max(t*1.6, 0.42);
+        const a=i*6, five=i%5===0, len = five&&mt.fives ? Math.max(mt.fiveLen, 0.6) : (mt.tickLen > 0 ? +mt.tickLen : Math.max(t*1.6, 0.42));
         /* How wide the mark is ACROSS the track, which is the direction the
            text runs: a dot is as wide as it is tall, a tick only as wide as
            its stroke. Without it the clearance was measured to the mark's
@@ -5847,9 +5856,17 @@ function buildSVG(st, o={}){
             body.push(`<line x1="${f(p0[0],3)}" y1="${f(p0[1],3)}" x2="${f(p1[0],3)}" y2="${f(p1[1],3)}" stroke="${tcol}" stroke-width="${f(bold ? rail*2.6 : tickW,3)}"/>`);
           }
         } else { // ticks / dashes
-          const p0=pt(r-len/2,a), p1=pt(r+len/2,a);
+          const sp = tSpan(len), p0=pt(sp[0],a), p1=pt(sp[1],a);
           body.push(`<line x1="${f(p0[0],3)}" y1="${f(p0[1],3)}" x2="${f(p1[0],3)}" y2="${f(p1[1],3)}" stroke="${tcol}" stroke-width="${f(five?mt.thickness*1.5:mt.thickness,3)}" stroke-linecap="${mt.style==="dashes"?"round":"butt"}"/>`);
         }
+      }
+      if(mt.fifths && (mt.style === "ticks" || mt.style === "railroad")){
+        const fl = mt.fifthLen > 0 ? +mt.fifthLen : (mt.tickLen > 0 ? +mt.tickLen : Math.max(t*1.6, 0.42))*0.55, fw = Math.max(0.025, (mt.style === "railroad" ? tickW : mt.thickness)*0.7);
+        const fs = mt.style === "railroad" ? [r - t, r - t + Math.min(fl, 2*t)] : tSpan(fl);
+        for(let i = 0; i < 300; i++){ if(i % 5 === 0) continue; const a = i*1.2; if(inGap(a)) continue;
+          if(mt.textBreak !== false && !clearsText(a, r, fl, fw)) continue;
+          const p0 = pt(fs[0], a), p1 = pt(fs[1], a);
+          body.push(`<line x1="${f(p0[0],3)}" y1="${f(p0[1],3)}" x2="${f(p1[0],3)}" y2="${f(p1[1],3)}" stroke="${tcol}" stroke-width="${f(fw,3)}"/>`); }
       }
       if(mtech) body.push(madeBy(mtech, body.splice(mtFrom).join(""), {ink:mt.color, size:Math.max(0.5, t*6), stroke:true}));
       if(trackFx) body.push(`</g>`);
@@ -5872,6 +5889,11 @@ function buildSVG(st, o={}){
     if(ht.on){
       const r=ht.diameter/2;
       if(ht.style==="ring") body.push(`<circle r="${r}" fill="none" stroke="${ht.color}" stroke-width="${ht.thickness}"/>`);
+      /* long marks at every minute between the hours, printed on the dial
+         inside the flange, as a sports dial has them */
+      else if(ht.style==="minuteMarks"){ const L = ht.len > 0 ? +ht.len : 1.4;
+        for(let i=0;i<60;i++){ if(i%5===0) continue; const a=i*6, p0=pt(r-L,a), p1=pt(r,a);
+          body.push(`<line x1="${f(p0[0],3)}" y1="${f(p0[1],3)}" x2="${f(p1[0],3)}" y2="${f(p1[1],3)}" stroke="${ht.color}" stroke-width="${ht.thickness}"/>`); } }
       else for(let i=0;i<12;i++){
         const a=i*30, p0=pt(r-0.6,a), p1=pt(r+0.6,a);
         body.push(`<line x1="${f(p0[0],3)}" y1="${f(p0[1],3)}" x2="${f(p1[0],3)}" y2="${f(p1[1],3)}" stroke="${ht.color}" stroke-width="${ht.thickness}"/>`);
@@ -11137,6 +11159,8 @@ const SCHEMA = {
   minute:{title:"Minute track", hint:"60 divisions. Diameter is the centre line of the track.", fields:()=>[
     N("minute.diameter","Track diameter",6,44),
     SEL("minute.nums","Track numbers",["none","minutes","hours"]),
+    SEL("minute.tickAlign","Ticks start from",["centre","inner","outer"]), N("minute.tickLen","Minute tick length",.1,2.5,.02),
+    CK("minute.fifths","Fifths between the minutes"), ...(S.minute.fifths ? [N("minute.fifthLen","Fifth tick length",.08,1.5,.02)] : []),
     ...(S.minute.nums === "minutes" || S.minute.nums === "hours" ? [N("minute.numSize","Number height",.4,1.6,.02), N("minute.numR","Numbers from centre",6,16,.05), C("minute.numColor","Number colour")] : []),
     S.minute.style === "railroad" ? N("minute.trackWMM","Track width (rail to rail)",.16,2.4,.02) : N("minute.thickness","Thickness",.08,1.2,.02),
     ...(S.minute.style === "railroad" ? [N("minute.railW","Rail weight (0 = automatic)",0,.2,.005), N("minute.tickW","Minute tick weight (0 = automatic)",0,.25,.005)] : []),
@@ -11150,7 +11174,7 @@ const SCHEMA = {
     ...(S.minute.textBreak !== false ? [N("minute.textGap","Gap either side",0,2,.05)] : [])]},
   hour:{title:"Hour track", hint:"12 divisions, often inside the sector.", fields:[
     N("hour.diameter","Track diameter",6,44), N("hour.thickness","Thickness",.1,1.5,.02),
-    SEL("hour.style","Style",["ticks","ring"]), C("hour.color","Colour")]},
+    SEL("hour.style","Style",["ticks","ring","minuteMarks"]), ...(S.hour.style === "minuteMarks" ? [N("hour.len","Mark length",.3,3,.05)] : []), C("hour.color","Colour")]},
   indices:{title:"Indices", hint:"Applied indices cast a shadow; printed ones sit flat.", fields:()=>[
     SEL("indices.style","Shape",["baton","dot","cone","box","diamond","triangle","dagger","double","f77"]),
     N("indices.radius","Distance from centre",3,22), N("indices.length","Length",.4,6,.05), N("indices.width","Width",.1,2.5,.05),
@@ -17440,7 +17464,7 @@ const GWORD = {ar:{
   "Extra high":"مرتفع جداً", "High":"مرتفع", "height:Standard":"عادي", "Window width":"عرض النافذة", "Narrow":"ضيقة", "Standard":"قياسية", "Wide":"عريضة",
   "Move them aside":"أزحهما جانباً", "Make them smaller":"صغّرهما", "Use markers":"ضع مؤشرين", "Leave them off":"احذفهما", "Let them touch":"اتركهما متلامسين",
   "Day font":"خط اليوم", "Arabic font":"الخط العربي", "English font":"الخط الإنجليزي", "In the window":"في النافذة", "Day disc":"قرص اليوم",
-  "Day lettering":"لون كتابة اليوم", "Window edge":"حافة النافذة", "Lume colour":"لون المادة المضيئة", "Lume fill":"تعبئة مضيئة", "Green-white":"أبيض مخضر", "Old radium":"راديوم قديم", "Vintage cream":"كريمي عتيق", "Five-minute marks":"علامات الخمس دقائق", "Run inward":"ممتدة للداخل", "Flared":"متسعة", "Gap at 6":"فراغ عند ٦", "Track width":"عرض المسار", "Rail weight":"وزن الخط", "Tick weight":"وزن العلامة", "Turn this hour":"اتجاه هذه الساعة", "Toward the centre":"نحو المركز", "On point":"على رأسه", "Across":"بالعرض", "Size of this hour":"حجم هذه الساعة", "Figure height":"ارتفاع الرقم", "Letter height":"ارتفاع الحروف", "Thin line":"خط رفيع", "Digit height":"ارتفاع الأرقام", "Bevelled cut":"قطع مشطوف", "Applied frame":"إطار مركّب", "Keep off the watch":"أسماء ممنوعة على الساعة", "Granular":"محبّب خشن", "Grain size":"حجم الحبيبات", "Grain strength":"قوة الحبيبات", "Painted":"مصبوغ", "Paint colour":"لون الصبغ", "Blue":"أزرق", "Track numbers":"أرقام المسار", "5 to 60":"٥ إلى ٦٠", "1 to 12":"١ إلى ١٢", "Number height":"ارتفاع الأرقام", "Numbers from centre":"بُعد الأرقام عن المركز", "The line under it moves with the logo":"السطر اللي تحته يتحرك مع الشعار", "Dial artwork (PDF)":"رسومات الميناء (PDF)", "Plan, inks and stones":"المخطط والأحبار والأحجار", "Show the colour as made":"اعرض اللون مثل ما ينصنع", "Drawn bezel":"البيزل المرسوم", "As Nivada's drawing":"مثل رسمة نيفادا", "As the prototype":"مثل النموذج", "Hand heights":"ارتفاعات العقارب", "I have the maker's hand heights":"عندي ارتفاعات العقارب من المصنّع", "Windows":"النوافذ", "One window":"نافذة وحدة", "Big date":"تاريخ كبير", "Centre bar":"الفاصل الوسطي", "Dates 1 to 9":"التواريخ من ١ إلى ٩",
+  "Day lettering":"لون كتابة اليوم", "Window edge":"حافة النافذة", "Lume colour":"لون المادة المضيئة", "Lume fill":"تعبئة مضيئة", "Green-white":"أبيض مخضر", "Old radium":"راديوم قديم", "Vintage cream":"كريمي عتيق", "Five-minute marks":"علامات الخمس دقائق", "Run inward":"ممتدة للداخل", "Flared":"متسعة", "Gap at 6":"فراغ عند ٦", "Track width":"عرض المسار", "Rail weight":"وزن الخط", "Tick weight":"وزن العلامة", "Turn this hour":"اتجاه هذه الساعة", "Toward the centre":"نحو المركز", "On point":"على رأسه", "Across":"بالعرض", "Size of this hour":"حجم هذه الساعة", "Figure height":"ارتفاع الرقم", "Letter height":"ارتفاع الحروف", "Thin line":"خط رفيع", "Digit height":"ارتفاع الأرقام", "Bevelled cut":"قطع مشطوف", "Applied frame":"إطار مركّب", "Keep off the watch":"أسماء ممنوعة على الساعة", "Minute marks":"علامات الدقايق", "Ticks start from":"العلامات تبدأ من", "Inner edge":"الحافة الداخلية", "Outer edge":"الحافة الخارجية", "Minute tick length":"طول علامة الدقيقة", "Fifths between the minutes":"أخماس بين الدقايق", "Fifth tick length":"طول علامة الخُمس", "Minute marks on the dial":"علامات الدقايق على الميناء", "Mark length":"طول العلامة", "Marks' outer edge (diameter)":"الحافة الخارجية للعلامات (القطر)", "Mark width":"عرض العلامة", "Granular":"محبّب خشن", "Grain size":"حجم الحبيبات", "Grain strength":"قوة الحبيبات", "Painted":"مصبوغ", "Paint colour":"لون الصبغ", "Blue":"أزرق", "Track numbers":"أرقام المسار", "5 to 60":"٥ إلى ٦٠", "1 to 12":"١ إلى ١٢", "Number height":"ارتفاع الأرقام", "Numbers from centre":"بُعد الأرقام عن المركز", "The line under it moves with the logo":"السطر اللي تحته يتحرك مع الشعار", "Dial artwork (PDF)":"رسومات الميناء (PDF)", "Plan, inks and stones":"المخطط والأحبار والأحجار", "Show the colour as made":"اعرض اللون مثل ما ينصنع", "Drawn bezel":"البيزل المرسوم", "As Nivada's drawing":"مثل رسمة نيفادا", "As the prototype":"مثل النموذج", "Hand heights":"ارتفاعات العقارب", "I have the maker's hand heights":"عندي ارتفاعات العقارب من المصنّع", "Windows":"النوافذ", "One window":"نافذة وحدة", "Big date":"تاريخ كبير", "Centre bar":"الفاصل الوسطي", "Dates 1 to 9":"التواريخ من ١ إلى ٩",
   "All seven days in the window":"أيام الأسبوع السبعة في النافذة", "The disc in order":"القرص بالترتيب",
   "Date window at 3":"نافذة التاريخ عند 3", "Magnifier":"المكبّر", "Digits":"الأرقام", "Date font":"خط التاريخ", "Date disc":"قرص التاريخ",
   "Date digits colour":"لون أرقام التاريخ", "Frame":"الإطار", "All window settings":"كل إعدادات النوافذ",
@@ -17510,7 +17534,7 @@ const GLOSS_OPT = {matte:"Matte", gloss:"Gloss", sunburst:"Sunburst", guilloche:
   "double printed":"Raised print", "applied metal":"Applied metal", "polished steel":"Steel", "blued steel":"Blued steel",
   "blackened steel":"Black", "yellow gold":"Gold",
   "gloss on matte":"Gloss on matte", "brushed across":"Brushed across the grain", "uv ink":"UV ink",
-  single:"One window", big:"Big date", minutes:"5 to 60", hours:"1 to 12", zero:"With a 0 (0 7)", blank:"Tens blank (  7)"};
+  single:"One window", big:"Big date", minutes:"5 to 60", hours:"1 to 12", centre:"Centre", inner:"Inner edge", outer:"Outer edge", minuteMarks:"Minute marks", zero:"With a 0 (0 7)", blank:"Tens blank (  7)"};
 const glossOpt = o => typeof o !== "string" ? o : (GLOSS_OPT[o] || (/^[a-z]/.test(o) ? o[0].toUpperCase() + o.slice(1) : o));
 
 /* Where to pick up after a reload. Back within half an hour, the step you
@@ -18781,6 +18805,14 @@ Object.assign(GWORD.ar, {
       if(S.minute.on && S.minute.style === "railroad") h += `<h3>${gW("Five-minute marks")}</h3>` + chips("minute.fiveStyle", [["inward","Run inward"],["plain","Plain"],["flared","Flared"]], S.minute.fiveStyle || "inward")
         + slider("minute.trackWMM", "Track width", 0.16, 2.4, 0.02, get(S, "minute.trackWMM"));
       if(S.minute.on) h += slider("minute.gap6", "Gap at 6", 0, 60, 1, +S.minute.gap6 || 0, "deg");
+      if(S.minute.on && (S.minute.style === "ticks" || S.minute.style === "railroad")){
+        h += `<h3>${gW("Ticks start from")}</h3>` + chips("minute.tickAlign", [["centre","Centre"],["inner","Inner edge"],["outer","Outer edge"]], S.minute.tickAlign === "inner" || S.minute.tickAlign === "outer" ? S.minute.tickAlign : "centre");
+        if(S.minute.style === "ticks") h += slider("minute.tickLen", "Minute tick length", 0.1, 2.5, 0.02, S.minute.tickLen > 0 ? +S.minute.tickLen : +Math.max(S.minute.thickness*1.6, 0.42).toFixed(2));
+        h += toggle("minute.fifths", "Fifths between the minutes", !!S.minute.fifths);
+        if(S.minute.fifths) h += slider("minute.fifthLen", "Fifth tick length", 0.08, 1.5, 0.02, S.minute.fifthLen > 0 ? +S.minute.fifthLen : +((S.minute.tickLen > 0 ? +S.minute.tickLen : Math.max(S.minute.thickness*1.6, 0.42))*0.55).toFixed(2));
+      }
+      h += toggle("hour.marksOn", "Minute marks on the dial", get(S, "hour.marksOn"));
+      if(get(S, "hour.marksOn")) h += slider("hour.len", "Mark length", 0.3, 3, 0.05, S.hour.len > 0 ? +S.hour.len : 1.4) + slider("hour.diameter", "Marks' outer edge (diameter)", 14, 28, 0.05, +S.hour.diameter || 24.6) + slider("hour.thickness", "Mark width", 0.04, 0.3, 0.01, +S.hour.thickness || 0.12);
       if(S.minute.on){
         const nmode = S.minute.nums === "minutes" || S.minute.nums === "hours" ? S.minute.nums : "none";
         h += `<h3>${gW("Track numbers")}</h3>` + chips("minute.nums", [["none","None"],["minutes","5 to 60"],["hours","1 to 12"]], nmode);
