@@ -2200,7 +2200,7 @@ const APP_BUILD = "__BUILD__";
 /* The version people see, raised with every change that reaches them:
    major for a new way of working, minor for something new to do, patch for
    a fix. Shown on the watch screen, so any screenshot says which it was. */
-const APP_VERSION = "4.11.1";
+const APP_VERSION = "4.11.2";
 const APP_DATE = "__DATE__";
 
 /* Every route that replaces S passes through one of these three, which is
@@ -10141,15 +10141,17 @@ function photoPixels(K){
   im.src = src;
   return null;
 }
-function tintedPhoto(K, plan){
-  const key = K.photoFile + "|" + (plan.full || "") + "|" + (plan.two || "");
+function tintedPhoto(K, plan, strapHex){
+  const key = K.photoFile + "|" + (plan.full || "") + "|" + (plan.two || "") + "|" + (strapHex || "");
   if(PHOTO_TINT.has(key)) return PHOTO_TINT.get(key);
   const px = photoPixels(K); if(!px) return null;
   const C = K.photoCal, w = px.width, h = px.height;
   const cal = {cx:w*C.cx/100, cy:h*C.cy/100, s:w*C.dia/100/K.opening};
   const cv = document.createElement("canvas"); cv.width = w; cv.height = h;
   const g = cv.getContext("2d"), out = g.createImageData(w, h);
-  out.data.set(photoTintPixels(px.data, w, h, cal, K.photoParts, plan));
+  const data = plan.full || plan.two ? photoTintPixels(px.data, w, h, cal, K.photoParts, plan) : new Uint8ClampedArray(px.data);
+  if(strapHex) strapTintPixels(data, w, h, cal, K.photoStrap, strapHex);
+  out.data.set(data);
   g.putImageData(out, 0, 0);
   const url = cv.toDataURL("image/jpeg", 0.92);
   if(PHOTO_TINT.size > 5) PHOTO_TINT.clear();
@@ -10157,6 +10159,31 @@ function tintedPhoto(K, plan){
   return url;
 }
 
+/* A strap of another colour on the photograph: inside the strap's measured
+   region (K.photoStrap, in mm from the dial centre), dark pixels take the
+   colour by their own light, the steel and the ground beside it not at all.
+   The maker's sheet did this on its own copy; the live view switched to the
+   drawn case instead, whose F77 had the wrong bezel. */
+function strapTintPixels(d, W, H, cal, P, hex){
+  const rgb = hex2rgb(hex);
+  for(let j = 0; j < H; j++){
+    const y = (j + 0.5 - cal.cy)/cal.s, beyond = y < P.ends[0] || y > P.ends[1], tongueRow = Math.abs(y) > P.tongue.y;
+    if(!beyond && !tongueRow) continue;
+    for(let i = 0; i < W; i++){
+      if(!beyond && Math.abs((i + 0.5 - cal.cx)/cal.s) > P.tongue.x) continue;
+      const o = (j*W + i)*4, L = 0.299*d[o] + 0.587*d[o + 1] + 0.114*d[o + 2];
+      const a = Math.max(0, Math.min(1, (170 - L)/60)); if(a <= 0) continue;
+      const k = Math.max(0.60, Math.min(1.25, 1 + 0.9*(L - 22)/120));      // the rubber's own mid-tone (L 22) takes the colour exactly
+      for(let c = 0; c < 3; c++) d[o + c] = d[o + c] + (Math.min(255, rgb[c]*k) - d[o + c])*a;
+    }
+  }
+  return d;
+}
+/* the strap colour the photograph has to be re-coloured to, or null */
+const photoStrapHex = (st, K) => {
+  const own = (K.photoOwn || {}).strapColor, c = st.case || {};
+  return K.photoStrap && !K.bracelet && own && c.strap !== false && /^#[0-9a-f]{6}$/i.test(c.strapColor || "") && c.strapColor.toUpperCase() !== own.toUpperCase() ? c.strapColor : null;
+};
 function buildTemplate(st, o){
   o = o || {};
   const K = caseOf(st);
@@ -10164,7 +10191,8 @@ function buildTemplate(st, o){
   const plan = K.photoFile ? photoPlan(st, K) : (twoToneOf(st) || gemBezelOn(st) ? false : null);
   if(plan === false) return buildSVG(st, {scope:"full"});
   let own = K.photoFile ? casePhoto(K) : null;
-  if(own && plan && (plan.full || plan.two)){ own = tintedPhoto(K, plan); if(!own) return buildSVG(st, {scope:"full"}); }
+  const strapHex = own ? photoStrapHex(st, K) : null;
+  if(own && ((plan && (plan.full || plan.two)) || strapHex)){ own = tintedPhoto(K, plan || {}, strapHex); if(!own) return buildSVG(st, {scope:"full"}); }
   const IMG = own || tplImage, IW = own ? K.photoCal.w : tplW, IH = own ? K.photoCal.h : tplH;
   if(!IMG) return buildSVG(st, {scope:"full"});
   const T = own ? Object.assign({}, st.tpl, {cx:K.photoCal.cx, cy:K.photoCal.cy, dia:K.photoCal.dia, rot:0}) : st.tpl;
@@ -14930,25 +14958,6 @@ async function sheetGround(g){
   SHEET_GROUND.set(g.key, cv);
   return cv;
 }
-/* A strap of another colour: the photograph's strap, inside the region
-   K.photoStrap gives, re-coloured by its own light. Dark pixels take the
-   colour fully, the steel and the ground beside it not at all. */
-function sheetStrapTint(cv, g, K, hex){
-  const W = cv.width, H = cv.height, ctx = cv.getContext("2d"), id = ctx.getImageData(0, 0, W, H), d = id.data;
-  const s = W/g.w*g.w*g.dia/100/K.opening, cx = W*g.cx/100, cy = H*g.cy/100, P = K.photoStrap, rgb = hex2rgb(hex);
-  for(let j = 0; j < H; j++){
-    const y = (j + 0.5 - cy)/s, beyond = y < P.ends[0] || y > P.ends[1], tongueRow = Math.abs(y) > P.tongue.y;
-    if(!beyond && !tongueRow) continue;
-    for(let i = 0; i < W; i++){
-      if(!beyond && Math.abs((i + 0.5 - cx)/s) > P.tongue.x) continue;
-      const o = (j*W + i)*4, L = 0.299*d[o] + 0.587*d[o + 1] + 0.114*d[o + 2];
-      const a = Math.max(0, Math.min(1, (170 - L)/60)); if(a <= 0) continue;
-      const k = Math.max(0.60, Math.min(1.25, 1 + 0.9*(L - 22)/120));      // the rubber's own mid-tone (L 22) takes the colour exactly
-      for(let c = 0; c < 3; c++) d[o + c] = d[o + c] + (Math.min(255, rgb[c]*k) - d[o + c])*a;
-    }
-  }
-  ctx.putImageData(id, 0, 0);
-}
 /* One version's picture: the photograph with the dial drawn in, the strap
    re-coloured if need be and the ground made white; or the drawn case.
    Version A is also the 200% render, so it is drawn for that: at least
@@ -14969,8 +14978,7 @@ async function sheetVersionRaster(st, hero, i){
         }catch(e){ cv = null; }
       }
       if(cv){
-        const own = (K.photoOwn || {}).strapColor;
-        if(K.photoStrap && !K.bracelet && own && String(st.case.strapColor || "").toUpperCase() !== own.toUpperCase()) sheetStrapTint(cv, g, K, st.case.strapColor);
+        /* the strap colour is already in the photograph buildTemplate used */
         try{ const m = await sheetGround(g); cv.getContext("2d").drawImage(m, 0, 0, cv.width, cv.height); }catch(e){}
         return {url:sheetJPEG(cv, 0.9), wmm, hmm:wmm*ar, fx:g.cx/100, fy:g.cy/100, px:W, kind:"photo"};
       }
@@ -18255,7 +18263,7 @@ Object.assign(GWORD.ar, {
     if(path === "case.material") return metalShows(K, v);
     if(path === "case.finish") return v === own.finish;
     if(path === "case.strap") return !!v;
-    if(path === "case.strapColor") return !!K.bracelet || String(v).toUpperCase() === String(own.strapColor || "").toUpperCase();
+    if(path === "case.strapColor") return !!K.bracelet || !!K.photoStrap || String(v).toUpperCase() === String(own.strapColor || "").toUpperCase();
     return true;
   }
   /* the whole design as its photograph can show it */
@@ -18263,7 +18271,7 @@ Object.assign(GWORD.ar, {
     const K = caseOf(st), c = st.case, own = K.photoOwn || {};
     if(!hasPhoto(K)) return false;
     return (twoToneOf(st) ? !!K.photoParts : metalShows(K, c.material)) && (!own.finish || c.finish === own.finish) && c.strap !== false
-      && (!!K.bracelet || !own.strapColor || String(c.strapColor).toUpperCase() === own.strapColor.toUpperCase()) && photoPlan(st, K) !== false;
+      && (!!K.bracelet || !!K.photoStrap || !own.strapColor || String(c.strapColor).toUpperCase() === own.strapColor.toUpperCase()) && photoPlan(st, K) !== false;
   }
   /* true while the drawing is on screen because of a choice, not because the
      person turned the photograph off: a later choice that fits brings it back */
@@ -18277,7 +18285,7 @@ Object.assign(GWORD.ar, {
     if(gemBezelOn(S) && !K.photoParts){ c.gemBezel = "none"; done.push(gT("photo.plainBezel")); }
     if(own.finish && c.finish !== own.finish){ c.finish = own.finish; done.push(gT("photo.finish", gW(GLOSS_OPT[own.finish] || own.finish))); }
     if(c.strap === false){ c.strap = true; done.push(gT(K.bracelet ? "photo.bracelet" : "photo.strap")); }
-    if(!K.bracelet && own.strapColor && String(c.strapColor).toUpperCase() !== own.strapColor.toUpperCase()){ c.strapColor = own.strapColor; done.push(gT(own.strap === "brown" ? "photo.brownStrap" : "photo.blackStrap")); }
+    if(!K.bracelet && !K.photoStrap && own.strapColor && String(c.strapColor).toUpperCase() !== own.strapColor.toUpperCase()){ c.strapColor = own.strapColor; done.push(gT(own.strap === "brown" ? "photo.brownStrap" : "photo.blackStrap")); }
     S.tpl.on = true; photoAuto = false;
     commit(); paintAll();
     toast(done.length ? gT("photo.changed", gT("list", done)) : gT("photo.on"));

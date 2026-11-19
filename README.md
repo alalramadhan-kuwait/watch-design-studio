@@ -200,6 +200,17 @@ stored in a design file do not change. In the full editor at laptop widths
 the toolbar sits tighter, and on a narrower window it takes a second row
 rather than pushing Share and Export off the screen.
 
+## Strap colour on the real photograph (v4.11.2)
+
+On a case whose strap is measured on its photograph (`K.photoStrap`, the
+Time Keeper × Nivada F77), choosing another strap colour keeps the photograph
+and re-colours the strap by its own light (`strapTintPixels`, done once per
+colour and cached with the gold tints in `tintedPhoto`). It used to switch to
+the drawn case, whose F77 had the wrong bezel, so all five designers in the
+F77 challenge kept the black strap. The maker's sheet takes the colour from
+the same picture and no longer tints its own copy. Cases without a measured
+strap (Vernoy) behave as before.
+
 ## Improvement plan, phase 1: first fixes (v4.11.1)
 
 From the F77 design challenge's reproduced bugs:
