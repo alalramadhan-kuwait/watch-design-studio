@@ -2180,6 +2180,10 @@ const VIRTUAL = {
   line2CapMM:{get:t => +((+t.line2Size || 0)*lineCapK(t.line2, t.line2Font)).toFixed(3), set:(t, v) => { t.line2Size = +(v/lineCapK(t.line2, t.line2Font)).toFixed(4); }},
   footCapMM:{get:t => +((+t.footSize || 0)*lineCapK(t.foot, t.footFont)).toFixed(3), set:(t, v) => { t.footSize = +(v/lineCapK(t.foot, t.footFont)).toFixed(4); }},
   splitCapMM:{get:t => +((+t.splitSize || 0)*lineCapK(t.split, t.splitFont)).toFixed(3), set:(t, v) => { t.splitSize = +(v/lineCapK(t.split, t.splitFont)).toFixed(4); }},
+  /* a railroad's width rail to rail (its "thickness" is half of it); any
+     other track's mark size as it always was */
+  trackWMM:{get:m => +((+m.thickness || 0)*(m.style === "railroad" ? 2 : 1)).toFixed(3),
+            set:(m, v) => { m.thickness = +(v/(m.style === "railroad" ? 2 : 1)).toFixed(4); }},
   /* the date's digit height: the one set, or the one the window gives */
   digitHUi:{get:d => d.digitH > 0 ? d.digitH : dateAutoDigitH(d), set:(d, v) => { d.digitH = +v; }},
   /* the date window's edge: a bevelled cut, an applied frame, or the thin
@@ -2209,7 +2213,7 @@ const APP_BUILD = "__BUILD__";
 /* The version people see, raised with every change that reaches them:
    major for a new way of working, minor for something new to do, patch for
    a fix. Shown on the watch screen, so any screenshot says which it was. */
-const APP_VERSION = "4.13.0";
+const APP_VERSION = "4.14.0";
 const APP_DATE = "__DATE__";
 
 /* Every route that replaces S passes through one of these three, which is
@@ -5454,8 +5458,9 @@ function buildSVG(st, o={}){
     /* A railroad's two rails are continuous rings, so they cannot simply be
        skipped a mark at a time — they are drawn as arcs that stop at the
        lettering and pick up again after it. */
-    const ringMaybeBroken = (rad, strokeW, col) => {
-      const spans = (st.minute && st.minute.textBreak !== false) ? textSpans(rad, strokeW, strokeW) : [];
+    const ringMaybeBroken = (rad, strokeW, col, gap) => {
+      const spans = ((st.minute && st.minute.textBreak !== false) ? textSpans(rad, strokeW, strokeW) : [])
+        .concat(gap > 0 ? [[180 - gap/2, 180 + gap/2]] : []);
       if(!spans.length)
         return `<circle r="${f(rad,3)}" fill="none" stroke="${col}" stroke-width="${f(strokeW,3)}"/>`;
       const norm = spans.map(([a,b]) => [((a%360)+360)%360, ((b%360)+360)%360])
@@ -5677,10 +5682,18 @@ function buildSVG(st, o={}){
       /* A railroad is printed fine: two hairline rails, hairline minutes
          between them, and the five-minute marks bolder and running a little
          inward, so the eye finds the fives without the track going heavy. */
-      const rail = Math.max(0.045, Math.min(0.08, t*0.18));
+      /* Optional, each defaulting to the track as it always was: the rails'
+         weight (railW), the minute ticks' (tickW), the five-minute marks run
+         inward, plain or flared (fiveStyle), and a gap round 6 for lettering,
+         in degrees (gap6). */
+      const rail = mt.railW > 0 ? mt.railW : Math.max(0.045, Math.min(0.08, t*0.18));
+      const tickW = mt.tickW > 0 ? mt.tickW : rail*1.15, fiveSt = mt.fiveStyle || "inward", gap6 = +mt.gap6 || 0;
+      const inGap = deg => gap6 > 0 && Math.abs(((deg - 180 + 540) % 360) - 180) < gap6/2;
+      /* the rails stop at the last minute mark either side of the gap */
+      const gapR = gap6 > 0 ? 2*Math.ceil(gap6/12 - 1e-9)*6 : 0;
       if(mt.style==="railroad"){
-        body.push(ringMaybeBroken(r + t, rail, tcol));
-        body.push(ringMaybeBroken(r - t, rail, tcol));
+        body.push(ringMaybeBroken(r + t, rail, tcol, gapR));
+        body.push(ringMaybeBroken(r - t, rail, tcol, gapR));
       }
       for(let i=0;i<60;i++){
         const a=i*6, five=i%5===0, len = five&&mt.fives ? Math.max(mt.fiveLen, 0.6) : Math.max(t*1.6, 0.42);
@@ -5692,6 +5705,7 @@ function buildSVG(st, o={}){
                    : mt.style === "railroad" ? (five && mt.fives ? rail*2.6 : rail*1.15)
                    : (five ? mt.thickness*1.5 : mt.thickness);
         if(mt.textBreak !== false && !clearsText(a, r, len, wide)) continue;
+        if(inGap(a)) continue;
         if(mt.style==="dots"){
           const p=pt(r,a);
           body.push(`<circle cx="${f(p[0],3)}" cy="${f(p[1],3)}" r="${f(five&&mt.fives?t*0.85:t*0.55,3)}" fill="${tcol}"${tcol === mt.color ? "" : ` stroke="none"`}/>`);
@@ -5702,8 +5716,16 @@ function buildSVG(st, o={}){
           body.push(beadRing(r, 1, five&&mt.fives ? t*0.85 : t*0.55, tcol, {from:a}));
         } else if(mt.style==="railroad"){
           const bold = five && mt.fives;
-          const p0 = pt(bold ? r - t - Math.min(0.45, t*1.2) : r - t, a), p1 = pt(r + t, a);
-          body.push(`<line x1="${f(p0[0],3)}" y1="${f(p0[1],3)}" x2="${f(p1[0],3)}" y2="${f(p1[1],3)}" stroke="${tcol}" stroke-width="${f(bold ? rail*2.6 : rail*1.15,3)}"/>`);
+          if(bold && fiveSt === "flared"){
+            /* a wedge, narrow at the inner rail and widening to the outer */
+            const ar = a*Math.PI/180, ux = Math.sin(ar), uy = -Math.cos(ar), vx = Math.cos(ar), vy = Math.sin(ar);
+            const r0 = r - t - Math.min(0.30, t*0.8), r1 = r + t, w0 = rail*0.7, w1 = rail*2.6;
+            const P = (rr, w) => `${f(ux*rr + vx*w,3)} ${f(uy*rr + vy*w,3)}`;
+            body.push(`<path d="M${P(r0,-w0)} L${P(r1,-w1)} L${P(r1,w1)} L${P(r0,w0)}Z" fill="${tcol}"/>`);
+          } else {
+            const p0 = pt(bold && fiveSt === "inward" ? r - t - Math.min(0.45, t*1.2) : r - t, a), p1 = pt(r + t, a);
+            body.push(`<line x1="${f(p0[0],3)}" y1="${f(p0[1],3)}" x2="${f(p1[0],3)}" y2="${f(p1[1],3)}" stroke="${tcol}" stroke-width="${f(bold ? rail*2.6 : tickW,3)}"/>`);
+          }
         } else { // ticks / dashes
           const p0=pt(r-len/2,a), p1=pt(r+len/2,a);
           body.push(`<line x1="${f(p0[0],3)}" y1="${f(p0[1],3)}" x2="${f(p1[0],3)}" y2="${f(p1[1],3)}" stroke="${tcol}" stroke-width="${f(five?mt.thickness*1.5:mt.thickness,3)}" stroke-linecap="${mt.style==="dashes"?"round":"butt"}"/>`);
@@ -10903,7 +10925,11 @@ const SCHEMA = {
     C("chapter.color","Colour"), SEL("chapter.finish","Finish",["flat","matte","gloss","sunburst","grained","enamel"]),
     CK("chapter.separator","Separator lines"), C("chapter.sepColor","Separator colour")]},
   minute:{title:"Minute track", hint:"60 divisions. Diameter is the centre line of the track.", fields:()=>[
-    N("minute.diameter","Track diameter",6,44), N("minute.thickness","Thickness",.08,1.2,.02),
+    N("minute.diameter","Track diameter",6,44),
+    S.minute.style === "railroad" ? N("minute.trackWMM","Track width (rail to rail)",.16,2.4,.02) : N("minute.thickness","Thickness",.08,1.2,.02),
+    ...(S.minute.style === "railroad" ? [N("minute.railW","Rail weight (0 = automatic)",0,.2,.005), N("minute.tickW","Minute tick weight (0 = automatic)",0,.25,.005)] : []),
+    ...(S.minute.style === "railroad" ? [SEL("minute.fiveStyle","Five-minute marks",["inward","plain","flared"])] : []),
+    N("minute.gap6","Gap at 6",0,60,1,"°"),
     SEL("minute.style","Style",["dots","beads","ticks","railroad","dashes"]),
     C("minute.color","Colour"), CK("minute.fives","Emphasise 5-minute marks"), N("minute.fiveLen","5-min length",.2,3,.05),
     SEL("minute.tech","Made by",["printed","double printed","engraved + filled","engraved","gloss on matte"]),
@@ -15605,6 +15631,8 @@ async function makeMakerPDF(){
     const add=(ok,title,detail,layer)=>out.push({ok,title,detail,layer});
     add(st.case.locked!==false,'Case reference',st.case.locked!==false?'Case locked to '+((typeof caseOf==='function')?caseOf(st).ref:'RD26-0172')+' factory dimensions.':'Exploratory case dimensions: confirm a compatible case and movement.','case');
     add(st.dial.diameter>=r*2,'Dial coverage',`Blank Ø${f(st.dial.diameter,2)} mm · visible opening Ø${f(r*2,2)} mm.`,'dial');
+    if(st.minute&&st.minute.on){ const mo=st.minute.diameter/2+(st.minute.style==='railroad'?st.minute.thickness:st.minute.thickness*0.8);
+      add(mo<=r-0.10,'Minute track in view',`Outer edge at R${f(mo,2)} mm; the opening shows to R${f(r,2)} mm${mo>r-0.10?': part of the track is hidden under the rehaut':''}.`,'dial'); }
     for(const [key,name]of [['hHand','Hour'],['mHand','Minute'],['sHand','Seconds']])if(st[key].on){
       /* handLength, not .length: a hand set to reach a landmark keeps whatever
          millimetres were last written to the file, and the renderer never reads
@@ -16822,7 +16850,7 @@ const GWORD = {ar:{
   "Extra high":"مرتفع جداً", "High":"مرتفع", "height:Standard":"عادي", "Window width":"عرض النافذة", "Narrow":"ضيقة", "Standard":"قياسية", "Wide":"عريضة",
   "Move them aside":"أزحهما جانباً", "Make them smaller":"صغّرهما", "Use markers":"ضع مؤشرين", "Leave them off":"احذفهما", "Let them touch":"اتركهما متلامسين",
   "Day font":"خط اليوم", "Arabic font":"الخط العربي", "English font":"الخط الإنجليزي", "In the window":"في النافذة", "Day disc":"قرص اليوم",
-  "Day lettering":"لون كتابة اليوم", "Window edge":"حافة النافذة", "Lume colour":"لون المادة المضيئة", "Lume fill":"تعبئة مضيئة", "Green-white":"أبيض مخضر", "Old radium":"راديوم قديم", "Vintage cream":"كريمي عتيق", "Figure height":"ارتفاع الرقم", "Letter height":"ارتفاع الحروف", "Thin line":"خط رفيع", "Digit height":"ارتفاع الأرقام", "Bevelled cut":"قطع مشطوف", "Applied frame":"إطار مركّب",
+  "Day lettering":"لون كتابة اليوم", "Window edge":"حافة النافذة", "Lume colour":"لون المادة المضيئة", "Lume fill":"تعبئة مضيئة", "Green-white":"أبيض مخضر", "Old radium":"راديوم قديم", "Vintage cream":"كريمي عتيق", "Five-minute marks":"علامات الخمس دقائق", "Run inward":"ممتدة للداخل", "Flared":"متسعة", "Gap at 6":"فراغ عند ٦", "Track width":"عرض المسار", "Rail weight":"وزن الخط", "Tick weight":"وزن العلامة", "Figure height":"ارتفاع الرقم", "Letter height":"ارتفاع الحروف", "Thin line":"خط رفيع", "Digit height":"ارتفاع الأرقام", "Bevelled cut":"قطع مشطوف", "Applied frame":"إطار مركّب",
   "All seven days in the window":"أيام الأسبوع السبعة في النافذة", "The disc in order":"القرص بالترتيب",
   "Date window at 3":"نافذة التاريخ عند 3", "Magnifier":"المكبّر", "Digits":"الأرقام", "Date font":"خط التاريخ", "Date disc":"قرص التاريخ",
   "Date digits colour":"لون أرقام التاريخ", "Frame":"الإطار", "All window settings":"كل إعدادات النوافذ",
@@ -16837,6 +16865,7 @@ const gW = (s, ctx) => { const W = GWORD[GLANG]; if(!W || typeof s !== "string")
 const G_DIR = {en:"ltr", ar:"rtl"};
 /* the design check's rows in Arabic, by the same titles as G_CHECK_WORDS */
 const G_CHECK_AR = {
+  "Minute track in view":"جزء من مسار الدقائق مخفي تحت حافة الفتحة.",
   "Dial coverage":"الميناء أصغر من الفتحة.",
   "Minute track envelope":"مسار الدقائق يمتد تحت الإطار.",
   "Surface detail scale":"نقش الغيوشيه أدق مما يستطيع معظم صانعي الموانئ تنفيذه.",
@@ -16981,6 +17010,7 @@ function gCommonInk(parts){
    production review, the case reference, where a stone comes from) are not
    shown as warnings. */
 const G_CHECK_WORDS = {
+  "Minute track in view":["dial","Part of the minute track is hidden under the rehaut."],
   "Dial coverage":["dial","The dial is smaller than the opening."],
   "Minute track envelope":["dial","The minute track runs under the bezel."],
   "Surface detail scale":["dial","The guilloché is finer than most dial makers can cut."],
@@ -17052,7 +17082,7 @@ const G_MORE = {
     {id:"stone", t:"Stone", src:"dial", paths:["dial.stoneScale","dial.stoneRot","dial.stoneOffX","dial.stoneOffY","dial.stoneBump","act:slabCut",
       "dial.stAdv","head","act:stReset","dial.stEnv","dial.stRoughLo","dial.stRoughHi","dial.stCoat","dial.stMetal","dial.stSSS","dial.stIrid",
       "dial.stAniso","dial.stFibre","dial.stFibreAngle","dial.stInclThr","dial.stSparkle","dial.stoneTint"]},
-    {id:"minute", t:"Minute track", src:"minute", show:"minute.on", paths:["minute.diameter","minute.thickness","minute.fives","minute.fiveLen",
+    {id:"minute", t:"Minute track", src:"minute", show:"minute.on", paths:["minute.diameter","minute.thickness","minute.trackWMM","minute.railW","minute.tickW","minute.fiveStyle","minute.gap6","minute.fives","minute.fiveLen",
       "minute.tech","minute.edgeLight","minute.textBreak","minute.textGap"]},
     {id:"chapter", t:"Chapter ring", src:"chapter", on:"chapter.on", onLabel:"Show the chapter ring",
       paths:["chapter.outerD","chapter.innerD","chapter.color","chapter.finish","chapter.separator","chapter.sepColor"]},
@@ -17117,7 +17147,7 @@ const G_MORE_LABEL = {
   "dial.stRoughHi":"Polish of the matrix", "dial.stCoat":"Clear coat", "dial.stMetal":"Metallic", "dial.stSSS":"Translucency",
   "dial.stIrid":"Iridescence", "dial.stAniso":"Shimmer strength", "dial.stFibre":"Shimmer direction", "dial.stFibreAngle":"Shimmer angle",
   "dial.stInclThr":"How many sparkles", "dial.stSparkle":"Sparkle strength", "dial.stoneTint":"Tint with the dial colour",
-  "minute.diameter":"Track diameter", "minute.thickness":"Thickness", "minute.fives":"Stronger five-minute marks",
+  "minute.diameter":"Track diameter", "minute.thickness":"Thickness", "minute.trackWMM":"Track width", "minute.railW":"Rail weight", "minute.tickW":"Tick weight", "minute.fiveStyle":"Five-minute marks", "minute.gap6":"Gap at 6", "minute.fives":"Stronger five-minute marks",
   "minute.fiveLen":"Five-minute mark length", "minute.tech":"Made by", "minute.edgeLight":"Edge light",
   "minute.textBreak":"Break the track at the lettering", "minute.textGap":"Gap each side",
   "chapter.outerD":"Outer diameter", "chapter.innerD":"Inner diameter", "chapter.color":"Colour", "chapter.finish":"Finish",
@@ -17185,6 +17215,7 @@ const G_MORE_OPT = {
   "gloss on matte":"Gloss on matte", "brushed across":"Brushed across the grain", "uv ink":"UV ink",
   "text.line2Tech=engraved":"Engraved, tone on tone", "text.footTech=engraved":"Engraved, tone on tone", "text.splitTech=engraved":"Engraved, tone on tone",
   "minute.tech=engraved":"Engraved, tone on tone", "indices.tech=engraved":"Engraved, tone on tone",
+  "minute.fiveStyle=inward":"Run inward", "minute.fiveStyle=plain":"Plain", "minute.fiveStyle=flared":"Flared",
   sandblasted:"Sandblasted", metallic:"Metallic", flat:"Flat", line:"Line", ring:"Ring",
   "same as dial":"Same as the dial", clous:"Clous de Paris", orge:"Grain d'orge", soleil:"Soleil", cercles:"Circles", vagues:"Waves",
   flamme:"Flammé", panier:"Basket", damier:"Checker", tapisserie:"Stepped squares", perlage:"Perlage", geneva:"Geneva waves",
@@ -18102,6 +18133,9 @@ Object.assign(GWORD.ar, {
         return h + more("dial", "All dial settings");
       }
       let h = chips("minute.style", [["none","None"],["railroad","Railroad"],["ticks","Ticks"],["dots","Dots"],["beads","Beads"],["dashes","Dashes"]], S.minute.on ? S.minute.style : "none");
+      if(S.minute.on && S.minute.style === "railroad") h += `<h3>${gW("Five-minute marks")}</h3>` + chips("minute.fiveStyle", [["inward","Run inward"],["plain","Plain"],["flared","Flared"]], S.minute.fiveStyle || "inward")
+        + slider("minute.trackWMM", "Track width", 0.16, 2.4, 0.02, get(S, "minute.trackWMM"));
+      if(S.minute.on) h += slider("minute.gap6", "Gap at 6", 0, 60, 1, +S.minute.gap6 || 0, "deg");
       if(S.minute.on) h += printingBlock("minute");
       return h + more("dial", "All dial settings");
     },

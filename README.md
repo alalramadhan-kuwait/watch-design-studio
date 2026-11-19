@@ -200,6 +200,17 @@ stored in a design file do not change. In the full editor at laptop widths
 the toolbar sits tighter, and on a narrower window it takes a second row
 rather than pushing Share and Export off the screen.
 
+## Minute track settings (v4.14.0)
+
+A railroad's **Track width** is its width rail to rail (`trackWMM`; its old
+"thickness" is half of it). New, each defaulting to the track as it always
+was: **Rail weight** and **Tick weight** (`railW`, `tickW`, 0 = automatic),
+**Five-minute marks** run inward, plain or flared (`fiveStyle`), and a **Gap
+at 6** in degrees for lettering (`gap6`), the rails stopping at the last
+minute mark either side. On the Dial step's Track tab and in the full editor.
+A design check, "Minute track in view", warns when the track's outer edge runs
+under the rehaut.
+
 ## Lume colour, and lume in every applied marker (v4.13.0)
 
 One lume colour for the whole watch (`lume.color`: green-white, old radium,
