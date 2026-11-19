@@ -2200,7 +2200,7 @@ const APP_BUILD = "__BUILD__";
 /* The version people see, raised with every change that reaches them:
    major for a new way of working, minor for something new to do, patch for
    a fix. Shown on the watch screen, so any screenshot says which it was. */
-const APP_VERSION = "4.11.2";
+const APP_VERSION = "4.11.3";
 const APP_DATE = "__DATE__";
 
 /* Every route that replaces S passes through one of these three, which is
@@ -15921,6 +15921,8 @@ body.guided .stage.gPhoto{ background:#fff }
 .gSl{ margin:4px 0 8px }
 .gSlHead{ display:flex; justify-content:space-between; align-items:baseline; gap:10px; font-size:14px; color:var(--ds-text) }
 .gSlHead output{ font:600 14px/1.3 var(--sans); font-variant-numeric:tabular-nums; color:var(--ds-text); white-space:nowrap }
+.gSlVal{ font:inherit; color:inherit; background:none; border:0; border-bottom:1px dashed var(--ds-text-2); padding:6px 2px; margin:-6px 0; min-height:32px; cursor:text }
+.gSlIn{ font:600 16px/1.3 var(--sans); font-variant-numeric:tabular-nums; width:6.5em; text-align:end; padding:4px 8px; border:1px solid var(--ds-brand); border-radius:8px; background:var(--ds-panel); color:var(--ds-text) }
 .gSlRow{ display:flex; align-items:center; gap:8px }
 .gStep{ flex:none; width:44px; height:44px; border-radius:12px; border:1px solid var(--ds-border); background:var(--ds-panel);
   font:500 20px/1 var(--sans); color:var(--ds-text); cursor:pointer; touch-action:manipulation; padding:0;
@@ -16331,6 +16333,7 @@ const GSTR = {en:{
   "hr.oclock": h => `${h} o'clock`, "hr.tap":"Tap an hour to choose what it carries.",
   "hr.covered":"12 and 3 sit under the day and date windows on this watch, so they stay empty.",
   "hr.covered1": h => `${h} sits under a window on this watch, so it stays empty.`,
+  "sl.type":"tap to type a value",
   "hands.also": ks => `Linked: also changed the ${[].concat(ks).join(" and ").toLowerCase()}. Unlink them under Hands together.`,
   "logo.upload":"Upload your logo…", "logo.replace":"Replace your logo…",
   "logo.uploadNote":"PNG, JPG or SVG. The background is removed and the logo takes the colour or metal you choose.",
@@ -16501,6 +16504,7 @@ GSTR.ar = {
   "hr.oclock": h => `الساعة ${h}`, "hr.tap":"اضغط على ساعة لتختار ما يوضع عندها.",
   "hr.covered":"الساعتان 12 و3 تحت نافذتي اليوم والتاريخ في هذه الساعة، فتبقيان فارغتين.",
   "hr.covered1": h => `الساعة ${h} تحت نافذة في هذه الساعة، فتبقى فارغة.`,
+  "sl.type":"اضغط لكتابة القيمة",
   "hands.also": ks => `العقارب مرتبطة: تغيّر أيضاً ${[].concat(ks).join(" و")}. يمكنك فكّ الربط من «العقارب معاً».`,
   "logo.upload":"ارفع شعارك…", "logo.replace":"استبدل شعارك…",
   "logo.uploadNote":"PNG أو JPG أو SVG. تُزال الخلفية ويأخذ الشعار اللون أو المعدن الذي تختاره.",
@@ -17239,7 +17243,7 @@ Object.assign(GWORD.ar, {
     const moved = o != null && Math.abs(v - o) > st/2;
     const less = kind === "pos" ? gT("sl.up") : gT("sl.less"), more = kind === "pos" ? gT("sl.down") : gT("sl.more");
     return `<div class="gSl" data-gsl="${path}" data-kind="${kind}" data-o="${o == null ? "" : o}">
-      <div class="gSlHead"><label for="${id}">${label}</label><output>${gReadout(v, kind, st)}</output></div>
+      <div class="gSlHead"><label for="${id}">${label}</label><output><button type="button" class="gSlVal" data-gtype="${path}" data-min="${min}" data-max="${max}" data-kind="${kind}" aria-label="${esc2(label)}: ${esc2(gT("sl.type"))}">${gReadout(v, kind, st)}</button></output></div>
       <div class="gSlRow"><button type="button" class="gStep" data-gnudge="${path}" data-dir="-1" aria-label="${label}: ${less}">${kind === "pos" ? "↑" : "−"}</button>
         <div class="gSlTrack"><input type="range" id="${id}" data-grange="${path}" min="${min}" max="${max}" step="${st}" value="${v}" style="--p:${p.toFixed(4)}">${op == null ? "" : `<i class="gSlMark" style="--o:${op.toFixed(4)}"></i>`}</div>
         <button type="button" class="gStep" data-gnudge="${path}" data-dir="1" aria-label="${label}: ${more}">${kind === "pos" ? "↓" : "+"}</button></div>
@@ -18290,6 +18294,31 @@ Object.assign(GWORD.ar, {
     commit(); paintAll();
     toast(done.length ? gT("photo.changed", gT("list", done)) : gT("photo.on"));
   }
+  /* Typing a value: the readout becomes a number field with the value as it
+     is stored (a percentage as a percentage), kept to the slider's range but
+     not to its step, and applied as one change, the same way as a slider
+     that was let go. Enter or leaving the field keeps it; Escape does not. */
+  function typeValue(btn){
+    const path = btn.dataset.gtype, kind = btn.dataset.kind, min = parseFloat(btn.dataset.min), max = parseFloat(btn.dataset.max);
+    const sheet = !!btn.closest(".gSheet"), now = Number(get(S, path));
+    const shown = kind === "pct" ? Math.round(now*1000)/10 : +now.toFixed(4);
+    const inp = document.createElement("input");
+    inp.type = "text"; inp.inputMode = kind === "pos" ? "text" : "decimal"; inp.className = "gSlIn"; inp.value = String(shown);
+    inp.setAttribute("aria-label", btn.getAttribute("aria-label") || ""); inp.setAttribute("enterkeyhint", "done");
+    btn.replaceWith(inp); inp.focus(); inp.select();
+    let done = false;
+    const finish = keep => {
+      if(done) return; done = true;
+      let v = parseFloat(String(inp.value).replace(",", ".").replace(/[^0-9.+-]/g, ""));
+      if(keep && Number.isFinite(v)){
+        if(kind === "pct") v = v/100;
+        v = Math.min(max, Math.max(min, v));
+        apply(path, v, sheet);
+      } else paint();
+    };
+    inp.addEventListener("keydown", e => { if(e.key === "Enter"){ e.preventDefault(); finish(true); } else if(e.key === "Escape"){ e.preventDefault(); finish(false); } });
+    inp.addEventListener("blur", () => finish(true));
+  }
   function apply(path, v, sheet){
     /* Every case has a photograph now (the Vernoy's is the built-in
        picture), and each keeps it for what it can show: its steel, its own
@@ -18586,6 +18615,8 @@ Object.assign(GWORD.ar, {
     const t = e.target.closest("button, [data-gstart]"); if(!t) return;
     const d = t.dataset;
     if(t.classList.contains("gStep")){ if(e.detail === 0){ nudge(t); endNudge(); } return; }   // a key press; a finger goes through pointerdown
+    /* the figure beside a slider: tap it to type an exact value */
+    if(d.gtype){ typeValue(t); return; }
     if(d.glang){ setLang(d.glang); return; }
     if(d.gstep){ go(+d.gstep); return; }
     if(d.glist){ listOpen = d.glist === "1"; paint(); return; }
@@ -18744,7 +18775,7 @@ Object.assign(GWORD.ar, {
      whole press is one undo step ---- */
   let rep = null;
   function readSl(box, v){
-    const r = box.querySelector("input[type=range]"), out = box.querySelector("output");
+    const r = box.querySelector("input[type=range]"), out = box.querySelector(".gSlVal") || box.querySelector("output");
     const min = parseFloat(r.min), max = parseFloat(r.max);
     r.style.setProperty("--p", ((v - min)/(max - min)).toFixed(4));
     if(out) out.textContent = gReadout(v, box.dataset.kind, parseFloat(r.step));

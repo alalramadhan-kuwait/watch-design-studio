@@ -200,6 +200,16 @@ stored in a design file do not change. In the full editor at laptop widths
 the toolbar sits tighter, and on a narrower window it takes a second row
 rather than pushing Share and Export off the screen.
 
+## Typed values in simple mode (v4.11.3)
+
+The figure beside every slider in simple mode, on the steps and in the More
+sheets, is a button: tap it and it becomes a number field (the decimal keypad
+on a phone) holding the value as stored, a percentage as a percentage. Enter
+or leaving the field applies it as one change and one undo step, kept to the
+slider's range but not to its step, so 0.35 mm is reachable where the steps
+are 0.1. A comma counts as a decimal point; Escape leaves the value as it was.
+In the F77 challenge one exact value took up to 84 taps of − and +.
+
 ## Strap colour on the real photograph (v4.11.2)
 
 On a case whose strap is measured on its photograph (`K.photoStrap`, the

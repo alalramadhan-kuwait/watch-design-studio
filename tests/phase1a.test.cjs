@@ -50,3 +50,17 @@ test('a strap of another colour keeps the photograph where the case has a measur
   assert.doesNotMatch(source, /sheetStrapTint/);
   assert.doesNotMatch(chunk('const photoStrapHex = ', '\n};'), /isHex\(/);
 });
+
+test('the figure beside every guided slider can be tapped to type an exact value', () => {
+  assert.match(source, /<output><button type="button" class="gSlVal" data-gtype="\$\{path\}" data-min="\$\{min\}" data-max="\$\{max\}" data-kind="\$\{kind\}"/);
+  assert.match(source, /if\(d\.gtype\)\{ typeValue\(t\); return; \}/);
+  const f = chunk('function typeValue(btn){', '\n  function apply(path, v, sheet){');
+  assert.match(f, /inp\.inputMode = kind === "pos" \? "text" : "decimal"/);
+  assert.match(f, /v = Math\.min\(max, Math\.max\(min, v\)\);\n        apply\(path, v, sheet\);/);
+  assert.match(f, /\.replace\(",", "\."\)/, 'a comma is a decimal point');
+  assert.match(f, /e\.key === "Escape"/);
+  // dragging the slider updates the figure, not the button's place
+  assert.match(source, /out = box\.querySelector\("\.gSlVal"\) \|\| box\.querySelector\("output"\);/);
+  // 16 px so iOS does not zoom into the field
+  assert.match(source, /\.gSlIn\{ font:600 16px\/1\.3 var\(--sans\)/);
+});
