@@ -2159,8 +2159,20 @@ function migrateHands(st){
   return st;
 }
 const deep = (a,b)=>{const o=clone(a);for(const k in b){o[k]=(b[k]&&typeof b[k]==="object"&&!Array.isArray(b[k]))?deep(o[k]||{},b[k]):b[k];}return o;};
-const get = (o,p)=>p.split(".").reduce((x,k)=>x[k],o);
-const set = (o,p,v)=>{const k=p.split(".");k.slice(0,-1).reduce((x,i)=>x[i],o)[k.pop()]=v;};
+/* Virtual fields: a value the controls show and set that the design keeps
+   another way. A hand's "widthMM" is the width the hand is drawn at, in mm.
+   The design keeps its base width, which each shape multiplies by its own
+   factor (STYLE_W), so every saved design draws exactly as before; only the
+   number on the slider changed. It used to show the base width, and a
+   designer who set a baton hand to "1.4" got one 2.66 mm wide. */
+const VIRTUAL = {
+  widthMM:{get:h => +((+h.width || 0)*handDrawnK(h.style)).toFixed(3),
+           set:(h, v) => { h.width = +(v/handDrawnK(h.style)).toFixed(5); }}
+};
+const get = (o,p)=>{const k=p.split("."),last=k.pop(),par=k.reduce((x,i)=>x[i],o);
+  return VIRTUAL[last] && par && typeof par === "object" && !(last in par) ? VIRTUAL[last].get(par) : par[last];};
+const set = (o,p,v)=>{const k=p.split("."),last=k.pop(),par=k.reduce((x,i)=>x[i],o);
+  if(VIRTUAL[last] && par && typeof par === "object" && !(last in par)) VIRTUAL[last].set(par, v); else par[last]=v;};
 
 let S = deep(BASE, PRESETS["Standard"]);   // a first visit opens on the standard dial
 let sel = "dial", measureOn = false, zoom = 1, panX = 0, panY = 0;
@@ -2177,7 +2189,7 @@ const APP_BUILD = "__BUILD__";
 /* The version people see, raised with every change that reaches them:
    major for a new way of working, minor for something new to do, patch for
    a fix. Shown on the watch screen, so any screenshot says which it was. */
-const APP_VERSION = "4.10.4";
+const APP_VERSION = "4.10.5";
 const APP_DATE = "__DATE__";
 
 /* Every route that replaces S passes through one of these three, which is
@@ -8907,6 +8919,12 @@ const STYLE_W = {
   "mercedes":2.2, "stick":1.6, "day-date":1.9, "dd-seconds":1.6,
   "royal-oak":2.25, "ro-seconds":1.6, "f77":2.0, "f77-seconds":1.6
 };
+/* How wide a hand is drawn for a base width of 1, at its widest point, as
+   measured on the drawn shapes: the factor itself, except for the blades
+   that taper before they reach it (leaf, feuille, obelisk). For the pomme,
+   English, Mercedes and counterweight hands it is the stem. */
+const HAND_DRAWN = {leaf:2.36, feuille:2.08, obelisque:2.1};
+function handDrawnK(style){ return HAND_DRAWN[style] || STYLE_W[style] || 1; }
 /* Supplied hand artwork carried as geometry rather than as a photograph: one
    compound path per hand, drawn pointing to 12 with the pivot at the origin,
    in true millimetres at 1:1. The studio scales it so the tip lands at the
@@ -10921,7 +10939,7 @@ const SCHEMA = {
    chosen. Reach arrived, length left, and the panel was down to Style and
    Finish with no way to set a length at all. Naming what the artwork supplies
    cannot go stale in the same way. */
-const VEC_SUPPLIES = new Set(["width","tail","stem","lume",
+const VEC_SUPPLIES = new Set(["width","widthMM","tail","stem","lume",
                               "pommeD","pommePos","ringW","tipW","taper","waist"]);
 function handSchema(k,title){
   const HAND_STYLES = [
@@ -10957,7 +10975,7 @@ function handSchema(k,title){
             ? N(k+".length","Length from centre",
                 Math.round(handFloor(handVec(S[k], k).zone || HAND_ZONES.hour)*100)/100, 24, .01)
             : N(k+".length","Length from centre",2,24)]),
-    N(k+".width","Body width",.1,3.5,.05),
+    N(k+".widthMM","Width (as drawn)",.1,4,.01),
     N(k+".tail","Counterweight tail",0,8,.1), N(k+".boss","Central boss diameter",.3,3,.05),
     ...(POMME[S[k].style] ? [
       N(k+".pommeD","Pomme diameter",.4,6,.05), N(k+".pommePos","Pomme position",30,95,1,"%"),
@@ -16752,7 +16770,7 @@ const G_MORE = {
   hands:[
     {id:"shape", t:"Shape", src:"@", paths:["H.style"], cards:["H.style"]},
     {id:"length", t:"Length", src:"@", paths:["H.reach","H.hourShare","H.reachTrim","H.length","say"]},
-    {id:"detail", t:"Shape details", src:"@", paths:["H.stem","H.width","H.tail","H.boss","H.pommeD","H.pommePos","H.ringW","H.tipW","H.taper","H.waist"]},
+    {id:"detail", t:"Shape details", src:"@", paths:["H.stem","H.widthMM","H.tail","H.boss","H.pommeD","H.pommePos","H.ringW","H.tipW","H.taper","H.waist"]},
     {id:"metal", t:"Metal and finish", src:"@", paths:["H.material","H.finish","H.lume"]},
     {id:"link", t:"Hands together", src:"@", paths:["linkbar","handSet.link","handSet.minuteScale","handSet.includeSeconds","act:matchFromHour","act:matchFromMinute"]}],
   text:[
@@ -16821,7 +16839,7 @@ const G_MORE_LABEL = {
   "linkbar":"Hands move together", "handSet.link":"What they share", "handSet.minuteScale":"Minute hand slimness",
   "handSet.includeSeconds":"Include the seconds hand", "act:matchFromHour":"Match them to the hour hand", "act:matchFromMinute":"Match them to the minute hand",
   "H.style":"Shape", "H.reach":"Length", "H.hourShare":"Share of the minute hand", "H.reachTrim":"Stop short", "H.length":"Length from centre",
-  "H.stem":"Stem", "H.width":"Width", "H.tail":"Tail", "H.boss":"Centre boss", "H.pommeD":"Ring size", "H.pommePos":"Ring position",
+  "H.stem":"Stem", "H.widthMM":"Width", "H.tail":"Tail", "H.boss":"Centre boss", "H.pommeD":"Ring size", "H.pommePos":"Ring position",
   "H.ringW":"Ring wall", "H.tipW":"Tip width", "H.taper":"Taper", "H.waist":"Waist", "H.material":"Metal", "H.finish":"Finish", "H.lume":"Lume",
   "text.logoMark":"Artwork", "text.logoTech":"Made by", "text.color":"Colour", "text.color|Ink colour":"Ink colour",
   "text.color|Top print colour":"Top colour", "text.printThick":"Ink thickness", "text.printFinish":"Finish", "text.dblBase":"Base colour",

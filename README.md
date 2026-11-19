@@ -200,6 +200,19 @@ stored in a design file do not change. In the full editor at laptop widths
 the toolbar sits tighter, and on a narrower window it takes a second row
 rather than pushing Share and Export off the screen.
 
+## Hand width in real millimetres (v4.10.5)
+
+Every hand shape multiplies its base width by its own factor (`STYLE_W`:
+dauphine ×3, leaf ×2.6, sword ×2.5, baton ×1.9…), and the hands' Width slider
+showed the base width. In the F77 design challenge two designers set the
+widths they wanted and got hands 1.7–1.8× too wide (a baton at "1.4" is
+2.66 mm). The slider, in the guided "All hand settings" sheet and the full
+editor, now shows and sets the width the hand is drawn at, at its widest
+point, in steps of 0.01 mm (`widthMM`, a virtual field read and written by
+`get`/`set`; `handDrawnK` has the measured factor, which for the tapered
+leaf, feuille and obelisk blades is below `STYLE_W`). The design still keeps
+the base width, so every saved design draws exactly as before.
+
 ## Step icons (v4.10.4)
 
 Simple mode's seven steps are shown by a picture each instead of a number:
