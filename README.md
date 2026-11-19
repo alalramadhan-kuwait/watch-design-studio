@@ -200,6 +200,16 @@ stored in a design file do not change. In the full editor at laptop widths
 the toolbar sits tighter, and on a narrower window it takes a second row
 rather than pushing Share and Export off the screen.
 
+## Carré stones and the invisible setting (v4.17.0)
+
+A seventh gem card, **Carré**: a square step cut (twelve step facets round a
+table, as on a baguette) instead of the princess's brilliant pinwheel. It sits
+lower (0.62 × its side above the seat) and weighs about 0.017 ct at 1.30 mm.
+Princess and carré can now be **Invisible**-set: the stones touch edge to edge
+with no metal rim or bezel showing, so an on-point square reads as pure stone,
+as in the 1956 reference. The maker's sheet names the cut ("carré") and the
+setting ("invisible-set"). Designs that use neither draw exactly as before.
+
 ## Each hour its own size and turn (v4.16.0)
 
 In "Each hour…", a picked hour carrying an index or a stone gets **Turn this

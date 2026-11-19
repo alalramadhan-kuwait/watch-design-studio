@@ -2216,7 +2216,7 @@ const APP_BUILD = "__BUILD__";
 /* The version people see, raised with every change that reaches them:
    major for a new way of working, minor for something new to do, patch for
    a fix. Shown on the watch screen, so any screenshot says which it was. */
-const APP_VERSION = "4.16.0";
+const APP_VERSION = "4.17.0";
 const APP_DATE = "__DATE__";
 
 /* Every route that replaces S passes through one of these three, which is
@@ -7523,7 +7523,9 @@ const GEM_CUTS = {
                d:{1:[1.0,2.2,1.50], 2:[0.8,1.4,1.20], 3:[0.8,1.1,1.00]}},
   "baguette": {n:[1,2],   settings:{1:["bezel"], 2:["channel","bezel"]},
                L:[1.8,3.4,2.60], W:{1:[0.8,1.6,1.10], 2:[0.6,1.0,0.80]}, Ldef:{1:2.60, 2:2.40}},
-  "princess": {n:[1],     settings:{1:["bezel","prong","channel"]}, s:[1.0,2.0,1.30]}
+  "princess": {n:[1],     settings:{1:["bezel","prong","channel","invisible"]}, s:[1.0,2.0,1.30]},
+  /* a square step cut: the baguette's facets on equal sides */
+  "carre":    {n:[1],     settings:{1:["bezel","prong","channel","invisible"]}, s:[1.0,2.0,1.30]}
 };
 /* The colours a stone is drawn in, darkest to brightest, the colour its
    facet edges catch, how much fire it throws (0-1) and how many glints it
@@ -7610,7 +7612,7 @@ function gemSize(g){
     return {w:g.d + e, l:(g.n - 1)*gemPitch(g) + g.d + e};
   }
   if(g.cut === "baguette"){ const tw = g.n*g.W + (g.n - 1)*0.10; return {w:tw + 2*GEM_SETTING.rail, l:g.L + 2*GEM_SETTING.rail}; }
-  const e = g.setting === "prong" ? 0.10 : W2;
+  const e = g.setting === "prong" ? 0.10 : g.setting === "invisible" ? 0.02 : W2;
   return {w:g.s + e, l:g.s + e};
 }
 /* where the stones of a stack sit along the marker's long axis */
@@ -7635,6 +7637,7 @@ function gemHeight(g, dialT){
   const room = Math.max(0, dialT - 0.15), lip = GEM_SETTING.lip[g.setting] || 0;
   if(g.cut === "baguette") return 0.70*g.W - Math.min(GEM_SETTING.bagRecess, room) + 0.05;
   if(g.cut === "princess") return 0.72*g.s - Math.min(GEM_SETTING.recess, room) + lip;
+  if(g.cut === "carre") return 0.62*g.s - Math.min(GEM_SETTING.recess, room) + lip;
   return 0.61*g.d - Math.min(GEM_SETTING.recess, room) + lip;
 }
 /* Carats, for the readout: ct ≈ 0.0037·d³ for a round brilliant; a step
@@ -7642,6 +7645,7 @@ function gemHeight(g, dialT){
 function gemCarats(g){
   if(g.cut === "baguette") return g.n*g.L*g.W*0.70*g.W*0.62*3.52/200;
   if(g.cut === "princess") return g.s*g.s*0.72*g.s*0.54*3.52/200;
+  if(g.cut === "carre") return g.s*g.s*0.70*g.s*0.62*3.52/200;
   return g.n*0.0037*Math.pow(g.d, 3);
 }
 /* The outline of the setting in the marker's own frame (y along the
@@ -7941,8 +7945,8 @@ function gemSummary(st){
 }
 const gemSizeText = g => g.cut === "round" ? `${g.n > 1 ? g.n + " × " : ""}Ø${g.d.toFixed(2)} mm`
   : g.cut === "baguette" ? `${g.n > 1 ? g.n + " × " : ""}${g.L.toFixed(2)} × ${g.W.toFixed(2)} mm` : `${g.s.toFixed(2)} mm square`;
-const GEM_CUT_NAME = {round:"round brilliant", baguette:"baguette", princess:"princess"};
-const GEM_SET_NAME = {bezel:"bezel-set", prong:"in prongs", channel:"channel-set"};
+const GEM_CUT_NAME = {round:"round brilliant", baguette:"baguette", princess:"princess", carre:"carré"};
+const GEM_SET_NAME = {bezel:"bezel-set", prong:"in prongs", channel:"channel-set", invisible:"invisible-set"};
 /* Who makes this case, for the checks that send a question to the maker:
    the case's own maker, the name after "/" in its sheet brand (NOREL /
    Blue Creations), or "the case maker". */
@@ -8259,10 +8263,17 @@ function gemMarkerSVG(g, la, seed, cx, dialT){
     for(let k = 0; k < n; k++) body += gemBaguette((k - (n - 1)/2)*(Wd + gap), 0, L, Wd, st, la, seed*7 + k, sp);
   }else{
     const s = g.s;
-    if(g.setting === "prong"){
+    /* a princess or a carré, the carré drawn with the baguette's step facets */
+    const sq = (x, y, s2) => g.cut === "carre" ? gemBaguette(x, y, s2, s2, st, la, seed, sp) : gemPrincess(x, y, s2, st, la, seed, sp);
+    if(g.setting === "invisible"){
+      /* no metal shows: the stone is held from below by grooves in its
+         pavilion, so only a hairline where it meets the next one is seen */
+      foot = `<rect x="${gf(-s/2 - .01)}" y="${gf(-s/2 - .01)}" width="${gf(s + .02)}" height="${gf(s + .02)}"/>`;
+      body += sq(0, 0, s) + `<rect x="${gf(-s/2)}" y="${gf(-s/2)}" width="${gf(s)}" height="${gf(s)}" fill="none" stroke="${shade(MT.lo, .45)}" stroke-opacity=".55" stroke-width=".018"/>`;
+    }else if(g.setting === "prong"){
       foot = `<rect x="${gf(-s/2 - .05)}" y="${gf(-s/2 - .05)}" width="${gf(s + .1)}" height="${gf(s + .1)}"/>`;
       body += `<rect x="${gf(-s/2 - .03)}" y="${gf(-s/2 - .03)}" width="${gf(s + .06)}" height="${gf(s + .06)}" fill="none" stroke="${MT.lo}" stroke-opacity=".7" stroke-width=".05"/>`;
-      body += gemPrincess(0, 0, s, st, la, seed, sp);
+      body += sq(0, 0, s);
       const paint = gemMetal(cx, MT, la);
       for(const [sx, sy] of [[-1,-1],[1,-1],[1,1],[-1,1]]){
         const x = sx*s/2, y = sy*s/2, k = .26;
@@ -8272,13 +8283,13 @@ function gemMarkerSVG(g, la, seed, cx, dialT){
       const len = s + .24;
       foot = `<rect x="${gf(-s/2 - RL)}" y="${gf(-len/2)}" width="${gf(s + 2*RL)}" height="${gf(len)}" rx=".05"/>`;
       body += `<rect x="${gf(-s/2)}" y="${gf(-len/2 + .06)}" width="${gf(s)}" height="${gf(len - .12)}" fill="${shade(MT.lo, .2)}"/>`;
-      body += gemPrincess(0, 0, s, st, la, seed, sp);
+      body += sq(0, 0, s);
       body += rail(-s/2 - RL, -len/2, RL, len) + rail(s/2, -len/2, RL, len) + rail(-s/2, -len/2, s, .12) + rail(-s/2, len/2 - .12, s, .12);
     }else{
       foot = `<rect x="${gf(-s/2 - W)}" y="${gf(-s/2 - W)}" width="${gf(s + 2*W)}" height="${gf(s + 2*W)}" rx=".05"/>`;
       body += `<rect x="${gf(-s/2 - W)}" y="${gf(-s/2 - W)}" width="${gf(s + 2*W)}" height="${gf(s + 2*W)}" rx=".05" fill="${gemMetal(cx, MT, la)}"/>`;
       body += `<rect x="${gf(-s/2 - .03)}" y="${gf(-s/2 - .03)}" width="${gf(s + .06)}" height="${gf(s + .06)}" fill="none" stroke="${gemMetal(cx, MT, la, true)}" stroke-width=".06"/>`;
-      body += gemPrincess(0, 0, s, st, la, seed, sp);
+      body += sq(0, 0, s);
     }
   }
   return {body, foot, H:gemHeight(g, dialT)};
@@ -15005,7 +15016,7 @@ const sheetHoursOf = (plan, kind) => [12,1,2,3,4,5,6,7,8,9,10,11].filter(h => pl
 function sheetStoneText(g, hours){
   const cut = g.cut || "round", n = (g.n || 1)*hours.length, per = g.n > 1 ? ` (${g.n} per hour)` : "";
   const size = cut === "round" ? `Ø${sn(g.d || 1.5, 2)}mm` : cut === "baguette" ? `${sn(g.L || 2.6, 2)} × ${sn(g.W || 1.1, 2)}mm` : `${sn(g.s || 1.2, 2)}mm square`;
-  const name = {round:"round brilliant", baguette:"baguette", princess:"princess"}[cut] || cut;
+  const name = {round:"round brilliant", baguette:"baguette", princess:"princess", carre:"carré"}[cut] || cut;
   const ct = typeof gemCarats === "function" ? gemCarats(Object.assign({n:1, d:1.5, L:2.6, W:1.1, s:1.2}, g))*hours.length : null;
   return `${n} × ${name} ${g.origin === "lab" ? "lab-grown " : ""}${g.stone || "diamond"} ${size}${per} at ${hours.join(", ")}, ${g.setting || "bezel"}-set in ${g.metal || "white gold"}${ct ? `, ≈${sn(ct, 2)} ct` : ""}`;
 }
@@ -16879,7 +16890,7 @@ const GWORD = {ar:{
   "Index finish":"تشطيب المؤشرات", "Size":"المقاس", "Distance from centre":"البعد عن المركز", "Thickness":"السماكة", "Index size":"مقاس المؤشرات",
   "Length":"الطول", "Width":"العرض", "All marker settings":"كل إعدادات المؤشرات",
   "Gem":"حجر", "Accent gem":"حجر مميّز", "Round":"دائري", "Two rounds":"دائريان", "Three rounds":"ثلاثة دائرية", "Baguette":"باغيت",
-  "Two baguettes":"باغيت مزدوج", "Princess":"برنسس", "Setting":"الترصيع", "Bezel-set":"بإطار", "Prongs":"بمخالب", "Channel":"بقناة",
+  "Two baguettes":"باغيت مزدوج", "Princess":"برنسس", "Carré":"كاريه", "Invisible":"خفي", "Setting":"الترصيع", "Bezel-set":"بإطار", "Prongs":"بمخالب", "Channel":"بقناة",
   "Setting metal":"معدن الترصيع", "Lab-grown":"مصنّع مخبرياً", "Sparkle":"اللمعان", "More…":"المزيد…", "Hand height":"ارتفاع العقارب",
   "Standard (4)":"قياسي (4)", "Numeral":"رقم", "Index":"مؤشر", "Accent index":"مؤشر مميّز", "Empty":"فارغ",
   "Day window":"نافذة اليوم", "Date + magnifier":"التاريخ والمكبّر", "Under a window":"تحت نافذة", "Apply to all free hours":"طبّقه على كل الساعات الخالية",
@@ -17773,7 +17784,7 @@ Object.assign(GWORD.ar, {
     return `<svg viewBox="${gf(-half)} ${gf(-half)} ${gf(2*half)} ${gf(2*half)}" aria-hidden="true"><defs>${cx.defs.join("")}</defs><rect x="${gf(-half)}" y="${gf(-half)}" width="${gf(2*half)}" height="${gf(2*half)}" fill="${bg || "#3B3F45"}"/>${gemShadow(m.foot, m.H, 135*Math.PI/180)}${m.body}</svg>`;
   }
   const GEM_CUT_CARDS = [["round",1,"Round","Ø1.50"],["round",2,"Two rounds","2 × 1.20"],["round",3,"Three rounds","3 × 1.00"],
-    ["baguette",1,"Baguette","2.6 × 1.1"],["baguette",2,"Two baguettes","2 × 2.4 × 0.8"],["princess",1,"Princess","1.30"]];
+    ["baguette",1,"Baguette","2.6 × 1.1"],["baguette",2,"Two baguettes","2 × 2.4 × 0.8"],["princess",1,"Princess","1.30"],["carre",1,"Carré","1.30"]];
   const GEM_STONE_CHIPS = [["diamond","Diamond"],["black diamond","Black diamond"],["blue sapphire","Sapphire"],["ruby","Ruby"],["emerald","Emerald"]];
   const GEM_METAL_CHIPS = [["white gold","White gold"],["yellow gold","Gold"],["rose gold","Rose gold"],["polished steel","Steel"],["blackened steel","Black"]];
   /* The "Gem" block, or a compact copy of it for the accent gem. */
@@ -17783,7 +17794,7 @@ Object.assign(GWORD.ar, {
       `<button type="button" class="gCard ${g.cut===c && g.n===n ? "on" : ""}" data-ggem="${k}|${c}|${n}"><div class="gPic">${gemPic(Object.assign({}, g, {cut:c, n}, gemCutDefaults(c, n), {setting:GEM_CUTS[c].settings[n].indexOf(g.setting) >= 0 ? g.setting : GEM_CUTS[c].settings[n][0]}), dial)}</div><div class="gName">${gW(l)}</div><div class="gSub" dir="ltr">${sub}</div></button>`).join("")}</div>`;
     h += `<h3>${gW("Stone")}</h3>` + stoneChips(k + ".stone", GEM_STONE_CHIPS, g.stone);
     if(g.stone === "emerald") h += `<p class="gNote">${gT("gem.emerald")}</p>`;
-    if(!compact) h += `<h3>${gW("Setting")}</h3>` + chips44(k + ".setting", [["bezel","Bezel-set"],["prong","Prongs"],["channel","Channel"]].filter(([v]) => K.settings[g.n].indexOf(v) >= 0), g.setting);
+    if(!compact) h += `<h3>${gW("Setting")}</h3>` + chips44(k + ".setting", [["bezel","Bezel-set"],["prong","Prongs"],["channel","Channel"],["invisible","Invisible"]].filter(([v]) => K.settings[g.n].indexOf(v) >= 0), g.setting);
     h += `<h3>${gW("Setting metal")}</h3>` + chips44(k + ".metal", GEM_METAL_CHIPS, g.metal);
     if(g.cut === "round"){ const r = K.d[g.n]; h += slider(k + ".d", "Stone size", r[0], r[1], 0.05, g.d); }
     else if(g.cut === "baguette"){ h += slider(k + ".L", "Length", K.L[0], K.L[1], 0.05, g.L) + slider(k + ".W", "Width", K.W[g.n][0], K.W[g.n][1], 0.05, g.W); }

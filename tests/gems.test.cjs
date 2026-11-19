@@ -108,8 +108,9 @@ const draw = (g, seed = 3, la = 135 * Math.PI / 180) => { let k = 0; const defs 
 
 test('A5 no gem uses a filter, and each casts three offset shadow copies', () => {
   const all = combos();
-  // GEM_CUTS allows 14 cut, count and setting combinations (the spec's "15" counts one twice)
-  assert.equal(all.length, 14 * 5, 'every combination, five stones');
+  // GEM_CUTS allows 19 cut, count and setting combinations (v4.17.0 added the carré, and the invisible
+  // setting for it and the princess; the spec's "15" counted one twice)
+  assert.equal(all.length, 19 * 5, 'every combination, five stones');
   for (const g of all) {
     const {s, defs} = draw(g);
     assert.ok(!/filter=|<filter|feDropShadow|feGaussianBlur/.test(s + defs), JSON.stringify(g));
@@ -296,4 +297,23 @@ test('A17 the design check carries the gem rows, before the production review', 
   for (const t of ['Gem height under the hands', 'Gems beside the day window', 'Gems and the date window', 'Gem envelope', 'Stone seat in the dial', 'Gem setting production review'])
     assert.ok(titles.includes(t), t);
   assert.equal(titles.at(-1), 'Movement and production review');
+});
+
+test('A18 carré: a square step cut (12 facets and a table); invisible setting: no metal round the stone', () => {
+  const cx = () => ({id:p => p, defs:[], grads:new Map()});
+  const body = o => G.gemMarkerSVG(G.gemNorm(Object.assign({n:1}, o)), 2.3, 1, cx()).body;
+  const ca = body({cut:'carre', setting:'bezel'});
+  assert.equal((ca.match(/<path [^>]*stroke-opacity="\.3"/g) || []).length, 12, 'step facets');
+  assert.equal((ca.match(/<rect [^>]*stroke="#FFFFFF" stroke-opacity="\.3"/g) || []).length, 1, 'the table');
+  assert.equal((ca.match(/<path [^>]*opacity="\.75"/g) || []).length, 0, 'no brilliant pinwheel');
+  for (const cut of ['carre', 'princess']) {
+    const inv = body({cut, setting:'invisible'});
+    assert.doesNotMatch(inv, /url\(#gmt\)/, cut + ': no metal rim or seat');
+    assert.match(body({cut, setting:'bezel'}), /url\(#gmt\)/);
+    assert.deepEqual(['w', 'l'].map(k => +G.gemSize(G.gemNorm({cut, n:1, setting:'invisible'}))[k].toFixed(2)), [1.32, 1.32], 'the stone edge to edge');
+  }
+  const H = o => G.gemHeight(G.gemNorm(Object.assign({n:1, s:1.3}, o)), 0.40);
+  assert.ok(Math.abs(H({cut:'carre'}) - 0.556) <= 0.005, 'a step cut sits lower than the princess');
+  assert.ok(H({cut:'carre'}) < H({cut:'princess'}));
+  assert.ok(Math.abs(G.gemCarats(G.gemNorm({cut:'carre', n:1, s:1.3})) - 0.0168) <= 0.0005);
 });
