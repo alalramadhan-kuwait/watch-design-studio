@@ -2221,7 +2221,7 @@ const APP_BUILD = "__BUILD__";
 /* The version people see, raised with every change that reaches them:
    major for a new way of working, minor for something new to do, patch for
    a fix. Shown on the watch screen, so any screenshot says which it was. */
-const APP_VERSION = "4.18.0";
+const APP_VERSION = "4.19.0";
 const APP_DATE = "__DATE__";
 
 /* Every route that replaces S passes through one of these three, which is
@@ -16124,6 +16124,7 @@ body.guided .stage.gPhoto{ background:#fff }
 .gTabs button.on::before{ content:""; position:absolute; inset:3px; border-radius:9px; background:var(--ds-panel); box-shadow:0 1px 3px rgba(0,0,0,.14); z-index:-1 }
 .gTabs button.warn::after{ content:""; display:inline-block; width:7px; height:7px; border-radius:50%; background:#F29A0E; margin-left:4px; vertical-align:2px }
 .gBody{ flex:1; overflow-y:auto; padding:6px 16px 20px; min-height:0 }
+.gBody.down{ -webkit-mask-image:linear-gradient(to bottom, #000 calc(100% - 30px), rgba(0,0,0,.25)); mask-image:linear-gradient(to bottom, #000 calc(100% - 30px), rgba(0,0,0,.25)) }
 .gBody h2{ font:600 21px/1.2 var(--sans); margin:6px 0 4px; letter-spacing:-.015em }
 .gBody .gLead{ color:var(--ds-text-2); font-size:13.5px; margin:0 0 14px; line-height:1.45 }
 .gBody h3{ font:600 15px/1.3 var(--sans); margin:16px 0 8px; color:var(--ds-text) }
@@ -16155,6 +16156,8 @@ body.guided .stage.gPhoto{ background:#fff }
 .gSw .on i{ box-shadow:0 0 0 2px var(--ds-panel), 0 0 0 4px var(--ds-brand) }
 .gSw .on span{ color:var(--ds-text); font-weight:600 }
 .gSw label i{ border:1px dashed var(--ds-text-2); display:grid; place-items:center; font-style:normal; font-size:18px; color:var(--ds-text-2) }
+.gSw label i.own{ border:1px solid rgba(0,0,0,.15) }
+.gSw label i.own.pale{ border-color:#C7C7CC }
 .gSw label input{ position:absolute; inset:0; opacity:0; cursor:pointer; width:100%; height:100% }
 .gSw .gRecent{ width:auto; min-height:0; padding:0 6px 0 0; align-self:center; font-size:12px; color:var(--ds-text-2); cursor:default }
 .gChips{ display:flex; flex-wrap:wrap; gap:6px }
@@ -16287,6 +16290,14 @@ body.guided .stage.gPhoto{ background:#fff }
 .gList li .on b{ background:var(--ds-text); color:var(--ds-panel) }
 .gList li small{ display:block; font-size:13px; color:var(--ds-text-2); font-weight:400 }
 .gList li small.w{ color:var(--g-warn-ink) }
+.gFindBar{ padding:2px 16px 8px; flex:none }
+.gFindIn{ width:100%; box-sizing:border-box; min-height:44px; border:1px solid var(--ds-border); border-radius:12px; padding:0 14px;
+  font:400 16px var(--sans); color:var(--ds-text); background:var(--ds-fill, rgba(120,120,128,.08)) }
+.gList ul.gFind{ list-style:none; margin:0; padding:0 8px 12px; overflow-y:auto; flex:1 }
+.gList ul.gFind li.none{ padding:12px 10px; color:var(--ds-text-2); font-size:14px }
+.gList [hidden]{ display:none !important }
+.gFlash{ animation:gFlash 1.8s ease-out; border-radius:10px }
+@keyframes gFlash{ 0%, 35%{ background:rgba(255,196,0,.32); box-shadow:0 0 0 6px rgba(255,196,0,.32) } 100%{ background:transparent; box-shadow:0 0 0 6px transparent } }
 /* MORE OPTIONS. A pill beside the tabs and a row at the foot of a tab open
    the step's other settings on a sheet: over the panel on a phone, rising
    from the bottom, and on a wide screen beside the panel, which keeps the
@@ -16427,7 +16438,7 @@ body:not(.guided) #gStartMore{ display:none }
   .gSheetBody{ padding:6px 14px 20px }
   .gSheetBody .gCards, .gSheetBody .gChips, .gSheetBody .gSw.row{ margin:0 -14px; padding:2px 14px 6px }
   .gMact:active, .gMoreRow:active, .gMoreTop:active, .gSheetDone:active{ transform:scale(.97) }
-  .gBody{ padding:2px 14px 14px; -webkit-overflow-scrolling:touch; overscroll-behavior:contain }
+  .gBody{ padding:2px 14px 28px; -webkit-overflow-scrolling:touch; overscroll-behavior:contain; scroll-padding-bottom:28px }
   .gBody h2, .gBody .gLead{ display:none }
   .gBody h3{ font-size:15px; margin:12px 0 6px }
   .gBody h3:first-child{ margin-top:4px }
@@ -16445,7 +16456,8 @@ body:not(.guided) #gStartMore{ display:none }
   .gChips{ gap:8px }
   .gChips button{ flex:none; min-height:44px; padding:0 16px; font-size:15px }
   /* how a line is made: seven short choices, wrapped so all of them show */
-  .gChips.gMade{ flex-wrap:wrap; overflow:visible; margin:0; padding:2px 0 6px; gap:6px }
+  .gChips.gMade, .gChips.wrap{ flex-wrap:wrap; overflow:visible; margin:0; padding:2px 0 6px; gap:6px }
+  .gChips.wrap{ -webkit-mask-image:none; mask-image:none }
   .gChips.gMade button{ padding:0 12px; font-size:14px }
   .gRow{ min-height:44px; margin:2px 0 }
   .gRow label, .gRow > span{ font-size:15px }
@@ -16548,6 +16560,7 @@ const GSTR = {en:{
   "lead.finish":"Name it, check it, keep it.",
   "prog": (name, n, total) => `<b>${name}</b><span> · <i>step </i>${n} of ${total}</span>`,
   "prog.aria": (name, n, total) => `${name}, step ${n} of ${total}. Show all steps`,
+  "find.ph":"Find a setting", "find.none":"Nothing by that name in this design.",
   "steps.all":"All steps", "steps.close":"Close", "steps.done":"Done", "steps.todo":"Not visited yet", "steps.here":"You are here",
   "next": name => `Next: ${name}`, "back":"Back", "done":"Done ✓",
   "tab.case.shape":"Watch", "tab.case.metal":"Metal and strap",
@@ -16622,6 +16635,9 @@ const GSTR = {en:{
   "mk.paveAdvice": (mm, easy) => `At ${mm} mm high only bold figures can be set; ask Blue Creations. Figures ${easy || "2.9"} mm high set more easily.`,
   "mk.underWindows":"Figures under the day and date windows are left off, as on a real dial.",
   "date.digitNote":"The height of the digits' ink in mm. They are centred in the window and made smaller if they would come within 0.3 mm of its sides.",
+  "hands.linkStyle":sec => `A change to the hour or minute hand's style, metal, finish or lume is made to the other${sec ? " and to the seconds hand" : ""}; each keeps its own length and width. Under Hands together, below.`,
+  "hands.linkFull":sec => `A change to the hour or minute hand's style, metal, finish, lume or width is made to the other${sec ? " and to the seconds hand" : ""}, widths in proportion. Under Hands together, below.`,
+  "hands.linkOff":"Each hand is set on its own.",
   "date.bigNote":"Tens and units each turn on their own disc, side by side under one opening. It needs a movement with a big-date module; the design check says whether yours has one.",
   "date.outer":(w, h, ow, oh) => `Opening ${w} × ${h} mm; ${ow} × ${oh} mm from outside the frame or bevel.`,
   "date.opening":(w, h) => `Opening ${w} × ${h} mm.`,
@@ -16724,6 +16740,7 @@ GSTR.ar = {
   "lead.finish":"سمِّها، وافحصها، واحفظها.",
   "prog": (name, n, total) => `<b>${name}</b><span> · <i>الخطوة </i>${n} من ${total}</span>`,
   "prog.aria": (name, n, total) => `${name}، الخطوة ${n} من ${total}. عرض كل الخطوات`,
+  "find.ph":"ابحث عن إعداد", "find.none":"ما في شي بهالاسم في هالتصميم.",
   "steps.all":"كل الخطوات", "steps.close":"إغلاق", "steps.done":"تمّت", "steps.todo":"لم تُفتح بعد", "steps.here":"أنت هنا",
   "next": name => `التالي: ${name}`, "back":"رجوع", "done":"تم ✓",
   "tab.case.shape":"الساعة", "tab.case.metal":"المعدن والحزام",
@@ -16796,6 +16813,9 @@ GSTR.ar = {
   "mk.paveAdvice": (mm, easy) => `بارتفاع ${mm} ملم لا تُرصّع إلا الأرقام العريضة، فاسأل Blue Creations. الأرقام بارتفاع ${easy || "2.9"} ملم أسهل في الترصيع.`,
   "mk.underWindows":"الأرقام التي تقع تحت نافذتي اليوم والتاريخ تُحذف، كما في الميناء الحقيقي.",
   "date.digitNote":"ارتفاع الأرقام بالملم. تتوسط النافذة، وتصغر تلقائياً إذا اقتربت أقل من 0.3 ملم من جوانبها.",
+  "hands.linkStyle":sec => `أي تغيير في شكل عقرب الساعات أو الدقائق أو معدنه أو تشطيبه أو المادة المضيئة ينطبق على الثاني${sec ? " وعلى عقرب الثواني" : ""}؛ والطول والعرض لكل عقرب بروحه. الإعدادات تحت «العقارب معاً».`,
+  "hands.linkFull":sec => `أي تغيير في شكل عقرب الساعات أو الدقائق أو معدنه أو تشطيبه أو المادة المضيئة أو عرضه ينطبق على الثاني${sec ? " وعلى عقرب الثواني" : ""}، والعرض بنفس النسبة. الإعدادات تحت «العقارب معاً».`,
+  "hands.linkOff":"كل عقرب يتعدل بروحه.",
   "date.bigNote":"العشرات والآحاد كل واحد على قرص خاص، جنب بعض تحت فتحة وحدة. يحتاج محرك فيه وحدة تاريخ كبير؛ فحص التصميم يبيّن إذا محركك فيه.",
   "date.outer":(w, h, ow, oh) => `الفتحة ${w} × ${h} ملم؛ ومن برّا الإطار أو الشطف ${ow} × ${oh} ملم.`,
   "date.opening":(w, h) => `الفتحة ${w} × ${h} ملم.`,
@@ -17242,12 +17262,12 @@ const G_MORE_LABEL = {
   "dial.stRoughHi":"Polish of the matrix", "dial.stCoat":"Clear coat", "dial.stMetal":"Metallic", "dial.stSSS":"Translucency",
   "dial.stIrid":"Iridescence", "dial.stAniso":"Shimmer strength", "dial.stFibre":"Shimmer direction", "dial.stFibreAngle":"Shimmer angle",
   "dial.stInclThr":"How many sparkles", "dial.stSparkle":"Sparkle strength", "dial.stoneTint":"Tint with the dial colour",
-  "minute.diameter":"Track diameter", "minute.thickness":"Thickness", "minute.trackWMM":"Track width", "minute.railW":"Rail weight", "minute.tickW":"Tick weight", "minute.fiveStyle":"Five-minute marks", "minute.gap6":"Gap at 6", "minute.fives":"Stronger five-minute marks",
+  "minute.diameter":"Minute track diameter", "minute.thickness":"Thickness", "minute.trackWMM":"Track width", "minute.railW":"Rail weight", "minute.tickW":"Tick weight", "minute.fiveStyle":"Five-minute marks", "minute.gap6":"Gap at 6", "minute.fives":"Stronger five-minute marks",
   "minute.fiveLen":"Five-minute mark length", "minute.tech":"Made by", "minute.edgeLight":"Edge light",
   "minute.textBreak":"Break the track at the lettering", "minute.textGap":"Gap each side",
   "chapter.outerD":"Outer diameter", "chapter.innerD":"Inner diameter", "chapter.color":"Colour", "chapter.finish":"Finish",
   "chapter.separator":"Separator lines", "chapter.sepColor":"Separator colour",
-  "hour.diameter":"Track diameter", "hour.thickness":"Thickness", "hour.style":"Style", "hour.color":"Colour",
+  "hour.diameter":"Hour track diameter", "hour.thickness":"Thickness", "hour.style":"Style", "hour.color":"Colour",
   "sector.zones.#.on":"Show this zone", "sector.zones.#.outerD":"Outer diameter", "sector.zones.#.innerD":"Inner diameter (0 makes a disc)",
   "sector.zones.#.lift":"Height above the dial (3D view)", "sector.zones.#.color":"Colour", "sector.zones.#.finish":"Finish",
   "sector.zones.#.pattern":"Pattern", "sector.zones.#.cell":"Cell size", "sector.zones.#.pitch":"Groove spacing", "sector.zones.#.lay":"Grid angle",
@@ -17263,13 +17283,13 @@ const G_MORE_LABEL = {
   "act:borderDel:#":"Remove this band", "act:borderAdd":"Add a band",
   "cross.length":"Arm length", "cross.width":"Line width", "cross.color":"Colour",
   "sub.at":"Position", "sub.dist":"Distance from centre", "sub.diameter":"Diameter", "sub.color":"Colour", "sub.ring":"Track colour", "sub.track":"Show the track",
-  "numerals.system":"Numerals", "numerals.set":"Which hours", "numerals.heightMM":"Figure height", "numerals.gap":"Spacing", "numerals.radius":"Distance from centre",
+  "numerals.system":"Numerals", "numerals.set":"Which hours", "numerals.heightMM":"Figure height", "numerals.gap":"Spacing", "numerals.radius":"Numerals from centre",
   "numerals.orient":"Direction", "numerals.align":"Line up by", "numerals.arc":"Follow the curve", "numerals.slant":"Slant",
   "numerals.tech":"Made by", "numerals.material":"Material", "numerals.metal":"Metal", "numerals.metalTex":"Use the loaded metal texture",
   "numerals.edgeLight":"Edge light", "numerals.height":"Thickness of the piece", "numerals.bevel":"Bevel",
   "numerals.engDepth":"Depth", "numerals.engBevel":"Bevel width", "numerals.engShadow":"Shadow", "numerals.engHilite":"Highlight",
   "numerals.engRecess":"Darkness inside", "render.az":"Light from", "numerals.engSharp":"Edge sharpness",
-  "indices.style":"Shape", "indices.count":"How many", "indices.radius":"Distance from centre", "indices.skipNumerals":"Leave room for the numerals",
+  "indices.style":"Shape", "indices.count":"How many", "indices.radius":"Indices from centre", "indices.skipNumerals":"Leave room for the numerals",
   "linkbar":"Hands move together", "handSet.link":"What they share", "handSet.minuteScale":"Minute hand slimness",
   "handSet.includeSeconds":"Include the seconds hand", "act:matchFromHour":"Match them to the hour hand", "act:matchFromMinute":"Match them to the minute hand",
   "H.style":"Shape", "H.reach":"Length", "H.hourShare":"Share of the minute hand", "H.reachTrim":"Stop short", "H.length":"Length from centre",
@@ -17382,7 +17402,7 @@ Object.assign(GWORD.ar, {
   "Polish of the matrix":"صقل الصخر الحاضن", "Clear coat":"طبقة شفافة", "Metallic":"معدني", "Translucency":"الشفافية", "Iridescence":"تقزّح الألوان",
   "Shimmer strength":"قوة البريق", "Shimmer direction":"اتجاه البريق", "Shimmer angle":"زاوية البريق", "How many sparkles":"عدد اللمعات",
   "Sparkle strength":"قوة اللمعات", "Tint with the dial colour":"صبغة بلون الميناء",
-  "Track diameter":"قطر المسار", "Stronger five-minute marks":"إبراز علامات الدقائق الخمس", "Five-minute mark length":"طول علامات الدقائق الخمس",
+  "Track diameter":"قطر المسار", "Minute track diameter":"قطر مسار الدقائق", "Hour track diameter":"قطر مسار الساعات", "Numerals from centre":"بُعد الأرقام عن المركز", "Indices from centre":"بُعد المؤشرات عن المركز", "Stronger five-minute marks":"إبراز علامات الدقائق الخمس", "Five-minute mark length":"طول علامات الدقائق الخمس",
   "Made by":"طريقة الصنع",
   "Engraved, filled":"محفورة ومحشوّة", "Tone on tone":"بلون الميناء", "Gloss on matte":"لامعة على مطفي", "Brushed across":"مصقولة بالعرض",
   "UV ink":"حبر فوق بنفسجي", "Engraved, tone on tone":"محفورة بلون الميناء نفسه", "Brushed across the grain":"مصقولة بعكس اتجاه الصقل",
@@ -17531,16 +17551,17 @@ Object.assign(GWORD.ar, {
      quote in it has to be escaped: the apostrophe in "tiger's eye" closed
      the attribute early, and tapping the chip threw instead of choosing. */
   const gv = v => JSON.stringify(v).replace(/&/g, "&amp;").replace(/'/g, "&#39;");
-  const chips = (path, opts, cur) => `<div class="gChips">${opts.map(([v,l]) =>
+  const chips = (path, opts, cur) => `<div class="gChips${opts.length > 6 ? " wrap" : ""}">${opts.map(([v,l]) =>
     `<button type="button" data-gset="${path}" data-gv='${gv(v)}' class="${JSON.stringify(cur)===JSON.stringify(v)?"on":""}">${esc2(gW(l))}</button>`).join("")}</div>`;
   const isHex = c => /^#[0-9a-f]{6}$/i.test(c || "");
   const pale = c => isHex(c) && relLum(c) > 0.72;
   /* A swatch is a disc with its name under it. The name is the colour's own,
      so the picked one can be read, not guessed from a tooltip a phone never
      shows. The last tile is any colour at all. */
-  const swatches = (path, list, cur, opt) => `<div class="gSw${opt && opt.row ? " row" : ""}">${list.map(([c,n]) =>
+  const swatches = (path, list, cur, opt) => { const own = isHex(cur) && !list.some(([c]) => String(c).toUpperCase() === String(cur).toUpperCase());
+    return `<div class="gSw${opt && opt.row ? " row" : ""}">${opt && opt.noAny ? "" : `<label title="${gW("Any colour")}"${own ? ' class="on"' : ""}><i${own ? ` class="own${pale(cur) ? " pale" : ""}" style="background:${cur}"` : ""}>${own ? "" : "+"}</i><span>${own ? esc2(String(cur).toUpperCase()) : gT("ink.any")}</span><input type="color" data-gcolor="${path}" value="${isHex(cur)?cur:"#888888"}"></label>`}${list.map(([c,n]) =>
     `<button type="button" title="${esc2(gW(n))}" aria-label="${esc2(gW(n))}" data-gset="${path}" data-gv='${gv(c)}' class="${String(cur).toUpperCase()===c.toUpperCase()?"on":""}"><i class="${pale(c)?"pale":""}" style="background:${c}"></i><span>${esc2(gW(n))}</span></button>`).join("")}
-    ${opt && opt.noAny ? "" : `<label title="${gW("Any colour")}"><i>+</i><span>${gT("ink.any")}</span><input type="color" data-gcolor="${path}" value="${isHex(cur)?cur:"#888888"}"></label>`}</div>`;
+    </div>`; };
   /* the whole row is the label, so the words switch it as well as the switch */
   const toggle = (path, label, on) => `<label class="gRow gTog"><span>${gW(label)}</span><span class="gSwitch"><input type="checkbox" data-gtoggle="${path}" ${on?"checked":""}><span></span></span></label>`;
   /* A slider with its value written out, a step either side, a mark at the
@@ -17793,7 +17814,7 @@ Object.assign(GWORD.ar, {
      block's finer controls are open */
   let pickHour = null, gemMore = false, eachHour = false;
   /* rows added with the gems keep every target at least 44 px tall */
-  const chips44 = (path, opts, cur) => chips(path, opts, cur).replace('<div class="gChips">', '<div class="gChips g44">');
+  const chips44 = (path, opts, cur) => chips(path, opts, cur).replace(/^<div class="gChips/, '<div class="gChips g44');
   const stoneChips = (path, opts, cur) => `<div class="gChips g44">${opts.map(([v,l]) =>
     `<button type="button" data-gset="${path}" data-gv='${gv(v)}' class="${cur===v?"on":""}"><i class="gDot" style="background:${GEM_STONES[v].body};border-color:${GEM_STONES[v].deep}"></i>${esc2(l)}</button>`).join("")}</div>`;
   /* The case metals, two-tone among them: a two-tone disc is split, steel
@@ -17953,7 +17974,13 @@ Object.assign(GWORD.ar, {
      through the same fieldInput and fieldChosen. Only the look is simple
      mode's: sliders with steps, chips, swatches and pictures. */
   let sheetOn = false, sheetHand = "hHand", timeSet = false;
-  const secOpen = new Set(), secShut = new Set(), subOpen = new Set(), subShut = new Set();
+  /* which sections of the More sheet were left open or shut: kept on this
+     device, so a sheet opens the way it was left even after a reload */
+  const FOLD_KEY = "wds.moreFolds";
+  const folds = (() => { try { const o = JSON.parse(localStorage.getItem(FOLD_KEY) || "{}"); return o && typeof o === "object" ? o : {}; } catch(e){ return {}; } })();
+  const foldSet = k => new Set(Array.isArray(folds[k]) ? folds[k].filter(x => typeof x === "string").slice(0, 200) : []);
+  const secOpen = foldSet("so"), secShut = foldSet("ss"), subOpen = foldSet("bo"), subShut = foldSet("bs");
+  const saveFolds = () => { try { localStorage.setItem(FOLD_KEY, JSON.stringify({so:[...secOpen], ss:[...secShut], bo:[...subOpen], bs:[...subShut]})); } catch(e){} };
   const MORE_NEED = {photo:() => !!(S.tpl.on && tplAvail(S)), upload:() => !!(S.tpl.on && tplAvail(S) && !caseOf(S).photoFile),
     calendar:() => !!caseOf(S).calendar};
   const hasSheet = k => !!(G_MORE[k] && G_MORE[k].length);
@@ -18053,6 +18080,10 @@ Object.assign(GWORD.ar, {
     let h = "", shown = 0;
     if(k === "hands"){
       h += chips44("ui.mhand", [["hHand","Hour hand"],["mHand","Minute hand"],["sHand","Seconds hand"]], sheetHand);
+      /* whether a change here carries to the other hands, said where the
+         change is made rather than only in the last section */
+      { const L = S.handSet.link !== "off";
+        h += toggle("ui.link", "Hands move together", L) + `<p class="gNote">${L ? gT(S.handSet.link === "full set" ? "hands.linkFull" : "hands.linkStyle", !!S.handSet.includeSeconds) : gT("hands.linkOff")}</p>`; }
       if(sheetHand === "sHand" && !S.sHand.on) return h + `<p class="gNote">${gT("more.secOff")}</p>` + toggle("sHand.on", "Seconds hand", false);
     }
     for(const sec of G_MORE[k]){ const s = moreSection(k, sec, used, shown === 0); if(s){ h += s; shown++; } }
@@ -18324,7 +18355,7 @@ Object.assign(GWORD.ar, {
         let h = "";
         if(showNum){
           h += slider("numerals.heightMM", "Figure height", 1.0, 4.0, 0.05, get(S, "numerals.heightMM"))
-            + slider("numerals.radius", "Distance from centre", 8, 14.5, 0.05, n.radius);
+            + slider("numerals.radius", "Numerals from centre", 8, 14.5, 0.05, n.radius);
           /* thickness thickens a printed figure's ink; an applied piece is cut
              to its outline and ignores it, except a diamond-set one, whose
              strokes have to be bold enough to hold the stones */
@@ -18332,7 +18363,8 @@ Object.assign(GWORD.ar, {
           if(fit && fit.touching) h += `<p class="gNote" style="color:var(--g-warn-ink)">${gT("w.dayTouch")}</p>`;
           h += `<p class="gNote">${gT("mk.underWindows")}</p>`;
         }
-        if(showIx) h += (showNum ? `<h3>${gW("Index size")}</h3>` : "") + slider("indices.length", "Length", 0.8, 4, 0.05, ix.length) + slider("indices.width", "Width", 0.2, 1.4, 0.02, ix.width);
+        if(showIx) h += (showNum ? `<h3>${gW("Index size")}</h3>` : "") + slider("indices.length", "Length", 0.8, 4, 0.05, ix.length) + slider("indices.width", "Width", 0.2, 1.4, 0.02, ix.width)
+          + slider("indices.radius", "Indices from centre", 6, 14.5, 0.05, ix.radius);
         return h;
       }
       let h = "";
@@ -18816,6 +18848,7 @@ Object.assign(GWORD.ar, {
     const d = e.target; if(!d || !d.dataset) return;
     if(d.dataset.gmsec){ const id = d.dataset.gmsec; if(d.open){ secOpen.add(id); secShut.delete(id); } else { secShut.add(id); secOpen.delete(id); } }
     if(d.dataset.gmsub){ const id = d.dataset.gmsub; if(d.open){ subOpen.add(id); subShut.delete(id); } else { subShut.add(id); subOpen.delete(id); } }
+    if(d.dataset.gmsec || d.dataset.gmsub) saveFolds();
   }, true);
   addEventListener("keydown", e => { if(e.key === "Escape" && sheetOn && mode === "guided"){ sheetOn = false; paint(); pillHere().focus({preventScroll:true}); } });
   /* the panel reads in the chosen language and direction; the stage, the
@@ -18869,6 +18902,7 @@ Object.assign(GWORD.ar, {
     const rowsX = [...body.querySelectorAll(".gCards, .gChips, .gSw.row")].map(r => r.scrollLeft);
     body.innerHTML = `<div class="gH2"><h2>${s.t}</h2>${hasSheet(s.k) ? `<button type="button" class="gMoreTop" data-gsheet="1"></button>` : ""}</div><p class="gLead">${s.lead}</p>` + stepWarnings(s.k) + VIEW[s.k](tab);
     body.dataset.view = view; if(same) body.scrollTop = scroll;
+    downEdge();
     body.querySelectorAll(".gCards, .gChips, .gSw.row").forEach((r, i) => {
       if(r.scrollWidth <= r.clientWidth + 2) return;
       if(same && rowsX[i] != null) r.scrollLeft = rowsX[i];
@@ -18892,12 +18926,110 @@ Object.assign(GWORD.ar, {
   }
   /* a sideways row with more to its right fades at that edge */
   const edge = r => r.classList.toggle("more", Math.abs(r.scrollLeft) + r.clientWidth < r.scrollWidth - 4);
-  body.addEventListener("scroll", e => { const r = e.target; if(r.classList && (r.classList.contains("gCards") || r.classList.contains("gChips") || r.classList.contains("gSw"))) edge(r); }, true);
+  body.addEventListener("scroll", e => { const r = e.target; if(r === body) return downEdge(); if(r.classList && (r.classList.contains("gCards") || r.classList.contains("gChips") || r.classList.contains("gSw"))) edge(r); }, true);
+  /* with more below, the panel fades at its foot, so a control cut off by
+     the edge reads as "scroll on" rather than as something to tap */
+  function downEdge(){ body.classList.toggle("down", body.scrollTop + body.clientHeight < body.scrollHeight - 6); }
+  /* Find a setting: every section and field of every step's More sheet,
+     as this design has them, and each step's own name. A result opens its
+     step, its sheet and its section, and points at the control. */
+  let findQ = "", findList = [], findIdx = null;
+  const tabsOf = k => { const n = S.numerals, ix = S.indices, per = perHourOn(S);
+    return gTabsFor(k, {hasCalendar:!!caseOf(S).calendar, num:n.on, ix:per ? (ix.on && planHas(S, "index", "indexAlt")) : (!n.on && ix.on), gems:per && planHas(S, "gem", "gemAlt")}); };
+  /* an element is found again by its data- attributes, as the page draws it */
+  const findSel = el => [...el.attributes].filter(a => /^data-g/.test(a.name)).map(a => `[${a.name}="${CSS.escape(a.value)}"]`).join("");
+  /* the controls on a step's own page: sliders, switches, choices, colours
+     and pictures, each under the heading it sits beneath */
+  function findPage(out, i, x, tb){
+    let html = ""; try{ html = VIEW[x.k](tb); }catch(e){ return; }
+    const tpl = document.createElement("template"); tpl.innerHTML = html;
+    const where0 = x.t + (tb ? " › " + gT("tab." + x.k + "." + tb) : ""), seenP = new Set();
+    let head = "";
+    const add = (t, el, under) => { t = String(t || "").replace(/\s+/g, " ").trim(); if(!t || t.length > 60) return;
+      const sel = findSel(el); if(!sel || seenP.has(sel)) return; seenP.add(sel);
+      out.push({i, t, where:where0 + (under && head && head !== t ? " › " + head : ""), tab:tb, sel}); };
+    const walker = document.createTreeWalker(tpl.content, NodeFilter.SHOW_ELEMENT);
+    for(let el = walker.nextNode(); el; el = walker.nextNode()){
+      if(el.tagName === "H3" || el.tagName === "H4"){ head = el.textContent.trim(); continue; }
+      if(el.classList.contains("gSl")){ const l = el.querySelector(".gSlHead label"); add(l && l.textContent, el); continue; }
+      if(el.matches("input[data-gtoggle]")){ const r = el.closest(".gRow"), sp = r && r.querySelector("span"); add(sp && sp.textContent, el); continue; }
+      if(el.matches("[data-gset], [data-ggem], [data-gcase], [data-ghand], [data-gsec], [data-ghour]") && el.matches("button")){
+        const nm = el.querySelector(".gName"); add(nm ? nm.textContent : (el.getAttribute("aria-label") || el.textContent), el, true); }
+    }
+  }
+  function findIndex(){
+    if(findIdx) return findIdx;
+    const out = [];
+    STEPS.forEach((x, i) => {
+      out.push({i, t:x.t, where:x.lead || ""});
+      const tabs = tabsOf(x.k);
+      for(const tb of (tabs.length ? tabs : [null])){ if(!(x.k === "case" && tb === "shape")) findPage(out, i, x, tb); }
+      for(const sec of (G_MORE[x.k] || [])){
+        try{
+          if(sec.show && !get(S, sec.show)) continue;
+          if(sec.need && !MORE_NEED[sec.need]()) continue;
+          const id = x.k + ":" + sec.id, want = new Set(sec.paths), seenL = new Set();
+          out.push({i, t:gW(sec.t), where:x.t + " › " + gT("more.title"), sec:id});
+          const walk = (list, subs, depth) => list.forEach(fd => {
+            if(fd.t === "group") return walk(fd.fields, subs, depth);
+            if(fd.t === "sub") return walk(fd.fields, depth >= 0 ? subs.concat([[id + "|" + fd.l, depth]]) : subs, depth + 1);
+            const key = gMoreKey(fd, "hHand");
+            if(!want.has(key) || (MORE_ONLY[key] && !MORE_ONLY[key]()) || fd.t === "head" || fd.t === "say") return;
+            const lab = gW(gMoreLabel(fd, "hHand")); if(!lab || seenL.has(lab)) return; seenL.add(lab);
+            out.push({i, t:lab, where:x.t + " › " + gW(sec.t), sec:id, subs, p:fd.p || (fd.t === "linkbar" ? "ui.link" : null)});
+          });
+          walk(schemaFields(sec.src), [], 0);
+        }catch(e){}
+      }
+    });
+    return (findIdx = out);
+  }
+  const findNorm = t => String(t || "").toLowerCase().normalize("NFKD").replace(/[\u0300-\u036f\u064B-\u065F\u0670]/g, "").replace(/[أإآ]/g, "ا").replace(/ة/g, "ه").replace(/ى/g, "ي");
+  function findHTML(q){
+    const words = findNorm(q).split(/\s+/).filter(Boolean);
+    findList = findIndex().map(r => { const a = findNorm(r.t), b = findNorm(r.where);
+      if(!words.every(w => a.indexOf(w) >= 0 || b.indexOf(w) >= 0)) return null;
+      return Object.assign({score:(a.indexOf(words[0]) === 0 ? 0 : a.indexOf(words[0]) > 0 ? 1 : 2) + (r.sel ? 0 : r.p ? 0.3 : 0.5)}, r); }).filter(Boolean)
+      .sort((x, y) => x.score - y.score);
+    /* the same control on a step's page and in its More sheet: the page's */
+    const once = new Set(); findList = findList.filter(r => { const k = r.i + "|" + findNorm(r.t); if(once.has(k)) return false; once.add(k); return true; }).slice(0, 14);
+    if(!findList.length) return `<li class="none">${esc2(gT("find.none"))}</li>`;
+    return findList.map((r, n) => `<li><button type="button" data-gfind="${n}"><b>${stepIcon(STEPS[r.i].k, 15)}</b><span>${esc2(r.t)}<small>${esc2(r.where)}</small></span></button></li>`).join("");
+  }
+  function findGo(r){
+    findQ = ""; findIdx = null; listOpen = false;
+    if(r.i !== step) go(r.i);
+    if(r.tab) subTab[STEPS[r.i].k] = r.tab;
+    if(r.sec){
+      secOpen.add(r.sec); secShut.delete(r.sec);
+      for(const [sk, depth] of (r.subs || [])){ if(depth === 0) subShut.delete(sk); else { subOpen.add(sk); subShut.delete(sk); } }
+      saveFolds(); sheetOn = true;
+    }
+    paint();
+    setTimeout(() => {
+      const root = guide.querySelector(r.sec ? ".gSheet" : ".gBody"); if(!root) return;
+      const q = r.sel ? root.querySelector(r.sel) : r.p ? root.querySelector(`[id="gms-${r.p}"], [data-gtoggle="${r.p}"], [data-gset="${r.p}"], [data-gcolor="${r.p}"], [data-gtype="${r.p}"]`) : null;
+      const el = q ? (q.closest(".gSl, .gRow") || q) : r.sec ? root.querySelector(`[data-gmsec="${r.sec}"]`) : null;
+      if(!el) return;
+      el.scrollIntoView({block:"center", behavior:"smooth"});
+      el.classList.remove("gFlash"); void el.offsetWidth; el.classList.add("gFlash");
+      setTimeout(() => el.classList.remove("gFlash"), 1800);
+    }, 60);
+  }
+  guide.addEventListener("input", e => {
+    const t = e.target; if(!t.classList || !t.classList.contains("gFindIn")) return;
+    findQ = t.value; const l = guide.querySelector(".gList"); if(!l) return;
+    const ul = l.querySelector(".gFind"), ol = l.querySelector("ol"), on = !!findQ.trim();
+    ul.hidden = !on; ol.hidden = on; ul.innerHTML = on ? findHTML(findQ) : "";
+  });
+  guide.addEventListener("keydown", e => { if(e.key === "Enter" && e.target.classList && e.target.classList.contains("gFindIn") && findList[0]){ e.preventDefault(); findGo(findList[0]); } });
   /* the seven steps as a list, with what is done and what needs a look */
   function paintList(){
     let l = guide.querySelector(".gList");
     if(!l){ l = document.createElement("div"); l.className = "gList"; l.setAttribute("role", "dialog"); l.setAttribute("aria-label", gT("steps.all")); guide.appendChild(l); }
-    l.innerHTML = `<header>${gT("steps.all")}<button type="button" data-glist="0" aria-label="${gT("steps.close")}">✕</button></header><ol>${STEPS.map((x,i) => {
+    l.innerHTML = `<header>${gT("steps.all")}<button type="button" data-glist="0" aria-label="${gT("steps.close")}">✕</button></header>`
+      + `<div class="gFindBar"><input type="search" class="gFindIn" placeholder="${esc2(gT("find.ph"))}" aria-label="${esc2(gT("find.ph"))}" value="${esc2(findQ)}" enterkeyhint="search" autocomplete="off"></div><ul class="gFind"${findQ.trim() ? "" : " hidden"}>${findQ.trim() ? findHTML(findQ) : ""}</ul>`
+      + `<ol${findQ.trim() ? " hidden" : ""}>${STEPS.map((x,i) => {
       const w = warnNow[x.k], c = i === step ? "on" : seen(i) ? "done" : "";
       const sub = w ? `<small class="w">⚠ ${esc2(w[0].text)}</small>` : `<small>${i === step ? gT("steps.here") : seen(i) ? gT("steps.done") : esc2(x.lead)}</small>`;
       return `<li><button type="button" data-gstep="${i}" class="${c}"><b>${stepIcon(x.k, 17)}</b><span>${esc2(x.t)}${sub}</span></button></li>`; }).join("")}</ol>`;
@@ -18950,7 +19082,8 @@ Object.assign(GWORD.ar, {
     if(d.gtype){ typeValue(t); return; }
     if(d.glang){ setLang(d.glang); return; }
     if(d.gstep){ go(+d.gstep); return; }
-    if(d.glist){ listOpen = d.glist === "1"; paint(); return; }
+    if(d.glist){ listOpen = d.glist === "1"; findIdx = null; if(!listOpen) findQ = ""; paint(); return; }
+    if(d.gfind){ const r = findList[+d.gfind]; if(r) findGo(r); return; }
     if(d.gsub){ subTab[STEPS[step].k] = d.gsub; frameWhole = false; paint(); body.scrollTop = 0; return; }
     if(t.classList.contains("back")){ if(step > 0) go(step - 1); return; }
     if(t.classList.contains("next")){ if(step < STEPS.length-1) go(step + 1); else finishSave(); return; }

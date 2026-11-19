@@ -200,6 +200,29 @@ stored in a design file do not change. In the full editor at laptop widths
 the toolbar sits tighter, and on a narrower window it takes a second row
 rather than pushing Share and Export off the screen.
 
+## Finding a setting (v4.19.0)
+
+The steps list (tap "step 3 of 7 ▾") has a **Find a setting** field. It
+searches every control on every step's own pages and in every More sheet, as
+the design in hand has them, in English or Arabic (with or without hamza and
+tashkeel). A result opens its step, its tab or its More section, scrolls to the
+control and lights it up. Alongside it, from the F77 challenge's findability
+findings:
+
+- The More sheet's sections open the way they were left, after a reload too
+  (kept on the device as `wds.moreFolds`).
+- A choice row of more than six wraps on a phone instead of scrolling, so the
+  dial's ninth finish (Stone) is in sight.
+- In a colour row **+ Any** comes first; once a colour of your own is set it
+  shows that colour and its hex, selected.
+- Labels say what they move: Numerals from centre, Indices from centre, Minute
+  track diameter, Hour track diameter. Indices from centre is now beside the
+  index size in Markers › Size.
+- The Hands More sheet says at the top whether the hands move together and what
+  a change carries to the other hands.
+- The panel fades at its foot while there is more below, so a control cut off
+  by the edge reads as "scroll on".
+
 ## Big date (v4.18.0)
 
 In the Date step, **Windows → Big date** splits the opening into two windows

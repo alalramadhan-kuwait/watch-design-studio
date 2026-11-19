@@ -82,3 +82,38 @@ test('big date (v4.18.0): two windows in one opening, tens and units discs, a ce
   assert.match(source, /chips\("date\.bigUi", \[\["single","One window"\],\["big","Big date"\]\]/);
   assert.match(source, /SEL\("date\.bigUi","Windows",\["single","big"\]\)/);
 });
+
+test('findability (v4.19.0): find a setting, folds kept, long rows wrapped, "+ Any" first, labels say what they move', () => {
+  // the search: every step's page and More sheet, as this design has them
+  assert.match(source, /<input type="search" class="gFindIn" placeholder="\$\{esc2\(gT\("find\.ph"\)\)\}"/);
+  assert.match(source, /function findPage\(out, i, x, tb\)\{/);
+  assert.match(source, /for\(const tb of \(tabs\.length \? tabs : \[null\]\)\)\{ if\(!\(x\.k === "case" && tb === "shape"\)\) findPage\(out, i, x, tb\); \}/);
+  assert.match(source, /out\.push\(\{i, t:lab, where:x\.t \+ " › " \+ gW\(sec\.t\), sec:id, subs, p:/);
+  assert.match(source, /if\(r\.tab\) subTab\[STEPS\[r\.i\]\.k\] = r\.tab;/, 'a result opens its tab');
+  assert.match(source, /secOpen\.add\(r\.sec\); secShut\.delete\(r\.sec\);/, 'and its section of the sheet');
+  assert.match(source, /el\.scrollIntoView\(\{block:"center", behavior:"smooth"\}\);/);
+  assert.match(source, /"find\.ph":"Find a setting"/); assert.match(source, /"find\.ph":"ابحث عن إعداد"/);
+  // Arabic matches with or without hamza and tashkeel
+  const norm = new Function('return ' + source.match(/const findNorm = (t => [^\n]+);/)[1])();
+  assert.equal(norm('أبعاد'), norm('ابعاد'));
+  assert.equal(norm('Guilloché'), 'guilloche');
+  // the More sheet opens the way it was left, after a reload too
+  assert.match(source, /const FOLD_KEY = "wds\.moreFolds";/);
+  assert.match(source, /if\(d\.dataset\.gmsec \|\| d\.dataset\.gmsub\) saveFolds\(\);/);
+  assert.match(source, /try \{ localStorage\.setItem\(FOLD_KEY,/);
+  // a choice row of more than six wraps, so the ninth is not off the screen
+  assert.match(source, /const chips = \(path, opts, cur\) => `<div class="gChips\$\{opts\.length > 6 \? " wrap" : ""\}">/);
+  assert.match(source, /\.gChips\.gMade, \.gChips\.wrap\{ flex-wrap:wrap;/);
+  // "+ Any" first, wearing the colour when it is not one of the swatches
+  const sw = chunk('  const swatches = (path, list, cur, opt) => {', '\n  const ');
+  assert.ok(sw.indexOf('<label title=') < sw.indexOf('${list.map('), '"+ Any" comes first');
+  assert.match(sw, /const own = isHex\(cur\) && !list\.some/);
+  // labels that name what they move
+  for (const [k, l] of [['minute.diameter', 'Minute track diameter'], ['hour.diameter', 'Hour track diameter'], ['numerals.radius', 'Numerals from centre'], ['indices.radius', 'Indices from centre']])
+    assert.match(source, new RegExp(`"${k.replace('.', '\\.')}":"${l}"`));
+  assert.match(source, /slider\("indices\.radius", "Indices from centre", 6, 14\.5, 0\.05, ix\.radius\)/, 'the index distance beside the index size');
+  // the hands say whether they move together, where they are changed
+  assert.match(source, /h \+= toggle\("ui\.link", "Hands move together", L\)/);
+  // a panel with more below fades at its foot
+  assert.match(source, /function downEdge\(\)\{ body\.classList\.toggle\("down",/);
+});
