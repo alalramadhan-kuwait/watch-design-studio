@@ -34,7 +34,7 @@ const LA = 135*Math.PI/180;
 const draw = (o, a = 30, la = LA) => { let n = 0; return G.indexShape(ix(o), a, k => k + (n++), [], la); };
 
 test('offered wherever an index shape is chosen, in English and Arabic', () => {
-  assert.match(chunk('  indices:{title:"Indices"', ']},'), /SEL\("indices\.style","Shape",\["baton","dot","cone","box","diamond","triangle","dagger","double","f77"\]\)/);
+  assert.match(chunk('  indices:{title:"Indices"', ']},'), /SEL\("indices\.style","Shape",\["baton","dot","square","cone","box","diamond","triangle","dagger","double","f77"\]\)/);
   assert.match(source, /chips44\("indices\.style", shp\(\[\["baton","Baton"\],\["double","Double"\],\["f77","Nivada F77"\],/);
   assert.match(source, /"f77":"Nivada F77"/); assert.match(source, /"Nivada F77":"نيفادا F77"/);
   assert.match(chunk('const MARKER_PRESETS = [', '];'), /\["special6", "Special 6"\],\n  \["f77", "F77 dial"\],\n  \["custom", "Each hour…"\]/);

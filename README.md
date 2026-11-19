@@ -200,6 +200,18 @@ stored in a design file do not change. In the full editor at laptop widths
 the toolbar sits tighter, and on a narrower window it takes a second row
 rather than pushing Share and Export off the screen.
 
+## Square plots and a Velcro strap (v4.30.0)
+
+- **Square** index shape (main and accent): an applied square, side twice the
+  width, its four chamfered edges each lit by where they face, with a square of
+  lume set in it, as a sports dial's plots at 3, 6 and 9.
+- **Strap › Fabric (Velcro)** in Case › Metal and strap, on a case with a
+  measured strap on its photograph (the F77): the photograph's strap becomes a
+  rib knit (columns 0.9 mm wide of twisted bumps 0.45 mm long, each a little
+  different, in mm so the same at any size) in the strap colour, with a
+  **Stitching** seam down each edge, a twisted cord in orange, white, red, sand
+  or none. The maker's sheet's band type follows ("fabric Velcro").
+
 ## Timing flange (v4.29.0)
 
 Dial › Minute track, for a sports watch's flange:

@@ -264,3 +264,19 @@ test('timing flange (v4.29.0): ticks from the inner or outer edge, fifths betwee
   assert.match(source, /toggle\("minute\.fifths", "Fifths between the minutes", !!S\.minute\.fifths\)/);
   assert.match(source, /toggle\("hour\.marksOn", "Minute marks on the dial", get\(S, "hour\.marksOn"\)\)/);
 });
+
+test('square plots and a woven Velcro strap (v4.30.0)', () => {
+  // an applied square with chamfered edges, each lit by where it faces, and its lume
+  assert.match(source, /case "square": \{ const q = W, b = W\*0\.22,/);
+  assert.match(source, /case "square": +s = `<rect x="\$\{f\(-W\*0\.62,3\)\}"/);
+  assert.match(source, /case "square": +return g\(`<rect x="\$\{f\(-W,3\)\}"/);
+  assert.match(source, /\["dot","Dot"\],\["square","Square"\],\["diamond","Diamond"\],\["box","Box"\]\]\), ix\.style\)/);
+  // the strap: a rib knit in mm and a twisted cord seam, on the photograph
+  assert.match(source, /function fabricTex\(x, y\)\{/);
+  assert.match(source, /const cw = 0\.90, bl = 0\.45, col = Math\.floor\(x\/cw\)/);
+  assert.match(source, /const tw = 0\.62 \+ 0\.38\*Math\.cos\(2\*Math\.PI\*\(ay\/0\.42 \+ off\*1\.6\)\)/);
+  assert.match(source, /if\(c\.strapType !== "fabric" \|\| !K\.photoStrap \|\| K\.bracelet \|\| c\.strap === false\) return null;/);
+  assert.match(source, /\+ "\|" \+ \(fab \? "fabric" \+ \(fab\.stitch \|\| ""\) : ""\);/, 'cached apart from rubber');
+  assert.match(source, /chips\("case\.strapType", \[\["rubber","Rubber"\],\["fabric","Fabric \(Velcro\)"\]\]/);
+  assert.match(source, /S\.sheet\.strap\.type = v === "fabric" \? "fabric Velcro" : "rubber";/, 'the maker\'s sheet says so');
+});

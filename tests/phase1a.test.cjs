@@ -42,9 +42,9 @@ test('linked hands: shape only by default, the seconds hand left out and never t
 });
 
 test('a strap of another colour keeps the photograph where the case has a measured strap', () => {
-  assert.match(source, /function strapTintPixels\(d, W, H, cal, P, hex\)\{/);
-  assert.match(source, /const strapHex = own \? photoStrapHex\(st, K\) : null;/);
-  assert.match(source, /if\(own && \(\(plan && \(plan\.full \|\| plan\.two\)\) \|\| strapHex\)\)\{ own = tintedPhoto\(K, plan \|\| \{\}, strapHex\);/);
+  assert.match(source, /function strapTintPixels\(d, W, H, cal, P, hex, fab\)\{/);
+  assert.match(source, /let strapHex = own \? photoStrapHex\(st, K\) : null;/);
+  assert.match(source, /if\(own && \(\(plan && \(plan\.full \|\| plan\.two\)\) \|\| strapHex\)\)\{ own = tintedPhoto\(K, plan \|\| \{\}, strapHex, fab\);/);
   assert.match(source, /if\(path === "case\.strapColor"\) return !!K\.bracelet \|\| !!K\.photoStrap \|\|/);
   // the sheet does not tint a second time, and no screen-only helper is used in the drawing
   assert.doesNotMatch(source, /sheetStrapTint/);

@@ -2240,7 +2240,7 @@ const APP_BUILD = "__BUILD__";
 /* The version people see, raised with every change that reaches them:
    major for a new way of working, minor for something new to do, patch for
    a fix. Shown on the watch screen, so any screenshot says which it was. */
-const APP_VERSION = "4.29.0";
+const APP_VERSION = "4.30.0";
 const APP_DATE = "__DATE__";
 
 /* Every route that replaces S passes through one of these three, which is
@@ -8993,6 +8993,7 @@ function indexLume(ix, a){
   let s;
   switch(ix.style){
     case "dot":      s = `<circle r="${f(W*0.55,3)}"${e}/>`; break;
+    case "square":   s = `<rect x="${f(-W*0.62,3)}" y="${f(-W*0.62,3)}" width="${f(W*1.24,3)}" height="${f(W*1.24,3)}" rx="${f(W*0.08,3)}"${e}/>`; break;
     case "double":   s = bar(-W*1.4) + bar(W*1.4); break;
     case "diamond":  s = `<path d="M0 ${f(-L*0.28,3)} L${f(W*0.55,3)} 0 L0 ${f(L*0.28,3)} L${f(-W*0.55,3)} 0 Z"${e}/>`; break;
     case "triangle": s = `<path d="M0 ${f(-L*0.22,3)} L${f(W*0.5,3)} ${f(L*0.3,3)} L${f(-W*0.5,3)} ${f(L*0.3,3)} Z"${e}/>`; break;
@@ -9023,6 +9024,17 @@ function metalIndexShape(ix, a, id, defs, la, MT){
   let s;
   switch(ix.style){
     case "dot": s = `<circle r="${W}" fill="${rad()}"${out}/>`; break;
+    /* a square plot: an applied square, side twice the width, its four
+       chamfered edges each lit by where they face, and the lume set in it */
+    case "square": { const q = W, b = W*0.22, laQ = la - a*Math.PI/180, Lq = [Math.cos(laQ), Math.sin(laQ)];
+      const face = (nx, ny) => { const k = nx*Lq[0] + ny*Lq[1]; return k > 0 ? tint(MT.base, 0.25 + 0.5*k) : shade(MT.base, 0.10 + 0.40*(-k)); };
+      const P2 = (x, y) => `${f(x,3)} ${f(y,3)}`;
+      s = `<rect x="${f(-q,3)}" y="${f(-q,3)}" width="${f(2*q,3)}" height="${f(2*q,3)}" fill="${lin()}"${out}/>`
+        + `<path d="M${P2(-q,-q)} L${P2(q,-q)} L${P2(q-b,-q+b)} L${P2(-q+b,-q+b)}Z" fill="${face(0,-1)}"/>`
+        + `<path d="M${P2(-q,q)} L${P2(q,q)} L${P2(q-b,q-b)} L${P2(-q+b,q-b)}Z" fill="${face(0,1)}"/>`
+        + `<path d="M${P2(-q,-q)} L${P2(-q+b,-q+b)} L${P2(-q+b,q-b)} L${P2(-q,q)}Z" fill="${face(-1,0)}"/>`
+        + `<path d="M${P2(q,-q)} L${P2(q-b,-q+b)} L${P2(q-b,q-b)} L${P2(q,q)}Z" fill="${face(1,0)}"/>`;
+      break; }
     case "cone": {
       const gid = rad(), nf = 16; let fac = "";
       for(let i=0;i<nf;i++){
@@ -9059,6 +9071,7 @@ function indexShape(ix, a, id, defs, la){
   const g = s => `${shadow}<g transform="rotate(${a}) translate(0,${-r})">${s}</g>`;
   switch(ix.style){
     case "dot":     return g(`<circle r="${W}" fill="${col}"/>`);
+    case "square":  return g(`<rect x="${f(-W,3)}" y="${f(-W,3)}" width="${f(2*W,3)}" height="${f(2*W,3)}" fill="${col}"/>`);
     case "cone": {
       /* a turned cone seen from above: radial facets, a lit side, a dark
          side and a bright point where the tip catches the light */
@@ -10410,8 +10423,8 @@ function photoPixels(K){
   im.src = src;
   return null;
 }
-function tintedPhoto(K, plan, strapHex){
-  const key = K.photoFile + "|" + (plan.full || "") + "|" + (plan.two || "") + "|" + (strapHex || "");
+function tintedPhoto(K, plan, strapHex, fab){
+  const key = K.photoFile + "|" + (plan.full || "") + "|" + (plan.two || "") + "|" + (strapHex || "") + "|" + (fab ? "fabric" + (fab.stitch || "") : "");
   if(PHOTO_TINT.has(key)) return PHOTO_TINT.get(key);
   const px = photoPixels(K); if(!px) return null;
   const C = K.photoCal, w = px.width, h = px.height;
@@ -10419,7 +10432,7 @@ function tintedPhoto(K, plan, strapHex){
   const cv = document.createElement("canvas"); cv.width = w; cv.height = h;
   const g = cv.getContext("2d"), out = g.createImageData(w, h);
   const data = plan.full || plan.two ? photoTintPixels(px.data, w, h, cal, K.photoParts, plan) : new Uint8ClampedArray(px.data);
-  if(strapHex) strapTintPixels(data, w, h, cal, K.photoStrap, strapHex);
+  if(strapHex) strapTintPixels(data, w, h, cal, K.photoStrap, strapHex, fab);
   out.data.set(data);
   g.putImageData(out, 0, 0);
   const url = cv.toDataURL("image/jpeg", 0.92);
@@ -10433,8 +10446,22 @@ function tintedPhoto(K, plan, strapHex){
    colour by their own light, the steel and the ground beside it not at all.
    The maker's sheet did this on its own copy; the live view switched to the
    drawn case instead, whose F77 had the wrong bezel. */
-function strapTintPixels(d, W, H, cal, P, hex){
-  const rgb = hex2rgb(hex);
+/* A woven strap: knit-like columns about 1.1 mm wide whose stitches lean
+   one way in one column and the other way in the next, in mm, so the weave
+   is the same at any picture size; and a stitched seam down each edge. */
+function fabricTex(x, y){
+  /* a rib knit: columns 0.9 mm wide, each a stack of twisted bumps 0.45 mm
+     long (each leans, as a twisted yarn does), the columns set off from one
+     another at random, deep shadow between, lit from above */
+  const cw = 0.90, bl = 0.45, col = Math.floor(x/cw), u = (x - col*cw)/cw;
+  const yy = y + mHash(col, 7.3)*bl + (u - 0.5)*0.30, row = Math.floor(yy/bl), v = (yy - row*bl)/bl;
+  const across = Math.sqrt(Math.max(0, 1 - Math.pow(2*u - 1, 2))), along = Math.sqrt(Math.max(0, 1 - Math.pow(2*v - 1, 2)));
+  const jit = mHash(col*3.1, row*1.7), bump = Math.pow(across, 0.7 + 0.4*jit)*Math.pow(along, 0.8 + 0.5*mHash(col, row*2.3)), lit = (1 + 0.30*(0.5 - v))*(0.78 + 0.44*jit);
+  const fuzz = (mHash(Math.floor(x*26), Math.floor(y*26)) - 0.5)*0.18 + (mHash(Math.floor(x*9 + 3), Math.floor(y*11)) - 0.5)*0.10;
+  return Math.max(0.10, 0.20 + 0.80*bump*lit + fuzz);
+}
+function strapTintPixels(d, W, H, cal, P, hex, fab){
+  const rgb = hex2rgb(hex), sti = fab && fab.stitch ? hex2rgb(fab.stitch) : null;
   for(let j = 0; j < H; j++){
     const y = (j + 0.5 - cal.cy)/cal.s, beyond = y < P.ends[0] || y > P.ends[1], tongueRow = Math.abs(y) > P.tongue.y;
     if(!beyond && !tongueRow) continue;
@@ -10443,11 +10470,34 @@ function strapTintPixels(d, W, H, cal, P, hex){
       const o = (j*W + i)*4, L = 0.299*d[o] + 0.587*d[o + 1] + 0.114*d[o + 2];
       const a = Math.max(0, Math.min(1, (170 - L)/60)); if(a <= 0) continue;
       const k = Math.max(0.60, Math.min(1.25, 1 + 0.9*(L - 22)/120));      // the rubber's own mid-tone (L 22) takes the colour exactly
+      if(fab){
+        /* fabric: the weave's own light over the photograph's shading, and the
+           seam's dashes 1.0 mm in from each edge */
+        const x = (i + 0.5 - cal.cx)/cal.s, ay = Math.abs(y), tex = fabricTex(x + 40, y + 60);
+        const shadeK = Math.max(0.55, Math.min(1.15, 1 + 0.6*(L - 22)/120));
+        let col = [0, 1, 2].map(c => Math.min(255, rgb[c]*tex*shadeK*1.25));
+        /* the seam: a twisted cord, 0.36 mm thick, its twist catching the light */
+        if(sti && beyond && fab.half){
+          const hw = fab.half(ay), off = Math.abs(x) - (hw - 1.0), dx = Math.abs(off);
+          if(dx < 0.18){ const tw = 0.62 + 0.38*Math.cos(2*Math.PI*(ay/0.42 + off*1.6)), rnd = Math.cos(dx/0.18*Math.PI/2);
+            col = [0, 1, 2].map(c => Math.min(255, sti[c]*(0.45 + 0.75*tw*rnd)*shadeK)); }
+        }
+        for(let c = 0; c < 3; c++) d[o + c] = d[o + c] + (col[c] - d[o + c])*a;
+        continue;
+      }
       for(let c = 0; c < 3; c++) d[o + c] = d[o + c] + (Math.min(255, rgb[c]*k) - d[o + c])*a;
     }
   }
   return d;
 }
+/* a fabric strap on the photograph: its stitching and its half-width along
+   its length (the F77's strap figures), or null for rubber */
+const photoFabric = (st, K) => {
+  const c = st.case || {}; if(c.strapType !== "fabric" || !K.photoStrap || K.bracelet || c.strap === false) return null;
+  const F = K.f77 && K.f77.strap, E = K.f77 && K.f77.body ? K.f77.body.lugEnd : 23.1;
+  const half = F ? (ay => ay <= E ? F.w0 : F.w0 + (F.w1 - F.w0)*(ay - E)/(F.y1 - E)) : null;
+  return {stitch:/^#[0-9a-f]{6}$/i.test(c.stitch || "") ? c.stitch : null, half};
+};
 /* the strap colour the photograph has to be re-coloured to, or null */
 const photoStrapHex = (st, K) => {
   const own = (K.photoOwn || {}).strapColor, c = st.case || {};
@@ -10460,8 +10510,10 @@ function buildTemplate(st, o){
   const plan = K.photoFile ? photoPlan(st, K) : (twoToneOf(st) || gemBezelOn(st) ? false : null);
   if(plan === false) return buildSVG(st, {scope:"full"});
   let own = K.photoFile ? casePhoto(K) : null;
-  const strapHex = own ? photoStrapHex(st, K) : null;
-  if(own && ((plan && (plan.full || plan.two)) || strapHex)){ own = tintedPhoto(K, plan || {}, strapHex); if(!own) return buildSVG(st, {scope:"full"}); }
+  let strapHex = own ? photoStrapHex(st, K) : null;
+  const fab = K.photoFile ? photoFabric(st, K) : null;
+  if(fab && !strapHex && K.photoStrap) strapHex = (st.case && st.case.strapColor) || (K.photoOwn && K.photoOwn.strapColor) || "#1E1E20";
+  if(own && ((plan && (plan.full || plan.two)) || strapHex)){ own = tintedPhoto(K, plan || {}, strapHex, fab); if(!own) return buildSVG(st, {scope:"full"}); }
   const IMG = own || tplImage, IW = own ? K.photoCal.w : tplW, IH = own ? K.photoCal.h : tplH;
   if(!IMG) return buildSVG(st, {scope:"full"});
   const T = own ? Object.assign({}, st.tpl, {cx:K.photoCal.cx, cy:K.photoCal.cy, dia:K.photoCal.dia, rot:0}) : st.tpl;
@@ -11176,12 +11228,12 @@ const SCHEMA = {
     N("hour.diameter","Track diameter",6,44), N("hour.thickness","Thickness",.1,1.5,.02),
     SEL("hour.style","Style",["ticks","ring","minuteMarks"]), ...(S.hour.style === "minuteMarks" ? [N("hour.len","Mark length",.3,3,.05)] : []), C("hour.color","Colour")]},
   indices:{title:"Indices", hint:"Applied indices cast a shadow; printed ones sit flat.", fields:()=>[
-    SEL("indices.style","Shape",["baton","dot","cone","box","diamond","triangle","dagger","double","f77"]),
+    SEL("indices.style","Shape",["baton","dot","square","cone","box","diamond","triangle","dagger","double","f77"]),
     N("indices.radius","Distance from centre",3,22), N("indices.length","Length",.4,6,.05), N("indices.width","Width",.1,2.5,.05),
     N("indices.count","Count",4,24,1,""), C("indices.color","Colour"),
     /* "colour" paints in the colour above; a metal makes the index in it */
     SEL("indices.metal","Finish",["colour"].concat(GEM_METALS)),
-    SEL("indices.altStyle","Accent index shape",["double","baton","triangle","dagger","dot","diamond","cone","box"]),
+    SEL("indices.altStyle","Accent index shape",["double","baton","triangle","dagger","dot","square","diamond","cone","box"]),
     CK("indices.applied","Applied"), CK("indices.skipNumerals","Skip where numerals sit"),
     /* printed batons can be cut or glossed as the lettering can */
     ...(!S.indices.applied && !(S.indices.metal && METALS[S.indices.metal]) && INDEX_TECH_STYLES.has(S.indices.style || "baton")
@@ -17464,7 +17516,7 @@ const GWORD = {ar:{
   "Extra high":"مرتفع جداً", "High":"مرتفع", "height:Standard":"عادي", "Window width":"عرض النافذة", "Narrow":"ضيقة", "Standard":"قياسية", "Wide":"عريضة",
   "Move them aside":"أزحهما جانباً", "Make them smaller":"صغّرهما", "Use markers":"ضع مؤشرين", "Leave them off":"احذفهما", "Let them touch":"اتركهما متلامسين",
   "Day font":"خط اليوم", "Arabic font":"الخط العربي", "English font":"الخط الإنجليزي", "In the window":"في النافذة", "Day disc":"قرص اليوم",
-  "Day lettering":"لون كتابة اليوم", "Window edge":"حافة النافذة", "Lume colour":"لون المادة المضيئة", "Lume fill":"تعبئة مضيئة", "Green-white":"أبيض مخضر", "Old radium":"راديوم قديم", "Vintage cream":"كريمي عتيق", "Five-minute marks":"علامات الخمس دقائق", "Run inward":"ممتدة للداخل", "Flared":"متسعة", "Gap at 6":"فراغ عند ٦", "Track width":"عرض المسار", "Rail weight":"وزن الخط", "Tick weight":"وزن العلامة", "Turn this hour":"اتجاه هذه الساعة", "Toward the centre":"نحو المركز", "On point":"على رأسه", "Across":"بالعرض", "Size of this hour":"حجم هذه الساعة", "Figure height":"ارتفاع الرقم", "Letter height":"ارتفاع الحروف", "Thin line":"خط رفيع", "Digit height":"ارتفاع الأرقام", "Bevelled cut":"قطع مشطوف", "Applied frame":"إطار مركّب", "Keep off the watch":"أسماء ممنوعة على الساعة", "Minute marks":"علامات الدقايق", "Ticks start from":"العلامات تبدأ من", "Inner edge":"الحافة الداخلية", "Outer edge":"الحافة الخارجية", "Minute tick length":"طول علامة الدقيقة", "Fifths between the minutes":"أخماس بين الدقايق", "Fifth tick length":"طول علامة الخُمس", "Minute marks on the dial":"علامات الدقايق على الميناء", "Mark length":"طول العلامة", "Marks' outer edge (diameter)":"الحافة الخارجية للعلامات (القطر)", "Mark width":"عرض العلامة", "Granular":"محبّب خشن", "Grain size":"حجم الحبيبات", "Grain strength":"قوة الحبيبات", "Painted":"مصبوغ", "Paint colour":"لون الصبغ", "Blue":"أزرق", "Track numbers":"أرقام المسار", "5 to 60":"٥ إلى ٦٠", "1 to 12":"١ إلى ١٢", "Number height":"ارتفاع الأرقام", "Numbers from centre":"بُعد الأرقام عن المركز", "The line under it moves with the logo":"السطر اللي تحته يتحرك مع الشعار", "Dial artwork (PDF)":"رسومات الميناء (PDF)", "Plan, inks and stones":"المخطط والأحبار والأحجار", "Show the colour as made":"اعرض اللون مثل ما ينصنع", "Drawn bezel":"البيزل المرسوم", "As Nivada's drawing":"مثل رسمة نيفادا", "As the prototype":"مثل النموذج", "Hand heights":"ارتفاعات العقارب", "I have the maker's hand heights":"عندي ارتفاعات العقارب من المصنّع", "Windows":"النوافذ", "One window":"نافذة وحدة", "Big date":"تاريخ كبير", "Centre bar":"الفاصل الوسطي", "Dates 1 to 9":"التواريخ من ١ إلى ٩",
+  "Day lettering":"لون كتابة اليوم", "Window edge":"حافة النافذة", "Lume colour":"لون المادة المضيئة", "Lume fill":"تعبئة مضيئة", "Green-white":"أبيض مخضر", "Old radium":"راديوم قديم", "Vintage cream":"كريمي عتيق", "Five-minute marks":"علامات الخمس دقائق", "Run inward":"ممتدة للداخل", "Flared":"متسعة", "Gap at 6":"فراغ عند ٦", "Track width":"عرض المسار", "Rail weight":"وزن الخط", "Tick weight":"وزن العلامة", "Turn this hour":"اتجاه هذه الساعة", "Toward the centre":"نحو المركز", "On point":"على رأسه", "Across":"بالعرض", "Size of this hour":"حجم هذه الساعة", "Figure height":"ارتفاع الرقم", "Letter height":"ارتفاع الحروف", "Thin line":"خط رفيع", "Digit height":"ارتفاع الأرقام", "Bevelled cut":"قطع مشطوف", "Applied frame":"إطار مركّب", "Keep off the watch":"أسماء ممنوعة على الساعة", "Strap":"السير", "Fabric (Velcro)":"قماش (فيلكرو)", "Stitching":"الخياطة", "Sand":"رملي", "Square":"مربع", "Minute marks":"علامات الدقايق", "Ticks start from":"العلامات تبدأ من", "Inner edge":"الحافة الداخلية", "Outer edge":"الحافة الخارجية", "Minute tick length":"طول علامة الدقيقة", "Fifths between the minutes":"أخماس بين الدقايق", "Fifth tick length":"طول علامة الخُمس", "Minute marks on the dial":"علامات الدقايق على الميناء", "Mark length":"طول العلامة", "Marks' outer edge (diameter)":"الحافة الخارجية للعلامات (القطر)", "Mark width":"عرض العلامة", "Granular":"محبّب خشن", "Grain size":"حجم الحبيبات", "Grain strength":"قوة الحبيبات", "Painted":"مصبوغ", "Paint colour":"لون الصبغ", "Blue":"أزرق", "Track numbers":"أرقام المسار", "5 to 60":"٥ إلى ٦٠", "1 to 12":"١ إلى ١٢", "Number height":"ارتفاع الأرقام", "Numbers from centre":"بُعد الأرقام عن المركز", "The line under it moves with the logo":"السطر اللي تحته يتحرك مع الشعار", "Dial artwork (PDF)":"رسومات الميناء (PDF)", "Plan, inks and stones":"المخطط والأحبار والأحجار", "Show the colour as made":"اعرض اللون مثل ما ينصنع", "Drawn bezel":"البيزل المرسوم", "As Nivada's drawing":"مثل رسمة نيفادا", "As the prototype":"مثل النموذج", "Hand heights":"ارتفاعات العقارب", "I have the maker's hand heights":"عندي ارتفاعات العقارب من المصنّع", "Windows":"النوافذ", "One window":"نافذة وحدة", "Big date":"تاريخ كبير", "Centre bar":"الفاصل الوسطي", "Dates 1 to 9":"التواريخ من ١ إلى ٩",
   "All seven days in the window":"أيام الأسبوع السبعة في النافذة", "The disc in order":"القرص بالترتيب",
   "Date window at 3":"نافذة التاريخ عند 3", "Magnifier":"المكبّر", "Digits":"الأرقام", "Date font":"خط التاريخ", "Date disc":"قرص التاريخ",
   "Date digits colour":"لون أرقام التاريخ", "Frame":"الإطار", "All window settings":"كل إعدادات النوافذ",
@@ -18746,6 +18798,11 @@ Object.assign(GWORD.ar, {
         + `<p class="gNote">${gT("case.bezelNote")}</p>`;
       h += toggle("case.strap", K.bracelet ? "Show the bracelet" : "Show the strap", S.case.strap);
       if(!K.bracelet && S.case.strap) h += `<h3>${gW("Strap colour")}</h3>` + swatches("case.strapColor", [["#4E3629","Brown"],["#1E1E20","Black"],["#1E2B45","Navy"],["#A0744A","Tan"],["#2F3B2E","Green"],["#7A2433","Burgundy"]], S.case.strapColor, {row:true});
+      /* the strap's material on the photograph: its rubber, or a woven Velcro strap with a stitched seam */
+      if(!K.bracelet && S.case.strap && K.photoStrap){
+        h += `<h3>${gW("Strap")}</h3>` + chips("case.strapType", [["rubber","Rubber"],["fabric","Fabric (Velcro)"]], S.case.strapType === "fabric" ? "fabric" : "rubber");
+        if(S.case.strapType === "fabric") h += `<h3>${gW("Stitching")}</h3>` + swatches("case.stitch", [["#00000000","None"],["#F2701E","Orange"],["#F2F2EF","White"],["#D7262E","Red"],["#E3C27A","Sand"]], /^#[0-9a-f]{6}$/i.test(S.case.stitch || "") ? S.case.stitch : "#00000000", {row:true});
+      }
       if(hasPhoto(K)){ h += toggle("tpl.on", "Show as a photograph", S.tpl.on); if(S.tpl.on) h += `<p class="gNote">${gT(K.photoParts ? "case.photoGold" : "case.photoNote")}</p>`; }
       return h + more("case", "All case settings");
     },
@@ -18857,8 +18914,8 @@ Object.assign(GWORD.ar, {
         if(showIx){
           /* "Diamond" here is the shape, not the stone */
           const shp = l => l.map(([v, w]) => [v, gW(w, "shape")]);
-          h += `<h3>${gW("Index shape")}</h3>` + chips44("indices.style", shp([["baton","Baton"],["double","Double"],["f77","Nivada F77"],["dagger","Dagger"],["triangle","Triangle"],["dot","Dot"],["diamond","Diamond"],["box","Box"]]), ix.style);
-          if(per && planHas(S, "indexAlt")) h += `<h3>${gW("Accent shape")}</h3>` + chips44("indices.altStyle", shp([["double","Double"],["baton","Baton"],["triangle","Triangle"],["dagger","Dagger"],["dot","Dot"],["diamond","Diamond"]]), ix.altStyle || "double");
+          h += `<h3>${gW("Index shape")}</h3>` + chips44("indices.style", shp([["baton","Baton"],["double","Double"],["f77","Nivada F77"],["dagger","Dagger"],["triangle","Triangle"],["dot","Dot"],["square","Square"],["diamond","Diamond"],["box","Box"]]), ix.style);
+          if(per && planHas(S, "indexAlt")) h += `<h3>${gW("Accent shape")}</h3>` + chips44("indices.altStyle", shp([["double","Double"],["baton","Baton"],["triangle","Triangle"],["dagger","Dagger"],["dot","Dot"],["square","Square"],["diamond","Diamond"]]), ix.altStyle || "double");
         }
         return h;
       }
@@ -19277,6 +19334,8 @@ Object.assign(GWORD.ar, {
     else if(path === "sHand.material"){ if(S.sHand){ S.sHand.material = v; delete S.sHand.paint; } }
     else if(path === "ui.metal"){ if(/^two:/.test(v)){ S.case.material = LUX_STEEL; S.case.twoTone = v.slice(4); } else { S.case.material = v; S.case.twoTone = "none"; } }
     /* the classic colours named ombré are ombré */
+    /* the strap's material, and the maker's sheet says the same */
+    else if(path === "case.strapType"){ S.case.strapType = v; ensureSheet(S); S.sheet.strap.type = v === "fabric" ? "fabric Velcro" : "rubber"; }
     else if(path === "dial.color"){ S.dial.color = v; const cl = classicOf(v); if(cl && /ombré/.test(cl[0]) && !(S.dial.ombre > 0)) S.dial.ombre = 0.7; }
     else if(path === "minute.style"){ if(v === "none") S.minute.on = false; else { S.minute.on = true; S.minute.style = v; } }
     /* the line under the logo goes where the logo goes, unless set apart */
