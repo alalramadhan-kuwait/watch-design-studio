@@ -1636,6 +1636,8 @@ const BASE = {
     inner:{on:true, dia:21.4, band:0.62, line:0.07, depth:0.05, spacing:0.42, angle:38, metal:"polished steel", color:"#9AA0A8"},
     outer:{on:true, dia:27.6, band:0.62, line:0.07, depth:0.05, spacing:0.42, angle:38, metal:"polished steel", color:"#9AA0A8"}},
   chapter:{on:true, outerD:30.5, innerD:27.0, color:"#003087", finish:"flat", separator:true, sepColor:"#8BB8E8"},
+  /* a printed ring between the dial and the bezel, on the photograph */
+  rehaut:{on:false, color:"#141A24", marks:"dots", markColor:"#EDEFF2"},
   sector:{on:false, waveGrowth:0, wavePhase:0, radialPhase:0, stamp:0, outerD:26.0, innerD:20.0, color:"#D6D2C4", ringColor:"#A89968", finish:"matte", band:true, arms:true, lineW:0.16,
           pattern:"same as dial", cell:0.85, pitch:0.42, rays:200, waveAmp:0.35, waveN:12, wall:32},
   minute:{on:true, diameter:29.6, thickness:.30, style:"dots", color:"#FFFFFF", fives:true, fiveLen:.9,
@@ -2240,7 +2242,7 @@ const APP_BUILD = "__BUILD__";
 /* The version people see, raised with every change that reaches them:
    major for a new way of working, minor for something new to do, patch for
    a fix. Shown on the watch screen, so any screenshot says which it was. */
-const APP_VERSION = "4.30.0";
+const APP_VERSION = "4.31.0";
 const APP_DATE = "__DATE__";
 
 /* Every route that replaces S passes through one of these three, which is
@@ -10539,6 +10541,28 @@ function buildTemplate(st, o){
     const g = gemBezelSVG(GB, {inner:P.inner, outer:P.outer}, ((st.render && st.render.az) || 135)*Math.PI/180, {id:gid, defs:gdefs, grads:new Map()});
     gemOver = `<g transform="translate(${f(cx,2)} ${f(cy,2)}) scale(${f(s,4)})" pointer-events="none"><defs>${gdefs.join("")}</defs>${g}</g>`;
   }
+  /* A printed rehaut: the ring between the dial and the bezel, coloured,
+     with a minute track of its own (dots or ticks at every minute, longer
+     at the fives), drawn over the photograph's steel ring in millimetres. */
+  let rehautOver = "";
+  const RH = st.rehaut;
+  if(own && RH && RH.on){
+    const s = dPx/openMM, r0 = openMM/2 - 0.02, r1 = RH.outerD > openMM ? RH.outerD/2 : Math.min(openMM/2 + 1.05, (K.bezelID || openMM + 2.2)/2 - 0.04);
+    const col = /^#[0-9a-f]{6}$/i.test(RH.color || "") ? RH.color : "#141A24", mc = /^#[0-9a-f]{6}$/i.test(RH.markColor || "") ? RH.markColor : "#EDEFF2";
+    const gid = `rhg${o.tag||""}`, la = ((st.render && st.render.az) || 135)*Math.PI/180;
+    let marks = "";
+    const rm = (r0 + r1)/2;
+    for(let i = 0; i < 60; i++){ const a = i*6, five = i%5 === 0, p = pt(rm, a);
+      if(RH.marks === "ticks"){ const L = (r1 - r0)*(five ? 0.62 : 0.38), q0 = pt(rm - L/2, a), q1 = pt(rm + L/2, a);
+        marks += `<line x1="${f(q0[0],3)}" y1="${f(q0[1],3)}" x2="${f(q1[0],3)}" y2="${f(q1[1],3)}" stroke="${mc}" stroke-width="${five ? 0.11 : 0.07}"/>`; }
+      else if(RH.marks !== "none") marks += `<circle cx="${f(p[0],3)}" cy="${f(p[1],3)}" r="${f(five ? 0.11 : 0.075,3)}" fill="${mc}"/>`; }
+    rehautOver = `<g transform="translate(${f(cx,2)} ${f(cy,2)}) scale(${f(s,4)})" pointer-events="none">
+      <defs><linearGradient id="${gid}" gradientUnits="userSpaceOnUse" x1="${f(-Math.cos(la)*r1,3)}" y1="${f(-Math.sin(la)*r1,3)}" x2="${f(Math.cos(la)*r1,3)}" y2="${f(Math.sin(la)*r1,3)}">
+        <stop offset="0" stop-color="${tint(col,0.16)}"/><stop offset=".5" stop-color="${col}"/><stop offset="1" stop-color="${shade(col,0.25)}"/></linearGradient></defs>
+      <path d="${annulus(r1, r0)}" fill="url(#${gid})" fill-rule="evenodd"/>
+      <circle r="${f(r1,3)}" fill="none" stroke="${shade(col,0.5)}" stroke-width="0.06"/>${marks}
+      <circle r="${f(r0 + 0.03,3)}" fill="none" stroke="#000" stroke-opacity=".35" stroke-width="0.06"/></g>`;
+  }
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${IW} ${IH}"
     width="${o.px || IW}" height="${f((o.px || IW)*IH/IW,0)}" preserveAspectRatio="xMidYMid meet">
     <defs>
@@ -10551,7 +10575,7 @@ function buildTemplate(st, o){
     <g clip-path="url(#${clip})" transform="rotate(${f(T.rot,2)} ${f(cx,2)} ${f(cy,2)})">
       ${inner}
       <circle cx="${f(cx,2)}" cy="${f(cy,2)}" r="${f(dPx/2,2)}" fill="url(#${sh})" pointer-events="none"/>
-    </g>${gemOver}
+    </g>${rehautOver}${gemOver}
     ${o.guide ? `<circle cx="${f(cx,2)}" cy="${f(cy,2)}" r="${f(dPx/2,2)}" fill="none" stroke="#C9A227" stroke-width="${f(IW*0.003,2)}" stroke-dasharray="${f(IW*0.012,2)} ${f(IW*0.008,2)}"/>
        <line x1="${f(cx-dPx*0.6,2)}" y1="${f(cy,2)}" x2="${f(cx+dPx*0.6,2)}" y2="${f(cy,2)}" stroke="#C9A227" stroke-width="${f(IW*0.002,2)}" stroke-opacity="0.6"/>
        <line x1="${f(cx,2)}" y1="${f(cy-dPx*0.6,2)}" x2="${f(cx,2)}" y2="${f(cy+dPx*0.6,2)}" stroke="#C9A227" stroke-width="${f(IW*0.002,2)}" stroke-opacity="0.6"/>` : ""}
@@ -15301,6 +15325,8 @@ function sheetSpec(st){
     add(`Dial zone ${i + 1}`, `${z.finish || "matte"}${z.edge && z.edge !== "none" ? `, ${z.edge} edge` : ""}`, z.color, `Ø${mm(z.innerD)}–${mm(z.outerD)}mm`));
   const ch = st.chapter;
   if(ch && ch.on && ch.innerD < (K.opening || 99)) add("Chapter ring", `${ch.finish || "flat"}${ch.separator ? ", with a separating line" : ""}`, ch.color, `Ø${mm(ch.innerD)}–${mm(Math.min(ch.outerD, K.opening || ch.outerD))}mm visible`);
+  const rh = st.rehaut;
+  if(rh && rh.on) add("Rehaut", `printed ring outside the dial${rh.marks === "none" ? "" : `, ${rh.marks === "ticks" ? "ticks" : "dots"} at every minute in ${String(rh.markColor || "#EDEFF2").toUpperCase()}`}`, rh.color, `from Ø${mm(K.opening)}mm to the bezel`);
   const mt = st.minute;
   if(mt && mt.on){
     const w = mt.style === "railroad" ? 2*mt.thickness : mt.thickness;
@@ -17087,6 +17113,7 @@ const GSTR = {en:{
   "prog": (name, n, total) => `<b>${name}</b><span> · <i>step </i>${n} of ${total}</span>`,
   "prog.aria": (name, n, total) => `${name}, step ${n} of ${total}. Show all steps`,
   "find.ph":"Find a setting", "find.none":"Nothing by that name in this design.",
+  "rehaut.note":"The ring between the dial and the bezel, printed with a minute at every dot or tick. It shows on the photograph of the case.",
   "dial.granNote":"A coarse grain, each grain a little lighter or darker than the next and the light ones catching the light, as a granular sports dial. Sized in millimetres, so it is the same in every picture.",
   "text.secHidden":"The seconds hand is left out of the picture on this step, so the lettering under it can be read. It is back on the next step.",
   "col.rendered":(hx, dl) => `As typed, and on the render under the studio light: ${hx} (${dl} in lightness).`,
@@ -17281,6 +17308,7 @@ GSTR.ar = {
   "prog": (name, n, total) => `<b>${name}</b><span> · <i>الخطوة </i>${n} من ${total}</span>`,
   "prog.aria": (name, n, total) => `${name}، الخطوة ${n} من ${total}. عرض كل الخطوات`,
   "find.ph":"ابحث عن إعداد", "find.none":"ما في شي بهالاسم في هالتصميم.",
+  "rehaut.note":"الحلقة اللي بين الميناء والبيزل، مطبوع عليها دقيقة عند كل نقطة أو علامة. تبين على صورة القالب.",
   "dial.granNote":"حبيبات خشنة، كل حبة أفتح أو أغمق شوي من اللي جنبها، والفاتحة تلمع مع الضوء، مثل ميناء الساعات الرياضية المحبّب. مقاسها بالملم، فتطلع نفس الشي في كل صورة.",
   "text.secHidden":"عقرب الثواني مخفي من الصورة في هالخطوة عشان تنقرا الكتابة اللي تحته. ويرجع في الخطوة الجاية.",
   "col.rendered":(hx, dl) => `اللون مثل ما انكتب، ومثل ما يطلع في الصورة تحت إضاءة الاستوديو: ${hx} (${dl} في درجة الفتاحة).`,
@@ -17516,7 +17544,7 @@ const GWORD = {ar:{
   "Extra high":"مرتفع جداً", "High":"مرتفع", "height:Standard":"عادي", "Window width":"عرض النافذة", "Narrow":"ضيقة", "Standard":"قياسية", "Wide":"عريضة",
   "Move them aside":"أزحهما جانباً", "Make them smaller":"صغّرهما", "Use markers":"ضع مؤشرين", "Leave them off":"احذفهما", "Let them touch":"اتركهما متلامسين",
   "Day font":"خط اليوم", "Arabic font":"الخط العربي", "English font":"الخط الإنجليزي", "In the window":"في النافذة", "Day disc":"قرص اليوم",
-  "Day lettering":"لون كتابة اليوم", "Window edge":"حافة النافذة", "Lume colour":"لون المادة المضيئة", "Lume fill":"تعبئة مضيئة", "Green-white":"أبيض مخضر", "Old radium":"راديوم قديم", "Vintage cream":"كريمي عتيق", "Five-minute marks":"علامات الخمس دقائق", "Run inward":"ممتدة للداخل", "Flared":"متسعة", "Gap at 6":"فراغ عند ٦", "Track width":"عرض المسار", "Rail weight":"وزن الخط", "Tick weight":"وزن العلامة", "Turn this hour":"اتجاه هذه الساعة", "Toward the centre":"نحو المركز", "On point":"على رأسه", "Across":"بالعرض", "Size of this hour":"حجم هذه الساعة", "Figure height":"ارتفاع الرقم", "Letter height":"ارتفاع الحروف", "Thin line":"خط رفيع", "Digit height":"ارتفاع الأرقام", "Bevelled cut":"قطع مشطوف", "Applied frame":"إطار مركّب", "Keep off the watch":"أسماء ممنوعة على الساعة", "Strap":"السير", "Fabric (Velcro)":"قماش (فيلكرو)", "Stitching":"الخياطة", "Sand":"رملي", "Square":"مربع", "Minute marks":"علامات الدقايق", "Ticks start from":"العلامات تبدأ من", "Inner edge":"الحافة الداخلية", "Outer edge":"الحافة الخارجية", "Minute tick length":"طول علامة الدقيقة", "Fifths between the minutes":"أخماس بين الدقايق", "Fifth tick length":"طول علامة الخُمس", "Minute marks on the dial":"علامات الدقايق على الميناء", "Mark length":"طول العلامة", "Marks' outer edge (diameter)":"الحافة الخارجية للعلامات (القطر)", "Mark width":"عرض العلامة", "Granular":"محبّب خشن", "Grain size":"حجم الحبيبات", "Grain strength":"قوة الحبيبات", "Painted":"مصبوغ", "Paint colour":"لون الصبغ", "Blue":"أزرق", "Track numbers":"أرقام المسار", "5 to 60":"٥ إلى ٦٠", "1 to 12":"١ إلى ١٢", "Number height":"ارتفاع الأرقام", "Numbers from centre":"بُعد الأرقام عن المركز", "The line under it moves with the logo":"السطر اللي تحته يتحرك مع الشعار", "Dial artwork (PDF)":"رسومات الميناء (PDF)", "Plan, inks and stones":"المخطط والأحبار والأحجار", "Show the colour as made":"اعرض اللون مثل ما ينصنع", "Drawn bezel":"البيزل المرسوم", "As Nivada's drawing":"مثل رسمة نيفادا", "As the prototype":"مثل النموذج", "Hand heights":"ارتفاعات العقارب", "I have the maker's hand heights":"عندي ارتفاعات العقارب من المصنّع", "Windows":"النوافذ", "One window":"نافذة وحدة", "Big date":"تاريخ كبير", "Centre bar":"الفاصل الوسطي", "Dates 1 to 9":"التواريخ من ١ إلى ٩",
+  "Day lettering":"لون كتابة اليوم", "Window edge":"حافة النافذة", "Lume colour":"لون المادة المضيئة", "Lume fill":"تعبئة مضيئة", "Green-white":"أبيض مخضر", "Old radium":"راديوم قديم", "Vintage cream":"كريمي عتيق", "Five-minute marks":"علامات الخمس دقائق", "Run inward":"ممتدة للداخل", "Flared":"متسعة", "Gap at 6":"فراغ عند ٦", "Track width":"عرض المسار", "Rail weight":"وزن الخط", "Tick weight":"وزن العلامة", "Turn this hour":"اتجاه هذه الساعة", "Toward the centre":"نحو المركز", "On point":"على رأسه", "Across":"بالعرض", "Size of this hour":"حجم هذه الساعة", "Figure height":"ارتفاع الرقم", "Letter height":"ارتفاع الحروف", "Thin line":"خط رفيع", "Digit height":"ارتفاع الأرقام", "Bevelled cut":"قطع مشطوف", "Applied frame":"إطار مركّب", "Keep off the watch":"أسماء ممنوعة على الساعة", "Printed ring outside the dial":"حلقة مطبوعة برّا الميناء", "Ring colour":"لون الحلقة", "Ring track":"مسار الحلقة", "Midnight":"كحلي غامق", "Graphite":"غرافيتي", "Strap":"السير", "Fabric (Velcro)":"قماش (فيلكرو)", "Stitching":"الخياطة", "Sand":"رملي", "Square":"مربع", "Minute marks":"علامات الدقايق", "Ticks start from":"العلامات تبدأ من", "Inner edge":"الحافة الداخلية", "Outer edge":"الحافة الخارجية", "Minute tick length":"طول علامة الدقيقة", "Fifths between the minutes":"أخماس بين الدقايق", "Fifth tick length":"طول علامة الخُمس", "Minute marks on the dial":"علامات الدقايق على الميناء", "Mark length":"طول العلامة", "Marks' outer edge (diameter)":"الحافة الخارجية للعلامات (القطر)", "Mark width":"عرض العلامة", "Granular":"محبّب خشن", "Grain size":"حجم الحبيبات", "Grain strength":"قوة الحبيبات", "Painted":"مصبوغ", "Paint colour":"لون الصبغ", "Blue":"أزرق", "Track numbers":"أرقام المسار", "5 to 60":"٥ إلى ٦٠", "1 to 12":"١ إلى ١٢", "Number height":"ارتفاع الأرقام", "Numbers from centre":"بُعد الأرقام عن المركز", "The line under it moves with the logo":"السطر اللي تحته يتحرك مع الشعار", "Dial artwork (PDF)":"رسومات الميناء (PDF)", "Plan, inks and stones":"المخطط والأحبار والأحجار", "Show the colour as made":"اعرض اللون مثل ما ينصنع", "Drawn bezel":"البيزل المرسوم", "As Nivada's drawing":"مثل رسمة نيفادا", "As the prototype":"مثل النموذج", "Hand heights":"ارتفاعات العقارب", "I have the maker's hand heights":"عندي ارتفاعات العقارب من المصنّع", "Windows":"النوافذ", "One window":"نافذة وحدة", "Big date":"تاريخ كبير", "Centre bar":"الفاصل الوسطي", "Dates 1 to 9":"التواريخ من ١ إلى ٩",
   "All seven days in the window":"أيام الأسبوع السبعة في النافذة", "The disc in order":"القرص بالترتيب",
   "Date window at 3":"نافذة التاريخ عند 3", "Magnifier":"المكبّر", "Digits":"الأرقام", "Date font":"خط التاريخ", "Date disc":"قرص التاريخ",
   "Date digits colour":"لون أرقام التاريخ", "Frame":"الإطار", "All window settings":"كل إعدادات النوافذ",
@@ -18869,6 +18897,16 @@ Object.assign(GWORD.ar, {
         if(S.minute.fifths) h += slider("minute.fifthLen", "Fifth tick length", 0.08, 1.5, 0.02, S.minute.fifthLen > 0 ? +S.minute.fifthLen : +((S.minute.tickLen > 0 ? +S.minute.tickLen : Math.max(S.minute.thickness*1.6, 0.42))*0.55).toFixed(2));
       }
       h += toggle("hour.marksOn", "Minute marks on the dial", get(S, "hour.marksOn"));
+      /* the ring outside the dial, between it and the bezel */
+      if(caseOf(S).photoFile){
+        h += toggle("rehaut.on", "Printed ring outside the dial", !!(S.rehaut && S.rehaut.on));
+        if(S.rehaut && S.rehaut.on){
+          h += `<h3>${gW("Ring colour")}</h3>` + swatches("rehaut.color", [["#141A24","Midnight"],["#0E0F11","Black"],["#3A3D42","Graphite"],["#1E2B45","Navy"],["#F2F2EF","White"]], S.rehaut.color, {row:true});
+          h += `<h3>${gW("Ring track")}</h3>` + chips("rehaut.marks", [["dots","Dots"],["ticks","Ticks"],["none","None"]], S.rehaut.marks || "dots");
+          if(S.rehaut.marks !== "none") h += `<h3>${gW("Track colour")}</h3>` + swatches("rehaut.markColor", [["#EDEFF2","White"],["#F2701E","Orange"],["#D7262E","Red"],["#E3C27A","Sand"]], S.rehaut.markColor, {row:true});
+          h += `<p class="gNote">${gT("rehaut.note")}</p>`;
+        }
+      }
       if(get(S, "hour.marksOn")) h += slider("hour.len", "Mark length", 0.3, 3, 0.05, S.hour.len > 0 ? +S.hour.len : 1.4) + slider("hour.diameter", "Marks' outer edge (diameter)", 14, 28, 0.05, +S.hour.diameter || 24.6) + slider("hour.thickness", "Mark width", 0.04, 0.3, 0.01, +S.hour.thickness || 0.12);
       if(S.minute.on){
         const nmode = S.minute.nums === "minutes" || S.minute.nums === "hours" ? S.minute.nums : "none";

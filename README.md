@@ -200,6 +200,16 @@ stored in a design file do not change. In the full editor at laptop widths
 the toolbar sits tighter, and on a narrower window it takes a second row
 rather than pushing Share and Export off the screen.
 
+## Printed rehaut ring (v4.31.0)
+
+Dial › Minute track › **Printed ring outside the dial** (`rehaut`), on a case
+shown on its photograph: the ring between the dial and the bezel, which on the
+F77 is polished steel, is printed in a colour (midnight, black, graphite, navy,
+white or any) with a minute track of its own: **dots** or **ticks** at every
+minute, the fives larger, in white, orange, red or sand. It is shaded as a
+sloping ring is, runs from the opening out to the bezel (or to `rehaut.outerD`
+for a slimmer ring), and the specification lists it. Off unless chosen.
+
 ## Square plots and a Velcro strap (v4.30.0)
 
 - **Square** index shape (main and accent): an applied square, side twice the
