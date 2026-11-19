@@ -200,6 +200,21 @@ stored in a design file do not change. In the full editor at laptop widths
 the toolbar sits tighter, and on a narrower window it takes a second row
 rather than pushing Share and Export off the screen.
 
+## Date window: bevelled cut and digit height (v4.11.0)
+
+On the Date step: **Window edge** (Bevelled cut, Applied frame, Thin line) and
+**Digit height** in mm, also in the full editor. A bevelled cut is drawn as the
+day window's is, a polished chamfer on each side lit by the scene's light, so a
+frameless window reads as cut through the dial and not as a patch laid on it.
+A digit height is the height of the figures' ink: the digits are centred by
+their ink and made smaller if they would come within 0.3 mm of the window's
+sides. Without them the window draws exactly as before (the edge stays the
+frame width's thin line or applied frame, the digits 0.78 of the window); the
+slider shows the height the window gives until one is set. The maker's sheet
+names the digit height and the edge. Found in the F77 design challenge: Basalt
+Nuit's frameless window was a flat patch with "28" touching its sides, and
+Nachtschrift's digits could not reach the 2.2 mm its designer specified.
+
 ## Hand width in real millimetres (v4.10.5)
 
 Every hand shape multiplies its base width by its own factor (`STYLE_W`:
