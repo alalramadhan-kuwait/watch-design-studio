@@ -24,7 +24,7 @@ vm.runInContext(
   + chunk('/* With a metal (MT)', '/* ---------------------------------------------------------------\n   Breguet numerals')
   + '\nthis.g={GEM_CUTS,GEM_STONES,METALS,NOREL_R4,VERNOY_CASE,gemNorm,gemSize,gemPitch,gemProngs,gemHeight,gemOutline,gemCarats,legacyPlan,hourPlan,'
   + 'migrateMarkers,applyMarkerPreset,markerPresetOf,syncMarkerFlags,gemPlacements,gemFit,gemChecks,gemSummary,distToSector,distToRect,insideLens,'
-  + 'gemMarkerSVG,gemOnDial,gemRound,packStones,paveStonesSVG,indexShape,perHourOn,paveOn,gemCutDefaults};', ctx);
+  + 'gemMarkerSVG,gemOnDial,gemRound,packStones,paveStonesSVG,indexShape,perHourOn,paveOn,gemCutDefaults,handFitOf,SW240_HAND_FIT};', ctx);
 const G = ctx.g;
 const clone = o => JSON.parse(JSON.stringify(o));
 
@@ -316,4 +316,26 @@ test('A18 carré: a square step cut (12 facets and a table); invisible setting: 
   assert.ok(Math.abs(H({cut:'carre'}) - 0.556) <= 0.005, 'a step cut sits lower than the princess');
   assert.ok(H({cut:'carre'}) < H({cut:'princess'}));
   assert.ok(Math.abs(G.gemCarats(G.gemNorm({cut:'carre', n:1, s:1.3})) - 0.0168) <= 0.0005);
+});
+
+test('A19 the maker\'s hand heights on a movement without Sellita\'s table', () => {
+  // the NOREL is an SW240-1: the table, whatever is entered
+  let st = norel(s => { G.applyMarkerPreset(s, 'allDiamond'); s.gem.d = 1.5; s.handSet.stack = {h:2, m:2.4, s:2.8}; });
+  assert.equal(G.handFitOf(st).source, 'sw240');
+  assert.equal(rowOf(st, 'Gem height under the hands').ok, true);
+  assert.match(rowOf(st, 'Gem height under the hands').detail, /at hand height 4/);
+  // another movement, nothing entered: not known, as before
+  st = norel(s => { G.applyMarkerPreset(s, 'allDiamond'); s.gem.d = 1.5; s.case.model = G.VERNOY_CASE.model; });
+  assert.equal(G.handFitOf(st).known, false);
+  assert.match(rowOf(st, 'Gem height under the hands').detail, /Hand heights unknown for this movement/);
+  // entered: the clearance from those heights, and said so
+  st.handSet.stack = {h:1.05, m:1.45, s:1.85};
+  const F = G.gemFit(st), r = rowOf(st, 'Gem height under the hands');
+  assert.equal(G.handFitOf(st).source, 'entered');
+  assert.ok(Math.abs(F.under.m - (1.45 - (G.VERNOY_CASE.dialT || 0.40) - 0.10)) < 1e-9);
+  assert.match(r.detail, /from the hand heights entered for the .* \(hour 1\.05, minute 1\.45 mm\)/);
+  assert.match(r.detail, /Blade thicknesses are estimates/);
+  st.handSet.stack = {h:0.9, m:1.0, s:1.4};
+  assert.equal(rowOf(st, 'Gem height under the hands').ok, false);
+  assert.match(rowOf(st, 'Gem height under the hands').detail, /ask the maker for higher-fitted hands/);
 });

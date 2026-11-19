@@ -2191,6 +2191,12 @@ const VIRTUAL = {
   digitHUi:{get:d => d.digitH > 0 ? d.digitH : dateAutoDigitH(d), set:(d, v) => { d.digitH = +v; }},
   /* one window or a big date; turning a big date on widens the opening to
      two windows and a bar, turning it off gives the single width back */
+  /* the maker's hand heights, entered on a movement whose stack the
+     studio does not know; switched on, they start from Sellita's standard */
+  stackOn:{get:hs => !!hs.stack, set:(hs, v) => { if(v) hs.stack = hs.stack || {h:1.00, m:1.40, s:1.80}; else delete hs.stack; }},
+  stackH:{get:hs => hs.stack ? +hs.stack.h : 1.00, set:(hs, v) => { hs.stack = Object.assign({h:1.00, m:1.40, s:1.80}, hs.stack, {h:+v}); }},
+  stackM:{get:hs => hs.stack ? +hs.stack.m : 1.40, set:(hs, v) => { hs.stack = Object.assign({h:1.00, m:1.40, s:1.80}, hs.stack, {m:+v}); }},
+  stackS:{get:hs => hs.stack ? +hs.stack.s : 1.80, set:(hs, v) => { hs.stack = Object.assign({h:1.00, m:1.40, s:1.80}, hs.stack, {s:+v}); }},
   bigUi:{get:d => d.big ? "big" : "single",
          set:(d, v) => { if(v === "big" && !d.big){ d.wSingle = d.w; d.big = true; d.w = Math.max(d.w, +(2*Math.max(2.0, d.h*0.9) + Math.max(0.3, +d.bar > 0 ? +d.bar : 0.8)).toFixed(2)); }
                          else if(v !== "big" && d.big){ delete d.big; if(d.wSingle > 0) d.w = d.wSingle; delete d.wSingle; } }},
@@ -2221,7 +2227,7 @@ const APP_BUILD = "__BUILD__";
 /* The version people see, raised with every change that reaches them:
    major for a new way of working, minor for something new to do, patch for
    a fix. Shown on the watch screen, so any screenshot says which it was. */
-const APP_VERSION = "4.19.0";
+const APP_VERSION = "4.20.0";
 const APP_DATE = "__DATE__";
 
 /* Every route that replaces S passes through one of these three, which is
@@ -3554,10 +3560,11 @@ const NUM_HEIGHTS = [[0.20,"Standard"],[0.35,"High"],[0.50,"Extra high"]];
 function numClear(st){
   const nm = st.numerals || {};
   const H = nm.height === undefined ? 0.20 : +nm.height;
+  const HF = typeof handFitOf === "function" ? handFitOf(st) : null;
   const fh = SW240_HAND_FIT[st.handSet && st.handSet.fitHeight] ? +st.handSet.fitHeight : 4;
-  const under = SW240_HAND_FIT[fh].m - gemDialT(st) - HAND_BLADE.m;
+  const under = (HF ? HF.fit.m : SW240_HAND_FIT[fh].m) - gemDialT(st) - HAND_BLADE.m;
   const clear = under - H - (nm.pave ? 0.15 : 0);
-  return {H, under, clear, tight: clear < 0.20};
+  return {H, under, clear, tight: clear < 0.20, known:HF ? HF.known : true};
 }
 const NUM_MATERIAL = ["ink","metal","lacquer / enamel","lume","stone","mother of pearl","sapphire / glass"];
 const NUM_MATERIAL_DEF = {
@@ -7562,6 +7569,18 @@ const SW240_HAND_FIT = {3:{h:0.75,m:1.15,s:1.55}, 4:{h:1.00,m:1.40,s:1.80}, 5:{h
 /* Blade thicknesses assumed for the hands: estimates until the maker's
    hand drawing says otherwise. */
 const HAND_BLADE = {h:0.12, m:0.10, s:0.08};
+/* The hand stack a clearance is worked from: Sellita's table on an SW240,
+   else the heights the maker gave, entered on the design (handSet.stack:
+   the tops of the hour, minute and seconds pipes above the dial seat, as
+   Sellita measures them). Without either the heights are not known, and
+   the table stands in only as an estimate. */
+function handFitOf(st){
+  const hs = (st && st.handSet) || {}, mv = typeof caseOf === "function" ? caseOf(st).movement || "" : "";
+  const fh = SW240_HAND_FIT[hs.fitHeight] ? +hs.fitHeight : 4, k = hs.stack;
+  if(/SW ?240/i.test(mv)) return {fit:SW240_HAND_FIT[fh], known:true, source:"sw240", fitHeight:fh, mv};
+  if(k && +k.h > 0 && +k.m > 0) return {fit:{h:+k.h, m:+k.m, s:+k.s > 0 ? +k.s : +k.m + 0.40}, known:true, source:"entered", fitHeight:fh, mv};
+  return {fit:SW240_HAND_FIT[fh], known:false, source:"none", fitHeight:fh, mv};
+}
 const GEM_METALS = ["polished steel","white gold","yellow gold","rose gold","blackened steel"];
 const GEM_FIRE = ["#FF6B6B","#6BC7FF","#FFE36B","#8CFF9E"];
 /* What an hour can carry when the hours are set one by one. */
@@ -7940,14 +7959,12 @@ function gemFit(st, pl){
   let H = 0, inner = Infinity;
   for(const p of pl){ H = Math.max(H, p.H); inner = Math.min(inner, p.r - p.size.l/2); }
   if(pave){ H = Math.max(H, (nm.height === undefined ? 0.20 : nm.height) + 0.15); inner = Math.min(inner, nm.radius - nm.size/2); }
-  const mv = typeof caseOf === "function" ? caseOf(st).movement || "" : "";
-  const known = /SW ?240/i.test(mv);
-  const fh = SW240_HAND_FIT[st.handSet && st.handSet.fitHeight] ? +st.handSet.fitHeight : 4, fit = SW240_HAND_FIT[fh];
+  const HF = handFitOf(st), known = HF.known, fh = HF.fitHeight, fit = HF.fit;
   const under = {h:fit.h - dialT - HAND_BLADE.h, m:fit.m - dialT - HAND_BLADE.m};
   const hourLen = st.hHand && st.hHand.on ? (typeof handLength === "function" ? handLength(st.hHand, "hHand", st) : st.hHand.length) : 0;
   const hourReaches = !!(st.hHand && st.hHand.on) && hourLen >= inner - 0.10;
   const clearM = under.m - H, clearH = under.h - H;
-  return {H, inner, known, fitHeight:fh, under, clearM, clearH, hourReaches, any:pl.length > 0 || pave,
+  return {H, inner, known, source:HF.source, stack:fit, fitHeight:fh, under, clearM, clearH, hourReaches, any:pl.length > 0 || pave,
     ok: known && clearM >= 0.20 && (!hourReaches || clearH >= 0.20)};
 }
 /* What the readout says: how many stones, how big, how many carats, how
@@ -7988,10 +8005,10 @@ function gemChecks(st, pave){
     if(!fit.known) d = `Hand heights unknown for this movement (${(typeof caseOf === "function" && caseOf(st).movement) || "not set"}): the markers stand ${mm(fit.H)} mm. Confirm the hand stack with the maker.`;
     else {
       const worst = fit.hourReaches ? Math.min(fit.clearM, fit.clearH) : fit.clearM;
-      d = `${on.length ? "Gems stand" : "The set numerals stand"} ${mm(fit.H)} mm; the minute hand's underside is about ${mm(fit.under.m)} mm at hand height ${fit.fitHeight}, so ${mm(fit.clearM)} mm clear.`
+      d = `${on.length ? "Gems stand" : "The set numerals stand"} ${mm(fit.H)} mm; the minute hand's underside is about ${mm(fit.under.m)} mm ${fit.source === "entered" ? `from the hand heights entered for the ${(typeof caseOf === "function" && caseOf(st).movement) || "movement"} (hour ${mm(fit.stack.h)}, minute ${mm(fit.stack.m)} mm)` : `at hand height ${fit.fitHeight}`}, so ${mm(fit.clearM)} mm clear.`
         + (fit.hourReaches ? ` The hour hand reaches the markers: its underside is about ${mm(fit.under.h)} mm, ${mm(fit.clearH)} mm clear.` : "")
-        + (worst < 0.10 ? " At this gap the hand will touch: choose smaller stones or a taller hand height." : "")
-        + ` Hand undersides are estimates from Sellita's fitting heights: ${makerOf(st)} to confirm.`;
+        + (worst < 0.10 ? (fit.source === "entered" ? " At this gap the hand will touch: choose smaller stones, or ask the maker for higher-fitted hands." : " At this gap the hand will touch: choose smaller stones or a taller hand height.") : "")
+        + (fit.source === "entered" ? ` Blade thicknesses are estimates: ${makerOf(st)} to confirm with the hand drawing.` : ` Hand undersides are estimates from Sellita's fitting heights: ${makerOf(st)} to confirm.`);
     }
     add(fit.ok, "Gem height under the hands", d, on.length ? "gems" : "numerals");
   }
@@ -11035,7 +11052,9 @@ const SCHEMA = {
     fields:()=>[
     GRP("Gem", gemSchema("gem")),
     GRP("Accent gem", gemSchema("gemAlt")),
-    N("handSet.fitHeight","Hand fitting height (SW240-1)",3,6,1,"")]},
+    N("handSet.fitHeight","Hand fitting height (SW240-1)",3,6,1,""),
+    CK("handSet.stackOn","Maker's hand heights (other movements)"),
+    ...(S.handSet.stack ? [N("handSet.stackH","Hour pipe above the dial seat",.5,3,.05), N("handSet.stackM","Minute pipe above the dial seat",.6,3.4,.05), N("handSet.stackS","Seconds pipe above the dial seat",.7,3.8,.05)] : [])]},
   numerals:{title:"Numerals", hint:"The vernoy and breguet sets are drawn outlines. The others are fonts.", fields:()=>[
     {t:"head", l:"Style"},
     SEL("numerals.system","Numeral system",NUM_SYSTEMS),
@@ -15109,6 +15128,10 @@ function sheetSpec(st){
     const L = typeof handLength === "function" ? handLength(h, k, st) : h.length, W = (h.width || 0)*(typeof handDrawnK === "function" ? handDrawnK(h.style) : 1);
     add(label, `${sheetHandStyle(h.style)}, ${sheetHandWords(h).toLowerCase()}${h.lume ? ", lume" : ""}${h.tail ? `, tail ${mm(h.tail)}mm` : ""}`, h.material ? "" : h.color, `${mm(L)}mm long, ${mm(W)}mm wide`);
   }
+  /* the hand stack the clearances were worked from, when the maker gave it */
+  { const hk = st.handSet && st.handSet.stack;
+    if(hk && typeof handFitOf === "function" && handFitOf(st).source === "entered")
+      add("Hand heights", "entered from the maker's data; used for the gem and raised-figure clearances", "", `pipes above the dial seat: hour ${mm(hk.h)}, minute ${mm(hk.m)}, seconds ${mm(hk.s)}mm`); }
   /* the lume, wherever it is used */
   const lumed = [["hHand","hour hand"],["mHand","minute hand"],["sHand","seconds hand"]].filter(([k]) => st[k] && st[k].on !== false && st[k].lume).map(x => x[1])
     .concat(plan.some(x => x === "index" || x === "indexAlt") && ix.lume ? ["indexes"] : []);
@@ -16647,6 +16670,10 @@ const GSTR = {en:{
   "gem.summary": (n, size, ct, h, clear, lab) => `${n} stone${n === 1 ? "" : "s"} · ${size} · ≈ ${ct} ct · stands ${h} mm`
     + (clear != null ? ` · ${clear} mm under the minute hand` : "") + (lab ? " · lab-grown" : ""),
   "gem.unknown":"⚠ Hand heights are unknown for this movement: ask the maker how much room the hands leave.",
+  "gem.tightEntered":(c, hand) => `⚠ ${c} mm under the ${hand} hand with the hand heights entered. Choose a smaller stone, and ask Blue Creations.`,
+  "mk.heightUnknown":mm => `Each figure stands ${mm} mm off the dial. The hand heights of this movement are not known, so the room under the minute hand is not either: enter Blue Creations' below.`,
+  "hand.stackOff":mv => `Ask Blue Creations for the hand fitting heights of the ${mv || "movement"} and switch this on to enter them; the gem and raised-figure checks then give the room under the hands.`,
+  "hand.stackOn":mv => `The top of each hand's pipe above the dial seat, in mm, from Blue Creations' drawing of the ${mv || "movement"}. They start at Sellita's standard heights: change them to the real ones.`,
   "gem.tight": (c, hand, fh, next) => `⚠ ${c} mm under the ${hand} hand at ${fh === 4 ? "the standard hand height" : "hand height " + fh}. Choose a smaller stone${next ? " or hand height " + next : ""}, and ask Blue Creations.`,
   "gem.handNote":"Set by the hands Blue Creations fits. Taller hands need the crystal checked.",
   "hr.oclock": h => `${h} o'clock`, "hr.tap":"Tap an hour to choose what it carries.",
@@ -16825,6 +16852,10 @@ GSTR.ar = {
   "gem.summary": (n, size, ct, h, clear, lab) => `${arCount(n, "حجر واحد", "حجران", "أحجار", "حجراً")} · ${size} · ≈ ${ct} قيراط · ارتفاعه ${h} ملم`
     + (clear != null ? ` · ${clear} ملم تحت عقرب الدقائق` : "") + (lab ? " · مصنّع مخبرياً" : ""),
   "gem.unknown":"⚠ ارتفاعات العقارب غير معروفة لهذا المحرك: اسأل المصنّع كم تترك العقارب من مسافة.",
+  "gem.tightEntered":(c, hand) => `⚠ ${c} ملم تحت عقرب ${hand === "minute" ? "الدقائق" : "الساعات"} حسب ارتفاعات العقارب المدخلة. اختر حجراً أصغر، واسأل Blue Creations.`,
+  "mk.heightUnknown":mm => `كل رقم مرتفع ${mm} ملم عن الميناء. ارتفاعات العقارب لهذا المحرك غير معروفة، فالفراغ تحت عقرب الدقائق غير معروف: أدخل ارتفاعات Blue Creations تحت.`,
+  "hand.stackOff":mv => `اطلب من Blue Creations ارتفاعات تركيب العقارب لمحرك ${mv || "الساعة"} وشغّل هذا الخيار لإدخالها؛ وبعدها فحص الأحجار والأرقام المرتفعة يعطيك الفراغ تحت العقارب.`,
+  "hand.stackOn":mv => `ارتفاع رأس أنبوب كل عقرب فوق قاعدة الميناء بالملم، من رسمة Blue Creations لمحرك ${mv || "الساعة"}. تبدأ بالارتفاعات القياسية لسيليتا: غيّرها للأرقام الحقيقية.`,
   "gem.tight": (c, hand, fh, next) => `⚠ ${c} ملم تحت عقرب ${hand === "minute" ? "الدقائق" : "الساعات"} عند ${fh === 4 ? "ارتفاع العقارب القياسي" : "ارتفاع العقارب " + fh}. اختر حجراً أصغر${next ? " أو ارتفاع العقارب " + next : ""}، واسأل Blue Creations.`,
   "gem.handNote":"تحدده العقارب التي تركّبها Blue Creations. العقارب الأعلى تحتاج فحص الزجاج.",
   "hr.oclock": h => `الساعة ${h}`, "hr.tap":"اضغط على ساعة لتختار ما يوضع عندها.",
@@ -16962,7 +16993,7 @@ const GWORD = {ar:{
   "Extra high":"مرتفع جداً", "High":"مرتفع", "height:Standard":"عادي", "Window width":"عرض النافذة", "Narrow":"ضيقة", "Standard":"قياسية", "Wide":"عريضة",
   "Move them aside":"أزحهما جانباً", "Make them smaller":"صغّرهما", "Use markers":"ضع مؤشرين", "Leave them off":"احذفهما", "Let them touch":"اتركهما متلامسين",
   "Day font":"خط اليوم", "Arabic font":"الخط العربي", "English font":"الخط الإنجليزي", "In the window":"في النافذة", "Day disc":"قرص اليوم",
-  "Day lettering":"لون كتابة اليوم", "Window edge":"حافة النافذة", "Lume colour":"لون المادة المضيئة", "Lume fill":"تعبئة مضيئة", "Green-white":"أبيض مخضر", "Old radium":"راديوم قديم", "Vintage cream":"كريمي عتيق", "Five-minute marks":"علامات الخمس دقائق", "Run inward":"ممتدة للداخل", "Flared":"متسعة", "Gap at 6":"فراغ عند ٦", "Track width":"عرض المسار", "Rail weight":"وزن الخط", "Tick weight":"وزن العلامة", "Turn this hour":"اتجاه هذه الساعة", "Toward the centre":"نحو المركز", "On point":"على رأسه", "Across":"بالعرض", "Size of this hour":"حجم هذه الساعة", "Figure height":"ارتفاع الرقم", "Letter height":"ارتفاع الحروف", "Thin line":"خط رفيع", "Digit height":"ارتفاع الأرقام", "Bevelled cut":"قطع مشطوف", "Applied frame":"إطار مركّب", "Windows":"النوافذ", "One window":"نافذة وحدة", "Big date":"تاريخ كبير", "Centre bar":"الفاصل الوسطي", "Dates 1 to 9":"التواريخ من ١ إلى ٩",
+  "Day lettering":"لون كتابة اليوم", "Window edge":"حافة النافذة", "Lume colour":"لون المادة المضيئة", "Lume fill":"تعبئة مضيئة", "Green-white":"أبيض مخضر", "Old radium":"راديوم قديم", "Vintage cream":"كريمي عتيق", "Five-minute marks":"علامات الخمس دقائق", "Run inward":"ممتدة للداخل", "Flared":"متسعة", "Gap at 6":"فراغ عند ٦", "Track width":"عرض المسار", "Rail weight":"وزن الخط", "Tick weight":"وزن العلامة", "Turn this hour":"اتجاه هذه الساعة", "Toward the centre":"نحو المركز", "On point":"على رأسه", "Across":"بالعرض", "Size of this hour":"حجم هذه الساعة", "Figure height":"ارتفاع الرقم", "Letter height":"ارتفاع الحروف", "Thin line":"خط رفيع", "Digit height":"ارتفاع الأرقام", "Bevelled cut":"قطع مشطوف", "Applied frame":"إطار مركّب", "Hand heights":"ارتفاعات العقارب", "I have the maker's hand heights":"عندي ارتفاعات العقارب من المصنّع", "Windows":"النوافذ", "One window":"نافذة وحدة", "Big date":"تاريخ كبير", "Centre bar":"الفاصل الوسطي", "Dates 1 to 9":"التواريخ من ١ إلى ٩",
   "All seven days in the window":"أيام الأسبوع السبعة في النافذة", "The disc in order":"القرص بالترتيب",
   "Date window at 3":"نافذة التاريخ عند 3", "Magnifier":"المكبّر", "Digits":"الأرقام", "Date font":"خط التاريخ", "Date disc":"قرص التاريخ",
   "Date digits colour":"لون أرقام التاريخ", "Frame":"الإطار", "All window settings":"كل إعدادات النوافذ",
@@ -17863,11 +17894,22 @@ Object.assign(GWORD.ar, {
     if(!F.known) h += `<p class="gNote" style="color:var(--g-warn-ink)">${gT("gem.unknown")}</p>`;
     else if(!F.ok){
       const hand = F.clearM < 0.20 ? "minute" : "hour", c = hand === "minute" ? F.clearM : F.clearH;
-      h += `<p class="gNote" style="color:var(--g-warn-ink)">${gT("gem.tight", c.toFixed(2), hand, F.fitHeight, F.fitHeight < 6 ? F.fitHeight + 1 : 0)}</p>`;
+      h += `<p class="gNote" style="color:var(--g-warn-ink)">${F.source === "entered" ? gT("gem.tightEntered", c.toFixed(2), hand) : gT("gem.tight", c.toFixed(2), hand, F.fitHeight, F.fitHeight < 6 ? F.fitHeight + 1 : 0)}</p>`;
     }
-    h += `<h3>${gW("Hand height")}</h3>` + chips44("handSet.fitHeight", [[4,"Standard (4)"],[5,"5"],[6,"6"]], F.fitHeight)
+    if(F.source === "sw240") h += `<h3>${gW("Hand height")}</h3>` + chips44("handSet.fitHeight", [[4,"Standard (4)"],[5,"5"],[6,"6"]], F.fitHeight)
       + `<p class="gNote">${gT("gem.handNote")}</p>`;
+    else h += handStackUI();
     return h;
+  }
+  /* On a movement without Sellita's table (the F77's P024), the hand
+     heights the maker gives: switched on, three heights to type in. */
+  function handStackUI(){
+    const HF = handFitOf(S); if(HF.source === "sw240") return "";
+    let h = `<h3>${gW("Hand heights")}</h3>` + toggle("handSet.stackOn", "I have the maker's hand heights", !!S.handSet.stack);
+    if(S.handSet.stack) h += slider("handSet.stackH", "Hour hand", 0.5, 3.0, 0.05, get(S, "handSet.stackH"))
+      + slider("handSet.stackM", "Minute hand", 0.6, 3.4, 0.05, get(S, "handSet.stackM"))
+      + slider("handSet.stackS", "Seconds hand", 0.7, 3.8, 0.05, get(S, "handSet.stackS"));
+    return h + `<p class="gNote">${gT(S.handSet.stack ? "hand.stackOn" : "hand.stackOff", HF.mv || "")}</p>`;
   }
   const KIND_CHIPS = [["numeral","Numeral"],["index","Index"],["indexAlt","Accent index"],["gem","Gem"],["gemAlt","Accent gem"],["none","Empty"]];
   /* The "Each hour" picker: a small dial with a round button at each hour
@@ -18333,7 +18375,9 @@ Object.assign(GWORD.ar, {
             const nh = n.height === undefined ? 0.20 : +n.height;
             h += `<h3>${gW("Height")}</h3>` + chips44("numerals.height", NUM_HEIGHTS.map(([v, l]) => [v, gW(l, "height")]), NUM_HEIGHTS.some(x => Math.abs(x[0] - nh) < 0.005) ? NUM_HEIGHTS.find(x => Math.abs(x[0] - nh) < 0.005)[0] : nh);
             const cl = numClear(S);
-            h += `<p class="gNote"${cl.tight ? ` style="color:var(--g-warn-ink)"` : ""}>${gT(cl.tight ? "mk.heightTight" : "mk.height", nh.toFixed(2), cl.clear.toFixed(2))}</p>`;
+            h += cl.known ? `<p class="gNote"${cl.tight ? ` style="color:var(--g-warn-ink)"` : ""}>${gT(cl.tight ? "mk.heightTight" : "mk.height", nh.toFixed(2), cl.clear.toFixed(2))}</p>`
+              : `<p class="gNote" style="color:var(--g-warn-ink)">${gT("mk.heightUnknown", nh.toFixed(2))}</p>`;
+            h += handStackUI();
           }
           if(pave){
             h += `<h3>${gW("Stones")}</h3>` + stoneChips("numerals.paveStone", [["diamond","Diamond"],["black diamond","Black diamond"],["blue sapphire","Sapphire"],["ruby","Ruby"]], n.paveStone || "diamond");

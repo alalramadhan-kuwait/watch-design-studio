@@ -200,6 +200,19 @@ stored in a design file do not change. In the full editor at laptop widths
 the toolbar sits tighter, and on a narrower window it takes a second row
 rather than pushing Share and Export off the screen.
 
+## The maker's hand heights (v4.20.0)
+
+Sellita publishes the SW240-1's hand fitting heights, so on the NOREL the gem
+and raised-figure checks give the room under the hands. Nivada has not given
+the Soprod P024's, so on the F77 those checks could only say "unknown". Now, on
+any movement without Sellita's table, Markers › Gems (and the Height of applied
+numerals) offers **I have the maker's hand heights**: switched on, the hour,
+minute and seconds pipe heights above the dial seat can be set or typed
+(`handSet.stack`, starting at Sellita's standard 1.00 / 1.40 / 1.80 mm). The
+design check then works the clearance from them and says so ("from the hand
+heights entered for the Soprod P024"), the specification lists them as entered
+from the maker's data, and an SW240 movement keeps using Sellita's table.
+
 ## Finding a setting (v4.19.0)
 
 The steps list (tap "step 3 of 7 ▾") has a **Find a setting** field. It
