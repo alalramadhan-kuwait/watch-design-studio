@@ -1287,6 +1287,7 @@ body.guided .atelier-nav, body.guided #gHideInGuided, body.guided .bar .grp.tool
       <button class="btn key" data-x="png">Export image (PNG)</button>
       <button class="btn" id="mkSheetBtn" title="One A3 page in the maker's layout: the versions at 1:1 with their specification and change marks, the 200% render, the drawings, caseback, buckles, hands and dial, as a PDF.">Maker's sheet (PDF)</button>
       <button class="btn" id="numArtBtn" title="The numerals font as vector artwork, black on white: the ten digits and 10, 11 and 12. A4.">Numerals artwork (PDF)</button>
+      <button class="btn" id="dialArtBtn" title="For the dial maker: the dimensioned dial plan at 4:1, one 1:1 print separation for each ink, and the stones' setting drawing. A4.">Dial artwork (PDF)</button>
       <button class="btn" id="moreT" style="margin-top:2px">More formats</button>
       <div id="moreBox" style="display:none;flex-direction:column;gap:8px">
         <div class="row" style="gap:6px">
@@ -1297,6 +1298,7 @@ body.guided .atelier-nav, body.guided #gHideInGuided, body.guided .bar .grp.tool
         </div>
         <button class="btn" data-x="svg">Artwork — SVG</button>
         <button class="btn" data-x="dial">Dial artwork — SVG</button>
+        <button class="btn" id="inkLayersBtn" title="The dial's print separations as vector, one named layer per ink, in its colour, at 1:1.">Print layers — SVG</button>
         <button class="btn" data-x="sheet" title="A web page with the dimensions, parts, materials and colours. Open it and print it, or save it as a PDF from the print dialog.">Technical sheet (web page)</button>
         <button class="btn" data-x="json">Save design file (JSON)</button>
         <label class="btn" style="display:block;text-align:center;cursor:pointer">Open a design file
@@ -2234,7 +2236,7 @@ const APP_BUILD = "__BUILD__";
 /* The version people see, raised with every change that reaches them:
    major for a new way of working, minor for something new to do, patch for
    a fix. Shown on the watch screen, so any screenshot says which it was. */
-const APP_VERSION = "4.23.0";
+const APP_VERSION = "4.24.0";
 const APP_DATE = "__DATE__";
 
 /* Every route that replaces S passes through one of these three, which is
@@ -15607,6 +15609,254 @@ async function makeNumArtPDF(){
   }catch(e){ toast("Could not make the PDF: " + e.message); }
 }
 
+/* =====================================================================
+   PRODUCTION ARTWORK — what the dial maker prints and sets from: a
+   dimensioned plan of the dial, one 1:1 separation for each ink, and
+   the stones' placing. The plan and the marks are vector; a separation
+   is the vector dial with only that ink left in it, in black, laid in
+   at 2400 dpi (svg2pdf cannot carry the dial's own fonts). The same
+   separations go out as one SVG with a layer per ink, as vector.
+   ===================================================================== */
+/* the inks the dial is printed in, from the specification: every printed,
+   double-printed or filled part with a colour, grouped by colour */
+function dialInks(st){
+  const inks = new Map();
+  for(const r of sheetSpec(st)){
+    if(!r.hex || !/^(Minute track|Hour track|Numerals|Indexes|Logo|Text )/.test(r.part)) continue;
+    if(r.part !== "Hour track" && !/print|filled|uv ink/i.test(r.spec)) continue;
+    const k = r.hex.toUpperCase();
+    if(!inks.has(k)) inks.set(k, {hex:k, parts:[], uv:false});
+    const ink = inks.get(k); ink.parts.push(r.part); if(/uv ink/i.test(r.spec)) ink.uv = true;
+  }
+  return [...inks.values()];
+}
+const artRGB = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+/* The dial drawn with one ink left in it: every shape painted in that
+   colour (fill or line) turned black, everything else hidden, and the
+   effects that would grey it (filters, blends, see-through) taken off. */
+/* the dial's layers that are never printed: stones, the windows, and
+   numerals or indexes that are applied parts */
+const artSkip = st => { const sk = new Set(["gems", "day", "date", "sub"]), nm = st.numerals || {}, ix = st.indices || {};
+  if(nm.tech === "applied") sk.add("numerals"); if(ix.applied !== false) sk.add("indices"); return sk; };
+function inkOnly(svg, hex, colour, skip){
+  const host = document.createElement("div");
+  host.style.cssText = "position:fixed;left:-30000px;top:0;width:600px;height:600px;visibility:hidden;pointer-events:none";
+  host.innerHTML = svg; document.body.appendChild(host);
+  try{
+    const root = host.querySelector("svg"), wl = labOf(hex), ink = colour || "#000000";
+    /* the dial's printing model shades an ink a touch for its finish
+       (#15171C prints as #131519), so a part is in an ink within ΔE 4 */
+    const dE = c => { const m = /rgba?\(\s*([\d.]+)[,\s]+([\d.]+)[,\s]+([\d.]+)(?:[,\s/]+([\d.]+))?/.exec(c || "");
+      if(!m || (m[4] !== undefined && +m[4] < 0.01)) return 99;
+      const l = labOf("#" + [m[1], m[2], m[3]].map(v => Math.round(+v).toString(16).padStart(2, "0")).join(""));
+      return Math.hypot(l[0] - wl[0], l[1] - wl[1], l[2] - wl[2]); };
+    const kept = new Map();
+    root.querySelectorAll("path,circle,ellipse,rect,line,polyline,polygon,text,use,image").forEach(el => {
+      if(el.closest("defs, clipPath, mask, pattern, marker, symbol")) return;
+      const lay = el.closest("[data-layer]");
+      if(skip && lay && skip.has(lay.getAttribute("data-layer"))){ el.setAttribute("display", "none"); return; }
+      const cs = getComputedStyle(el), img = el.tagName.toLowerCase() === "image";
+      const df = img ? 99 : dE(cs.fill), ds = img || !cs.stroke || cs.stroke === "none" ? 99 : dE(cs.stroke);
+      const fOk = df <= 4, sOk = ds <= 4;
+      /* a see-through pass is a lip or a shine the render adds, not ink */
+      const see = +cs.opacity < 0.9 || (fOk && +cs.fillOpacity < 0.9 && !sOk);
+      if((!fOk && !sOk) || see){ el.setAttribute("display", "none"); return; }
+      /* the same part drawn twice (raised print's offset pass): the copy
+         nearest the ink, at its place, is the artwork */
+      const ref = el.tagName.toLowerCase() === "use" ? (el.getAttribute("href") || el.getAttribute("xlink:href")) : null;
+      if(ref){ const d0 = Math.min(df, ds) + Math.hypot(+el.getAttribute("x") || 0, +el.getAttribute("y") || 0)*10, was = kept.get(ref);
+        if(was && was.d <= d0){ el.setAttribute("display", "none"); return; }
+        if(was) was.el.setAttribute("display", "none");
+        kept.set(ref, {el, d:d0}); }
+      el.setAttribute("fill", fOk ? ink : "none"); el.setAttribute("stroke", sOk ? ink : "none");
+      for(const a of ["filter", "opacity", "fill-opacity", "stroke-opacity", "mask"]) el.removeAttribute(a);
+      el.style.cssText = `fill:${fOk ? ink : "none"};stroke:${sOk ? ink : "none"};opacity:1;fill-opacity:1;stroke-opacity:1;filter:none;mix-blend-mode:normal`;
+    });
+    root.querySelectorAll("g").forEach(g => { for(const a of ["filter", "opacity", "mask"]) g.removeAttribute(a); g.style.filter = "none"; g.style.opacity = "1"; g.style.mixBlendMode = "normal"; });
+    return new XMLSerializer().serializeToString(root);
+  } finally { host.remove(); }
+}
+/* the vector dial for artwork: no guides, no material, ids kept apart */
+const artDial = (st, tag) => buildSVG(st, {scope:"dial", guides:false, material:false, tag:tag || "art"});
+const artBox = st => { const K = caseOf(st), d = st.dial || {}; return (d.lock === false ? d.diameter : K.dialD) + 3; };
+async function artPNG(svg, mm, dpi){
+  const px = Math.min(4800, Math.round(mm/25.4*dpi));
+  const blob = await svgToPng(svg, px, px, 60000);
+  return await new Promise((ok, no) => { const r = new FileReader(); r.onload = () => ok(r.result); r.onerror = no; r.readAsDataURL(blob); });
+}
+const artEsc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;"}[c]));
+const artT = (x, y, s, size, o) => `<text x="${gf(x)}" y="${gf(y)}" font-family="helvetica" font-size="${size || 3}"${o && o.bold ? ' font-weight="bold"' : ""}${o && o.end ? ' text-anchor="end"' : o && o.mid ? ' text-anchor="middle"' : ""} fill="${(o && o.fill) || "#111"}">${artEsc(s)}</text>`;
+/* crop marks and a centre cross round a square of side w at (x, y) */
+const artMarks = (x, y, w) => {
+  const L = 4, g = 1.5, c = [x + w/2, y + w/2]; let s = "";
+  for(const [px, py, dx, dy] of [[x, y, -1, -1], [x + w, y, 1, -1], [x, y + w, -1, 1], [x + w, y + w, 1, 1]])
+    s += `<path d="M${gf(px + dx*g)} ${gf(py)}h${gf(dx*L)}M${gf(px)} ${gf(py + dy*g)}v${gf(dy*L)}" stroke="#000" stroke-width="0.15" fill="none"/>`;
+  s += `<path d="M${gf(c[0] - 3)} ${gf(c[1])}h6M${gf(c[0])} ${gf(c[1] - 3)}v6" stroke="#000" stroke-width="0.1"/>`;
+  return s;
+};
+/* One page per ink: the separation at 1:1, which is what is printed, and
+   at 4:1 to check it by, with its marks and what is in it. */
+function inkPageSVG(st, ink, n, of, png, box, info){
+  const big = 4, X1 = 22, Y1 = 62, X4 = 297 - 16 - box*big, Y4 = Math.max(26, (210 - box*big)/2 + 4);
+  const pn = typeof nearestPantone === "function" ? nearestPantone(ink.hex) : null;
+  const dialR = (box - 3)/2;
+  const ring = (x, y, k) => `<circle cx="${gf(x + box*k/2)}" cy="${gf(y + box*k/2)}" r="${gf(dialR*k)}" fill="none" stroke="#9AA0A6" stroke-width="0.12" stroke-dasharray="1 1"/>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 297 210" width="297mm" height="210mm">
+    <rect width="297" height="210" fill="#FFFFFF"/>
+    ${artT(16, 16, `${info.brand || "Dial"} ${info.designNo || ""} · dial print, ink ${n} of ${of}`.replace(/\s+/g, " "), 5, {bold:true})}
+    ${artT(16, 24, `${ink.hex}${pn ? " · " + (pn.exact ? "Pantone " : "nearest Pantone ") + pn.code : ""}${ink.uv ? " · UV ink" : ""}`, 3.6)}
+    ${artT(16, 30, `${ink.parts.join(", ")}`, 3)}
+    ${artT(X1, Y1 - 5, "1:1 · print from this", 3, {bold:true})}
+    <image x="${gf(X1)}" y="${gf(Y1)}" width="${gf(box)}" height="${gf(box)}" href="${png}" xlink:href="${png}" preserveAspectRatio="none"/>
+    ${ring(X1, Y1, 1)}${artMarks(X1, Y1, box)}
+    ${artT(X1, Y1 + box + 9, `Dial Ø${gf(box - 3)} mm, centred on the cross.`, 2.6)}
+    ${artT(X1, Y1 + box + 14, `Black is ink; everything else stays the dial.`, 2.6)}
+    ${artT(X4, Y4 - 5, "4:1 · to check by", 3, {bold:true})}
+    <image x="${gf(X4)}" y="${gf(Y4)}" width="${gf(box*big)}" height="${gf(box*big)}" href="${png}" xlink:href="${png}" preserveAspectRatio="none"/>
+    ${ring(X4, Y4, big)}${artMarks(X4, Y4, box*big)}
+    ${artT(16, 202, `Watch Design Studio ${APP_VERSION} · ${info.date || ""} · separation at 2400 dpi from the vector dial; the vector layers are in the SVG file sent with it.`, 2.4, {fill:"#555"})}
+  </svg>`;
+}
+/* The plan: the dial at 4:1, light, with every printed and applied part's
+   place dimensioned from the centre. */
+function dialPlanSVG(st, under, box, info){
+  const K = caseOf(st), d = st.dial || {}, T = st.text || {}, nm = st.numerals || {}, ix = st.indices || {}, mt = st.minute || {}, dt = st.date || {};
+  const k = 4, cx = 22 + box*k/2, cy = 26 + box*k/2, dialD = box - 3, out = [];
+  const X = v => cx + v*k, Y = v => cy + v*k, L = (s, x, y, o) => out.push(artT(x, y, s, 2.7, o));
+  const circ = (r, dash, w) => out.push(`<circle cx="${gf(cx)}" cy="${gf(cy)}" r="${gf(r*k)}" fill="none" stroke="#1A5FB4" stroke-width="${w || 0.18}"${dash ? ` stroke-dasharray="${dash}"` : ""}/>`);
+  const rows = [];
+  const note = (label, value) => rows.push([label, value]);
+  circ(dialD/2, null, 0.25); note("Dial blank", `Ø${sn(dialD, 2)} × ${sn(K.dialT || 0.40, 2)} mm`);
+  if(K.opening){ circ(K.opening/2, "2 1"); note("Visible (case opening)", `Ø${sn(K.opening, 2)} mm`); }
+  if(mt.on){ const w = mt.style === "railroad" ? 2*mt.thickness : mt.thickness;
+    circ(mt.diameter/2 + w/2, null, 0.12); circ(mt.diameter/2 - w/2, null, 0.12);
+    note("Minute track", `${mt.style}, centre Ø${sn(mt.diameter, 2)}, width ${sn(w, 2)} mm (Ø${sn(mt.diameter + w, 2)} to Ø${sn(mt.diameter - w, 2)})`); }
+  const plan = hourPlan(st);
+  const at = (r, i) => [X(r*Math.sin(i*Math.PI/6)), Y(-r*Math.cos(i*Math.PI/6))];
+  const cross = (x, y) => out.push(`<path d="M${gf(x - 1.6)} ${gf(y)}h3.2M${gf(x)} ${gf(y - 1.6)}v3.2" stroke="#C01C28" stroke-width="0.15"/>`);
+  if(nm.on && plan.some(p => p.kind === "numeral")){ circ(nm.radius, "3 1 0.6 1", 0.12);
+    plan.forEach((p, i) => { if(p.kind === "numeral"){ const [x, y] = at(nm.radius, i); cross(x, y); } });
+    note("Numerals", `centres on r ${sn(nm.radius, 2)} mm, figures ${sn((nm.size || 3)*(typeof numFigureK === "function" ? numFigureK(nm) : 1), 2)} mm high`); }
+  if(ix.on && plan.some(p => p.kind === "index" || p.kind === "indexAlt")){ circ(ix.radius, "3 1 0.6 1", 0.12);
+    plan.forEach((p, i) => { if(p.kind === "index" || p.kind === "indexAlt"){ const [x, y] = at(ix.radius, i); cross(x, y); } });
+    note("Indexes", `centres on r ${sn(ix.radius, 2)} mm, ${sn(ix.length, 2)} × ${sn(ix.width, 2)} mm`); }
+  /* the text lines: a mark at the height of each, from the centre */
+  if(T.on !== false){
+    const line = (on, text, y, label) => { if(!on || !text) return; const yy = Y(y || 0);
+      out.push(`<path d="M${gf(cx - 10)} ${gf(yy)}h20" stroke="#C01C28" stroke-width="0.12" stroke-dasharray="1 0.6"/>`);
+      note(label, `“${text}”, ${sn(Math.abs(y || 0), 2)} mm ${(y || 0) <= 0 ? "above" : "below"} the centre`); };
+    line(true, T.logoMark && T.logoMark !== "none" ? "logo" : T.logo, T.logoY, "Logo centre");
+    line(T.line2On !== false, T.line2, T.line2Y, "Text under the logo");
+    line(T.footOn !== false, T.foot, T.footY, "Text above 6");
+    if(T.splitOn && T.split){ circ(T.splitR === undefined ? 12.6 : T.splitR, "0.6 0.8", 0.1); note("Text either side of 6", `“${T.split}” on r ${sn(T.splitR === undefined ? 12.6 : T.splitR, 2)} mm`); }
+  }
+  if(dt.on){
+    const a = (dt.at || 3)*Math.PI/6, pcx = dt.dist*Math.sin(a), pcy = -dt.dist*Math.cos(a), w = dt.w, h = dt.h, o = dateOuter(dt);
+    /* upright wherever it is, as the dial draws it */
+    out.push(`<g transform="translate(${gf(X(pcx))} ${gf(Y(pcy))})"><rect x="${gf(-w*k/2)}" y="${gf(-h*k/2)}" width="${gf(w*k)}" height="${gf(h*k)}" fill="none" stroke="#1A5FB4" stroke-width="0.2"/>${o.e ? `<rect x="${gf(-o.w*k/2)}" y="${gf(-o.h*k/2)}" width="${gf(o.w*k)}" height="${gf(o.h*k)}" fill="none" stroke="#1A5FB4" stroke-width="0.1" stroke-dasharray="1 0.6"/>` : ""}</g>`);
+    cross(X(pcx), Y(pcy));
+    note(dt.big ? "Big date opening" : "Date opening", `${sn(w, 2)} × ${sn(h, 2)} mm${o.e ? ` (${sn(o.w, 2)} × ${sn(o.h, 2)} outside)` : ""}, centre ${sn(dt.dist, 2)} mm out at ${dt.at || 3} o'clock${dt.big ? `, bar ${sn(dateBar(dt), 2)} mm` : ""}`);
+  }
+  /* the centre and its axes */
+  out.push(`<path d="M${gf(cx - dialD/2*k - 4)} ${gf(cy)}H${gf(cx + dialD/2*k + 4)}M${gf(cx)} ${gf(cy - dialD/2*k - 4)}V${gf(cy + dialD/2*k + 4)}" stroke="#555" stroke-width="0.1" stroke-dasharray="4 1 1 1"/>`);
+  /* the overall diameter, dimensioned across the top */
+  const yD = cy - dialD/2*k - 8;
+  out.push(`<path d="M${gf(X(-dialD/2))} ${gf(yD)}H${gf(X(dialD/2))}M${gf(X(-dialD/2))} ${gf(yD - 2)}v4M${gf(X(dialD/2))} ${gf(yD - 2)}v4" stroke="#111" stroke-width="0.15"/>`);
+  out.push(artT(cx, yD - 1.4, `Ø${sn(dialD, 2)}`, 3, {mid:true}));
+  /* the table of places */
+  const tx = 22 + box*k + 14;
+  let ty = 34, tbl = artT(tx, 26, "Where everything goes (mm, from the dial centre)", 3.2, {bold:true});
+  for(const [a, b] of rows){
+    tbl += artT(tx, ty, a, 2.7, {bold:true});
+    const words = b.split(" "), lines = []; let cur = "";
+    for(const w of words){ if((cur + " " + w).length > 56){ lines.push(cur); cur = w; } else cur = cur ? cur + " " + w : w; }
+    if(cur) lines.push(cur);
+    lines.forEach((l, j) => tbl += artT(tx, ty + 4 + j*3.6, l, 2.6));
+    ty += 6 + lines.length*3.6;
+  }
+  return `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 297 210" width="297mm" height="210mm">
+    <rect width="297" height="210" fill="#FFFFFF"/>
+    ${artT(16, 14, `${info.brand || "Dial"} ${info.designNo || ""} · dial plan, 4:1`.replace(/\s+/g, " "), 5, {bold:true})}
+    <image x="${gf(cx - box*k/2)}" y="${gf(cy - box*k/2)}" width="${gf(box*k)}" height="${gf(box*k)}" href="${under}" xlink:href="${under}" opacity="0.30" preserveAspectRatio="none"/>
+    ${out.join("")}${tbl}
+    ${artT(16, 202, `Scale 4:1. Blue: outlines; red: centres; dashed: the visible edge and outside sizes. Watch Design Studio ${APP_VERSION} · ${info.date || ""}`, 2.4, {fill:"#555"})}
+  </svg>`;
+}
+/* The stones: each one's outline in place at 4:1, numbered, and a table
+   of what and where. */
+function gemPlanSVG(st, box, info){
+  const pl = gemPlacements(st).filter(p => !p.drop); if(!pl.length) return null;
+  const k = 4, cx = 22 + box*k/2, cy = 26 + box*k/2, dialD = box - 3;
+  let shapes = `<circle cx="${gf(cx)}" cy="${gf(cy)}" r="${gf(dialD/2*k)}" fill="none" stroke="#1A5FB4" stroke-width="0.25"/>`
+    + `<path d="M${gf(cx - dialD/2*k - 4)} ${gf(cy)}H${gf(cx + dialD/2*k + 4)}M${gf(cx)} ${gf(cy - dialD/2*k - 4)}V${gf(cy + dialD/2*k + 4)}" stroke="#555" stroke-width="0.1" stroke-dasharray="4 1 1 1"/>`;
+  const rows = [];
+  pl.forEach((p, n) => {
+    const t = (+p.rot || 0)*Math.PI/180, ol = gemOutline(p.g, 48).map(q => gemToDial([q[0]*Math.cos(t) - q[1]*Math.sin(t), q[0]*Math.sin(t) + q[1]*Math.cos(t)], p.a, p.r));
+    shapes += `<path d="M${ol.map(q => `${gf(cx + q[0]*k)} ${gf(cy + q[1]*k)}`).join("L")}Z" fill="#E8F0FB" stroke="#111" stroke-width="0.2"/>`;
+    const c = gemToDial([0, 0], p.a, p.r), lx = cx + c[0]*k*1.0, ly = cy + c[1]*k*1.0;
+    shapes += `<path d="M${gf(lx - 1.2)} ${gf(ly)}h2.4M${gf(lx)} ${gf(ly - 1.2)}v2.4" stroke="#C01C28" stroke-width="0.12"/>`;
+    const lo = gemToDial([0, 0], p.a, p.r - Math.max(p.size.w, p.size.l)/2 - 1.6);
+    shapes += artT(cx + lo[0]*k, cy + lo[1]*k + 1, String(p.hour), 3, {mid:true, bold:true});
+    const cut = (typeof GEM_CUT_NAME === "object" && GEM_CUT_NAME[p.g.cut]) || p.g.cut, set = (typeof GEM_SET_NAME === "object" && GEM_SET_NAME[p.g.setting]) || p.g.setting;
+    rows.push([String(p.hour), `${p.g.n > 1 ? p.g.n + " × " : ""}${cut}`, p.g.stone || "", gemSizeText(p.g), set || "", sn(p.r, 2), sn(p.a, 1) + "°", p.rot ? sn(p.rot, 0) + "°" : "—", sn(p.H, 2)]);
+  });
+  const tx = 22 + box*k + 10, head = ["Hour", "Cut", "Stone", "Size", "Setting", "r", "At", "Turn", "Stands"], wcol = [10, 22, 20, 24, 18, 11, 11, 10, 11];
+  let tbl = artT(tx, 26, "Stones (mm and degrees, from 12, clockwise)", 3.2, {bold:true}), x0 = tx;
+  head.forEach((h, j) => { tbl += artT(x0, 34, h, 2.5, {bold:true}); x0 += wcol[j]; });
+  rows.forEach((r, i) => { let x = tx; r.forEach((v, j) => { tbl += artT(x, 39 + i*4.4, v, 2.5); x += wcol[j]; }); });
+  const ct = pl.reduce((s, p) => s + gemCarats(p.g), 0), n = pl.reduce((s, p) => s + p.g.n, 0);
+  tbl += artT(tx, 44 + rows.length*4.4, `${n} stone${n === 1 ? "" : "s"}, about ${ct.toFixed(2)} ct. "Turn" is each stone's turn about its own centre from the way it points at the centre.`, 2.5);
+  return `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 297 210" width="297mm" height="210mm">
+    <rect width="297" height="210" fill="#FFFFFF"/>
+    ${artT(16, 14, `${info.brand || "Dial"} ${info.designNo || ""} · stone setting, 4:1`.replace(/\s+/g, " "), 5, {bold:true})}
+    ${shapes}${tbl}
+    ${artT(16, 202, `Scale 4:1. Outlines are each stone's girdle with its setting's edge; red crosses its centre. Watch Design Studio ${APP_VERSION} · ${info.date || ""}`, 2.4, {fill:"#555"})}
+  </svg>`;
+}
+/* the separations as one vector SVG: a layer per ink, named, in its colour */
+function inkLayersSVG(st, inks){
+  const box = artBox(st), parts = inks.map((ink, i) => {
+    const one = inkOnly(artDial(st, "ink" + i), ink.hex, ink.hex, artSkip(st)), inner = one.replace(/^<svg[^>]*>/, "").replace(/<\/svg>\s*$/, "");
+    const vb = (/viewBox="([^"]+)"/.exec(one) || [])[1] || `${-box/2} ${-box/2} ${box} ${box}`;
+    return `<svg id="ink-${i + 1}" data-ink="${ink.hex}" viewBox="${vb}" width="${gf(box)}" height="${gf(box)}" overflow="visible"><title>Ink ${i + 1}: ${ink.hex} (${artEsc(ink.parts.join(", "))})</title>${inner}</svg>`;
+  });
+  return `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${gf(box)}mm" height="${gf(box)}mm" viewBox="0 0 ${gf(box)} ${gf(box)}"><title>Dial print layers, 1:1</title>${parts.map(p => `<g>${p.replace(/^<svg /, '<svg x="0" y="0" ')}</g>`).join("")}</svg>`;
+}
+async function makeDialArtPDF(){
+  try{
+    toast(sheetSay("art.making", "Making the dial artwork…"));
+    ensureSheet(S);
+    const info = sheetInfo(S, new Date()), inks = dialInks(S), box = artBox(S);
+    const kit = await loadPdfKit();
+    const doc = new kit.jsPDF({orientation:"landscape", unit:"mm", format:"a4", compress:true, putOnlyUsedFonts:true});
+    doc.setProperties({title:`Dial artwork ${info.designNo || ""}`.trim(), creator:"Watch Design Studio " + APP_VERSION});
+    const page = async (svg, first) => {
+      if(!first) doc.addPage("a4", "landscape");
+      const host = document.createElement("div");
+      host.style.cssText = "position:fixed;left:-20000px;top:0;width:297px;height:210px;overflow:hidden;pointer-events:none";
+      host.innerHTML = svg; document.body.appendChild(host);
+      try{ await doc.svg(host.firstElementChild, {x:0, y:0, width:297, height:210}); } finally { host.remove(); }
+    };
+    const under = await artPNG(artDial(S, "under"), box, 600);
+    await page(dialPlanSVG(S, under, box, info), true);
+    for(let i = 0; i < inks.length; i++){
+      const png = await artPNG(inkOnly(artDial(S, "sep" + i), inks[i].hex, null, artSkip(S)), box, 2400);
+      await page(inkPageSVG(S, inks[i], i + 1, inks.length, png, box, info));
+    }
+    const gp = gemPlanSVG(S, box, info); if(gp) await page(gp);
+    const name = sheetFileName(info).replace(/\.pdf$/, "_dial-artwork.pdf");
+    presentOutput(name, doc.output("blob"), "application/pdf");
+  }catch(e){ toast("Could not make the dial artwork: " + e.message); }
+}
+function makeInkLayers(){
+  try{
+    ensureSheet(S);
+    const inks = dialInks(S); if(!inks.length){ toast(sheetSay("art.noInk", "Nothing on this dial is printed.")); return; }
+    const info = sheetInfo(S, new Date());
+    presentOutput(sheetFileName(info).replace(/\.pdf$/, "_print-layers.svg"), new Blob([inkLayersSVG(S, inks)], {type:"image/svg+xml"}), "image/svg+xml");
+  }catch(e){ toast("Could not make the print layers: " + e.message); }
+}
+
 /* ---- the preview, and where it is opened from ---- */
 let mkBuilt = null, mkRun = 0, mkZoomed = false;
 function mkPicker(){
@@ -15700,6 +15950,8 @@ async function makeMakerPDF(){
   });
   for(const id of ["#mkSheetBtn", "#open-sheet"]){ const b = q(id); if(b) b.onclick = openMakerSheet; }
   { const b = q("#numArtBtn"); if(b) b.onclick = makeNumArtPDF; }
+  { const b = q("#dialArtBtn"); if(b) b.onclick = makeDialArtPDF; }
+  { const b = q("#inkLayersBtn"); if(b) b.onclick = makeInkLayers; }
 })();
 </script>
 <script>
@@ -17111,7 +17363,7 @@ const GWORD = {ar:{
   "Extra high":"مرتفع جداً", "High":"مرتفع", "height:Standard":"عادي", "Window width":"عرض النافذة", "Narrow":"ضيقة", "Standard":"قياسية", "Wide":"عريضة",
   "Move them aside":"أزحهما جانباً", "Make them smaller":"صغّرهما", "Use markers":"ضع مؤشرين", "Leave them off":"احذفهما", "Let them touch":"اتركهما متلامسين",
   "Day font":"خط اليوم", "Arabic font":"الخط العربي", "English font":"الخط الإنجليزي", "In the window":"في النافذة", "Day disc":"قرص اليوم",
-  "Day lettering":"لون كتابة اليوم", "Window edge":"حافة النافذة", "Lume colour":"لون المادة المضيئة", "Lume fill":"تعبئة مضيئة", "Green-white":"أبيض مخضر", "Old radium":"راديوم قديم", "Vintage cream":"كريمي عتيق", "Five-minute marks":"علامات الخمس دقائق", "Run inward":"ممتدة للداخل", "Flared":"متسعة", "Gap at 6":"فراغ عند ٦", "Track width":"عرض المسار", "Rail weight":"وزن الخط", "Tick weight":"وزن العلامة", "Turn this hour":"اتجاه هذه الساعة", "Toward the centre":"نحو المركز", "On point":"على رأسه", "Across":"بالعرض", "Size of this hour":"حجم هذه الساعة", "Figure height":"ارتفاع الرقم", "Letter height":"ارتفاع الحروف", "Thin line":"خط رفيع", "Digit height":"ارتفاع الأرقام", "Bevelled cut":"قطع مشطوف", "Applied frame":"إطار مركّب", "Keep off the watch":"أسماء ممنوعة على الساعة", "Show the colour as made":"اعرض اللون مثل ما ينصنع", "Drawn bezel":"البيزل المرسوم", "As Nivada's drawing":"مثل رسمة نيفادا", "As the prototype":"مثل النموذج", "Hand heights":"ارتفاعات العقارب", "I have the maker's hand heights":"عندي ارتفاعات العقارب من المصنّع", "Windows":"النوافذ", "One window":"نافذة وحدة", "Big date":"تاريخ كبير", "Centre bar":"الفاصل الوسطي", "Dates 1 to 9":"التواريخ من ١ إلى ٩",
+  "Day lettering":"لون كتابة اليوم", "Window edge":"حافة النافذة", "Lume colour":"لون المادة المضيئة", "Lume fill":"تعبئة مضيئة", "Green-white":"أبيض مخضر", "Old radium":"راديوم قديم", "Vintage cream":"كريمي عتيق", "Five-minute marks":"علامات الخمس دقائق", "Run inward":"ممتدة للداخل", "Flared":"متسعة", "Gap at 6":"فراغ عند ٦", "Track width":"عرض المسار", "Rail weight":"وزن الخط", "Tick weight":"وزن العلامة", "Turn this hour":"اتجاه هذه الساعة", "Toward the centre":"نحو المركز", "On point":"على رأسه", "Across":"بالعرض", "Size of this hour":"حجم هذه الساعة", "Figure height":"ارتفاع الرقم", "Letter height":"ارتفاع الحروف", "Thin line":"خط رفيع", "Digit height":"ارتفاع الأرقام", "Bevelled cut":"قطع مشطوف", "Applied frame":"إطار مركّب", "Keep off the watch":"أسماء ممنوعة على الساعة", "Dial artwork (PDF)":"رسومات الميناء (PDF)", "Plan, inks and stones":"المخطط والأحبار والأحجار", "Show the colour as made":"اعرض اللون مثل ما ينصنع", "Drawn bezel":"البيزل المرسوم", "As Nivada's drawing":"مثل رسمة نيفادا", "As the prototype":"مثل النموذج", "Hand heights":"ارتفاعات العقارب", "I have the maker's hand heights":"عندي ارتفاعات العقارب من المصنّع", "Windows":"النوافذ", "One window":"نافذة وحدة", "Big date":"تاريخ كبير", "Centre bar":"الفاصل الوسطي", "Dates 1 to 9":"التواريخ من ١ إلى ٩",
   "All seven days in the window":"أيام الأسبوع السبعة في النافذة", "The disc in order":"القرص بالترتيب",
   "Date window at 3":"نافذة التاريخ عند 3", "Magnifier":"المكبّر", "Digits":"الأرقام", "Date font":"خط التاريخ", "Date disc":"قرص التاريخ",
   "Date digits colour":"لون أرقام التاريخ", "Frame":"الإطار", "All window settings":"كل إعدادات النوافذ",
@@ -18694,7 +18946,7 @@ Object.assign(GWORD.ar, {
       h += `<h3>${gT("fin.check")}</h3>` + checkSummary();
       /* Saving is the footer's "Done", so the tiles are what comes after it */
       h += `<h3>${gT("fin.keep")}</h3><div class="gActions">
-        ${[["export","Export","Image, PDF or file"],["maker","Maker's sheet (PDF)","A3 for the maker"]].concat(S.numerals && S.numerals.on ? [["numart","Numerals (PDF)","Artwork for the maker"]] : []).concat([["share","Share","Send a picture"],["3d","3D view","Turn it in your hand"],["compare","Compare","Side by side"],["spec","Specification","For the factory"]])
+        ${[["export","Export","Image, PDF or file"],["maker","Maker's sheet (PDF)","A3 for the maker"],["dialart","Dial artwork (PDF)","Plan, inks and stones"]].concat(S.numerals && S.numerals.on ? [["numart","Numerals (PDF)","Artwork for the maker"]] : []).concat([["share","Share","Send a picture"],["3d","3D view","Turn it in your hand"],["compare","Compare","Side by side"],["spec","Specification","For the factory"]])
           .map(([k, l, s]) => `<button type="button" data-gdo="${k}">${gW(l)}<small>${gW(s)}</small></button>`).join("\n        ")}</div>`;
       return h;
     }
@@ -19379,7 +19631,7 @@ Object.assign(GWORD.ar, {
       if(d.gdo === "hourAll"){ if(pickHour === null) return; const k = S.markers.at[pickHour], cov = coveredHours(S);
         S.markers.at = S.markers.at.map((x, i) => cov.has(i || 12) ? x : k); syncMarkerFlags(S); commit(); paintAll(); return; }
       ({save:()=>click("#save"), export:()=>click("#exp"), share:()=>{ if(document.querySelector("#share")) click("#share"); else click("#exp"); }, "3d":()=>click("#open-relief"),
-        compare:()=>click("#compare"), spec:()=>click('[data-atelier="spec"]'), check:()=>click('[data-atelier="check"]'), maker:()=>openMakerSheet(), numart:()=>makeNumArtPDF()}[d.gdo] || (()=>{}))();
+        compare:()=>click("#compare"), spec:()=>click('[data-atelier="spec"]'), check:()=>click('[data-atelier="check"]'), maker:()=>openMakerSheet(), numart:()=>makeNumArtPDF(), dialart:()=>makeDialArtPDF()}[d.gdo] || (()=>{}))();
     }
   });
   /* the hand shapes, as the full editor sets them */

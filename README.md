@@ -200,6 +200,32 @@ stored in a design file do not change. In the full editor at laptop widths
 the toolbar sits tighter, and on a narrower window it takes a second row
 rather than pushing Share and Export off the screen.
 
+## Dial artwork for the maker (v4.24.0)
+
+**Dial artwork (PDF)**, in Export and in Finish, is what a dial maker quotes,
+prints and sets from, A4 landscape:
+
+1. **Dial plan, 4:1**: the dial faint underneath; the blank and the visible
+   edge, the minute track's rails, the circles the numerals and indexes are
+   centred on with a cross at each, a mark at the height of each text line, the
+   date opening (and outside its frame or bevel), all dimensioned from the
+   centre in a table beside it.
+2. **One page per ink**: the separation at 1:1, to print from, and at 4:1, to
+   check by, with crop marks, the centre cross, the ink's hex and nearest
+   Pantone, and the parts printed in it. A separation is the vector dial with
+   only that ink left in it, in black (matched within ΔE 4, as the printing
+   model shades an ink a touch; see-through lips and the offset second pass of
+   raised print left out; stones, windows and applied parts never in it), laid
+   in at 2400 dpi because the PDF cannot carry the dial's fonts.
+3. **Stone setting, 4:1**, when there are stones: each stone's outline in place,
+   labelled with its hour, and a table of cut, stone, size, setting, radius,
+   angle, turn and height.
+
+**Print layers — SVG** (Export › More formats) gives the same separations as
+vector, one named layer per ink in its own colour, at 1:1.
+
+The numerals PDF stays the font alone, as asked.
+
 ## Colour as made (v4.23.0)
 
 The shaded render lights the dial with a studio lamp (ambient 0.30, the key at

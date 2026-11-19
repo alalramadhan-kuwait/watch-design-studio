@@ -167,3 +167,27 @@ test('colour as made (v4.23.0): the lamp\'s darkening undone on request, the ren
   assert.match(source, /toggle\("render\.asMade", "Show the colour as made", !!S\.render\.asMade\)/);
   assert.match(source, /"col\.asMade":"Raises the light so the render shows the paint as it is, not as a lamp darkens it\. The maker's sheet always gives the colour typed\."/);
 });
+
+test('production artwork (v4.24.0): a dimensioned plan, a separation per ink, the stones placed, and vector layers', () => {
+  // the inks: printed, double-printed or filled parts of the specification, by colour
+  const di = chunk('function dialInks(st){', '\n}\n');
+  assert.match(di, /\/\^\(Minute track\|Hour track\|Numerals\|Indexes\|Logo\|Text \)\//);
+  assert.match(di, /print\|filled\|uv ink/);
+  // a separation keeps a part within ΔE 4 of its ink, drops see-through passes and the second copy of a part, and never prints stones or windows
+  const io = chunk('function inkOnly(svg, hex, colour, skip){', '\n}\n');
+  assert.match(io, /const fOk = df <= 4, sOk = ds <= 4;/);
+  assert.match(io, /const see = \+cs\.opacity < 0\.9 \|\| \(fOk && \+cs\.fillOpacity < 0\.9 && !sOk\);/);
+  assert.match(io, /if\(was && was\.d <= d0\)\{ el\.setAttribute\("display", "none"\); return; \}/);
+  assert.match(source, /const sk = new Set\(\["gems", "day", "date", "sub"\]\)/);
+  assert.match(source, /if\(nm\.tech === "applied"\) sk\.add\("numerals"\); if\(ix\.applied !== false\) sk\.add\("indices"\);/);
+  // pages: plan at 4:1, each ink at 1:1 and 4:1 from a 2400 dpi separation, the stones; the date window upright
+  assert.match(source, /await page\(dialPlanSVG\(S, under, box, info\), true\);/);
+  assert.match(source, /const png = await artPNG\(inkOnly\(artDial\(S, "sep" \+ i\), inks\[i\]\.hex, null, artSkip\(S\)\), box, 2400\);/);
+  assert.match(source, /const gp = gemPlanSVG\(S, box, info\); if\(gp\) await page\(gp\);/);
+  assert.doesNotMatch(chunk('function dialPlanSVG(', '\n}\n'), /rotate\(/, 'windows are drawn upright, as on the dial');
+  // the vector layers: one nested svg per ink, sized in the outer viewBox's own units
+  assert.match(source, /<svg id="ink-\$\{i \+ 1\}" data-ink="\$\{ink\.hex\}" viewBox="\$\{vb\}" width="\$\{gf\(box\)\}" height="\$\{gf\(box\)\}"/);
+  // offered in Export and in Finish
+  assert.match(source, /id="dialArtBtn"/); assert.match(source, /id="inkLayersBtn"/);
+  assert.match(source, /\["dialart","Dial artwork \(PDF\)","Plan, inks and stones"\]/);
+});
