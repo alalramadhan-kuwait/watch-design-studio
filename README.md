@@ -255,7 +255,8 @@ render look right, colours that would have been made too light.
   Off unless chosen, so saved designs look as they did.
 - Gloss, lacquer and enamel now carry a **clear coat** that shows: a soft
   reflection of the studio's softbox across the dial on the light's side
-  (strength 0.10, 0.15 and 0.055). On a pale dial they no longer look matte.
+  (strength 0.05, 0.07 and 0.03 since v4.25.1, halved after it read as a grey
+  swath on black lacquer). On a pale dial they no longer look matte.
   This changes how those three finishes render.
 
 ## Export, and the F77's bezel (v4.22.0)

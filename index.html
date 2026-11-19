@@ -2236,7 +2236,7 @@ const APP_BUILD = "__BUILD__";
 /* The version people see, raised with every change that reaches them:
    major for a new way of working, minor for something new to do, patch for
    a fix. Shown on the watch screen, so any screenshot says which it was. */
-const APP_VERSION = "4.25.0";
+const APP_VERSION = "4.25.1";
 const APP_DATE = "__DATE__";
 
 /* Every route that replaces S passes through one of these three, which is
@@ -3652,13 +3652,13 @@ const MFINISH = {
   brushedsteel:{rough:0.34, metal:0.88, aniso:0.82, groove:"linear", coat:0.04, grain:0.050, dish:0.015},
   sunburst:    {rough:0.36, metal:0.92, aniso:0.80, groove:"radial", coat:0.05, grain:0.055, dish:0.020},
   circular:    {rough:0.34, metal:0.86, aniso:0.80, groove:"circle", coat:0.04, grain:0.048, dish:0.015},
-  gloss:       {rough:0.10, metal:0.00, aniso:0.00, groove:"none",   coat:0.80, grain:0.006, dish:0.020, rim:0.18, rimAt:0.92, sheen:0.10},
-  lacquer:     {rough:0.06, metal:0.00, aniso:0.00, groove:"none",   coat:1.00, grain:0.004, dish:0.020, rim:0.30, rimAt:0.90, envGain:0.45, sheen:0.15},
+  gloss:       {rough:0.10, metal:0.00, aniso:0.00, groove:"none",   coat:0.80, grain:0.006, dish:0.020, rim:0.18, rimAt:0.92, sheen:0.05},
+  lacquer:     {rough:0.06, metal:0.00, aniso:0.00, groove:"none",   coat:1.00, grain:0.004, dish:0.020, rim:0.30, rimAt:0.90, envGain:0.45, sheen:0.07},
   /* Grand feu enamel measured off a reference blank: the body is optically
      black and every highlight lives in the last tenth of the radius, where
      the fired surface domes over the edge. So the centre is near-flat and
      glassy, and the rim carries a steep roll. */
-  enamel:      {rough:0.045,metal:0.00, aniso:0.00, groove:"none",   coat:1.00, grain:0.002, dish:0.004, rim:1.35, rimAt:0.87, envGain:0.04, envRing:34, envRingAt:0.34, sheen:0.055},
+  enamel:      {rough:0.045,metal:0.00, aniso:0.00, groove:"none",   coat:1.00, grain:0.002, dish:0.004, rim:1.35, rimAt:0.87, envGain:0.04, envRing:34, envRingAt:0.34, sheen:0.03},
   metallic:    {rough:0.18, metal:1.00, aniso:0.00, groove:"none",   coat:0.08, grain:0.020, dish:0.018},
   mop:         {rough:0.16, metal:0.28, aniso:0.55, groove:"radial", coat:0.70, grain:0.030, dish:0.024},
   stone:       {rough:0.22, metal:0.08, aniso:0.00, groove:"none",   coat:0.50, grain:0.000, dish:0.018},

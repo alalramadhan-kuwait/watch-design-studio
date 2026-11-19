@@ -160,7 +160,7 @@ test('colour as made (v4.23.0): the lamp\'s darkening undone on request, the ren
   const k = 1 / (0.30 + 0.70 * Math.sin(52 * Math.PI / 180));
   assert.ok(k > 1.15 && k < 1.2);
   // the clear coats each have a sheen, matte none
-  for (const [f, v] of [['gloss', '0\\.10'], ['lacquer', '0\\.15'], ['enamel', '0\\.055']]) assert.match(source, new RegExp(`  ${f}: +\\{[^\\n]*sheen:${v}\\}`));
+  for (const [f, v] of [['gloss', '0\\.05'], ['lacquer', '0\\.07'], ['enamel', '0\\.03']]) assert.match(source, new RegExp(`  ${f}: +\\{[^\\n]*sheen:${v}\\}`));
   assert.doesNotMatch(source.match(/  matte: +\{[^\n]*\}/)[0], /sheen/);
   // the Colour tab: as typed beside as rendered, and the switch
   assert.match(source, /const rh = d\.finish !== "stone" \? renderedDialHex\(S\) : null;/);
