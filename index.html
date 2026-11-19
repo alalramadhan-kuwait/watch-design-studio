@@ -1462,6 +1462,7 @@ const NOREL_R4 = Object.assign({}, NOREL_D, {
    are estimates until Nivada sends them. The drawn case (when the
    photograph is off) is drawn by f77Case from the figures in f77 below. */
 const TK_NIVADA = {
+  maker:"Nivada",
   model:"Time Keeper × Nivada · F77", shape:"round", photo:false,
   ref:"Nivada Grenchen F77 · Time Keeper edition", steel:"stainless steel (grade to confirm)", wr:"10 ATM",
   movement:"Soprod P024 automatic, without date",                       // sheet
@@ -1592,7 +1593,9 @@ const BASE = {
   render:{mode:"studio", az:135, el:40, quality:340, view:"front"},
   exportPx:0,
   /* fitHeight: the SW240-1 hand fitting height (Sellita p.20), 4 standard */
-  handSet:{link:"full set", minuteScale:0.80, secondsScale:0.52, includeSeconds:true, fitHeight:4},
+  /* linked by shape only, the seconds hand left out: a width or a length
+     set on one hand stays on that hand */
+  handSet:{link:"style only", minuteScale:0.80, secondsScale:0.52, includeSeconds:false, fitHeight:4},
   /* where the built-in case photograph's opening is (BUILTIN_CASE_CAL). Every
      preset, reference design and opened file starts from these, so a stale
      figure here put the photographed dial in a ring round every one of them. */
@@ -2179,7 +2182,8 @@ const VIRTUAL = {
 const get = (o,p)=>{const k=p.split("."),last=k.pop(),par=k.reduce((x,i)=>x[i],o);
   return VIRTUAL[last] && par && typeof par === "object" && !(last in par) ? VIRTUAL[last].get(par) : par[last];};
 const set = (o,p,v)=>{const k=p.split("."),last=k.pop(),par=k.reduce((x,i)=>x[i],o);
-  if(VIRTUAL[last] && par && typeof par === "object" && !(last in par)) VIRTUAL[last].set(par, v); else par[last]=v;};
+  if(VIRTUAL[last] && par && typeof par === "object" && !(last in par)) VIRTUAL[last].set(par, v); else par[last]=v;
+  if(last === "reach" && par && typeof par === "object" && typeof onReachChoice === "function") onReachChoice(par, v, o);};
 
 let S = deep(BASE, PRESETS["Standard"]);   // a first visit opens on the standard dial
 let sel = "dial", measureOn = false, zoom = 1, panX = 0, panY = 0;
@@ -2196,7 +2200,7 @@ const APP_BUILD = "__BUILD__";
 /* The version people see, raised with every change that reaches them:
    major for a new way of working, minor for something new to do, patch for
    a fix. Shown on the watch screen, so any screenshot says which it was. */
-const APP_VERSION = "4.11.0";
+const APP_VERSION = "4.11.1";
 const APP_DATE = "__DATE__";
 
 /* Every route that replaces S passes through one of these three, which is
@@ -7710,7 +7714,14 @@ function applyMarkerPreset(st, id){
   const m = st.markers, cov = coveredHours(st), nm = st.numerals, ix = st.indices;
   if(id === "uniform"){ m.perHour = false; return st; }
   if(Math.round(ix.count || 12) !== 12) ix.count = 12;
-  if(id === "custom"){ m.perHour = true; syncMarkerFlags(st); return st; }
+  /* "Each hour…" starts from the dial as it is: when every hour had the
+     same marker, the per-hour list still held whatever the project opened
+     with (the F77 challenge found it bringing back old Arabic numerals in
+     place of the batons on screen), so it is filled from what is shown. */
+  if(id === "custom"){
+    if(!m.perHour){ const now = hourPlan(st); m.at = now.map(q => q.covered ? "none" : q.kind); }
+    m.perHour = true; syncMarkerFlags(st); return st;
+  }
   const fill = fn => { m.at = Array.from({length:12}, (_, i) => cov.has(i || 12) ? "none" : fn(i || 12)); m.perHour = true; };
   const q = h => h === 6 || h === 9;
   if(id === "qGems"){ fill(h => q(h) ? "gem" : "numeral"); Object.assign(st.gem, GEM_ROUND_DIAMOND); }
@@ -7858,6 +7869,15 @@ const gemSizeText = g => g.cut === "round" ? `${g.n > 1 ? g.n + " × " : ""}Ø${
   : g.cut === "baguette" ? `${g.n > 1 ? g.n + " × " : ""}${g.L.toFixed(2)} × ${g.W.toFixed(2)} mm` : `${g.s.toFixed(2)} mm square`;
 const GEM_CUT_NAME = {round:"round brilliant", baguette:"baguette", princess:"princess"};
 const GEM_SET_NAME = {bezel:"bezel-set", prong:"in prongs", channel:"channel-set"};
+/* Who makes this case, for the checks that send a question to the maker:
+   the case's own maker, the name after "/" in its sheet brand (NOREL /
+   Blue Creations), or "the case maker". */
+function makerOf(st){
+  const K = typeof caseOf === "function" ? caseOf(st) : null;
+  if(K && K.maker) return K.maker;
+  const b = K && K.sheet && K.sheet.brand || "";
+  return b.indexOf("/") >= 0 ? b.split("/").pop().trim() : "the case maker";
+}
 const GEM_METAL_NAME = {"polished steel":"steel", "white gold":"18k white gold", "yellow gold":"18k yellow gold", "rose gold":"18k rose gold", "blackened steel":"black rhodium"};
 /* one line for the brief and the technical sheet */
 const gemSpecText = g => `${gemSizeText(g)} ${GEM_CUT_NAME[g.cut]}${g.n > 1 ? "s" : ""}, ${g.origin === "lab" ? "lab-grown " : ""}${g.stone}, ${GEM_SET_NAME[g.setting]} in ${GEM_METAL_NAME[g.metal] || g.metal}`;
@@ -7879,7 +7899,7 @@ function gemChecks(st, pave){
       d = `${on.length ? "Gems stand" : "The set numerals stand"} ${mm(fit.H)} mm; the minute hand's underside is about ${mm(fit.under.m)} mm at hand height ${fit.fitHeight}, so ${mm(fit.clearM)} mm clear.`
         + (fit.hourReaches ? ` The hour hand reaches the markers: its underside is about ${mm(fit.under.h)} mm, ${mm(fit.clearH)} mm clear.` : "")
         + (worst < 0.10 ? " At this gap the hand will touch: choose smaller stones or a taller hand height." : "")
-        + " Hand undersides are estimates from Sellita's fitting heights: Blue Creations to confirm.";
+        + ` Hand undersides are estimates from Sellita's fitting heights: ${makerOf(st)} to confirm.`;
     }
     add(fit.ok, "Gem height under the hands", d, on.length ? "gems" : "numerals");
   }
@@ -7953,7 +7973,7 @@ function gemChecks(st, pave){
     /* G7 */
     {
       const dialT = gemDialT(st), room = dialT - 0.15;
-      add(room >= GEM_SETTING.recess - 1e-9, "Stone seat in the dial", `${room >= GEM_SETTING.recess - 1e-9 ? `Seats up to ${mm(GEM_SETTING.recess)} mm deep leave ${mm(dialT - GEM_SETTING.recess)} mm of the ${mm(dialT)} mm dial.` : `The ${mm(dialT)} mm dial leaves room for a ${mm(Math.max(0, room))} mm seat, so the stones stand taller.`} The day and date discs run under the dial between R8.7 and R13.2, so seats must be blind and setting feet riveted flush.`, "gems");
+      add(room >= GEM_SETTING.recess - 1e-9, "Stone seat in the dial", `${room >= GEM_SETTING.recess - 1e-9 ? `Seats up to ${mm(GEM_SETTING.recess)} mm deep leave ${mm(dialT - GEM_SETTING.recess)} mm of the ${mm(dialT)} mm dial.` : `The ${mm(dialT)} mm dial leaves room for a ${mm(Math.max(0, room))} mm seat, so the stones stand taller.`}${caseOf(st).calendar ? " The day and date discs run under the dial between R8.7 and R13.2, so seats must be blind and" : " Seats must be blind and"} setting feet riveted flush.`, "gems");
     }
     /* G8 */
     {
@@ -7981,12 +8001,12 @@ function gemChecks(st, pave){
       (total !== null ? `${total} stones of Ø${mm(d)} mm, about ${gf(total*0.0037*Math.pow(d, 3), 2)} ct. ` : "")
       + (few.length ? `${few.map(x => x.label).join(" ")} get${few.length > 1 ? "" : "s"} fewer than 2 stones: the strokes are too thin to hold a ${mm(d)} mm stone and its bead walls (${mm(d + 0.24)} mm). ` : "")
       + (nm.size < 4.0 ? `At ${mm(nm.size)} mm the figures can be set only as one row, and only as a bold, purpose-drawn set; loops such as ٩ and ٥ close up. 4.0 mm figures set more easily. ` : "")
-      + "Ask Blue Creations whether they can make it, who redraws the figures, and the cost and lead time.", "numerals");
+      + `Ask ${makerOf(st)} whether they can make it, who redraws the figures, and the cost and lead time.`, "numerals");
   }
   /* G10 */
-  add(false, "Gem setting production review", "Confirm with Blue Creations and the setter: hand height fitted, stone grade, origin"
+  add(false, "Gem setting production review", `Confirm with ${makerOf(st)} and the setter: hand height fitted, stone grade, origin`
     + ((on.some(p => p.g.origin === "lab")) ? " (lab-grown, to be disclosed on the brief and invoice)" : "")
-    + " and supplier, setting metal, seats and feet over the calendar discs, cost and lead time.", on.length ? "gems" : "numerals");
+    + ` and supplier, setting metal, seats and feet${caseOf(st).calendar ? " over the calendar discs" : ""}, cost and lead time.`, on.length ? "gems" : "numerals");
   return out;
 }
 
@@ -8615,13 +8635,13 @@ function luxChecks(st, pv){
     add(false, "Gem-set bezel", `${what}, ${B.stone === "diamond" ? "diamonds" : B.stone + "s"}, about ${gf(B.ct, 2)} ct, in 18k ${B.metal}. `
       + `The ring is ${mm(B.w)} mm wide (Ø${mm(B.od)} outside, Ø${mm(B.id)} inside, from the case drawing), so ${mm(GEM_BEZEL_EDGE)} mm of gold is kept each side. `
       + (B.cut === "round" && B.want > B.d + 1e-9 ? `Ø${mm(B.want)} mm stones do not fit the ring, so Ø${mm(B.d)} is drawn. ` : "")
-      + `${K.model || "This case"} is drawn with a fluted steel bezel: Blue Creations must make a gem-set bezel (its seats, height over the crystal and the bezel fixing) and quote it.`, "case");
+      + `${K.model || "This case"} is drawn with a fluted steel bezel: ${makerOf(st)} must make a gem-set bezel (its seats, height over the crystal and the bezel fixing) and quote it.`, "case");
   }
   if(paveDialOn(st)){
     const d = paveDialD(st), n = pv && pv.n, dialT = gemDialT(st), mat = (K.dialMat || "brass");
     add(false, "Pavé dial", `${n ? n + " stones" : "Stones"} of Ø${mm(d)} mm${n ? `, about ${gf(n*0.0037*Math.pow(d, 3), 2)} ct,` : ""} grain-set over the ${st.dial.pave === "centre" ? "centre field" : st.dial.pave === "ring" ? "outer ring" : "whole dial"}. `
       + `The dial blank is ${mat} Ø${mm(K.dialD || 0)} × ${mm(dialT)} mm; a pavé dial is normally an 18k gold base about 0.8–1.0 mm thick, so the stones can be seated. `
-      + `Blue Creations must confirm the stack height (hands, day and date discs, crystal) before a pavé dial is offered.`, "dial");
+      + `${makerOf(st)} must confirm the stack height (hands${caseOf(st).calendar ? ", day and date discs" : ""}, crystal) before a pavé dial is offered.`, "dial");
   }
   const two = twoToneOf(st);
   if(two) add(false, "Two-tone parts", `Bezel, crown and bracelet centre links in ${two} on a steel case: separate parts, solid 18k or gold-plated steel. Confirm the material, plating thickness and cost with Blue Creations.`, "case");
@@ -9825,6 +9845,27 @@ function dialLandmark(st, which){
   return null;
 }
 
+/* Choosing a landmark for a hand's length starts it where the name says.
+   A "stop short" factor saved with the design (0.82 on the F77 project,
+   from when its lengths were first turned into landmarks) used to carry
+   over, so "To the minute track" left the minute hand 2.4 mm short. Now
+   "To the minute track" puts the tip on the track's inner edge for its
+   style (the inner rail of a railroad, the inner ends of ticks, the inner
+   edge of dots), and any other landmark starts at the usual 0.97. The
+   landmark itself is unchanged, so saved designs draw as before. */
+function trackTrim(st){
+  const mt = st.minute, lm = dialLandmark(st, "to the minute track");
+  if(!mt || !mt.on || !(lm > 0)) return 0.97;
+  const r = mt.diameter/2, t = mt.thickness || 0.3;
+  const inner = mt.style === "railroad" ? r - t
+              : (mt.style === "dots" || mt.style === "beads") ? r - t*0.55
+              : r - Math.max(t*1.6, 0.42)/2;
+  return Math.min(1.05, Math.max(0.80, inner/lm));
+}
+function onReachChoice(h, v, st){
+  if(v === "to the minute track") h.reachTrim = +trackTrim(st).toFixed(4);
+  else if(v && v !== "free" && v !== "share of the minute hand") h.reachTrim = 0.97;
+}
 /* The length a hand is actually drawn at. Everything that draws a hand asks
    this rather than reading h.length, so the two can never disagree. */
 function handLength(h, k, st){
@@ -9868,16 +9909,21 @@ function snapVectorLengths(master){
     if(v){ S[k].length = v.tip; S[k].reach = "free"; }
   }
 }
+/* Returns the hands it changed, so the screen can say so. The seconds hand
+   is its own kind of hand: a change to it never reaches the hour and minute
+   hands (choosing a stick seconds once turned all three into sticks), and it
+   follows them only when "include the seconds hand" is on. */
 function syncHands(master){
-  const set = S.handSet;
-  if(!set || set.link === "off") return;
-  if(master !== "hHand" && master !== "mHand" && master !== "sHand") return;
+  const set = S.handSet, changed = [];
+  if(!set || set.link === "off") return changed;
+  if(master !== "hHand" && master !== "mHand") return changed;
   const src = S[master], full = set.link === "full set";
   let targets = ["hHand","mHand"].filter(k => k !== master);
-  if(set.includeSeconds && master !== "sHand") targets.push("sHand");
-  if(master === "sHand" && !set.includeSeconds) return;
+  if(set.includeSeconds) targets.push("sHand");
   for(const k of targets){
-    const dst = S[k];
+    /* only what shows counts as a change: a shared default filled in on
+       the other hand is not news */
+    const dst = S[k], seen = ["style","material","color","lume","finish"].concat(full ? HAND_SCALE : []), was = JSON.stringify(seen.map(x => dst[x] === undefined ? null : dst[x]));
     for(const key of HAND_SHARE){ if(src[key] !== undefined) dst[key] = src[key]; }
     if(full){
       const r = handScale(k)/handScale(master);
@@ -9885,7 +9931,9 @@ function syncHands(master){
         if(typeof src[key] === "number") dst[key] = Math.round(src[key]*r*1000)/1000;
       }
     }
+    if(JSON.stringify(seen.map(x => dst[x] === undefined ? null : dst[x])) !== was) changed.push(k);
   }
+  return changed;
 }
 
 
@@ -16274,6 +16322,8 @@ const GSTR = {en:{
   "gem.handNote":"Set by the hands Blue Creations fits. Taller hands need the crystal checked.",
   "hr.oclock": h => `${h} o'clock`, "hr.tap":"Tap an hour to choose what it carries.",
   "hr.covered":"12 and 3 sit under the day and date windows on this watch, so they stay empty.",
+  "hr.covered1": h => `${h} sits under a window on this watch, so it stays empty.`,
+  "hands.also": ks => `Linked: also changed the ${[].concat(ks).join(" and ").toLowerCase()}. Unlink them under Hands together.`,
   "logo.upload":"Upload your logo…", "logo.replace":"Replace your logo…",
   "logo.uploadNote":"PNG, JPG or SVG. The background is removed and the logo takes the colour or metal you choose.",
   "day.widthNote": w => `${w}. Standard is the Day-Date 40 proportion.`,
@@ -16329,7 +16379,15 @@ const GSTR = {en:{
 }};
 let GLANG = "en";
 const gT = (k, ...a) => { const L = GSTR[GLANG] || GSTR.en; let s = L[k]; if(s == null) s = GSTR.en[k]; if(s == null) return k;
-  return typeof s === "function" ? s(...a) : s; };
+  return ownMaker(typeof s === "function" ? s(...a) : s); };
+/* The notes were written for the NOREL, whose maker is Blue Creations; on
+   any other case they name that case's own maker (Nivada on the F77). */
+function ownMaker(t){
+  if(typeof t !== "string" || t.indexOf("Blue Creations") < 0 || typeof S === "undefined" || typeof makerOf !== "function") return t;
+  const m = makerOf(S);
+  if(m === "Blue Creations") return t;
+  return t.split("Blue Creations'").join(/s$/.test(m) ? m + "'" : m + "'s").split("Blue Creations").join(m);
+}
 
 /* Simple mode in Arabic: plain Modern Standard Arabic as it is written in
    the Gulf, short, with the words a watch buyer there uses (ميناء، عقارب،
@@ -16434,6 +16492,8 @@ GSTR.ar = {
   "gem.handNote":"تحدده العقارب التي تركّبها Blue Creations. العقارب الأعلى تحتاج فحص الزجاج.",
   "hr.oclock": h => `الساعة ${h}`, "hr.tap":"اضغط على ساعة لتختار ما يوضع عندها.",
   "hr.covered":"الساعتان 12 و3 تحت نافذتي اليوم والتاريخ في هذه الساعة، فتبقيان فارغتين.",
+  "hr.covered1": h => `الساعة ${h} تحت نافذة في هذه الساعة، فتبقى فارغة.`,
+  "hands.also": ks => `العقارب مرتبطة: تغيّر أيضاً ${[].concat(ks).join(" و")}. يمكنك فكّ الربط من «العقارب معاً».`,
   "logo.upload":"ارفع شعارك…", "logo.replace":"استبدل شعارك…",
   "logo.uploadNote":"PNG أو JPG أو SVG. تُزال الخلفية ويأخذ الشعار اللون أو المعدن الذي تختاره.",
   "day.widthNote": w => `${w}. القياسية بنسبة Day-Date 40.`,
@@ -16765,7 +16825,7 @@ const G_LAYER_STEP = {case:"case", tpl:"case", dial:"dial", minute:"dial", secto
 function gPlainCheck(row){
   if(!row || row.ok || G_CHECK_QUIET.has(row.title)) return null;
   const w = G_CHECK_WORDS[row.title];
-  if(w) return {step:w[0], text:(GLANG === "ar" && G_CHECK_AR[row.title]) || w[1], title:row.title};
+  if(w) return {step:w[0], text:ownMaker((GLANG === "ar" && G_CHECK_AR[row.title]) || w[1]), title:row.title};
   return {step:G_LAYER_STEP[row.layer] || "finish", text:row.title + ".", title:row.title};
 }
 /* MORE OPTIONS. What each step's "More options" sheet offers: the settings
@@ -17490,7 +17550,8 @@ Object.assign(GWORD.ar, {
       h += `<p class="gNote" style="margin-bottom:6px"><b>${gT("hr.oclock", pickHour || 12)}</b></p>` + chips44("ui.hourKind", KIND_CHIPS, at[pickHour]);
       h += `<button type="button" class="gMore" style="margin-top:2px" data-gdo="hourAll">${gW("Apply to all free hours")}</button>`;
     } else h += `<p class="gNote">${gT("hr.tap")}</p>`;
-    h += `<p class="gNote">${gT("hr.covered")}</p>`;
+    const covN = coveredHours(S);
+    if(covN.size) h += `<p class="gNote">${covN.size > 1 ? gT("hr.covered") : gT("hr.covered1", [...covN][0])}</p>`;
     return h;
   }
   /* the two NOREL examples under "Start from…" */
@@ -18263,9 +18324,11 @@ Object.assign(GWORD.ar, {
     else if(path === "ui.link") setHandLink(!!v);
     else put(path, v);
     fieldChosen(path);
-    if(/^hHand\./.test(path)) syncHands("hHand");
+    let alsoHands = [];
+    if(/^hHand\./.test(path)) alsoHands = syncHands("hHand");
     /* on the sheet any hand can be set, and a linked set follows it */
-    else if(sheet && /^(mHand|sHand)\./.test(path)) syncHands(path.split(".")[0]);
+    else if(sheet && /^mHand\./.test(path)) alsoHands = syncHands("mHand");
+    if(alsoHands.length) toast(gT("hands.also", alsoHands.map(k => gW({hHand:"Hour hand", mHand:"Minute hand", sHand:"Seconds hand"}[k]))));
     if(/^meta\.time\./.test(path)) timeSet = true;
     /* a two-tone case or a gem bezel the photograph has no parts for,
        whichever case it was chosen on */

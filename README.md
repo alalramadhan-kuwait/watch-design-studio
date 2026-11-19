@@ -200,6 +200,26 @@ stored in a design file do not change. In the full editor at laptop widths
 the toolbar sits tighter, and on a narrower window it takes a second row
 rather than pushing Share and Export off the screen.
 
+## Improvement plan, phase 1: first fixes (v4.11.1)
+
+From the F77 design challenge's reproduced bugs:
+- **"Each hour…"** starts from the markers on the dial. When every hour had
+  the same marker, the per-hour list still held what the project opened with,
+  so switching brought back old Arabic numerals in place of batons.
+- **Window notes** ("12 and 3 sit under the day and date windows", "the day
+  and date discs run under the dial") show only on a watch with windows, and
+  the checks name the case's own maker (`makerOf`; `TK_NIVADA.maker` is
+  Nivada) instead of Blue Creations everywhere.
+- **"To the minute track"** puts the tip on the track's inner edge for its
+  style (the inner rail of a railroad, the inner ends of ticks, the inner edge
+  of dots). A "stop short" of 0.82 saved with the F77 project used to carry
+  over and leave the hand 2.4 mm short. The landmark itself is unchanged, so
+  saved designs draw as before.
+- **Linked hands** are linked by shape only by default, with the seconds
+  hand left out. A change to the seconds hand never reaches the hour and
+  minute hands, and when a linked change does reach another hand the screen
+  says so.
+
 ## Date window: bevelled cut and digit height (v4.11.0)
 
 On the Date step: **Window edge** (Bevelled cut, Applied frame, Thin line) and
