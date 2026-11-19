@@ -2234,7 +2234,7 @@ const APP_BUILD = "__BUILD__";
 /* The version people see, raised with every change that reaches them:
    major for a new way of working, minor for something new to do, patch for
    a fix. Shown on the watch screen, so any screenshot says which it was. */
-const APP_VERSION = "4.22.0";
+const APP_VERSION = "4.23.0";
 const APP_DATE = "__DATE__";
 
 /* Every route that replaces S passes through one of these three, which is
@@ -3650,13 +3650,13 @@ const MFINISH = {
   brushedsteel:{rough:0.34, metal:0.88, aniso:0.82, groove:"linear", coat:0.04, grain:0.050, dish:0.015},
   sunburst:    {rough:0.36, metal:0.92, aniso:0.80, groove:"radial", coat:0.05, grain:0.055, dish:0.020},
   circular:    {rough:0.34, metal:0.86, aniso:0.80, groove:"circle", coat:0.04, grain:0.048, dish:0.015},
-  gloss:       {rough:0.10, metal:0.00, aniso:0.00, groove:"none",   coat:0.80, grain:0.006, dish:0.020, rim:0.18, rimAt:0.92},
-  lacquer:     {rough:0.06, metal:0.00, aniso:0.00, groove:"none",   coat:1.00, grain:0.004, dish:0.020, rim:0.30, rimAt:0.90, envGain:0.45},
+  gloss:       {rough:0.10, metal:0.00, aniso:0.00, groove:"none",   coat:0.80, grain:0.006, dish:0.020, rim:0.18, rimAt:0.92, sheen:0.10},
+  lacquer:     {rough:0.06, metal:0.00, aniso:0.00, groove:"none",   coat:1.00, grain:0.004, dish:0.020, rim:0.30, rimAt:0.90, envGain:0.45, sheen:0.15},
   /* Grand feu enamel measured off a reference blank: the body is optically
      black and every highlight lives in the last tenth of the radius, where
      the fired surface domes over the edge. So the centre is near-flat and
      glassy, and the rim carries a steep roll. */
-  enamel:      {rough:0.045,metal:0.00, aniso:0.00, groove:"none",   coat:1.00, grain:0.002, dish:0.004, rim:1.35, rimAt:0.87, envGain:0.04, envRing:34, envRingAt:0.34},
+  enamel:      {rough:0.045,metal:0.00, aniso:0.00, groove:"none",   coat:1.00, grain:0.002, dish:0.004, rim:1.35, rimAt:0.87, envGain:0.04, envRing:34, envRingAt:0.34, sheen:0.055},
   metallic:    {rough:0.18, metal:1.00, aniso:0.00, groove:"none",   coat:0.08, grain:0.020, dish:0.018},
   mop:         {rough:0.16, metal:0.28, aniso:0.55, groove:"radial", coat:0.70, grain:0.030, dish:0.024},
   stone:       {rough:0.22, metal:0.08, aniso:0.00, groove:"none",   coat:0.50, grain:0.000, dish:0.018},
@@ -4456,6 +4456,14 @@ function renderDialPixels(opt){
 
   const az = G.az*Math.PI/180, el = G.el*Math.PI/180;
   const L = [Math.cos(el)*Math.cos(az), Math.cos(el)*Math.sin(az), Math.sin(el)];
+  /* "As made": the lamp lights a flat dial at ambient + (1 - ambient)·sin(el)
+     of full strength (0.85 in the studio), so a paint renders darker than
+     it is. Raised by that much, a flat matte dial shows the colour typed. */
+  const expo = exposure*(opt.asMade ? 1/(G.ambient + (1 - G.ambient)*Math.max(0.05, L[2])) : 1);
+  /* A clear coat (gloss, lacquer, enamel) shows the studio's softbox as a
+     soft band across the dial on the light's side: the reflection that
+     tells a glossy dial from a matte one even when the dial is pale. */
+  const sheen = (M.sheen || 0)*(G.coatScale === undefined ? 1 : G.coatScale), Lh = Math.hypot(L[0], L[1]) || 1, Lux = L[0]/Lh, Luy = L[1]/Lh;
 
   /* brushed steel is drawn directly (brushSteelK) */
   const BR = finish === "brushedsteel" ? {dir:brushDirOf(opt.brush), band:brushBand(G.az, opt.brush), key:Math.min(1, G.key/1.5)} : null;
@@ -4475,7 +4483,7 @@ function renderDialPixels(opt){
       if(rr > dialR){ buf[i+3] = 0; continue; }
       const rn = rr/dialR, th = Math.atan2(uy, ux);
       if(BR){
-        const k = brushSteelK(ux, uy, dialR, BR.dir, BR.band, BR.key)*exposure*(1 - 0.14*Math.pow(rn, 6));
+        const k = brushSteelK(ux, uy, dialR, BR.dir, BR.band, BR.key)*expo*(1 - 0.14*Math.pow(rn, 6));
         for(let c=0; c<3; c++) buf[i+c] = mLin2srgb(Math.min(1, Math.max(0, alin[c]*k)))*255 + (mHash(x*7.1, y*3.3) - 0.5);
         buf[i+3] = 255;
         continue;
@@ -4666,7 +4674,9 @@ function renderDialPixels(opt){
             v += 0.10*FAM.irid*(0.5+0.5*Math.sin(th))*Math.pow(1-ndv+0.35, 2);
           }
         }
-        v *= exposure*(1 - 0.14*Math.pow(rn, 6));
+        if(sheen > 0){ const t_ = (ux*Lux + uy*Luy)/dialR, q_ = (ux*Luy - uy*Lux)/dialR;
+          v += sheen*Math.exp(-Math.pow((t_ - 0.40)/0.24, 2))*Math.max(0, 1 - 0.55*q_*q_)*(1 - Math.pow(Math.min(1, rn), 8)); }
+        v *= expo*(1 - 0.14*Math.pow(rn, 6));
         buf[i+c] = mLin2srgb(Math.min(1, Math.max(0, v)))*255 + (mHash(x*7.1, y*3.3) - 0.5);
       }
       buf[i+3] = 255;
@@ -4696,9 +4706,9 @@ function stoneArgs(st, color){
                fibre:d.stFibre, fibreAngle:d.stFibreAngle}};
 }
 let _matLast = null;
-function materialURL(color, finish, mode, az, el, px, guil, stone, surf, brush){
+function materialURL(color, finish, mode, az, el, px, guil, stone, surf, brush, made){
   if(typeof document === "undefined") return null;      // headless: no material
-  const key = [color, finish + (finish === "brushedsteel" ? ":" + brushDirOf(brush) : ""), mode, az, el, px, CASE_SPEC.dialD,
+  const key = [color, finish + (finish === "brushedsteel" ? ":" + brushDirOf(brush) : ""), mode, az, el, px, CASE_SPEC.dialD, made ? "made" : "",
                surf ? [surf.dome, surf.satin].join(".") : "-",
                guil && Object.values(guil).join(","),
                stone && [stone.type, stone.slab, stone.scale, stone.rot, stone.offX,
@@ -4718,7 +4728,7 @@ function materialURL(color, finish, mode, az, el, px, guil, stone, surf, brush){
     const ctx = cv.getContext("2d");
     const buf = renderDialPixels({px, dialMM:CASE_SPEC.dialD, base:color, finish,
                                   lighting:mode, light:{az:+az, el:+el}, guil, stone,
-                                  override: surf || null, brush,
+                                  override: surf || null, brush, asMade:!!made,
                                   ss: (guil || stone) ? 2 : 1});
     const img = ctx.createImageData(px, px);
     img.data.set(buf);
@@ -4728,6 +4738,31 @@ function materialURL(color, finish, mode, az, el, px, guil, stone, surf, brush){
     _matCache.set(key, url); _matLast = url;
     return url;
   }catch(e){ return null; }
+}
+/* The dial's colour as the shaded render shows it: the dial alone, drawn
+   small by the same shader, and the median of a clear ring between the
+   centre and the markers. Null when the plain drawing is in use (it shows
+   the colour as typed) or there is no canvas. */
+const _rendHex = new Map();
+function renderedDialHex(st){
+  const mode = (st.render && st.render.mode) || "old", d = st.dial || {};
+  if(mode === "old" || typeof document === "undefined" || !/^#[0-9a-f]{6}$/i.test(d.color || "")) return null;
+  const fin = MAT_FINISH[d.finish] || "matte", made = !!st.render.asMade;
+  const key = [d.color, fin, mode, st.render.az, st.render.el, d.brushDir, made, d.dome, d.satin].join("|");
+  if(_rendHex.has(key)) return _rendHex.get(key);
+  let hex = null;
+  try{
+    const px = 72, surf = (d.dome || d.satin) ? {dome:d.dome, satin:d.satin} : null;
+    const buf = renderDialPixels({px, dialMM:CASE_SPEC.dialD, base:d.color, finish:fin, lighting:mode, light:{az:+st.render.az, el:+st.render.el},
+                                  guil:fin === "guilloche" ? {pattern:d.pattern, cell:d.cell, pitch:d.pitch} : null, override:surf, brush:d.brushDir, asMade:made});
+    const ch = [[], [], []];
+    for(let y = 0; y < px; y++) for(let x = 0; x < px; x++){ const r = Math.hypot(x - px/2 + 0.5, y - px/2 + 0.5)/(px/2); if(r < 0.30 || r > 0.55) continue;
+      const i = (y*px + x)*4; ch[0].push(buf[i]); ch[1].push(buf[i+1]); ch[2].push(buf[i+2]); }
+    hex = "#" + ch.map(a => { a.sort((m, n) => m - n); return Math.round(a[a.length >> 1]).toString(16).padStart(2, "0"); }).join("").toUpperCase();
+  }catch(e){ hex = null; }
+  if(_rendHex.size > 40) _rendHex.delete(_rendHex.keys().next().value);
+  _rendHex.set(key, hex);
+  return hex;
 }
 /* map the app's finish names onto the material model */
 const MAT_FINISH = {flat:"matte", matte:"matte", gloss:"gloss", lacquer:"lacquer",
@@ -4809,7 +4844,7 @@ function buildSVG(st, o={}){
     const url = materialURL(color, MAT_FINISH[finish] || "matte", matMode,
                             st.render.az, st.render.el, o.matPx || st.render.quality, gu,
                             stoneArgs(st, color),
-                            (surf.dome || surf.satin) ? surf : null, st.dial.brushDir);
+                            (surf.dome || surf.satin) ? surf : null, st.dial.brushDir, !!(st.render && st.render.asMade));
     if(!url) return null;
     const cid = id("mi");
     defs.push(`<clipPath id="${cid}"><path d="${rIn>0?annulus(rOut,rIn):disc(rOut)}" clip-rule="evenodd"/></clipPath>`);
@@ -16238,6 +16273,8 @@ body.guided .stage.gPhoto{ background:#fff }
 .gSw .on span{ color:var(--ds-text); font-weight:600 }
 .gSw label i{ border:1px dashed var(--ds-text-2); display:grid; place-items:center; font-style:normal; font-size:18px; color:var(--ds-text-2) }
 .gSw label i.own{ border:1px solid rgba(0,0,0,.15) }
+.gRendered{ display:flex; align-items:center; gap:6px } .gRendered i{ flex:none; width:22px; height:22px; border-radius:50%; border:1px solid rgba(0,0,0,.15) }
+.gRendered i + i{ margin-left:-12px }
 .gSw label i.own.pale{ border-color:#C7C7CC }
 .gSw label input{ position:absolute; inset:0; opacity:0; cursor:pointer; width:100%; height:100% }
 .gSw .gRecent{ width:auto; min-height:0; padding:0 6px 0 0; align-self:center; font-size:12px; color:var(--ds-text-2); cursor:default }
@@ -16649,6 +16686,8 @@ const GSTR = {en:{
   "prog": (name, n, total) => `<b>${name}</b><span> · <i>step </i>${n} of ${total}</span>`,
   "prog.aria": (name, n, total) => `${name}, step ${n} of ${total}. Show all steps`,
   "find.ph":"Find a setting", "find.none":"Nothing by that name in this design.",
+  "col.rendered":(hx, dl) => `As typed, and on the render under the studio light: ${hx} (${dl} in lightness).`,
+  "col.asMade":"Raises the light so the render shows the paint as it is, not as a lamp darkens it. The maker's sheet always gives the colour typed.",
   "case.bezelNote":"How the drawn case shows the bezel when the photograph is off: round, as Nivada's front drawing has it, or eight-sided, as the prototype and the photograph are.",
   "rs.title":"Research", "rs.fold":"Close the research", "rs.unfold":"Research behind the design",
   "rs.sum":(n, a) => `${n} reference${n === 1 ? "" : "s"} · ${a} name${a === 1 ? "" : "s"} to keep off`,
@@ -16839,6 +16878,8 @@ GSTR.ar = {
   "prog": (name, n, total) => `<b>${name}</b><span> · <i>الخطوة </i>${n} من ${total}</span>`,
   "prog.aria": (name, n, total) => `${name}، الخطوة ${n} من ${total}. عرض كل الخطوات`,
   "find.ph":"ابحث عن إعداد", "find.none":"ما في شي بهالاسم في هالتصميم.",
+  "col.rendered":(hx, dl) => `اللون مثل ما انكتب، ومثل ما يطلع في الصورة تحت إضاءة الاستوديو: ${hx} (${dl} في درجة الفتاحة).`,
+  "col.asMade":"يرفع الإضاءة عشان الصورة تبين الصبغ على حقيقته، مو مثل ما يغمّقه الضوء. ورقة المصنّع دايماً تعطي اللون المكتوب.",
   "case.bezelNote":"شكل البيزل في القالب المرسوم لما تكون الصورة مطفية: دائري مثل رسمة نيفادا، أو ثماني مثل النموذج والصورة.",
   "rs.title":"البحث", "rs.fold":"إغلاق البحث", "rs.unfold":"البحث وراء التصميم",
   "rs.sum":(n, a) => `${n} مرجع · ${a} اسم ممنوع`,
@@ -17070,7 +17111,7 @@ const GWORD = {ar:{
   "Extra high":"مرتفع جداً", "High":"مرتفع", "height:Standard":"عادي", "Window width":"عرض النافذة", "Narrow":"ضيقة", "Standard":"قياسية", "Wide":"عريضة",
   "Move them aside":"أزحهما جانباً", "Make them smaller":"صغّرهما", "Use markers":"ضع مؤشرين", "Leave them off":"احذفهما", "Let them touch":"اتركهما متلامسين",
   "Day font":"خط اليوم", "Arabic font":"الخط العربي", "English font":"الخط الإنجليزي", "In the window":"في النافذة", "Day disc":"قرص اليوم",
-  "Day lettering":"لون كتابة اليوم", "Window edge":"حافة النافذة", "Lume colour":"لون المادة المضيئة", "Lume fill":"تعبئة مضيئة", "Green-white":"أبيض مخضر", "Old radium":"راديوم قديم", "Vintage cream":"كريمي عتيق", "Five-minute marks":"علامات الخمس دقائق", "Run inward":"ممتدة للداخل", "Flared":"متسعة", "Gap at 6":"فراغ عند ٦", "Track width":"عرض المسار", "Rail weight":"وزن الخط", "Tick weight":"وزن العلامة", "Turn this hour":"اتجاه هذه الساعة", "Toward the centre":"نحو المركز", "On point":"على رأسه", "Across":"بالعرض", "Size of this hour":"حجم هذه الساعة", "Figure height":"ارتفاع الرقم", "Letter height":"ارتفاع الحروف", "Thin line":"خط رفيع", "Digit height":"ارتفاع الأرقام", "Bevelled cut":"قطع مشطوف", "Applied frame":"إطار مركّب", "Keep off the watch":"أسماء ممنوعة على الساعة", "Drawn bezel":"البيزل المرسوم", "As Nivada's drawing":"مثل رسمة نيفادا", "As the prototype":"مثل النموذج", "Hand heights":"ارتفاعات العقارب", "I have the maker's hand heights":"عندي ارتفاعات العقارب من المصنّع", "Windows":"النوافذ", "One window":"نافذة وحدة", "Big date":"تاريخ كبير", "Centre bar":"الفاصل الوسطي", "Dates 1 to 9":"التواريخ من ١ إلى ٩",
+  "Day lettering":"لون كتابة اليوم", "Window edge":"حافة النافذة", "Lume colour":"لون المادة المضيئة", "Lume fill":"تعبئة مضيئة", "Green-white":"أبيض مخضر", "Old radium":"راديوم قديم", "Vintage cream":"كريمي عتيق", "Five-minute marks":"علامات الخمس دقائق", "Run inward":"ممتدة للداخل", "Flared":"متسعة", "Gap at 6":"فراغ عند ٦", "Track width":"عرض المسار", "Rail weight":"وزن الخط", "Tick weight":"وزن العلامة", "Turn this hour":"اتجاه هذه الساعة", "Toward the centre":"نحو المركز", "On point":"على رأسه", "Across":"بالعرض", "Size of this hour":"حجم هذه الساعة", "Figure height":"ارتفاع الرقم", "Letter height":"ارتفاع الحروف", "Thin line":"خط رفيع", "Digit height":"ارتفاع الأرقام", "Bevelled cut":"قطع مشطوف", "Applied frame":"إطار مركّب", "Keep off the watch":"أسماء ممنوعة على الساعة", "Show the colour as made":"اعرض اللون مثل ما ينصنع", "Drawn bezel":"البيزل المرسوم", "As Nivada's drawing":"مثل رسمة نيفادا", "As the prototype":"مثل النموذج", "Hand heights":"ارتفاعات العقارب", "I have the maker's hand heights":"عندي ارتفاعات العقارب من المصنّع", "Windows":"النوافذ", "One window":"نافذة وحدة", "Big date":"تاريخ كبير", "Centre bar":"الفاصل الوسطي", "Dates 1 to 9":"التواريخ من ١ إلى ٩",
   "All seven days in the window":"أيام الأسبوع السبعة في النافذة", "The disc in order":"القرص بالترتيب",
   "Date window at 3":"نافذة التاريخ عند 3", "Magnifier":"المكبّر", "Digits":"الأرقام", "Date font":"خط التاريخ", "Date disc":"قرص التاريخ",
   "Date digits colour":"لون أرقام التاريخ", "Frame":"الإطار", "All window settings":"كل إعدادات النوافذ",
@@ -18360,6 +18401,14 @@ Object.assign(GWORD.ar, {
         const cl = classicOf(d.color);
         h += colourLine(d.color, cl ? " · " + esc2(gT("col.classic", cl[2])) : "");
         if(d.finish === "stone") h += `<p class="gNote">${gT("dial.stoneTint")}</p>`;
+        /* what the render makes of it under the studio light, beside it, and
+           the way to show it as made; the specification keeps the colour typed */
+        const rh = d.finish !== "stone" ? renderedDialHex(S) : null;
+        if(rh){
+          const dl = labOf(rh)[0] - labOf(d.color)[0];
+          h += `<p class="gColLine gRendered"><i style="background:${d.color}"></i><i style="background:${rh}"></i><span>${gT("col.rendered", rh, (dl >= 0 ? "+" : "−") + Math.abs(dl).toFixed(0))}</span></p>`;
+          h += toggle("render.asMade", "Show the colour as made", !!S.render.asMade) + `<p class="gNote">${gT("col.asMade")}</p>`;
+        }
         return h + more("dial", "All dial settings");
       }
       if(tab === "surface"){

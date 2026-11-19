@@ -200,6 +200,25 @@ stored in a design file do not change. In the full editor at laptop widths
 the toolbar sits tighter, and on a narrower window it takes a second row
 rather than pushing Share and Export off the screen.
 
+## Colour as made (v4.23.0)
+
+The shaded render lights the dial with a studio lamp (ambient 0.30, the key at
+52°), which lights a flat dial at 0.85 of full strength: a typed #F2ECDF came
+out #DAD5C9, and the challenge's designers typed lighter colours to make the
+render look right, colours that would have been made too light.
+
+- Dial › Colour now shows the colour as typed beside the colour **on the
+  render**, measured the way the review measured it (the dial alone, the median
+  of a clear ring), with the difference in lightness.
+- **Show the colour as made** (`render.asMade`) raises the light by that 0.85,
+  so a flat dial renders at its paint colour (#F2ECDF renders #F2ECDF in enamel,
+  within 3 levels in matte). The maker's sheet always gives the colour typed.
+  Off unless chosen, so saved designs look as they did.
+- Gloss, lacquer and enamel now carry a **clear coat** that shows: a soft
+  reflection of the studio's softbox across the dial on the light's side
+  (strength 0.10, 0.15 and 0.055). On a pale dial they no longer look matte.
+  This changes how those three finishes render.
+
 ## Export, and the F77's bezel (v4.22.0)
 
 - **Image size** is this device's choice and is kept (`wds:exportPx`), across

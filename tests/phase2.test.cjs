@@ -149,3 +149,21 @@ test('export polish (v4.22.0): the image size kept on the device, 2400 px on a p
   assert.equal(slugOf('***'), 'watch');
   assert.match(source, /const pngName = kind => kind === "template" \|\| kind === "front" \? `\$\{slug\(\)\}\.png` : `\$\{slug\(\)\}-\$\{kind\}\.png`;/);
 });
+
+test('colour as made (v4.23.0): the lamp\'s darkening undone on request, the rendered colour shown, and a clear coat that reads', () => {
+  // exposure raised by the flat dial's irradiance, only when asked
+  assert.match(source, /const expo = exposure\*\(opt\.asMade \? 1\/\(G\.ambient \+ \(1 - G\.ambient\)\*Math\.max\(0\.05, L\[2\]\)\) : 1\);/);
+  assert.match(source, /override: surf \|\| null, brush, asMade:!!made,/);
+  assert.match(source, /\(surf\.dome \|\| surf\.satin\) \? surf : null, st\.dial\.brushDir, !!\(st\.render && st\.render\.asMade\)\);/);
+  assert.match(source, /mode, az, el, px, CASE_SPEC\.dialD, made \? "made" : "",/, 'the cache keeps the two apart');
+  // the studio light: 0.30 ambient and the key at 52 degrees light a flat dial at 0.85
+  const k = 1 / (0.30 + 0.70 * Math.sin(52 * Math.PI / 180));
+  assert.ok(k > 1.15 && k < 1.2);
+  // the clear coats each have a sheen, matte none
+  for (const [f, v] of [['gloss', 0.10], ['lacquer', 0.15], ['enamel', 0.055]]) assert.match(source, new RegExp(`  ${f}: +\\{[^\\n]*sheen:${v}\\}`));
+  assert.doesNotMatch(source.match(/  matte: +\{[^\n]*\}/)[0], /sheen/);
+  // the Colour tab: as typed beside as rendered, and the switch
+  assert.match(source, /const rh = d\.finish !== "stone" \? renderedDialHex\(S\) : null;/);
+  assert.match(source, /toggle\("render\.asMade", "Show the colour as made", !!S\.render\.asMade\)/);
+  assert.match(source, /"col\.asMade":"Raises the light so the render shows the paint as it is, not as a lamp darkens it\. The maker's sheet always gives the colour typed\."/);
+});
