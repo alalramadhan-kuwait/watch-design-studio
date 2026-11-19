@@ -117,3 +117,22 @@ test('findability (v4.19.0): find a setting, folds kept, long rows wrapped, "+ A
   // a panel with more below fades at its foot
   assert.match(source, /function downEdge\(\)\{ body\.classList\.toggle\("down",/);
 });
+
+test('research board (v4.21.0): references in the design file, on the specification, and names kept off the watch', () => {
+  const vm = require('node:vm');
+  const ctx = vm.createContext({});
+  vm.runInContext(chunk('function researchHits(st, words){', '\n/* a big date') + 'this.r = researchHits;', ctx);
+  const hits = ctx.r;
+  const st = {text:{logo:'Nivada', line2:'TIME KEEPER', foot:'SWISS MADE'}, hHand:{style:'dauphine'}, numerals:{style:'Bodoni Moda'}, dial:{pattern:'clous'}, meta:{name:'Calatrava study'}};
+  assert.deepEqual(JSON.parse(JSON.stringify(hits(st, ['nivada', 'Bodoni']))), [{w:'nivada', where:'the logo'}, {w:'Bodoni', where:"the numerals' face"}]);
+  assert.equal(hits(st, ['Calatrava']).length, 0, "the design's own name is not on the watch");
+  assert.match(source, /add\(!hits\.length, 'Names kept off the watch',/);
+  assert.match(source, /"Names kept off the watch":\["text",/);
+  // kept in S.sheet.research: {refs:[{id, title, url, note}], avoid}
+  assert.match(source, /const r = \{id:v\("id"\), title:v\("title"\), url:v\("url"\), note:v\("note"\)\};/);
+  assert.match(source, /apply\("sheet\.research\.refs", refs\.slice\(0, 40\)\)/);
+  assert.match(source, /textIn\("sheet\.research\.avoid", "Keep off the watch", R\.avoid, gT\("rs\.avoidPh"\)\)/);
+  assert.match(source, /add\("Reference" \+ \(r\.id \? " " \+ r\.id : ""\),/);
+  // a link opens apart from the studio, never as a script
+  assert.match(source, /<a href="\$\{esc2\(\/\^https\?:\\\/\\\/\/i\.test\(r\.url\) \? r\.url : "https:\/\/" \+ r\.url\)\}" target="_blank" rel="noopener noreferrer"/);
+});

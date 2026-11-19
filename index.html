@@ -2227,7 +2227,7 @@ const APP_BUILD = "__BUILD__";
 /* The version people see, raised with every change that reaches them:
    major for a new way of working, minor for something new to do, patch for
    a fix. Shown on the watch screen, so any screenshot says which it was. */
-const APP_VERSION = "4.20.0";
+const APP_VERSION = "4.21.0";
 const APP_DATE = "__DATE__";
 
 /* Every route that replaces S passes through one of these three, which is
@@ -10733,6 +10733,18 @@ function lineCapK(text, font){
 /* The height of the date's digits as the window draws them when no digit
    height is set: 0.78 of the window (0.95 for Arabic-Indic) as the font
    size, times the ink height of the font's figures. */
+/* Where a name to keep off the watch turns up: in the dial's writing, or
+   in the name of a style chosen for it (a hand, a face, a pattern). */
+function researchHits(st, words){
+  const T = st.text || {}, nm = (o, k) => o && o[k] ? String(o[k]) : "";
+  const label = v => typeof glossOpt === "function" ? glossOpt(v) : v;
+  const places = [["the logo", nm(T, "logo")], ["the second line", nm(T, "line2")], ["the lower line", nm(T, "foot")], ["the text either side of 6", nm(T, "split")],
+    ["the hour hand's style", label(nm(st.hHand, "style"))], ["the minute hand's style", label(nm(st.mHand, "style"))], ["the seconds hand's style", label(nm(st.sHand, "style"))],
+    ["the numerals' face", nm(st.numerals, "style")], ["the dial pattern", label(nm(st.dial, "pattern"))]];
+  const out = [];
+  for(const w of words){ const lw = w.toLowerCase(); for(const [where, t] of places) if(t && t.toLowerCase().indexOf(lw) >= 0) out.push({w, where}); }
+  return out;
+}
 /* a big date's centre bar, and the size of the whole window from outside
    its frame or bevel: what the dial maker cuts, what the case must clear */
 function dateBar(dt){ return Math.max(0.3, Math.min(+dt.bar > 0 ? +dt.bar : 0.8, (dt.w || 0)*0.3)); }
@@ -15132,6 +15144,9 @@ function sheetSpec(st){
   { const hk = st.handSet && st.handSet.stack;
     if(hk && typeof handFitOf === "function" && handFitOf(st).source === "entered")
       add("Hand heights", "entered from the maker's data; used for the gem and raised-figure clearances", "", `pipes above the dial seat: hour ${mm(hk.h)}, minute ${mm(hk.m)}, seconds ${mm(hk.s)}mm`); }
+  /* the research behind it */
+  { const R = st.sheet && st.sheet.research, refs = R && Array.isArray(R.refs) ? R.refs.slice(0, 8) : [];
+    for(const r of refs) add("Reference" + (r.id ? " " + r.id : ""), `${r.title || ""}${r.note ? (r.title ? ": " : "") + r.note : ""}`, "", String(r.url || "").replace(/^https?:\/\//i, "").slice(0, 70)); }
   /* the lume, wherever it is used */
   const lumed = [["hHand","hour hand"],["mHand","minute hand"],["sHand","seconds hand"]].filter(([k]) => st[k] && st[k].on !== false && st[k].lume).map(x => x[1])
     .concat(plan.some(x => x === "index" || x === "indexAlt") && ix.lume ? ["indexes"] : []);
@@ -15758,6 +15773,9 @@ async function makeMakerPDF(){
     if(st.date.on)add(Math.hypot(st.date.dist+Math.max(st.date.w,st.date.h)/2,Math.min(st.date.w,st.date.h)/2)<=r,'Date window envelope','Conservative outer-corner estimate; verify movement date alignment separately.','date');
     /* A movement calendar is fixed, so the windows are checked against it. */
     const cal=(typeof caseOf==='function')?caseOf(st).calendar:null;
+    { const av = st.sheet && st.sheet.research && typeof st.sheet.research.avoid === "string" ? st.sheet.research.avoid.split(/[,،\n]/).map(w => w.trim()).filter(w => w.length > 1) : [];
+      if(av.length){ const hits = researchHits(st, av);
+        add(!hits.length, 'Names kept off the watch', hits.length ? hits.map(h => `“${h.w}” in ${h.where}`).join("; ") + ". Change it, or take the name off the list." : `None of ${av.map(w => "“" + w + "”").join(", ")} is on the dial or in the styles chosen.`, 'text'); } }
     if(st.date&&st.date.on&&st.date.big)add(!!(cal&&cal.bigDate),'Big date movement',cal&&cal.bigDate?`The ${CASE_SPEC.movement} carries a big-date module.`:`A big date needs separate tens and units discs, from a big-date module; the ${CASE_SPEC.movement||'movement'} has ${cal?'one date ring':'no date mechanism'}. Ask the maker for a movement with a big-date module${cal?', or use one window':''}.`,'date');
     if(cal&&st.date&&st.date.on&&!st.date.big){
       add(st.date.w<=cal.dateW+1e-6&&st.date.h<=cal.dateH+1e-6,'Date window size',`${f(st.date.w,2)} × ${f(st.date.h,2)} mm against the movement's ${f(cal.dateW,2)} × ${f(cal.dateH,2)} mm aperture; larger shows the ring edge or the next date.`,'date');
@@ -16314,6 +16332,13 @@ body.guided .stage.gPhoto{ background:#fff }
 .gList li small{ display:block; font-size:13px; color:var(--ds-text-2); font-weight:400 }
 .gList li small.w{ color:var(--g-warn-ink) }
 .gFindBar{ padding:2px 16px 8px; flex:none }
+.gRef{ display:flex; gap:8px; align-items:flex-start; padding:10px 0; border-bottom:1px solid var(--ds-border) }
+.gRef > div{ flex:1; min-width:0; font-size:14px; line-height:1.35 }
+.gRef small{ color:var(--ds-text-2) } .gRef p{ margin:2px 0; color:var(--ds-text-2) }
+.gRef a{ color:var(--ds-brand-ink, #6B5428); word-break:break-all; font-size:13px }
+.gRef button{ flex:none; width:44px; height:44px; border:0; background:none; color:var(--ds-text-2); font-size:16px; cursor:pointer }
+.gRefNew{ display:grid; gap:6px; margin:10px 0 4px }
+.gRefNew input{ min-height:44px; box-sizing:border-box; width:100%; border:1px solid var(--ds-border); border-radius:10px; padding:0 12px; font:400 16px var(--sans); color:var(--ds-text); background:var(--ds-panel) }
 .gFindIn{ width:100%; box-sizing:border-box; min-height:44px; border:1px solid var(--ds-border); border-radius:12px; padding:0 14px;
   font:400 16px var(--sans); color:var(--ds-text); background:var(--ds-fill, rgba(120,120,128,.08)) }
 .gList ul.gFind{ list-style:none; margin:0; padding:0 8px 12px; overflow-y:auto; flex:1 }
@@ -16584,6 +16609,11 @@ const GSTR = {en:{
   "prog": (name, n, total) => `<b>${name}</b><span> · <i>step </i>${n} of ${total}</span>`,
   "prog.aria": (name, n, total) => `${name}, step ${n} of ${total}. Show all steps`,
   "find.ph":"Find a setting", "find.none":"Nothing by that name in this design.",
+  "rs.title":"Research", "rs.fold":"Close the research", "rs.unfold":"Research behind the design",
+  "rs.sum":(n, a) => `${n} reference${n === 1 ? "" : "s"} · ${a} name${a === 1 ? "" : "s"} to keep off`,
+  "rs.del":"Remove this reference", "rs.titlePh":"Title, e.g. Ref. 2526, 1953", "rs.idPh":"Research id, e.g. R12", "rs.urlPh":"Link (auction, archive, article)",
+  "rs.notePh":"What it gives this design", "rs.add":"Add the reference", "rs.avoidPh":"e.g. Calatrava, Nautilus, Datograph",
+  "rs.note":"Kept in the design file and listed in the specification. The design check looks for the names to keep off in the dial's writing and in the names of the styles chosen.",
   "steps.all":"All steps", "steps.close":"Close", "steps.done":"Done", "steps.todo":"Not visited yet", "steps.here":"You are here",
   "next": name => `Next: ${name}`, "back":"Back", "done":"Done ✓",
   "tab.case.shape":"Watch", "tab.case.metal":"Metal and strap",
@@ -16768,6 +16798,11 @@ GSTR.ar = {
   "prog": (name, n, total) => `<b>${name}</b><span> · <i>الخطوة </i>${n} من ${total}</span>`,
   "prog.aria": (name, n, total) => `${name}، الخطوة ${n} من ${total}. عرض كل الخطوات`,
   "find.ph":"ابحث عن إعداد", "find.none":"ما في شي بهالاسم في هالتصميم.",
+  "rs.title":"البحث", "rs.fold":"إغلاق البحث", "rs.unfold":"البحث وراء التصميم",
+  "rs.sum":(n, a) => `${n} مرجع · ${a} اسم ممنوع`,
+  "rs.del":"احذف هالمرجع", "rs.titlePh":"العنوان، مثلاً Ref. 2526، 1953", "rs.idPh":"رقم البحث، مثلاً R12", "rs.urlPh":"الرابط (مزاد، أرشيف، مقال)",
+  "rs.notePh":"شنو يعطي هالتصميم", "rs.add":"أضف المرجع", "rs.avoidPh":"مثلاً Calatrava، Nautilus، Datograph",
+  "rs.note":"ينحفظ في ملف التصميم وينكتب في المواصفات. فحص التصميم يدوّر على الأسماء الممنوعة في كتابة الميناء وفي أسماء الأنماط المختارة.",
   "steps.all":"كل الخطوات", "steps.close":"إغلاق", "steps.done":"تمّت", "steps.todo":"لم تُفتح بعد", "steps.here":"أنت هنا",
   "next": name => `التالي: ${name}`, "back":"رجوع", "done":"تم ✓",
   "tab.case.shape":"الساعة", "tab.case.metal":"المعدن والحزام",
@@ -16993,7 +17028,7 @@ const GWORD = {ar:{
   "Extra high":"مرتفع جداً", "High":"مرتفع", "height:Standard":"عادي", "Window width":"عرض النافذة", "Narrow":"ضيقة", "Standard":"قياسية", "Wide":"عريضة",
   "Move them aside":"أزحهما جانباً", "Make them smaller":"صغّرهما", "Use markers":"ضع مؤشرين", "Leave them off":"احذفهما", "Let them touch":"اتركهما متلامسين",
   "Day font":"خط اليوم", "Arabic font":"الخط العربي", "English font":"الخط الإنجليزي", "In the window":"في النافذة", "Day disc":"قرص اليوم",
-  "Day lettering":"لون كتابة اليوم", "Window edge":"حافة النافذة", "Lume colour":"لون المادة المضيئة", "Lume fill":"تعبئة مضيئة", "Green-white":"أبيض مخضر", "Old radium":"راديوم قديم", "Vintage cream":"كريمي عتيق", "Five-minute marks":"علامات الخمس دقائق", "Run inward":"ممتدة للداخل", "Flared":"متسعة", "Gap at 6":"فراغ عند ٦", "Track width":"عرض المسار", "Rail weight":"وزن الخط", "Tick weight":"وزن العلامة", "Turn this hour":"اتجاه هذه الساعة", "Toward the centre":"نحو المركز", "On point":"على رأسه", "Across":"بالعرض", "Size of this hour":"حجم هذه الساعة", "Figure height":"ارتفاع الرقم", "Letter height":"ارتفاع الحروف", "Thin line":"خط رفيع", "Digit height":"ارتفاع الأرقام", "Bevelled cut":"قطع مشطوف", "Applied frame":"إطار مركّب", "Hand heights":"ارتفاعات العقارب", "I have the maker's hand heights":"عندي ارتفاعات العقارب من المصنّع", "Windows":"النوافذ", "One window":"نافذة وحدة", "Big date":"تاريخ كبير", "Centre bar":"الفاصل الوسطي", "Dates 1 to 9":"التواريخ من ١ إلى ٩",
+  "Day lettering":"لون كتابة اليوم", "Window edge":"حافة النافذة", "Lume colour":"لون المادة المضيئة", "Lume fill":"تعبئة مضيئة", "Green-white":"أبيض مخضر", "Old radium":"راديوم قديم", "Vintage cream":"كريمي عتيق", "Five-minute marks":"علامات الخمس دقائق", "Run inward":"ممتدة للداخل", "Flared":"متسعة", "Gap at 6":"فراغ عند ٦", "Track width":"عرض المسار", "Rail weight":"وزن الخط", "Tick weight":"وزن العلامة", "Turn this hour":"اتجاه هذه الساعة", "Toward the centre":"نحو المركز", "On point":"على رأسه", "Across":"بالعرض", "Size of this hour":"حجم هذه الساعة", "Figure height":"ارتفاع الرقم", "Letter height":"ارتفاع الحروف", "Thin line":"خط رفيع", "Digit height":"ارتفاع الأرقام", "Bevelled cut":"قطع مشطوف", "Applied frame":"إطار مركّب", "Keep off the watch":"أسماء ممنوعة على الساعة", "Hand heights":"ارتفاعات العقارب", "I have the maker's hand heights":"عندي ارتفاعات العقارب من المصنّع", "Windows":"النوافذ", "One window":"نافذة وحدة", "Big date":"تاريخ كبير", "Centre bar":"الفاصل الوسطي", "Dates 1 to 9":"التواريخ من ١ إلى ٩",
   "All seven days in the window":"أيام الأسبوع السبعة في النافذة", "The disc in order":"القرص بالترتيب",
   "Date window at 3":"نافذة التاريخ عند 3", "Magnifier":"المكبّر", "Digits":"الأرقام", "Date font":"خط التاريخ", "Date disc":"قرص التاريخ",
   "Date digits colour":"لون أرقام التاريخ", "Frame":"الإطار", "All window settings":"كل إعدادات النوافذ",
@@ -17033,6 +17068,7 @@ const G_CHECK_AR = {
   "Date window envelope":"نافذة التاريخ تمتد تحت الإطار.",
   "Date window size":"نافذة التاريخ أكبر من تاريخ المحرك.",
   "Big date movement":"التاريخ الكبير يحتاج محرك فيه وحدة تاريخ كبير.",
+  "Names kept off the watch":"اسم من قائمة الأسماء الممنوعة موجود على الميناء أو في اسم نمط مختار.",
   "Date window position":"نافذة التاريخ ليست حيث يُظهر المحرك التاريخ.",
   "Cyclops coverage":"المكبّر لا يغطي التاريخ كله.",
   "Day window arc":"نافذة اليوم أعرض من قرص اليوم.",
@@ -17180,6 +17216,7 @@ const G_CHECK_WORDS = {
   "Date window envelope":["calendar","The date window runs under the bezel."],
   "Date window size":["calendar","The date window is bigger than the movement's date."],
   "Big date movement":["calendar","A big date needs a movement with a big-date module."],
+  "Names kept off the watch":["text","A name on the research avoid-list is on the dial or in a style's name."],
   "Date window position":["calendar","The date window is not where the movement shows the date."],
   "Cyclops coverage":["calendar","The magnifier doesn't cover the whole date."],
   "Day window arc":["calendar","The day window is wider than the day disc."],
@@ -18559,6 +18596,7 @@ Object.assign(GWORD.ar, {
         <button type="button" data-gdo="refine">${gT("fin.refine")}</button></div></div>`;
       h += textIn("meta.name", "Name", S.meta.name, gT("eg.name"));
       h += makerBlock();
+      h += researchBlock();
       h += `<h3>${gT("fin.check")}</h3>` + checkSummary();
       /* Saving is the footer's "Done", so the tiles are what comes after it */
       h += `<h3>${gT("fin.keep")}</h3><div class="gActions">
@@ -18574,7 +18612,23 @@ Object.assign(GWORD.ar, {
      values stay in English, as the sheet does; the labels follow the
      language. Which versions stand beside this one, and which is the
      maker's last, are picked on the sheet's preview. */
-  let makerOpen = false;
+  let makerOpen = false, researchOpen = false;
+  /* The research behind the design, kept in its file: references (an id
+     from the research notes, a title, a link, why it matters) and the
+     names to keep off the watch, which the design check looks for. */
+  const research = () => { ensureSheet(S); const r = S.sheet.research;
+    return r && typeof r === "object" ? {refs:Array.isArray(r.refs) ? r.refs : [], avoid:typeof r.avoid === "string" ? r.avoid : ""} : {refs:[], avoid:""}; };
+  function researchBlock(){
+    const R = research();
+    let x = `<h3>${gT("rs.title")}</h3><button type="button" class="gMoreRow" data-gdo="researchFold" aria-expanded="${researchOpen}"><b>${researchOpen ? gT("rs.fold") : gT("rs.unfold")}</b><small>${esc2(gT("rs.sum", R.refs.length, R.avoid.split(",").map(w => w.trim()).filter(Boolean).length))}</small></button>`;
+    if(!researchOpen) return x;
+    if(!S.sheet.research || typeof S.sheet.research !== "object") S.sheet.research = {};
+    x += R.refs.map((r, i) => `<div class="gRef"><div><b>${esc2(r.title || r.id || "—")}</b>${r.id && r.title ? ` <small>${esc2(r.id)}</small>` : ""}${r.note ? `<p>${esc2(r.note)}</p>` : ""}${r.url ? `<a href="${esc2(/^https?:\/\//i.test(r.url) ? r.url : "https://" + r.url)}" target="_blank" rel="noopener noreferrer" dir="ltr">${esc2(r.url.replace(/^https?:\/\//i, "").slice(0, 60))}</a>` : ""}</div><button type="button" data-gdo="refDel" data-gi="${i}" aria-label="${esc2(gT("rs.del"))}">✕</button></div>`).join("");
+    x += `<div class="gRefNew"><input type="text" dir="auto" data-gref="title" placeholder="${esc2(gT("rs.titlePh"))}"><input type="text" dir="ltr" data-gref="id" placeholder="${esc2(gT("rs.idPh"))}"><input type="url" dir="ltr" data-gref="url" placeholder="${esc2(gT("rs.urlPh"))}" inputmode="url"><input type="text" dir="auto" data-gref="note" placeholder="${esc2(gT("rs.notePh"))}"><button type="button" class="gMore" data-gdo="refAdd">${gT("rs.add")}</button></div>`;
+    x += textIn("sheet.research.avoid", "Keep off the watch", R.avoid, gT("rs.avoidPh"));
+    x += `<p class="gNote">${gT("rs.note")}</p>`;
+    return x;
+  }
   function makerBlock(){
     ensureSheet(S);
     const sh = S.sheet, d = sheetInfo(S), sp = sheetStrap(S), K = caseOf(S), bare = Object.assign({}, S, {sheet:{}});
@@ -19213,6 +19267,20 @@ Object.assign(GWORD.ar, {
       if(d.gdo === "inkMore"){ inkMore = !inkMore; paint(); return; }
       if(d.gdo === "startAll"){ startAll = !startAll; paint(); return; }
       if(d.gdo === "makerFold"){ makerOpen = !makerOpen; paint(); return; }
+      if(d.gdo === "researchFold"){ researchOpen = !researchOpen; paint(); return; }
+      if(d.gdo === "refAdd" || d.gdo === "refDel"){
+        const R = research(), refs = R.refs.slice();
+        if(d.gdo === "refDel") refs.splice(+d.gi, 1);
+        else {
+          const v = k => { const el = body.querySelector(`[data-gref="${k}"]`); return el ? el.value.trim().slice(0, 300) : ""; };
+          const r = {id:v("id"), title:v("title"), url:v("url"), note:v("note")};
+          if(!r.title && !r.url && !r.id) return;
+          for(const k of Object.keys(r)) if(!r[k]) delete r[k];
+          refs.push(r);
+        }
+        if(!S.sheet.research || typeof S.sheet.research !== "object") S.sheet.research = {};
+        apply("sheet.research.refs", refs.slice(0, 40)); return;
+      }
       if(d.gdo === "refine"){ savedAs = ""; go(0); return; }
       if(d.gdo === "hourAll"){ if(pickHour === null) return; const k = S.markers.at[pickHour], cov = coveredHours(S);
         S.markers.at = S.markers.at.map((x, i) => cov.has(i || 12) ? x : k); syncMarkerFlags(S); commit(); paintAll(); return; }

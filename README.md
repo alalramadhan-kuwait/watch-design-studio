@@ -200,6 +200,22 @@ stored in a design file do not change. In the full editor at laptop widths
 the toolbar sits tighter, and on a narrower window it takes a second row
 rather than pushing Share and Export off the screen.
 
+## Research board (v4.21.0)
+
+Finish › **Research** keeps the research behind a design in its file
+(`sheet.research`): references, each with a research id (as in the challenge's
+`sources.json`), a title, a link (auction, archive, article) and what it gives
+the design, and a list of **names to keep off the watch**. The references are
+listed in the specification ("Reference R03 · Patek Philippe Ref. 2526, 1953:
+enamel dial, applied gold figures · phillips.com/…"). The design check adds
+**Names kept off the watch**: it looks for each name in the dial's writing (logo,
+second line, lower line, the text either side of 6) and in the names of the
+styles chosen (hands, numerals' face, dial pattern), and says where it found one.
+
+The Director's review also suggested renaming presets that carry other houses'
+names ("Royal Oak" hands, the "FPJ" face). Those were made by name on request,
+so they are unchanged; the avoid-list is the guardrail.
+
 ## The maker's hand heights (v4.20.0)
 
 Sellita publishes the SW240-1's hand fitting heights, so on the NOREL the gem
