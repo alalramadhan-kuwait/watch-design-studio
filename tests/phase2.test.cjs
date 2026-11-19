@@ -288,7 +288,7 @@ test('printed rehaut ring (v4.31.0): a ring outside the dial on the photograph, 
   assert.match(t, /r0 = openMM\/2 - 0\.02, r1 = RH\.outerD > openMM \? RH\.outerD\/2 : Math\.min\(openMM\/2 \+ 1\.05,/);
   assert.match(t, /if\(RH\.marks === "ticks"\)\{ const L = \(r1 - r0\)\*\(five \? 0\.62 : 0\.38\)/);
   assert.match(source, /<\/g>\$\{rehautOver\}\$\{gemOver\}/);
-  assert.match(source, /toggle\("rehaut\.on", "Printed ring outside the dial", !!\(S\.rehaut && S\.rehaut\.on\)\)/);
+  assert.match(source, /toggle\("rehaut\.on", "Outer chapter ring \(rehaut\)", !!\(S\.rehaut && S\.rehaut\.on\)\)/);
   assert.match(source, /chips\("rehaut\.marks", \[\["dots","Dots"\],\["ticks","Ticks"\],\["none","None"\]\]/);
-  assert.match(source, /if\(rh && rh\.on\) add\("Rehaut", `printed ring outside the dial/);
+  assert.match(source, /if\(rh && rh\.on\) add\("Outer chapter ring \(rehaut\)", `printed, between the dial and the bezel/);
 });
