@@ -141,9 +141,14 @@ def sdf_trace(g, level):
 # 1. every figure at the figure height, as lifted (or from the base font, the 3)
 shapes = {}
 for ch in '0123456789':
+    if ch in CFG.get('derive', {}): continue      # drawn from another figure, below
     g = shape(outlines[ch]) if ch in outlines else glyph_geom(gs, cmap[ord(ch)])
     if ch in TURN: g = affinity.rotate(g, TURN[ch], origin='centroid')
     shapes[ch], _ = to_units(g, H)
+
+# figures the dial does not show whole, drawn from another: {"6": ["9", 180]}
+for d, (src, ang) in CFG.get('derive', {}).items():
+    shapes[d], _ = to_units(affinity.rotate(shapes[src], ang, origin='centroid'), H)
 
 # 2. the set's weight: stems and hairlines of the figures printed at full size
 meas = {ch: strokes(g) for ch, g in shapes.items()}

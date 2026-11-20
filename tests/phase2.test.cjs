@@ -441,3 +441,13 @@ test('Max Bill Study, and tools to lift any dial (v4.37.0)', () => {
   assert.ok(!fs.readdirSync(path.join(dir, 'maxbill')).some(f => /\.(jpe?g)$/i.test(f)), 'the photograph is not kept');
   assert.match(fs.readFileSync(path.join(dir, 'build.py'), 'utf8'), /def spline_ring\(/, 'outlines fitted between their corners');
 });
+
+test('Lange 1815 Study (v4.38.0)', () => {
+  const dir = path.join(__dirname, '../tools/dial-font/lange');
+  for (const f of ['outlines.json', 'spec.json', 'face.json', 'lange.woff2', 'README.md']) assert.ok(fs.existsSync(path.join(dir, f)), f);
+  const b64 = fs.readFileSync(path.join(dir, 'lange.woff2')).toString('base64');
+  assert.ok(source.includes('"Lange 1815 Study":{family:"wdslange", seated:true, src:"data:font/woff2;base64,' + b64 + '"}'), 'the studio carries the face');
+  assert.deepEqual(JSON.parse(fs.readFileSync(path.join(dir, 'face.json'), 'utf8')).derive, { 6: ['9', 180] }, 'the 6, cut by the small seconds, drawn from the 9');
+  assert.match(fs.readFileSync(path.join(__dirname, '../tools/dial-font/build.py'), 'utf8'), /for d, \(src, ang\) in CFG\.get\('derive', \{\}\)\.items\(\):/);
+  assert.ok(!fs.readdirSync(dir).some(f => /\.(jpe?g|png)$/i.test(f)), 'the photograph is not kept');
+});

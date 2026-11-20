@@ -200,6 +200,15 @@ stored in a design file do not change. In the full editor at laptop widths
 the toolbar sits tighter, and on a narrower window it takes a second row
 rather than pushing Share and Export off the screen.
 
+## Lange 1815 Study (v4.38.0)
+
+A new numeral face, **Lange 1815 Study**: the A. Lange & Söhne 1815's
+high-contrast serif figures with ball terminals, lifted from the maker's own
+straight-on photograph (about 310 px a figure). The small seconds cuts the 6
+in half on every 1815, so the 6 is the 9 turned upside down, as the face pairs
+them; the build tool now draws such figures from another (`derive`). Every
+figure measured square; weight as printed. `tools/dial-font/lange/`.
+
 ## Max Bill Study, and tools to lift any dial's figures (v4.37.0)
 
 A new numeral face, **Max Bill Study**: the Junghans Max Bill's Bauhaus
