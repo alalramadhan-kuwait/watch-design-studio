@@ -377,8 +377,16 @@ test('the logo comes with the case (v4.36.0)', () => {
 });
 
 test('even figures (v4.36.1)', () => {
-  assert.match(source, /"FPJ":\{family:"wdsfpj", even:true, src:/, 'the traced FPJ figures are evened');
+  assert.match(source, /"FPJ":\{family:"wdsfpj", src:/, 'FPJ is even in the font itself since 4.36.2, so it needs no flag');
   assert.match(source, /if\(!F \|\| !F\.even \|\| drawnOutline \|\| arcSet\) return \(\) => 1;/, 'other fonts as they were');
   assert.match(source, /return label => \{ const m = inkMetrics\(famUsed, label\); return m && m\.h > 0 \? Math\.max\(1, Math\.min\(1\.6, top\/m\.h\)\) : 1; \};/, 'each brought to the tallest');
   assert.match(source, /const label = numeralLabel\(n, sys\), sc = sc0\*evenK\(label\), fz = fsz\*sc;/);
+});
+
+test('the FPJ font rebuilt: one figure height, clean outlines (v4.36.2)', () => {
+  const dir = path.join(__dirname, '../tools/fpj-font');
+  for (const f of ['rebuild.py', 'glyphs.py', 'specimen.py', 'fpj-traced.woff2', 'fpj.woff2', 'README.md']) assert.ok(fs.existsSync(path.join(dir, f)), f);
+  const b64 = fs.readFileSync(path.join(dir, 'fpj.woff2')).toString('base64');
+  assert.ok(source.includes('"FPJ":{family:"wdsfpj", src:"data:font/woff2;base64,' + b64 + '"'), 'the studio carries the rebuilt font');
+  assert.match(fs.readFileSync(path.join(dir, 'rebuild.py'), 'utf8'), /^H = 700 /m, 'one height for all ten');
 });

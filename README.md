@@ -200,6 +200,16 @@ stored in a design file do not change. In the full editor at laptop widths
 the toolbar sits tighter, and on a narrower window it takes a second row
 rather than pushing Share and Export off the screen.
 
+## The FPJ font rebuilt (v4.36.2)
+
+The fault was in the font, so the font is fixed: its ten figures are rebuilt
+from the photo trace at one height (700 units; the 7 had been 499 and the 8
+549), with the trace's ragged edges smoothed away and each figure keeping its
+weight as it is brought up to height. The tool, the original trace and the
+method are in `tools/fpj-font/`. Measured on Chocolat 77 at 2.95 mm, every
+figure is 2.95 to 2.96 mm straight from the font; the drawing-time evening of
+4.36.1 stays for any other font marked `even`, and FPJ no longer needs it.
+
 ## Even figures (v4.36.1)
 
 The FPJ numerals were traced at uneven heights: at one size the 7 came out
