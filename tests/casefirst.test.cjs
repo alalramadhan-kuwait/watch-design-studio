@@ -31,7 +31,8 @@ test('the Case step carries what Start did: your watches, the language, Start fr
   const block = chunk('  function watchesBlock(){', '\n  const VIEW = {');
   for (const s of ['data-gstart="${esc2(c.id)}"', 'data-glang="${l}"', 'id="gStartFrom" data-gdo="startAll"', 'gT("start.continue")', 'versions'])
     assert.ok(block.includes(s), s);
-  assert.match(guide, /return watchesBlock\(\) \+ `<h3>\$\{gT\("case\.cases"\)\}<\/h3>/);
+  assert.match(guide, /if\(tab === "designs"\) return watchesBlock\(\);/, 'every design on the Designs tab');
+  assert.match(guide, /return `<h3>\$\{gT\("case\.cases"\)\}<\/h3>/);
   // and Start from… is in More as well
   assert.match(guide, /slots\.prepend\(mobileStart\)/);
 });

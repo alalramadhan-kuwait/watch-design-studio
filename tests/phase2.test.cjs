@@ -87,7 +87,7 @@ test('findability (v4.19.0): find a setting, folds kept, long rows wrapped, "+ A
   // the search: every step's page and More sheet, as this design has them
   assert.match(source, /<input type="search" class="gFindIn" placeholder="\$\{esc2\(gT\("find\.ph"\)\)\}"/);
   assert.match(source, /function findPage\(out, i, x, tb\)\{/);
-  assert.match(source, /for\(const tb of \(tabs\.length \? tabs : \[null\]\)\)\{ if\(!\(x\.k === "case" && tb === "shape"\)\) findPage\(out, i, x, tb\); \}/);
+  assert.match(source, /for\(const tb of \(tabs\.length \? tabs : \[null\]\)\)\{ if\(!\(x\.k === "case" && \(tb === "shape" \|\| tb === "designs"\)\)\) findPage\(out, i, x, tb\); \}/);
   assert.match(source, /out\.push\(\{i, t:lab, where:x\.t \+ " › " \+ gW\(sec\.t\), sec:id, subs, p:/);
   assert.match(source, /if\(r\.tab\) subTab\[STEPS\[r\.i\]\.k\] = r\.tab;/, 'a result opens its tab');
   assert.match(source, /secOpen\.add\(r\.sec\); secShut\.delete\(r\.sec\);/, 'and its section of the sheet');
@@ -321,4 +321,23 @@ test('power reserve, small seconds, lance, alligator (v4.33.0)', () => {
   for (const t of ['Power reserve and the movement', 'Small seconds and the movement']) assert.ok(source.includes(t), t);
   const list = JSON.parse(fs.readFileSync(path.join(__dirname, '../concepts/index.json'), 'utf8'));
   assert.equal(list[0].id, 'chocolat-77', 'the newest concept first');
+});
+
+test('designs tab and the movement rule (v4.34.0)', () => {
+  assert.match(source, /if\(k === "case"\) return \["designs","shape","metal"\];/);
+  assert.match(source, /if\(tab === "designs"\) return watchesBlock\(\);/);
+  assert.match(source, /data-gdo="keep">\$\{gT\("start\.saveNow"\)\}/, 'Save beside what was saved');
+  assert.match(source, /powerReserve:\(\) => !!caseOf\(S\)\.powerReserve \|\| !!\(S\.power && S\.power\.on\)\}/);
+  assert.match(source, /"sub\.hand":\(\) => !!caseOf\(S\)\.smallSeconds \|\| !!\(S\.sub && S\.sub\.hand\),/);
+  assert.match(source, /\{id:"power", t:"Power reserve", src:"power", need:"powerReserve", needSay:"more\.noPower",/);
+  assert.ok(!/powerReserve:\s*true|smallSeconds:\s*true/.test(source), 'no case has such a movement yet; a test to change when one does');
+  // every concept keeps to what its movement drives
+  const list = JSON.parse(fs.readFileSync(path.join(__dirname, '../concepts/index.json'), 'utf8'));
+  for (const c of list) {
+    const st = JSON.parse(fs.readFileSync(path.join(__dirname, '../concepts', c.file), 'utf8'));
+    assert.ok(!(st.power && st.power.on), c.id + ': no power reserve');
+    assert.ok(!(st.sub && st.sub.hand), c.id + ': no small seconds');
+    if (st.case.model === 'Time Keeper × Nivada · F77') assert.ok(!(st.date && st.date.on), c.id + ': the P024 in the F77 has no date');
+  }
+  assert.match(fs.readFileSync(path.join(__dirname, '../CLAUDE.md'), 'utf8'), /Complications need a movement that drives them/);
 });

@@ -200,6 +200,22 @@ stored in a design file do not change. In the full editor at laptop widths
 the toolbar sits tighter, and on a narrower window it takes a second row
 rather than pushing Share and Export off the screen.
 
+## Designs tab; complications only with a movement that drives them (v4.34.0)
+
+- **Designs**, the first tab of the Case step, holds every design in one
+  place: the watches being made, what you saved (newest first, with
+  **Save this design** beside it), the studio's Concepts, and Start from…
+  for plain dials and studies. The case itself is chosen on the **Case** tab.
+- A complication is designed in only with a movement that drives it and is
+  known to fit the case (see `CLAUDE.md`). The Power reserve section and the
+  small seconds hand are offered only where the case's movement has them;
+  elsewhere the section says why. No case in the studio has such a movement
+  yet, so neither is offered.
+- The concepts follow the rule: Chocolat 77 keeps the Journe palette,
+  numerals, hands and strap and leaves out the power reserve and small
+  seconds, with a slim cream centre seconds as the P024 has; Basalt Nuit and
+  Nachtschrift lose their date windows, the P024 in the F77 having no date.
+
 ## Power reserve, small seconds hand, lance hands, alligator strap (v4.33.0)
 
 For dials laid out like a chronometer's, as in **Chocolat 77**:

@@ -65,7 +65,7 @@ test('long steps split into tabs, and empty tabs are left out', () => {
   assert.deepEqual([...G.gTabsFor('markers', {ix:true})], ['style','shape','made','size'], 'indices have a shape, not a font');
   assert.deepEqual([...G.gTabsFor('markers', {gems:true})], ['style','gems'], 'gems only');
   assert.deepEqual([...G.gTabsFor('markers', {})], ['style'], 'a clean dial');
-  assert.deepEqual([...G.gTabsFor('case')], ['shape','metal'], 'the Watch tab, then Metal and strap');
+  assert.deepEqual([...G.gTabsFor('case')], ['designs','shape','metal'], 'Designs, the Case, then Metal and strap');
   assert.deepEqual([...G.gTabsFor('finish')], []);
 });
 
@@ -134,8 +134,8 @@ test('the design check is put in plain words, on the step that fixes it', () => 
   assert.deepEqual(unworded, []);
 });
 
-test('simple mode is version 4.33.0 and the drawing code is not touched by its preview', () => {
-  assert.match(source, /const APP_VERSION = "4\.33\.0";/);
+test('simple mode is version 4.34.0 and the drawing code is not touched by its preview', () => {
+  assert.match(source, /const APP_VERSION = "4\.34\.0";/);
   // the preview's seconds-hand change is undone whatever happens while drawing
   const v = chunk('function viewSVG(){', 'function viewSVGOf(){');
   assert.match(v, /finally\{ S\.meta\.time = t; S\.sHand\.on = on; \}/);

@@ -143,12 +143,14 @@
     "markColor": "#EDEFF2"
   },
   "power": {
-    "on": true,
-    "at": 3.09,
-    "dist": 11.2,
-    "r": 7.4,
-    "empty": 310,
-    "full": 240,
+    "on": false,
+    "at": 3,
+    "dist": 10.8,
+    "r": 6,
+    "empty": 305,
+    "full": 235,
+    "value": 0.8,
+    "numSize": 0.62,
     "labels": [
       "56",
       "42",
@@ -156,11 +158,9 @@
       "14",
       "0"
     ],
-    "value": 0.62,
-    "color": "#4B2B1F",
+    "color": "",
     "ink": "#EDE7D6",
-    "handColor": "#F2E4C4",
-    "numSize": 0.78
+    "handColor": "#EDE7D6"
   },
   "sector": {
     "on": true,
@@ -285,16 +285,14 @@
     "color": "#8BB8E8"
   },
   "sub": {
-    "on": true,
-    "at": 7.3,
-    "dist": 5.7,
-    "diameter": 7,
-    "color": "#4B2B1F",
-    "ring": "#EDE7D6",
+    "on": false,
+    "at": 6,
+    "dist": 7.861,
+    "diameter": 9.434,
+    "color": "#D6D2C4",
+    "ring": "#84754E",
     "track": true,
-    "ticks": "60",
-    "hand": true,
-    "handColor": "#F2E4C4"
+    "hand": false
   },
   "date": {
     "on": false,
@@ -459,13 +457,13 @@
     "paint": true
   },
   "sHand": {
-    "on": false,
+    "on": true,
     "style": "stick",
-    "length": 13,
-    "width": 0.14,
-    "tail": 3.5,
+    "length": 12.6,
+    "width": 0.13,
+    "tail": 2.8,
     "boss": 0.9,
-    "color": "#D9A184",
+    "color": "#F2E4C4",
     "finish": "polished",
     "lume": false,
     "pommeD": 1.4,
@@ -473,11 +471,13 @@
     "ringW": 0.18,
     "tipW": 0.18,
     "taper": 0.7,
-    "material": "rose gold",
+    "material": "",
     "waist": 0.8,
     "reach": "free",
     "reachTrim": 1.03,
-    "stem": "solid"
+    "stem": "solid",
+    "secTip": "lollipop",
+    "paint": true
   },
   "sheet": {
     "designNo": "103277_4",
@@ -513,28 +513,11 @@
         {
           "id": "R1",
           "title": "F.P. Journe Chronomètre Souverain, rose gold, chocolate dial (the picture sent)",
-          "note": "Studied as closely as the studio draws it: the layout, the numerals, the hands, the palette. A private study; the maker’s own name is kept off the dial."
+          "note": "Taken: the chocolate dial with its centre guilloché, the turning serif numerals, the lance hands in cream, the rose gold and the tan alligator. Left out: the power reserve and the small seconds, which the Soprod P024 in this case does not drive. A private study; the maker’s own name is kept off the dial."
         }
       ],
       "avoid": "Journe, Invenit, Fecit, Souverain"
     }
   },
-  "markers": {
-    "perHour": true,
-    "at": [
-      "numeral",
-      "numeral",
-      "numeral",
-      "none",
-      "numeral",
-      "numeral",
-      "numeral",
-      "numeral",
-      "numeral",
-      "numeral",
-      "numeral",
-      "numeral"
-    ],
-    "dayClear": "move"
-  }
+  "markers": null
 }

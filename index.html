@@ -2244,7 +2244,7 @@ const APP_BUILD = "__BUILD__";
 /* The version people see, raised with every change that reaches them:
    major for a new way of working, minor for something new to do, patch for
    a fix. Shown on the watch screen, so any screenshot says which it was. */
-const APP_VERSION = "4.33.0";
+const APP_VERSION = "4.34.0";
 const APP_DATE = "__DATE__";
 
 /* Every route that replaces S passes through one of these three, which is
@@ -16773,6 +16773,8 @@ body.guided .stage.gPhoto{ background:#fff }
 /* where you are, on a phone: "Dial · step 2 of 7" and a numbered bar */
 .gProg{ display:none }
 .gTabs[hidden]{ display:none !important }
+.gSavedHead{ display:flex; align-items:center; justify-content:space-between; gap:10px }
+.gSavedHead .gGo{ flex:none; margin:0; min-height:40px; border:0; border-radius:11px; padding:0 14px; background:var(--ds-text); color:var(--ds-panel); font:600 14px/1.1 var(--sans); cursor:pointer }
 .gTabs{ display:flex; margin:2px 16px 8px; border-radius:12px; background:var(--ds-fill, rgba(120,120,128,.12)); flex:none; position:relative }
 .gTabs button{ flex:1 1 0; min-width:0; min-height:44px; border:0; background:none; padding:0 4px; position:relative;
   color:var(--ds-text-2); font:500 14px/1.15 var(--sans); cursor:pointer; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; z-index:1 }
@@ -17241,7 +17243,7 @@ const GSTR = {en:{
   "rs.note":"Kept in the design file and listed in the specification. The design check looks for the names to keep off in the dial's writing and in the names of the styles chosen.",
   "steps.all":"All steps", "steps.close":"Close", "steps.done":"Done", "steps.todo":"Not visited yet", "steps.here":"You are here",
   "next": name => `Next: ${name}`, "back":"Back", "done":"Done ✓",
-  "tab.case.shape":"Watch", "tab.case.metal":"Metal and strap",
+  "tab.case.designs":"Designs", "tab.case.shape":"Case", "tab.case.metal":"Metal and strap",
   "tab.dial.colour":"Colour", "tab.dial.surface":"Surface", "tab.dial.track":"Minute track",
   "tab.markers.style":"Style", "tab.markers.font":"Font", "tab.markers.shape":"Shape", "tab.markers.made":"Made by", "tab.markers.size":"Size", "tab.markers.gems":"Gems",
   "tab.hands.shape":"Shape", "tab.hands.seconds":"Seconds",
@@ -17254,7 +17256,9 @@ const GSTR = {en:{
   "start.today":"today", "start.yesterday":"yesterday",
   "start.from":"Start from…", "start.fromSub": n => `Start something new: a plain dial, a style or a saved version (${n})`,
   "start.fromHint":"A plain dial, a style or a saved version",
-  "start.versions": n => `Your versions (${n})`, "start.version":"Saved version",
+  "start.versions": n => `Saved by you (${n})`, "start.version":"Saved version",
+  "start.saveNow":"Save this design", "start.noneSaved":"Nothing saved yet. Save keeps the design on screen here, to come back to whenever you like.",
+  "more.noPower": mv => `The ${mv} in this case has no power reserve. A power reserve needs a movement that drives one and is known to fit this case; none is set up, so it is not offered.`,
   "start.loaded":"Loaded. Undo brings back the design before.", "start.fresh":"A plain dial. Undo brings back the design before.",
   "card.plain":"Plain dial", "card.plainSub":"Blank start", "card.norel":"NOREL B6098G-A1", "card.norelSub":"Powder blue",
   "card.gems":"NOREL · diamond hours", "card.gemsSub":"A diamond at each free hour",
@@ -17437,7 +17441,7 @@ GSTR.ar = {
   "rs.note":"ينحفظ في ملف التصميم وينكتب في المواصفات. فحص التصميم يدوّر على الأسماء الممنوعة في كتابة الميناء وفي أسماء الأنماط المختارة.",
   "steps.all":"كل الخطوات", "steps.close":"إغلاق", "steps.done":"تمّت", "steps.todo":"لم تُفتح بعد", "steps.here":"أنت هنا",
   "next": name => `التالي: ${name}`, "back":"رجوع", "done":"تم ✓",
-  "tab.case.shape":"الساعة", "tab.case.metal":"المعدن والحزام",
+  "tab.case.designs":"التصاميم", "tab.case.shape":"القالب", "tab.case.metal":"المعدن والحزام",
   "tab.dial.colour":"اللون", "tab.dial.surface":"السطح", "tab.dial.track":"مسار الدقائق",
   "tab.markers.style":"النوع", "tab.markers.font":"الخط", "tab.markers.shape":"الشكل", "tab.markers.made":"الصنع", "tab.markers.size":"المقاس", "tab.markers.gems":"الأحجار",
   "tab.hands.shape":"الشكل", "tab.hands.seconds":"الثواني",
@@ -17450,7 +17454,9 @@ GSTR.ar = {
   "start.today":"اليوم", "start.yesterday":"أمس",
   "start.from":"ابدأ من…", "start.fromSub": n => `ابدأ تصميماً جديداً: ميناء بسيط، أو طراز جاهز، أو نسخة محفوظة (${n})`,
   "start.fromHint":"ميناء بسيط، أو طراز جاهز، أو نسخة محفوظة",
-  "start.versions": n => `نسخك (${n})`, "start.version":"نسخة محفوظة",
+  "start.versions": n => `اللي حفظته (${n})`, "start.version":"نسخة محفوظة",
+  "start.saveNow":"احفظ هالتصميم", "start.noneSaved":"ما في شي محفوظ للحين. «احفظ» يخلي التصميم اللي قدامك هني، ترجع له متى ما تبي.",
+  "more.noPower": mv => `محرك ${mv} اللي في هالقالب ما فيه احتياطي طاقة. احتياطي الطاقة يبيله محرك يشغّله ونعرف إنه يركب في هالقالب، وما عندنا محرك جذي، فما نعرضه.`,
   "start.loaded":"فُتح التصميم. زر التراجع يعيد التصميم السابق.", "start.fresh":"ميناء بسيط. زر التراجع يعيد التصميم السابق.",
   "card.plain":"ميناء بسيط", "card.plainSub":"بداية فارغة", "card.norel":"NOREL B6098G-A1", "card.norelSub":"أزرق بودرة",
   "card.gems":"NOREL · ألماس عند الساعات", "card.gemsSub":"ماسة عند كل ساعة خالية",
@@ -17744,7 +17750,7 @@ const gResumeStep = (rec, now, steps) => (rec && rec.step > 0 && rec.step < (ste
    would be empty is left out. */
 function gTabsFor(k, o){
   o = o || {};
-  if(k === "case") return ["shape","metal"];
+  if(k === "case") return ["designs","shape","metal"];
   if(k === "dial") return ["colour","surface","track"];
   if(k === "hands") return ["shape","seconds"];
   if(k === "text") return ["logo","lines","colour"];
@@ -17925,7 +17931,7 @@ const G_MORE = {
         "borders.bands.#.angle","borders.bands.#.metal","borders.bands.#.color","act:borderDel:#","act:borderAdd"]},
     {id:"cross", t:"Crosshair", src:"cross", on:"cross.on", onLabel:"Show the crosshair", paths:["cross.length","cross.width","cross.color"]},
     {id:"sub", t:"Sub-dial", src:"sub", on:"sub.on", onLabel:"Show the sub-dial", paths:["sub.at","sub.dist","sub.diameter","sub.color","sub.ring","sub.track","sub.ticks","sub.hand","sub.handColor"]},
-    {id:"power", t:"Power reserve", src:"power", on:"power.on", onLabel:"Show a power reserve", paths:["power.at","power.dist","power.r","power.empty","power.full","power.value","power.numSize","power.color","power.ink","power.handColor"]}],
+    {id:"power", t:"Power reserve", src:"power", need:"powerReserve", needSay:"more.noPower", on:"power.on", onLabel:"Show a power reserve", paths:["power.at","power.dist","power.r","power.empty","power.full","power.value","power.numSize","power.color","power.ink","power.handColor"]}],
   markers:[
     {id:"layout", t:"Numeral layout", src:"numerals", show:"numerals.on", paths:["numerals.system","numerals.set","numerals.heightMM","numerals.gap",
       "numerals.radius","numerals.orient","numerals.align","numerals.arc","numerals.slant"]},
@@ -18714,13 +18720,18 @@ Object.assign(GWORD.ar, {
   const secOpen = foldSet("so"), secShut = foldSet("ss"), subOpen = foldSet("bo"), subShut = foldSet("bs");
   const saveFolds = () => { try { localStorage.setItem(FOLD_KEY, JSON.stringify({so:[...secOpen], ss:[...secShut], bo:[...subOpen], bs:[...subShut]})); } catch(e){} };
   const MORE_NEED = {photo:() => !!(S.tpl.on && tplAvail(S)), upload:() => !!(S.tpl.on && tplAvail(S) && !caseOf(S).photoFile),
-    calendar:() => !!caseOf(S).calendar};
+    calendar:() => !!caseOf(S).calendar,
+    /* a complication is offered only where the case's movement drives it;
+       one already on can still be turned off */
+    powerReserve:() => !!caseOf(S).powerReserve || !!(S.power && S.power.on)};
   const hasSheet = k => !!(G_MORE[k] && G_MORE[k].length);
   /* Two settings the full editor always shows that only some designs use:
      the slant of the drawn numeral sets, and the spacing of a typed logo.
      Elsewhere they would be controls that move nothing. */
   const MORE_ONLY = {"numerals.slant":() => S.numerals.system === "western 0–9" && /^(vernoy|breguet)$/.test(S.numerals.style),
-    "text.logoTrack":() => !S.text.logoMark || S.text.logoMark === "none"};
+    "text.logoTrack":() => !S.text.logoMark || S.text.logoMark === "none",
+    "sub.hand":() => !!caseOf(S).smallSeconds || !!(S.sub && S.sub.hand),
+    "sub.handColor":() => !!(S.sub && S.sub.hand)};
   /* where the full editor opens from a sheet, and what the link says */
   const FULL_AT = {case:["case","All case settings"], dial:["dial","All dial settings"], markers:["numerals","All marker settings"],
     hands:["hands","All hand settings"], text:["text","All text settings"], calendar:["date","All window settings"]};
@@ -18783,7 +18794,11 @@ Object.assign(GWORD.ar, {
      A path already shown higher up the sheet is not shown twice. */
   function moreSection(k, sec, used, first){
     if(sec.show && !get(S, sec.show)) return "";
-    if(sec.need && !MORE_NEED[sec.need]()) return "";
+    if(sec.need && !MORE_NEED[sec.need]()){
+      if(!sec.needSay) return "";
+      const mv = caseOf(S).movement || "?";
+      return `<details class="gMsec" data-gmsec="${k}:${sec.id}"><summary><span>${esc2(gW(sec.t))}</span><small>${esc2(gT("more.off"))}</small></summary><div class="gMsecB"><p class="gNote">${esc2(gT(sec.needSay, mv))}</p></div></details>`;
+    }
     const want = new Set(sec.paths), id = k + ":" + sec.id, on = sec.on ? !!get(S, sec.on) : true;
     let n = 0;
     const walk = (list, depth) => list.map(fd => {
@@ -18907,22 +18922,26 @@ Object.assign(GWORD.ar, {
       + `<div class="gSub">${rec.at ? esc2(gT("start.edited", when(rec.at), STEPS[back].t)) : ""}</div>`
       + `<button type="button" class="gGo" data-gcontinue="${back}">${gT("start.continue")}</button></div></div>`;
     if(ours.length) h += (back || first ? `<h3>${gT("start.yours")}</h3>` : "") + `<div class="gCards">${ours.map(card).join("")}</div>`;
+    const vers = (versions || []).map((v,i) => ({id:"v:"+i, name:v.name, sub:v.at ? when(v.at) : gT("start.version"), st:v.state ? migrateHands(deep(BASE, v.state)) : null})).filter(c => c.st).reverse();
+    h += `<div class="gSavedHead"><h3>${gT("start.versions", vers.length)}</h3><button type="button" class="gGo" data-gdo="keep">${gT("start.saveNow")}</button></div>`
+      + (vers.length ? `<div class="gCards">${vers.map(card).join("")}</div>` : `<p class="gNote">${gT("start.noneSaved")}</p>`);
     if(conceptRefs.length) h += `<h3>${gT("start.concepts")}</h3><div class="gCards">${conceptRefs.map(c => card({id:c.id, name:c.name, sub:c.sub, st:migrateHands(deep(BASE, c.ref))})).join("")}</div>`;
     /* everything else to start from, folded away until asked for */
     if(noreRef) cards.push({id:"norel-gems", name:gT("card.gems"), sub:gT("card.gemsSub"), st:gemExample("gems")},
                            {id:"norel-pave", name:gT("card.pave"), sub:gT("card.paveSub"), st:gemExample("pave")});
     for(const n of Object.keys(PRESETS)) if(n !== "Standard" && n !== VERNOY_DESIGN) cards.push({id:"p:"+n, name:n.replace(/^Vernoy — /,""), sub:n.startsWith("Vernoy") ? gT("card.vernoy") : gT("card.study"), st:migrateHands(deep(BASE, PRESETS[n]))});
-    const vers = (versions || []).map((v,i) => ({id:"v:"+i, name:v.name, sub:gT("start.version"), st:v.state ? migrateHands(deep(BASE, v.state)) : null})).filter(c => c.st);
-    h += `<button type="button" class="gStartRow${startAll ? " on" : ""}" id="gStartFrom" data-gdo="startAll" aria-expanded="${startAll}"><span><b>${gT("start.from")}</b><small>${gT("start.fromSub", cards.length + 1 + vers.length)}</small></span><i aria-hidden="true">${startAll ? "⌃" : "›"}</i></button>`;
+    h += `<button type="button" class="gStartRow${startAll ? " on" : ""}" id="gStartFrom" data-gdo="startAll" aria-expanded="${startAll}"><span><b>${gT("start.from")}</b><small>${gT("start.fromSub", cards.length + 1)}</small></span><i aria-hidden="true">${startAll ? "⌃" : "›"}</i></button>`;
     if(startAll){
       h += `<div class="gCards all">${[{id:"fresh", name:gT("card.plain"), sub:gT("card.plainSub"), st:freshState()}].concat(cards).map(card).join("")}</div>`;
-      if(vers.length) h += `<h3>${gT("start.versions", vers.length)}</h3><div class="gCards all">${vers.map(card).join("")}</div>`;
     }
     return h;
   }
   const VIEW = {
     case(tab){
       const K = caseOf(S);
+      /* every design in one place: the watches being made, the studio's
+         concepts and the versions saved here, with Save at hand */
+      if(tab === "designs") return watchesBlock();
       if(tab === "shape"){
         /* each case is shown wearing this dial, the way picking it would leave it */
         const pic = m => {
@@ -18935,7 +18954,7 @@ Object.assign(GWORD.ar, {
         const name = {[VERNOY_CASE.model]:["case.vernoy","case.vernoySub"], [NOREL_R3.model]:["case.r3","case.r3Sub"], [NOREL_D.model]:["case.d","case.dSub"], [NOREL_R4.model]:["case.norel","case.norelSub"], [TK_NIVADA.model]:["case.tk","case.tkSub"]};
         const card = m => `<button type="button" class="gCard ${m===K.model?"on":""}" data-gcase="${esc2(m)}" title="${esc2(m)}"><div class="gPic">${pic(m)}</div><div class="gName">${esc2(name[m] ? gT(name[m][0]) : m)}</div><div class="gSub">${esc2(name[m] ? gT(name[m][1]) : "")}</div></button>`;
         const now = [NOREL_R4.model, TK_NIVADA.model, VERNOY_CASE.model].filter(m => CASE_MODELS.indexOf(m) >= 0), earlier = CASE_MODELS.filter(m => now.indexOf(m) < 0);
-        return watchesBlock() + `<h3>${gT("case.cases")}</h3><div class="gCards">${now.map(card).join("")}</div>`
+        return `<h3>${gT("case.cases")}</h3><div class="gCards">${now.map(card).join("")}</div>`
           + (earlier.length ? `<h3>${gT("case.earlier")}</h3><div class="gCards">${earlier.map(card).join("")}</div>` : "");
       }
       let h = `<h3>${gT("case.metal")}</h3>` + metalRow();
@@ -19778,7 +19797,7 @@ Object.assign(GWORD.ar, {
     STEPS.forEach((x, i) => {
       out.push({i, t:x.t, where:x.lead || ""});
       const tabs = tabsOf(x.k);
-      for(const tb of (tabs.length ? tabs : [null])){ if(!(x.k === "case" && tb === "shape")) findPage(out, i, x, tb); }
+      for(const tb of (tabs.length ? tabs : [null])){ if(!(x.k === "case" && (tb === "shape" || tb === "designs"))) findPage(out, i, x, tb); }
       for(const sec of (G_MORE[x.k] || [])){
         try{
           if(sec.show && !get(S, sec.show)) continue;
@@ -20002,6 +20021,7 @@ Object.assign(GWORD.ar, {
       if(d.gdo === "refine"){ savedAs = ""; go(0); return; }
       if(d.gdo === "hourAll"){ if(pickHour === null) return; const k = S.markers.at[pickHour], cov = coveredHours(S);
         S.markers.at = S.markers.at.map((x, i) => cov.has(i || 12) ? x : k); syncMarkerFlags(S); commit(); paintAll(); return; }
+      if(d.gdo === "keep"){ keepDesign(); return; }
       ({save:()=>click("#save"), export:()=>click("#exp"), share:()=>{ if(document.querySelector("#share")) click("#share"); else click("#exp"); }, "3d":()=>click("#open-relief"),
         compare:()=>click("#compare"), spec:()=>click('[data-atelier="spec"]'), check:()=>click('[data-atelier="check"]'), maker:()=>openMakerSheet(), numart:()=>makeNumArtPDF(), dialart:()=>makeDialArtPDF()}[d.gdo] || (()=>{}))();
     }
@@ -20058,6 +20078,14 @@ Object.assign(GWORD.ar, {
     /* the seconds hand is a fine needle on every one of these watches, whatever shape the hour and minute take */
     if(S.sHand && hs !== "day-date" && hs !== "royal-oak" && hs !== "f77"){ if(S.sHand.secTip === "match"){ S.sHand.style = hs; } else if(S.sHand.style !== "dd-seconds" && S.sHand.style !== "ro-seconds" && S.sHand.style !== "f77-seconds"){ S.sHand.style = "stick"; if(!(S.sHand.width <= 0.35)) S.sHand.width = 0.16; } }
     commit(); paintAll();
+  }
+  /* Save on the Designs tab: kept under the design's name and a number,
+     and shown at once among the saved designs */
+  function keepDesign(){
+    const nm = q("#saveName");
+    if(typeof doSaveVersion !== "function" || !nm){ const sv = document.getElementById("save"); if(sv) sv.click(); return; }
+    nm.value = ((S.meta.name || "My watch") + " " + String(versions.length + 1).padStart(2, "0")).trim();
+    Promise.resolve(doSaveVersion()).then(() => paint(), () => paint());
   }
   /* Done on the Finish step keeps a version under the name above, then
      offers what usually comes next. */
@@ -20174,7 +20202,7 @@ Object.assign(GWORD.ar, {
   mobileStart.onclick = () => {
     const mm = document.getElementById("mMore"); if(mm){ mm.classList.remove("open"); mm.style.display = "none"; }
     if(mode !== "guided") setMode("guided");
-    subTab.case = "shape"; startAll = true;
+    subTab.case = "designs"; startAll = true;
     if(step !== 0) go(0); else paint();
     const row = document.getElementById("gStartFrom"); if(row) row.scrollIntoView({block:"start"});
   };
