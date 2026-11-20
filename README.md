@@ -200,6 +200,14 @@ stored in a design file do not change. In the full editor at laptop widths
 the toolbar sits tighter, and on a narrower window it takes a second row
 rather than pushing Share and Export off the screen.
 
+## Reverso Study (v4.39.0)
+
+A new numeral face, **Reverso Study**: the Jaeger-LeCoultre Reverso's Art Deco
+figures, bold with flared stroke ends, lifted from the maker's own
+straight-on photograph of the Reverso Classic Monoface (8000 px, about 210 px
+a figure). No sub-dial, so all ten figures are the watch's own; every figure
+measured square; weight as printed. `tools/dial-font/reverso/`.
+
 ## Lange 1815 Study (v4.38.0)
 
 A new numeral face, **Lange 1815 Study**: the A. Lange & Söhne 1815's

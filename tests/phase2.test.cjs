@@ -451,3 +451,12 @@ test('Lange 1815 Study (v4.38.0)', () => {
   assert.match(fs.readFileSync(path.join(__dirname, '../tools/dial-font/build.py'), 'utf8'), /for d, \(src, ang\) in CFG\.get\('derive', \{\}\)\.items\(\):/);
   assert.ok(!fs.readdirSync(dir).some(f => /\.(jpe?g|png)$/i.test(f)), 'the photograph is not kept');
 });
+
+test('Reverso Study (v4.39.0)', () => {
+  const dir = path.join(__dirname, '../tools/dial-font/reverso');
+  for (const f of ['outlines.json', 'spec.json', 'face.json', 'reverso.woff2', 'README.md']) assert.ok(fs.existsSync(path.join(dir, f)), f);
+  const b64 = fs.readFileSync(path.join(dir, 'reverso.woff2')).toString('base64');
+  assert.ok(source.includes('"Reverso Study":{family:"wdsreverso", seated:true, src:"data:font/woff2;base64,' + b64 + '"}'), 'the studio carries the face');
+  assert.deepEqual(Object.keys(JSON.parse(fs.readFileSync(path.join(dir, 'outlines.json'), 'utf8'))).sort(), ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'], 'all ten from the watch');
+  assert.ok(!fs.readdirSync(dir).some(f => /\.(jpe?g|png)$/i.test(f)), 'the photograph is not kept');
+});
