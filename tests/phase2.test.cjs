@@ -430,3 +430,14 @@ test('FPJ, the numerals new designs start in (v4.36.6)', () => {
   const st = tk.state || tk;
   assert.equal(st.numerals.system, 'arabic ٠–٩', 'the Time Keeper × Nivada keeps its Arabic figures'); assert.equal(st.numerals.style, 'Noto Naskh Arabic');
 });
+
+test('Max Bill Study, and tools to lift any dial (v4.37.0)', () => {
+  const dir = path.join(__dirname, '../tools/dial-font');
+  for (const f of ['dial.py', 'lift.py', 'build.py', 'maxbill/outlines.json', 'maxbill/face.json', 'maxbill/spec2.json', 'maxbill/maxbill.woff2', 'maxbill/README.md']) assert.ok(fs.existsSync(path.join(dir, f)), f);
+  const b64 = fs.readFileSync(path.join(dir, 'maxbill/maxbill.woff2')).toString('base64');
+  assert.ok(source.includes('"Max Bill Study":{family:"wdsmaxbill", seated:true, src:"data:font/woff2;base64,' + b64 + '"}'), 'the studio carries the face');
+  const o = JSON.parse(fs.readFileSync(path.join(dir, 'maxbill/outlines.json'), 'utf8'));
+  assert.deepEqual(Object.keys(o).sort(), ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'], 'all ten figures from the watch');
+  assert.ok(!fs.readdirSync(path.join(dir, 'maxbill')).some(f => /\.(jpe?g)$/i.test(f)), 'the photograph is not kept');
+  assert.match(fs.readFileSync(path.join(dir, 'build.py'), 'utf8'), /def spline_ring\(/, 'outlines fitted between their corners');
+});

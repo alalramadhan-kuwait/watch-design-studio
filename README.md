@@ -200,6 +200,19 @@ stored in a design file do not change. In the full editor at laptop widths
 the toolbar sits tighter, and on a narrower window it takes a second row
 rather than pushing Share and Export off the screen.
 
+## Max Bill Study, and tools to lift any dial's figures (v4.37.0)
+
+A new numeral face, **Max Bill Study**: the Junghans Max Bill's Bauhaus
+figures, lifted from a photograph of the watch. The photograph was taken at an
+angle, so the dial is first straightened through the printed minute numbers
+round its edge (they sit on one circle at known angles), then each figure is
+lifted upright, the dust on the crystal filtered out, the 0 the hour hand
+partly covers rebuilt from its symmetric half, and the outlines fitted with
+smooth curves between their corners, so there are no wedges. One height,
+weight as printed. The tools are general, for the faces that follow:
+`tools/dial-font/` (`dial.py` straightens a dial, `lift.py` lifts its figures,
+`build.py` makes the font from a short settings file per watch).
+
 ## FPJ, the numerals new designs start in (v4.36.6)
 
 A new design (Start from… › Plain dial) starts with the FPJ figures as its
