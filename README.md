@@ -200,6 +200,14 @@ stored in a design file do not change. In the full editor at laptop widths
 the toolbar sits tighter, and on a narrower window it takes a second row
 rather than pushing Share and Export off the screen.
 
+## FPJ, the numerals new designs start in (v4.36.6)
+
+A new design (Start from… › Plain dial) starts with the FPJ figures as its
+numerals, so they are what appears when numerals are turned on. A design
+switched to Western figures in a face that cannot draw them turns to FPJ too.
+Designs already made keep their own numerals: the Time Keeper × Nivada keeps
+its Arabic figures in Naskh. The default is `DEFAULT_NUMERAL_FONT`.
+
 ## FPJ figures retraced from the watch (v4.36.5)
 
 The figures are lifted again from a clear photograph of the Journe dial, each

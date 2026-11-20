@@ -421,3 +421,12 @@ test('FPJ figures retraced from the watch (v4.36.5)', () => {
   assert.deepEqual(JSON.parse(fs.readFileSync(path.join(dir, 'turn.json'), 'utf8')), { 1: -2.6, 8: 1.8 });
   assert.ok(!fs.existsSync(path.join(dir, 'journe.jpg')), 'the photograph is not kept in the repository');
 });
+
+test('FPJ, the numerals new designs start in (v4.36.6)', () => {
+  assert.match(source, /const DEFAULT_NUMERAL_FONT = "FPJ";/);
+  assert.match(source, /S\.numerals\.system = "western 0–9"; S\.numerals\.style = DEFAULT_NUMERAL_FONT; \}/, 'a new design starts in FPJ');
+  assert.match(source, /S\.numerals\.style = ok\.indexOf\(DF\) >= 0 \? DF : ok\[0\] \|\| "vernoy";/, 'Western figures turn to FPJ when the face cannot draw them');
+  const tk = JSON.parse(fs.readFileSync(path.join(__dirname, '../designs/timekeeper-nivada.json'), 'utf8'));
+  const st = tk.state || tk;
+  assert.equal(st.numerals.system, 'arabic ٠–٩', 'the Time Keeper × Nivada keeps its Arabic figures'); assert.equal(st.numerals.style, 'Noto Naskh Arabic');
+});

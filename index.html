@@ -2275,7 +2275,7 @@ const APP_BUILD = "__BUILD__";
 /* The version people see, raised with every change that reaches them:
    major for a new way of working, minor for something new to do, patch for
    a fix. Shown on the watch screen, so any screenshot says which it was. */
-const APP_VERSION = "4.36.5";
+const APP_VERSION = "4.36.6";
 const APP_DATE = "__DATE__";
 
 /* Every route that replaces S passes through one of these three, which is
@@ -3298,6 +3298,9 @@ function fontHasGlyph(family, ch){
   }catch(e){ return true; }
 }
 /* which styles can actually carry the chosen numeral system */
+/* the numeral face a design starts in, and the one Western figures turn to:
+   the FPJ figures, retraced from the watch */
+const DEFAULT_NUMERAL_FONT = "FPJ";
 function stylesFor(sys){
   const out = [];
   if(sys === "western 0–9") out.push("vernoy", "breguet");   // drawn outlines, western only
@@ -12726,8 +12729,10 @@ function fieldChosen(p){
     S.text.plateTint = (METALS[S.text.plateMetal] || METALS["polished steel"]).base;
   if(p === "numerals.system"){
     const ok = stylesFor(S.numerals.system);
-    if(ok.indexOf(S.numerals.style) < 0)
-      S.numerals.style = ok[0] || "vernoy";        // keep a valid pairing
+    if(ok.indexOf(S.numerals.style) < 0){
+      const DF = typeof DEFAULT_NUMERAL_FONT === "string" ? DEFAULT_NUMERAL_FONT : "FPJ";
+      S.numerals.style = ok.indexOf(DF) >= 0 ? DF : ok[0] || "vernoy";        // keep a valid pairing, FPJ first
+    }
   }
   if(p === "dial.stone"){
     applyFamilyDefaults(S.dial.stone);
@@ -19494,6 +19499,9 @@ Object.assign(GWORD.ar, {
       S = migrateHands(deep(BASE, PRESETS.Standard));
       const m = keep.case && keep.case.model;
       if(m && m !== S.case.model){ const from = S.case.model; S.case.model = m; applyCaseModel(from, m); }
+      /* a new design's figures, when they are turned on, are the FPJ figures */
+      if((S.numerals.system || "western 0–9") === "western 0–9" && stylesFor("western 0–9").indexOf(DEFAULT_NUMERAL_FONT) >= 0){
+        S.numerals.system = "western 0–9"; S.numerals.style = DEFAULT_NUMERAL_FONT; }
       st = S;
     }finally{ S = keep; }
     return st;
