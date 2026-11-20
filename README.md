@@ -200,6 +200,15 @@ stored in a design file do not change. In the full editor at laptop widths
 the toolbar sits tighter, and on a narrower window it takes a second row
 rather than pushing Share and Export off the screen.
 
+## Even figures (v4.36.1)
+
+The FPJ numerals were traced at uneven heights: at one size the 7 came out
+2.10 mm tall and the 8 2.32 mm against 2.95 mm for the 12, so radial figures
+looked mixed in size and did not meet the same inner and outer circle. A font
+can now be marked `even`, and its figures are then each drawn at the height of
+the tallest; FPJ is. Measured on Chocolat 77, every figure is 2.93 to 2.95 mm
+and centred on its circle within 0.04 mm. Other fonts are unchanged.
+
 ## The logo comes with the case (v4.36.0)
 
 Each case carries its brand's own logo: the Nivada shield and script on the
