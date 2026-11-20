@@ -492,3 +492,28 @@ test('the fonts as a grid (v4.40.3)', () => {
   assert.match(source, /\.gCards\.all\{ display:grid !important;/);
   assert.match(source, /\.gCards\.all\.gFaces \.gName\{ white-space:normal;/, 'long names on two lines');
 });
+
+test('tap the watch to edit what you tapped (v4.41.0)', () => {
+  const src = chunk('function gPickTarget(st, layer, x, y, pv){', '\n}\n') + '\n}';
+  const pt = (r, deg) => { const a = (deg - 90) * Math.PI / 180; return [r * Math.cos(a), r * Math.sin(a)]; };
+  const pick = new Function('pt', 'visR', src + '\nreturn gPickTarget;')(pt, st => 14);
+  const st = { minute:{on:true, diameter:24, thickness:0.1}, hour:{on:false}, chapter:{on:true, innerD:20, outerD:21}, date:{on:true, at:3, dist:9, w:2.6, h:2},
+    sub:{on:true, at:6, dist:7, diameter:6}, text:{logoY:-6, line2:'Time Keeper', line2Y:-3.5}, sHand:{on:true}, meta:{time:{h:10, m:10, s:30}} };
+  assert.deepEqual(pick(st, 'numerals', 0, -10), {step:'markers', tab:'font'});
+  assert.deepEqual(pick(st, 'indices', 0, -10), {step:'markers', tab:'shape'});
+  assert.deepEqual(pick(st, 'text', 0, -6.2), {step:'text', tab:'logo'});
+  assert.deepEqual(pick(st, 'text', 0, -3.4), {step:'text', tab:'lines'});
+  assert.deepEqual(pick(st, 'hands', 0, 5, null), {step:'hands', tab:'seconds', hand:'sHand'}, 'at 6, where the seconds hand stands at :30');
+  assert.deepEqual(pick(st, 'hands', 3, -0.5, null), {step:'hands', tab:'shape', hand:'mHand'}, 'towards 2, the minute hand');
+  assert.deepEqual(pick(st, 'hands', 0, 5, {hideSeconds:true}).hand !== 'sHand', true, 'no seconds hand drawn, none picked');
+  assert.deepEqual(pick(st, 'dial', -11.95, 0), {step:'dial', tab:'track'}, 'the minute track');
+  assert.deepEqual(pick(st, 'dial', 0, 10.2), {step:'dial', tab:'keep', sec:'chapter'}, 'the chapter ring');
+  assert.deepEqual(pick(st, 'dial', 9, 0), {step:'calendar', tab:'date'}, 'the date window');
+  assert.deepEqual(pick(st, 'dial', 0, 7.5), {step:'dial', tab:'keep', sec:'sub'}, 'the sub-dial');
+  assert.deepEqual(pick(st, 'dial', -5, -2), {step:'dial', tab:'keep'}, 'the plain dial keeps the tab');
+  assert.deepEqual(pick(st, null, 0, -16), {step:'case', tab:'shape'}, 'the case');
+  assert.equal(pick(st, null, 40, 40), null, 'the background is nothing');
+  assert.match(source, /if\(ctm && ctm\.a && window\.WatchGuidePick\(k, \(e\.clientX - ctm\.e\)\/ctm\.a, \(e\.clientY - ctm\.f\)\/ctm\.d\)\) return;/);
+  assert.match(source, /findGo\(\{i, tab: tab \|\| undefined, sec: t\.sec \? t\.step \+ ":" \+ t\.sec : undefined\}\);/);
+  assert.match(source, /if\(Date\.now\(\) - stageDragAt < 400\) return;/, 'the end of a drag is not a tap');
+});

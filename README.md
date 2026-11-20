@@ -200,6 +200,22 @@ stored in a design file do not change. In the full editor at laptop widths
 the toolbar sits tighter, and on a narrower window it takes a second row
 rather than pushing Share and Export off the screen.
 
+## Tap the watch to edit what you tapped (v4.41.0)
+
+In simple mode a tap on the watch opens what edits that part: its step, the
+tab, and for a part kept in More options that sheet open on its section with
+the step's other sections folded. Numerals open Markers › Font, indices
+Markers › Shape, gems Markers › Gems; the logo or the lines under it Text
+(whichever the tap is nearer); a hand Hands, the seconds hand its own tab;
+the day and date windows Calendar; the minute track Dial › Minute track; a
+chapter ring, an hour track, the sub-dial, a power reserve or engraved
+borders Dial's More options; the plain dial Dial, on the tab already open;
+the case round the opening Case. Parts drawn as part of the dial (the
+tracks, rings, the sub-dial, the date window) are found by where the tap is,
+in millimetres about the dial centre (`gPickTarget`). The click a mouse sends
+on letting go of a pan or a pinch is no longer taken as a tap, in either
+mode.
+
 ## The fonts as a grid (v4.40.3)
 
 Markers › Font laid every face in one row to scroll sideways, three at a

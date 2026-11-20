@@ -2283,7 +2283,7 @@ const APP_BUILD = "__BUILD__";
 /* The version people see, raised with every change that reaches them:
    major for a new way of working, minor for something new to do, patch for
    a fix. Shown on the watch screen, so any screenshot says which it was. */
-const APP_VERSION = "4.40.3";
+const APP_VERSION = "4.41.0";
 const APP_DATE = "__DATE__";
 
 /* Every route that replaces S passes through one of these three, which is
@@ -13051,10 +13051,16 @@ function selectLayer(k){
   };
   st.addEventListener("click", e=>{
     if(picking) return;                      // the tap is sampling a colour
+    if(Date.now() - stageDragAt < 400) return;   // the end of a pan or a pinch
     if(e.target.closest && (e.target.closest(".zoomer") || e.target.closest(".hnd")
        || e.target.closest("#mModes") || e.target.closest("#mMeasure"))) return;
     const t = e.target.closest && e.target.closest("[data-layer]");
     const k = t ? t.getAttribute("data-layer") : (onDial(e) ? "dial" : null);
+    /* simple mode: open the step and tab that edit what was tapped */
+    if(typeof window.WatchGuidePick === "function"){
+      const v = q("#view"), mm = v && (v.querySelector("svg[viewBox]") || v), ctm = mm && mm.getScreenCTM && mm.getScreenCTM();
+      if(ctm && ctm.a && window.WatchGuidePick(k, (e.clientX - ctm.e)/ctm.a, (e.clientY - ctm.f)/ctm.d)) return;
+    }
     if(!k || !selectLayer(k)) return;
     if(stacked()) tab("props");
   });
@@ -13148,6 +13154,9 @@ function fitTo(mode, want){
   applyTF();
 }
 
+/* when a pan or a pinch last ended: the click a mouse sends on letting go
+   of a drag is not a tap on what lies under it */
+let stageDragAt = 0;
 /* pinch to zoom, one finger to pan — handles keep priority */
 (function(){
   const stage=q("#stage"), pts=new Map(); let pinch=null, pan=null;
@@ -13180,7 +13189,7 @@ function fitTo(mode, want){
       panX=e.clientX-pan.x; panY=e.clientY-pan.y; userFramed=true; applyTF(); e.preventDefault();
     }
   });
-  const end=e=>{ pts.delete(e.pointerId); if(pts.size<2) pinch=null; if(!pts.size) pan=null; };
+  const end=e=>{ if(pinch || (pan && pan.live)) stageDragAt = Date.now(); pts.delete(e.pointerId); if(pts.size<2) pinch=null; if(!pts.size) pan=null; };
   stage.addEventListener("pointerup",end); stage.addEventListener("pointercancel",end);
   stage.addEventListener("wheel", e=>{
     if(!e.ctrlKey && !e.metaKey) return;
@@ -17891,6 +17900,59 @@ const glossOpt = o => typeof o !== "string" ? o : (GLOSS_OPT[o] || (/^[a-z]/.tes
 const G_RESUME_MS = 30*60*1000;
 const gResumeStep = (rec, now, steps) => (rec && rec.step > 0 && rec.step < (steps || 7) && now - (rec.t || rec.at || 0) < G_RESUME_MS) ? rec.step : 0;
 
+/* What a tap on the watch opens in simple mode: {step, tab, sec?, hand?}.
+   Parts with a tagged group of their own are known by it; the rest (the
+   minute and hour tracks, a chapter ring, the sub-dial, the date window) are
+   drawn as part of the dial, so they are found by where the tap is. tab
+   "keep" leaves the tab as it is when the step is already open. */
+function gPickTarget(st, layer, x, y, pv){
+  const r = Math.hypot(x, y), at = (d, deg) => pt(d, deg);
+  const ring = (rIn, rOut, pad) => r >= rIn - pad && r <= rOut + pad;
+  const mt = st.minute || {}, ht = st.hour || {}, ch = st.chapter || {}, dt = st.date || {}, T = st.text || {};
+  switch(layer){
+    case "numerals": return {step:"markers", tab:"font"};
+    case "indices":  return {step:"markers", tab:"shape"};
+    case "markers":  return {step:"markers", tab:"style"};
+    case "gems":     return {step:"markers", tab:"gems"};
+    case "day":      return {step:"calendar", tab:"day"};
+    case "date":     return {step:"calendar", tab:"date"};
+    case "power":    return {step:"dial", tab:"keep", sec:"power"};
+    case "borders":  return {step:"dial", tab:"keep", sec:"borders"};
+    case "pave":     return {step:"dial", tab:"surface"};
+    case "text": {
+      /* the logo or the lines under it: whichever the tap is nearer */
+      const ly = +T.logoY || 0, l2 = T.line2 && T.line2On !== false ? +T.line2Y : NaN;
+      return {step:"text", tab: isFinite(l2) && Math.abs(y - l2) < Math.abs(y - ly) ? "lines" : "logo"};
+    }
+    case "hands": {
+      /* the hand whose line passes nearest the tap */
+      const tm = (st.meta && st.meta.time) || {h:10, m:10, s:0};
+      const sS = pv && pv.s !== undefined ? pv.s : (tm.s || 0);
+      const aT = (Math.atan2(x, -y)*180/Math.PI + 360) % 360, dA = a => { const d = Math.abs(((aT - a) % 360 + 540) % 360 - 180); return d; };
+      const cand = [["hHand", (tm.h%12)*30 + tm.m*0.5], ["mHand", tm.m*6 + (tm.s||0)*0.1]];
+      if(st.sHand && st.sHand.on && !(pv && pv.hideSeconds)) cand.push(["sHand", sS*6]);
+      cand.sort((a, b) => dA(a[1]) - dA(b[1]));
+      const h = cand[0][0];
+      return h === "sHand" ? {step:"hands", tab:"seconds", hand:h} : {step:"hands", tab:"shape", hand:h};
+    }
+    case "dial": case null: case undefined: {
+      if(dt.on && Math.abs(x - at(dt.dist, dt.at*30)[0]) <= (+dt.w || 3)/2 + 0.6 && Math.abs(y - at(dt.dist, dt.at*30)[1]) <= (+dt.h || 2.5)/2 + 0.6)
+        return {step:"calendar", tab:"date"};
+      for(const sd of [st.sub || {}, ...(st.sub && Array.isArray(st.sub.extra) ? st.sub.extra : [])]){
+        if(!st.sub || !st.sub.on || sd.on === false) continue;
+        const c = at(sd.dist, sd.at*30); if(Math.hypot(x - c[0], y - c[1]) <= sd.diameter/2) return {step:"dial", tab:"keep", sec:"sub"};
+      }
+      if(mt.on && ring(mt.diameter/2 - (+mt.thickness || 0) - 0.3, mt.diameter/2, 0.5)) return {step:"dial", tab:"track"};
+      if(ch.on && ring(ch.innerD/2, ch.outerD/2, 0.2)) return {step:"dial", tab:"keep", sec:"chapter"};
+      if(ht.on && ring(ht.diameter/2 - (+ht.thickness || 0), ht.diameter/2, 0.4)) return {step:"dial", tab:"keep", sec:"hour"};
+      if(layer === "dial") return {step:"dial", tab:"keep"};
+      /* the case round the opening; a tap on the background is nothing */
+      return r <= visR(st)*1.45 ? {step:"case", tab:"shape"} : null;
+    }
+  }
+  return null;
+}
+
 /* The tabs a step is cut into, given what the design has on. A tab that
    would be empty is left out. */
 function gTabsFor(k, o){
@@ -19829,6 +19891,28 @@ Object.assign(GWORD.ar, {
     if(STEPS[step].k === "text") return {hideSeconds:true};
     const s = S.meta.time.s || 0;
     return !timeSet && s >= 25 && s <= 35 ? {s:37} : null;
+  };
+
+  /* Tapping the watch opens what edits the part tapped: its step, its tab,
+     and for a part kept in the More sheet that sheet open at its section.
+     layer is the tagged group the tap landed in ("dial" for the bare dial
+     inside the opening, null outside it); x, y the point in millimetres
+     about the dial centre, which places the parts drawn as plain rings and
+     windows (the minute track, a chapter ring, the date) and tells the
+     hands apart. Returns false when it is not simple mode's to handle. */
+  window.WatchGuidePick = (layer, x, y) => {
+    if(mode !== "guided") return false;
+    const t = gPickTarget(S, layer, x, y, window.WatchGuidePreview());
+    if(!t) return false;
+    const i = STEPS.findIndex(s => s.k === t.step); if(i < 0) return false;
+    if(t.hand) sheetHand = t.hand;
+    const tab = t.tab === "keep" ? (i === step ? curTab() : null) : t.tab;
+    if(!t.sec && STEPS[i].k === STEPS[step].k && (!tab || tab === curTab()) && !sheetOn) return true;   // already there
+    if(!t.sec) sheetOn = false;
+    /* the sheet opens on the part tapped alone, the step's other sections folded */
+    else for(const sec of (G_MORE[t.step] || [])){ const id = t.step + ":" + sec.id; if(sec.id !== t.sec){ secOpen.delete(id); secShut.add(id); } }
+    findGo({i, tab: tab || undefined, sec: t.sec ? t.step + ":" + t.sec : undefined});
+    return true;
   };
 
   /* ---- painting ---- */
