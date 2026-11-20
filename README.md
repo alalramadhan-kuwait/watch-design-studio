@@ -200,6 +200,15 @@ stored in a design file do not change. In the full editor at laptop widths
 the toolbar sits tighter, and on a narrower window it takes a second row
 rather than pushing Share and Export off the screen.
 
+## Pilot Study: the 0, 2 and 7 traced whole (v4.40.1)
+
+In IWC's photograph the hands stand at 10:10 and lie over the 0, the 2 and
+the 7, and those three had been rebuilt or repaired; the 2's top, under the
+minute hand, did not come back clean. They are now traced whole from a review
+photograph where the hands stand at 10:15 and all three are clear, brought to
+the set's weight (that photograph draws strokes heavier by 0.03 of the height,
+measured on the 5 in both). No figure of the face is rebuilt.
+
 ## Pilot Study (v4.40.0)
 
 A new numeral face, **Pilot Study**: the IWC Big Pilot's Type A figures,

@@ -169,6 +169,7 @@ for ch in '0123456789':
         e = want
     if ch not in WEIGHT_FULL: e *= WEIGHT_PART
     if hair + 2 * e < 0.8 * T_HAIR: e = (0.8 * T_HAIR - hair) / 2     # a hairline never thinner than 80 % of the set's
+    e += CFG.get('grow_per', {}).get(ch, 0)       # a figure from a photograph that draws its strokes heavier or lighter, brought to the set's
     out = sdf_trace(g, -e)                       # the field is + inside: a level of -e grows by e
     r_open = CFG.get('open_per', {}).get(ch)
     if r_open: out = out.buffer(-r_open, join_style=1).buffer(r_open, join_style=1)   # a spur thinner than the strokes taken off

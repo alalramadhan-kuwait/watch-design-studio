@@ -468,7 +468,8 @@ test('Pilot Study (v4.40.0)', () => {
   assert.ok(source.includes('"Pilot Study":{family:"wdspilot", seated:true, src:"data:font/woff2;base64,' + b64 + '"}'), 'the studio carries the face');
   const spec = JSON.parse(fs.readFileSync(path.join(dir, 'spec.json'), 'utf8'));
   assert.equal(spec.dark, false, 'light figures on a dark dial');
-  assert.ok(spec.digits['7'].unline && spec.digits['0'].mirror === 'left' && spec.digits['2'].boost, 'each figure a hand touched, freed');
+  for (const d of ['0', '2', '7']) assert.match(spec.digits[d].from, /hands at 10:15/, d + ' traced whole where no hand covers it (since 4.40.1)');
+  assert.deepEqual(JSON.parse(fs.readFileSync(path.join(dir, 'face.json'), 'utf8')).grow_per, { 0: -11.5, 2: -11.5, 7: -11.5 }, 'brought to the set\'s weight');
   const lift = fs.readFileSync(path.join(__dirname, '../tools/dial-font/lift.py'), 'utf8');
   for (const k of ["'unline'", "'boost'", "'box'", "'keep_px'"]) assert.ok(lift.includes(k), k);
   assert.ok(!fs.readdirSync(dir).some(f => /\.(jpe?g|png)$/i.test(f)), 'the photograph is not kept');
