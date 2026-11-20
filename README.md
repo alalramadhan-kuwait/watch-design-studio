@@ -200,6 +200,12 @@ stored in a design file do not change. In the full editor at laptop widths
 the toolbar sits tighter, and on a narrower window it takes a second row
 rather than pushing Share and Export off the screen.
 
+## The fonts as a grid (v4.40.3)
+
+Markers › Font laid every face in one row to scroll sideways, three at a
+time on a phone. They are a grid now, three across, all in view as the panel
+scrolls down; a long name takes two lines rather than being cut.
+
 ## Thickness for every figure, thinner too (v4.40.2)
 
 "Thickness" under Markers › Size was hidden for applied figures, and they

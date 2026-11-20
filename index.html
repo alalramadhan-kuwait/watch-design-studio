@@ -2283,7 +2283,7 @@ const APP_BUILD = "__BUILD__";
 /* The version people see, raised with every change that reaches them:
    major for a new way of working, minor for something new to do, patch for
    a fix. Shown on the watch screen, so any screenshot says which it was. */
-const APP_VERSION = "4.40.2";
+const APP_VERSION = "4.40.3";
 const APP_DATE = "__DATE__";
 
 /* Every route that replaces S passes through one of these three, which is
@@ -17077,6 +17077,9 @@ body.guided .stage.gPhoto{ background:#fff }
 .gWelcome{ font:600 21px/1.2 var(--sans); margin:4px 0 2px; letter-spacing:-.015em; color:var(--ds-text) }
 .gCards.all{ display:grid !important; grid-template-columns:repeat(auto-fill,minmax(96px,1fr)); overflow:visible !important; margin:0 !important; padding:2px 0 6px !important }
 .gCards.all .gCard{ flex:none }
+/* the fonts: every face in view at once, a grid rather than one row to scroll;
+   a long name takes two lines rather than being cut */
+.gCards.all.gFaces .gName{ white-space:normal; line-height:1.2; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; margin-top:3px }
 /* the list of all seven steps, over the panel */
 .gList{ position:absolute; inset:0; z-index:12; background:var(--ds-panel); display:flex; flex-direction:column }
 .gList header{ display:flex; align-items:center; justify-content:space-between; padding:6px 6px 4px 16px; flex:none; font:600 17px var(--sans); color:var(--ds-text) }
@@ -19239,7 +19242,7 @@ Object.assign(GWORD.ar, {
           const sys = n.system || "western 0–9";
           /* a face set in a preset or the full editor that this system's list does not carry is still shown, chosen */
           const faces = stylesFor(sys).indexOf(n.style) < 0 && n.style ? stylesFor(sys).concat([n.style]) : stylesFor(sys);
-          h += `<div class="gCards gFaces">${faces.map(st => `<button type="button" class="gCard gFace ${st===n.style?"on":""}" data-gset="numerals.style" data-gv='${gv(st)}'><div class="gFaceArt">${faceSample(st, sys)}</div><div class="gName">${esc2(st)}</div></button>`).join("")}</div>`;
+          h += `<div class="gCards gFaces all">${faces.map(st => `<button type="button" class="gCard gFace ${st===n.style?"on":""}" data-gset="numerals.style" data-gv='${gv(st)}'><div class="gFaceArt">${faceSample(st, sys)}</div><div class="gName">${esc2(st)}</div></button>`).join("")}</div>`;
         }
         if(showIx){
           /* "Diamond" here is the shape, not the stone */

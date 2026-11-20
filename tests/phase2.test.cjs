@@ -486,3 +486,9 @@ test('thickness for every figure, thinner too (v4.40.2)', () => {
   const M = chunk('function migrateNumerals(st){', '\n}\n');
   assert.match(M, /if\(!nm\.weightLive\)\{\n    if\(nm\.tech === "applied" && !\(typeof paveOn === "function" && paveOn\(st\)\)\) nm\.weight = 0;\n    nm\.weightLive = true;/, 'a value carried unseen cleared once');
 });
+
+test('the fonts as a grid (v4.40.3)', () => {
+  assert.match(source, /h \+= `<div class="gCards gFaces all">\$\{faces\.map\(/, 'a grid, not one row');
+  assert.match(source, /\.gCards\.all\{ display:grid !important;/);
+  assert.match(source, /\.gCards\.all\.gFaces \.gName\{ white-space:normal;/, 'long names on two lines');
+});
