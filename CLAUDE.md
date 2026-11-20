@@ -28,6 +28,22 @@ seconds hand are offered only where the case's movement drives them
 and the movement" must pass for every design in `concepts/`
 (tests/phase2.test.cjs).
 
+## The logo is the case's brand's
+
+Each case carries its brand's own logo, set in its case record (`logo:`):
+
+- Time Keeper × Nivada F77: the Nivada logo (shield and script, or either alone);
+- NOREL: the NOREL logo (the lock-up, or its shield or wordmark);
+- Vernoy: the traced Vernoy wordmark.
+
+Never type the brand's name in a font, swap in another brand's mark, or
+change the logo to suit a design's words or inspiration. Only how it is made
+(print, raised print, applied metal), its colour or metal, size and position
+are design choices. Co-branding lines such as "Time Keeper" go on the line
+under the logo, not in its place. A new brand is added with its own logo in
+its case record. The app enforces this (`keepCaseLogo`, the check "Logo and
+the case").
+
 ## Releases
 
 Bump `APP_VERSION` and `package.json` together (`npm version X.Y.Z

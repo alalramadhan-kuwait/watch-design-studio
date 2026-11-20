@@ -1371,6 +1371,8 @@ body.guided .atelier-nav, body.guided #gHideInGuided, body.guided .bar .grp.tool
    Vernoy RD26-0172 / FZY0192 — S.S 316L, 5 ATM, movement 1062. */
 const VERNOY_CASE = {
   model:"Vernoy cushion · RD26-0172", shape:"cushion", photo:true,
+  /* the brand's own logo: a design on this case carries it, whatever words are typed */
+  logo:{brand:"Vernoy", marks:["Vernoy wordmark (traced)"], text:"VERNOY", fromLetters:0.70},
   ref:"RD26-0172 (FZY0192)", steel:"S.S 316L", wr:"5 ATM", movement:"1062",
   flat:36.00, diagonal:40.05, rSide:38.00, rCorner:10.00,          // bezel / case top view
   midFlat:35.50, midDiagonal:39.55, midRSide:37.75, midRCorner:9.75,// case middle (coin edge)
@@ -1396,6 +1398,7 @@ const VERNOY_CASE = {
    8.75–11.15 mm through 2.40 × 2.00 mm centred 9.95 mm from the centre. */
 const NOREL_R3 = {
   model:"NOREL B6098G-A1 · R3", shape:"round", photo:false,
+  logo:{brand:"NOREL", marks:["NOREL logo", "NOREL shield", "NOREL wordmark"], text:"NOREL"},
   ref:"B6098G-A1 (R3)", steel:"S.S 316L", wr:"10 ATM", movement:"Sellita SW240-1",
   flat:41.00, diagonal:41.00, rSide:20.50, rCorner:20.50,                 // round: no flats or corners
   midFlat:41.00, midDiagonal:41.00, midRSide:20.50, midRCorner:20.50,
@@ -1467,6 +1470,7 @@ const NOREL_R4 = Object.assign({}, NOREL_D, {
 const TK_NIVADA = {
   maker:"Nivada",
   model:"Time Keeper × Nivada · F77", shape:"round", photo:false,
+  logo:{brand:"Nivada", marks:["Nivada shield + script", "Nivada script", "Nivada shield"], text:"Nivada"},
   ref:"Nivada Grenchen F77 · Time Keeper edition", steel:"stainless steel (grade to confirm)", wr:"10 ATM",
   movement:"Soprod P024 automatic, without date",                       // sheet
   flat:38.00, diagonal:38.00, rSide:19.00, rCorner:19.00,                // sheet: 38 mm at 3 and 9
@@ -1564,6 +1568,33 @@ const TK_NIVADA = {
 const CASES = {[VERNOY_CASE.model]:VERNOY_CASE, [NOREL_R3.model]:NOREL_R3, [NOREL_D.model]:NOREL_D, [NOREL_R4.model]:NOREL_R4, [TK_NIVADA.model]:TK_NIVADA};
 const CASE_MODELS = Object.keys(CASES);
 const caseOf = st => (st && st.case && CASES[st.case.model]) || VERNOY_CASE;
+/* The logo is the case's brand's, never what is typed: a Nivada case carries
+   the Nivada logo, a NOREL case the NOREL logo, a Vernoy case the Vernoy
+   wordmark. Only that brand's own marks can be chosen; a design that has
+   anything else is put back on the brand's first mark. A case without a
+   logo of its own (a design with no case named) keeps what it has; a new
+   brand comes with its own logo in its case record. */
+const caseBrandLogo = st => { const K = st && st.case && CASES[st.case.model]; return K && K.logo || null; };
+const BRAND_LOGO_SIZE = {"NOREL logo":5.4, "NOREL shield":3.2, "NOREL wordmark":2.2, "Nivada shield + script":3.6, "Nivada script":2.6, "Nivada shield":2.4, "Vernoy wordmark (traced)":1.2};
+function keepCaseLogo(st){
+  const L = caseBrandLogo(st), T = st && st.text;
+  if(!L || !T) return false;
+  let changed = false;
+  if(L.marks.indexOf(T.logoMark) < 0){
+    /* typed letters give way to the drawn mark at the size they were read at:
+       a font size counts the letters' em, a mark's size its whole height */
+    const typed = (!T.logoMark || T.logoMark === "none") && L.fromLetters && +T.logoSize > 0 && T.logo;
+    T.logoSize = typed ? +(T.logoSize*L.fromLetters).toFixed(2) : BRAND_LOGO_SIZE[L.marks[0]] || T.logoSize;
+    T.logoMark = L.marks[0]; changed = true;
+    /* the line under it steps down to clear the mark, as it would under the logo it replaces */
+    if(T.line2 && T.line2On !== false && +T.line2Y > +T.logoY){
+      const need = +T.logoY + T.logoSize/2 + 0.3 + (+T.line2Size || 1)*0.45;
+      if(+T.line2Y < need) T.line2Y = +need.toFixed(2);
+    }
+  }
+  if(T.logo !== L.text){ T.logo = L.text; changed = true; }
+  return changed;
+}
 /* CASE_SPEC is the case of the design on screen. It reads through to that
    design every time, so the many places that ask it never have to be told the
    case changed. Anything drawing some other design asks caseOf(that design). */
@@ -2244,12 +2275,13 @@ const APP_BUILD = "__BUILD__";
 /* The version people see, raised with every change that reaches them:
    major for a new way of working, minor for something new to do, patch for
    a fix. Shown on the watch screen, so any screenshot says which it was. */
-const APP_VERSION = "4.35.0";
+const APP_VERSION = "4.36.0";
 const APP_DATE = "__DATE__";
 
 /* Every route that replaces S passes through one of these three, which is
    why autosave hangs here rather than on each of the eighteen callers. */
 function commit(){
+  keepCaseLogo(S);
   hist = hist.slice(0, hi+1); hist.push(clone(S));
   if(hist.length>120) hist.shift(); hi = hist.length-1; syncUndo();
   queueSave();
@@ -3358,6 +3390,9 @@ const VERNOY_ART = {
   wordmark:{bx:18.545, by:62.875, bw:202.748, bh:32.859, inner:"<g transform=\"translate(18,95) scale(0.023691)\"><g transform=\"translate(0.0000,0) scale(1,-1)\"><path d=\"M1456 1341V1288L1309 1262L770 -31H719L174 1262L23 1288V1341H565V1288L385 1262L791 275L1196 1262L1020 1288V1341Z\" fill=\"#151515\" fill-rule=\"evenodd\"></path></g><g transform=\"translate(1499.0000,0) scale(1,-1)\"><path d=\"M59 53 231 80V1262L59 1288V1341H1065V1020H999L967 1237Q855 1251 643 1251H424V727H786L817 887H881V475H817L786 637H424V90H688Q946 90 1026 106L1083 354H1149L1130 0H59Z\" fill=\"#151515\" fill-rule=\"evenodd\"></path></g><g transform=\"translate(2770.0000,0) scale(1,-1)\"><path d=\"M424 588V80L627 53V0H72V53L231 80V1262L59 1288V1341H638Q890 1341 1010.0 1256.0Q1130 1171 1130 983Q1130 849 1057.0 751.5Q984 654 855 616L1218 80L1363 53V0H1042L665 588ZM931 969Q931 1122 856.5 1186.5Q782 1251 595 1251H424V678H601Q780 678 855.5 744.5Q931 811 931 969Z\" fill=\"#151515\" fill-rule=\"evenodd\"></path></g><g transform=\"translate(4156.0000,0) scale(1,-1)\"><path d=\"M1155 1262 975 1288V1341H1432V1288L1260 1262V0H1163L336 1206V80L516 53V0H59V53L231 80V1262L59 1288V1341H465L1155 348Z\" fill=\"#151515\" fill-rule=\"evenodd\"></path></g><g transform=\"translate(5655.0000,0) scale(1,-1)\"><path d=\"M293 672Q293 349 401.0 204.0Q509 59 739 59Q968 59 1077.0 204.0Q1186 349 1186 672Q1186 993 1077.5 1134.5Q969 1276 739 1276Q508 1276 400.5 1134.5Q293 993 293 672ZM84 672Q84 1356 739 1356Q1063 1356 1229.0 1182.5Q1395 1009 1395 672Q1395 330 1227.0 155.0Q1059 -20 739 -20Q420 -20 252.0 154.5Q84 329 84 672Z\" fill=\"#151515\" fill-rule=\"evenodd\"></path></g><g transform=\"translate(7154.0000,0) scale(1,-1)\"><path d=\"M838 528V80L1051 53V0H432V53L645 80V522L174 1262L23 1288V1341H590V1288L410 1262L795 643L1161 1262L991 1288V1341H1427V1288L1280 1262Z\" fill=\"#151515\" fill-rule=\"evenodd\"></path></g></g>"},
   cartouche:{bx:8, by:6.5, bw:224, bh:72.5, inner:"<path d=\"M 8,25 Q 120,-12 232,25 L 219,79 Q 120,30 21,79 Z M 15,30 Q 120,-3 225,30 L 214,73 Q 120,35 26,73 Z\" fill-rule=\"evenodd\"/><path d=\"M 15,30 Q 120,-3 225,30 L 214,73 Q 120,35 26,73 Z\"/>"}
 };
+/* The supplied wordmark came painted near-black on every letter, which
+   overrode the colour a dial gives its logo: it takes the dial's ink now. */
+VERNOY_ART.wordmark.inner = VERNOY_ART.wordmark.inner.replace(/ fill="#151515"/g, "");
 /* Place supplied artwork centred on the origin at a given height in mm. */
 function artGroup(A, height, fill, width){
   const ky = height/A.bh;
@@ -11510,9 +11545,10 @@ const SCHEMA = {
     const T = S.text, cart = LOGO_CART[T.logoTech];
     return [
       GRP("Logo",[
+        ...(typeof caseBrandLogo === "function" && caseBrandLogo(S) ? [SEL("text.logoMark","Artwork",caseBrandLogo(S).marks)] : [
         {t:"logofile", l:"Upload your logo"},
         SEL("text.logoMark","Artwork",["none"].concat(LOGO_MARK_IDS.filter(k => k !== "Your logo" || T.logoImg))),
-        ...(T.logoMark === "none" ? [TX("text.logo","Logo text")] : []),
+        ...(T.logoMark === "none" ? [TX("text.logo","Logo text")] : [])]),
         N("text.logoSize","Logo size",.6,5,.05),
         N("text.logoY","Vertical position",-18,18)
       ]),
@@ -12430,7 +12466,7 @@ function syncPresetLabel(){
     custom.textContent=S.meta.name+' · current design';picker.value='__current__';
   }else{if(custom)custom.remove();picker.value=S.meta.name;}
 }
-function paintAll(){ paintLayers(); paintProps(); paintView(); syncUndo(); syncPresetLabel(); }
+function paintAll(){ keepCaseLogo(S); paintLayers(); paintProps(); paintView(); syncUndo(); syncPresetLabel(); }
 
 /* The panel's action buttons, by name. Simple mode's More options sheets
    run the same ones, so adding a zone or matching the hands does the same
@@ -16418,6 +16454,9 @@ async function makeMakerPDF(){
     }
     { const mt=st.minute||{}; if(mt.on&&(mt.nums==='minutes'||mt.nums==='hours')){ const R=(mt.numR>0?+mt.numR:mt.diameter/2+mt.thickness+0.55)+(mt.numSize>0?+mt.numSize:0.8)*0.55;
       add(R<=r-0.30,'Track numbers in view',`The numbers reach R${f(R,2)} mm; the opening is R${f(r,2)} mm${R<=r-0.30?'':', so keep 0.30 mm: bring them in or make them smaller'}.`,'minute'); } }
+    /* the logo is the case's brand's own */
+    { const L=typeof caseBrandLogo==='function'?caseBrandLogo(st):null, T=st.text||{};
+      if(L)add(L.marks.indexOf(T.logoMark)>=0,'Logo and the case',L.marks.indexOf(T.logoMark)>=0?`The ${L.brand} logo, as the case's brand.`:`This is a ${L.brand} case, so it carries the ${L.brand} logo, not ${T.logoMark&&T.logoMark!=='none'?T.logoMark:'the typed “'+(T.logo||'')+'”'}.`,'text'); }
     /* complications the movement must have: a power reserve, and small seconds */
     { const K2=typeof caseOf==='function'?caseOf(st):{}, mv=K2.movement||'the movement';
       if(st.power&&st.power.on)add(!!K2.powerReserve,'Power reserve and the movement',K2.powerReserve?`The ${mv} indicates its power reserve.`:`The ${mv} has no power-reserve indication: the sector and its hand need a movement or a module that drives one. Ask ${typeof makerOf==='function'?makerOf(st):'the maker'}.`,'dial');
@@ -17288,6 +17327,7 @@ const GSTR = {en:{
   "start.from":"Start from…", "start.fromSub": n => `Start something new: a plain dial, a style or a saved version (${n})`,
   "start.fromHint":"A plain dial, a style or a saved version",
   "start.versions": n => `Saved by you (${n})`, "start.version":"Saved version",
+  "logo.byCase": b => `The logo is the case's own: ${b}. It is set by the case and does not change with the words typed; each brand keeps its own logo.`,
   "start.saveNow":"Save this design", "start.noneSaved":"Nothing saved yet. Save keeps the design on screen here, to come back to whenever you like.",
   "more.noPower": mv => `The ${mv} in this case has no power reserve. A power reserve needs a movement that drives one and is known to fit this case; none is set up, so it is not offered.`,
   "start.loaded":"Loaded. Undo brings back the design before.", "start.fresh":"A plain dial. Undo brings back the design before.",
@@ -17486,6 +17526,7 @@ GSTR.ar = {
   "start.from":"ابدأ من…", "start.fromSub": n => `ابدأ تصميماً جديداً: ميناء بسيط، أو طراز جاهز، أو نسخة محفوظة (${n})`,
   "start.fromHint":"ميناء بسيط، أو طراز جاهز، أو نسخة محفوظة",
   "start.versions": n => `اللي حفظته (${n})`, "start.version":"نسخة محفوظة",
+  "logo.byCase": b => `الشعار شعار القالب نفسه: ${b}. القالب يحدده وما يتغير مع الكلام اللي ينكتب؛ كل ماركة لها شعارها.`,
   "start.saveNow":"احفظ هالتصميم", "start.noneSaved":"ما في شي محفوظ للحين. «احفظ» يخلي التصميم اللي قدامك هني، ترجع له متى ما تبي.",
   "more.noPower": mv => `محرك ${mv} اللي في هالقالب ما فيه احتياطي طاقة. احتياطي الطاقة يبيله محرك يشغّله ونعرف إنه يركب في هالقالب، وما عندنا محرك جذي، فما نعرضه.`,
   "start.loaded":"فُتح التصميم. زر التراجع يعيد التصميم السابق.", "start.fresh":"ميناء بسيط. زر التراجع يعيد التصميم السابق.",
@@ -17686,7 +17727,7 @@ const GWORD = {ar:{
   "Seconds hand":"عقرب الثواني", "Needle":"إبرة", "Lollipop":"دائرة", "Arrow":"سهم", "Matching":"مطابق", "Counterweight":"الذيل",
   "Disc":"قرص", "Ring":"حلقة", "Seconds hand metal":"معدن عقرب الثواني",
   /* text */
-  "Type it":"اكتبه", "NOREL logo":"شعار NOREL", "NOREL shield":"درع NOREL", "Your logo":"شعارك", "Logo text":"نص الشعار", "Logo font":"خط الشعار",
+  "Type it":"اكتبه", "NOREL logo":"شعار NOREL", "NOREL shield":"درع NOREL", "NOREL wordmark":"كلمة NOREL", "Nivada shield + script":"درع نيفادا مع الكتابة", "Nivada script":"كتابة نيفادا", "Nivada shield":"درع نيفادا", "Vernoy wordmark (traced)":"شعار فيرنوي", "Your logo":"شعارك", "Logo text":"نص الشعار", "Logo font":"خط الشعار",
   "Serif":"كلاسيكي", "Sans":"حديث", "Logo made by":"طريقة صنع الشعار", "Logo metal":"معدن الشعار", "Logo size":"مقاس الشعار",
   "Logo position":"موضع الشعار", "All text settings":"كل إعدادات الكتابة", "Position":"الموضع", "Follow the curve":"على انحناء الميناء",
   "Space either side of 6":"المسافة على جانبي ٦", "Lean with the curve":"مائل مع انحناء الميناء", "Split either side of 6":"مقسوم حول ٦",
@@ -17738,6 +17779,7 @@ const G_CHECK_AR = {
   "Date window size":"نافذة التاريخ أكبر من تاريخ المحرك.",
   "Big date movement":"التاريخ الكبير يحتاج محرك فيه وحدة تاريخ كبير.",
   "Power reserve and the movement":"هالمحرك ما يبين احتياطي الطاقة.",
+  "Logo and the case":"الشعار لازم يكون شعار ماركة القالب.",
   "Small seconds and the movement":"هالمحرك يبين الثواني في الوسط، مو في ميناء صغير.",
   "Date and the movement":"هالمحرك ما فيه قرص تاريخ، فالنافذة بتبين المحرك.",
   "Lines of writing apart":"سطرين من الكتابة داخلين في بعض.",
@@ -17892,6 +17934,7 @@ const G_CHECK_WORDS = {
   "Date window size":["calendar","The date window is bigger than the movement's date."],
   "Big date movement":["calendar","A big date needs a movement with a big-date module."],
   "Power reserve and the movement":["dial","This movement has no power-reserve indication."],
+  "Logo and the case":["text","The logo must be the case's brand's own."],
   "Small seconds and the movement":["dial","This movement shows its seconds at the centre, not in a sub-dial."],
   "Date and the movement":["calendar","This movement has no date disc, so a window would show the movement."],
   "Lines of writing apart":["text","Two lines of writing run into each other."],
@@ -19226,6 +19269,19 @@ Object.assign(GWORD.ar, {
     },
     text(tab){
       const T = S.text;
+      if(tab === "logo" && caseBrandLogo(S)){
+        /* the case's brand's logo, set by the case: its own marks only, then how it is made */
+        const L = caseBrandLogo(S);
+        let h = `<p class="gNote">${gT("logo.byCase", L.brand)}</p>`;
+        if(L.marks.length > 1) h += chips("text.logoMark", L.marks.map(m => [m, m]), T.logoMark);
+        const techs = [["printed","Printed"],["double printed","Raised print"],["applied metal","Applied metal"]];
+        if(T.logoTech && !techs.some(x => x[0] === T.logoTech)) techs.push([T.logoTech, T.logoTech[0].toUpperCase() + T.logoTech.slice(1)]);
+        h += `<h3>${gW("Logo made by")}</h3>` + chips("text.logoTech", techs, T.logoTech || "printed");
+        if(T.logoTech === "applied metal") h += `<h3>${gW("Logo metal")}</h3>` + chips("text.logoMetal", [["polished steel","Steel"],["white gold","White gold"],["yellow gold","Gold"],["rose gold","Rose gold"],["blackened steel","Black"]], T.logoMetal || "polished steel");
+        h += slider("text.logoSize", "Logo size", 0.8, 8, 0.05, T.logoSize) + slider("text.logoY", "Logo position", -12, 12, 0.1, T.logoY, "pos");
+        if(T.line2 && T.line2On !== false) h += toggle("text.line2Follow", "The line under it moves with the logo", T.line2Follow !== false);
+        return h + more("text", "All text settings");
+      }
       if(tab === "logo"){
         const mine = T.logoMark === "Your logo" && T.logoImg;
         /* NOREL's own logo is built in, as the full lock-up or the shield alone */
@@ -19580,8 +19636,8 @@ Object.assign(GWORD.ar, {
     }
     /* any artwork from the sheet: sized as above when it is a different kind of mark */
     else if(path === "text.logoMark"){
-      const was = S.text.logoMark, kind = m => /^(NOREL logo|NOREL shield|Your logo)$/.test(m) ? m : "letters";
-      S.text.logoMark = v; if(kind(v) !== kind(was)) S.text.logoSize = logoSizeFor(v);
+      const was = S.text.logoMark, kind = m => /^(NOREL logo|NOREL shield|Your logo)$/.test(m) || BRAND_LOGO_SIZE[m] ? m : "letters";
+      S.text.logoMark = v; if(kind(v) !== kind(was)) S.text.logoSize = BRAND_LOGO_SIZE[v] || logoSizeFor(v);
     }
     else if(path === "text.foot"){ S.text.foot = v; S.text.footOn = !!v; }
     else if(path === "text.split"){ S.text.split = v; S.text.splitOn = !!v; }

@@ -357,3 +357,21 @@ test('red gold, the photo tent and leather that reads as leather (v4.35.0)', () 
   const c = JSON.parse(fs.readFileSync(path.join(__dirname, '../concepts/chocolat-77.json'), 'utf8'));
   assert.equal(c.case.material, '#D39B78'); assert.equal(c.render.mode, 'tent'); assert.equal(c.dial.color, '#694229');
 });
+
+test('the logo comes with the case (v4.36.0)', () => {
+  assert.match(source, /logo:\{brand:"Nivada", marks:\["Nivada shield \+ script", "Nivada script", "Nivada shield"\], text:"Nivada"\}/);
+  assert.match(source, /logo:\{brand:"NOREL", marks:\["NOREL logo", "NOREL shield", "NOREL wordmark"\], text:"NOREL"\}/);
+  assert.match(source, /logo:\{brand:"Vernoy", marks:\["Vernoy wordmark \(traced\)"\], text:"VERNOY", fromLetters:0\.70\}/);
+  assert.match(source, /function commit\(\)\{\n  keepCaseLogo\(S\);/, 'held on every change');
+  assert.match(source, /function paintAll\(\)\{ keepCaseLogo\(S\);/, 'and on every design opened');
+  assert.match(source, /if\(tab === "logo" && caseBrandLogo\(S\)\)\{/, 'the Logo tab offers the brand\'s marks only');
+  assert.match(source, /VERNOY_ART\.wordmark\.inner = VERNOY_ART\.wordmark\.inner\.replace\(\/ fill="#151515"\/g, ""\);/, 'the wordmark takes the dial\'s ink');
+  assert.match(source, /'Logo and the case'/);
+  // every concept carries its case's brand's logo
+  const list = JSON.parse(fs.readFileSync(path.join(__dirname, '../concepts/index.json'), 'utf8'));
+  for (const c of list) {
+    const st = JSON.parse(fs.readFileSync(path.join(__dirname, '../concepts', c.file), 'utf8'));
+    if (st.case.model === 'Time Keeper × Nivada · F77') assert.match(st.text.logoMark, /^Nivada (shield \+ script|script|shield)$/, c.id + ' carries the Nivada logo');
+  }
+  assert.match(fs.readFileSync(path.join(__dirname, '../CLAUDE.md'), 'utf8'), /The logo is the case's brand's/);
+});

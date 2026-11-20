@@ -200,6 +200,19 @@ stored in a design file do not change. In the full editor at laptop widths
 the toolbar sits tighter, and on a narrower window it takes a second row
 rather than pushing Share and Export off the screen.
 
+## The logo comes with the case (v4.36.0)
+
+Each case carries its brand's own logo: the Nivada shield and script on the
+Time Keeper × Nivada F77, the NOREL logo on the NOREL cases, the traced
+Vernoy wordmark on the Vernoy. On those cases the Logo tab offers only that
+brand's marks, then how the logo is made, its metal or colour, size and
+position; typing a name, uploading another logo or picking another brand's
+mark is not offered. A design that has anything else, opened or saved before,
+is put back on the brand's logo, its size kept as it was read and the line
+under it stepped down to clear it, and the check **Logo and the case** says so.
+The Vernoy wordmark now takes the dial's ink (it came painted near-black).
+A case added later comes with its own brand's logo in its record.
+
 ## Red gold, the photo tent, leather that reads as leather (v4.35.0)
 
 Colours are now matched by measurement, not by eye: the reference and the

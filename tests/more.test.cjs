@@ -144,7 +144,8 @@ function optionsOf(f, key) {
   let d = 0, j = i;
   for (; j < call.length; j++) { const c = call[j]; if ('([{'.includes(c)) d++; else if (')]}'.includes(c)) { if (d === 0) break; d--; } }
   const expr = call.slice(i, j);
-  const env = { ...LISTS, k: 'hHand', T: { logoImg: {} }, S: { numerals: { tech: 'applied' } }, numMaterialsFor: () => MATERIALS, HAND_REACH_H: LISTS.HAND_REACH_H };
+  const env = { ...LISTS, k: 'hHand', T: { logoImg: {} }, S: { numerals: { tech: 'applied' } }, numMaterialsFor: () => MATERIALS, HAND_REACH_H: LISTS.HAND_REACH_H,
+    caseBrandLogo: () => ({ marks: ['Nivada shield + script', 'Nivada script', 'Nivada shield'] }) };
   const v = vm.runInNewContext('(' + expr + ')', env);
   return v.map(o => Array.isArray(o) ? o[0] : o);
 }
