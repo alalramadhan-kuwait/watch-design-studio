@@ -200,6 +200,18 @@ stored in a design file do not change. In the full editor at laptop widths
 the toolbar sits tighter, and on a narrower window it takes a second row
 rather than pushing Share and Export off the screen.
 
+## Pilot Study (v4.40.0)
+
+A new numeral face, **Pilot Study**: the IWC Big Pilot's Type A figures,
+applied lume light on black, lifted from the maker's own straight-on
+photograph of the Big Pilot's Watch 43 (all ten from the dial: the 0 from the
+10). Three figures were touched by the hands and freed one by one: the 0 the
+hour hand meets rebuilt from its symmetric half, the seconds hand taken off
+the 7's bar along its path, and the minute hand's shadow on the 2 brightened
+back. The lifting tool gained these for the faces that follow (`box`,
+`unline`, `boost`, `keep_px`, and `open_per` in the build). Every figure
+measured square; weight as printed. `tools/dial-font/pilot/`.
+
 ## Reverso Study (v4.39.0)
 
 A new numeral face, **Reverso Study**: the Jaeger-LeCoultre Reverso's Art Deco

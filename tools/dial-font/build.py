@@ -115,7 +115,7 @@ def spline_shape(g, tol):
     return res
 
 def smooth_shape(g):
-    if CFG.get('spline'): return spline_shape(g, CFG['spline'])
+    if CFG.get('spline'): return spline_shape(g, CFG.get('spline_per', {}).get(CUR_CH, CFG['spline']))
     res = Polygon()
     tol = CFG.get('simplify', 0)
     if tol: g = g.simplify(tol, preserve_topology=True)      # wobbles straightened, corners kept where they are
@@ -158,7 +158,9 @@ print('set weight: stem %.0f hairline %.0f' % (T_STEM, T_HAIR))
 
 font = TTFont(sys.argv[2])
 report = {}
+CUR_CH = ''
 for ch in '0123456789':
+    CUR_CH = ch
     g = shapes[ch]; hair, med, stem = meas[ch]
     want = (T_STEM - stem) / 2                   # grow (+) or thin (-) each side, by the stems
     want_h = (T_HAIR - hair) / 2
@@ -168,6 +170,8 @@ for ch in '0123456789':
     if ch not in WEIGHT_FULL: e *= WEIGHT_PART
     if hair + 2 * e < 0.8 * T_HAIR: e = (0.8 * T_HAIR - hair) / 2     # a hairline never thinner than 80 % of the set's
     out = sdf_trace(g, -e)                       # the field is + inside: a level of -e grows by e
+    r_open = CFG.get('open_per', {}).get(ch)
+    if r_open: out = out.buffer(-r_open, join_style=1).buffer(r_open, join_style=1)   # a spur thinner than the strokes taken off
     out = smooth_shape(out)                      # no wedge or wobble left along the strokes
     out = out.buffer(-4, join_style=1).buffer(4, join_style=1)     # spurs off (the 7's serif had some)
     out = out.buffer(4, join_style=1).buffer(-4, join_style=1)     # nicks filled

@@ -460,3 +460,16 @@ test('Reverso Study (v4.39.0)', () => {
   assert.deepEqual(Object.keys(JSON.parse(fs.readFileSync(path.join(dir, 'outlines.json'), 'utf8'))).sort(), ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'], 'all ten from the watch');
   assert.ok(!fs.readdirSync(dir).some(f => /\.(jpe?g|png)$/i.test(f)), 'the photograph is not kept');
 });
+
+test('Pilot Study (v4.40.0)', () => {
+  const dir = path.join(__dirname, '../tools/dial-font/pilot');
+  for (const f of ['outlines.json', 'spec.json', 'face.json', 'pilot.woff2', 'README.md']) assert.ok(fs.existsSync(path.join(dir, f)), f);
+  const b64 = fs.readFileSync(path.join(dir, 'pilot.woff2')).toString('base64');
+  assert.ok(source.includes('"Pilot Study":{family:"wdspilot", seated:true, src:"data:font/woff2;base64,' + b64 + '"}'), 'the studio carries the face');
+  const spec = JSON.parse(fs.readFileSync(path.join(dir, 'spec.json'), 'utf8'));
+  assert.equal(spec.dark, false, 'light figures on a dark dial');
+  assert.ok(spec.digits['7'].unline && spec.digits['0'].mirror === 'left' && spec.digits['2'].boost, 'each figure a hand touched, freed');
+  const lift = fs.readFileSync(path.join(__dirname, '../tools/dial-font/lift.py'), 'utf8');
+  for (const k of ["'unline'", "'boost'", "'box'", "'keep_px'"]) assert.ok(lift.includes(k), k);
+  assert.ok(!fs.readdirSync(dir).some(f => /\.(jpe?g|png)$/i.test(f)), 'the photograph is not kept');
+});
