@@ -200,6 +200,15 @@ stored in a design file do not change. In the full editor at laptop widths
 the toolbar sits tighter, and on a narrower window it takes a second row
 rather than pushing Share and Export off the screen.
 
+## FPJ figures upright (v4.36.3)
+
+The trace had left three figures leaning, each traced off a dial where it sat
+at an angle: the 0 about 10° to the left, the 2 and the 4 about 5° to the
+right. They now stand upright on the baseline (the 4's stem at 91°, its bars
+at 178°; the 2's base level; the 0's top over its bottom within 14 units of
+700), so on a dial each figure lies exactly along its radius. The turns, and
+the tools that measure them, are in `tools/fpj-font/`.
+
 ## The FPJ font rebuilt (v4.36.2)
 
 The fault was in the font, so the font is fixed: its ten figures are rebuilt

@@ -390,3 +390,10 @@ test('the FPJ font rebuilt: one figure height, clean outlines (v4.36.2)', () => 
   assert.ok(source.includes('"FPJ":{family:"wdsfpj", src:"data:font/woff2;base64,' + b64 + '"'), 'the studio carries the rebuilt font');
   assert.match(fs.readFileSync(path.join(dir, 'rebuild.py'), 'utf8'), /^H = 700 /m, 'one height for all ten');
 });
+
+test('FPJ figures upright (v4.36.3)', () => {
+  const dir = path.join(__dirname, '../tools/fpj-font');
+  assert.match(fs.readFileSync(path.join(dir, 'rebuild.py'), 'utf8'), /^TURN = \{'0': -10\.0, '2': 5\.0, '4': 5\.5\}$/m, 'the 0, 2 and 4 stood upright');
+  for (const f of ['lean.py', 'segs.py', 'guides.py']) assert.ok(fs.existsSync(path.join(dir, f)), f + ' kept to measure them again');
+  assert.match(source, /the 0, 2 and 4, which the trace left leaning, stood upright/);
+});

@@ -24,6 +24,12 @@ H = 700          # the figure height, in font units (the tallest figure, the 2, 
 PX = 2.0         # raster pixels per font unit
 SIGMA = 13.0     # smoothing of the distance field, font units
 RSB = 96         # right side bearing every digit had
+# Figures the trace left leaning, each traced off a dial where it sat at an
+# angle: the turn (degrees, anticlockwise +) that stands each upright, measured
+# on its own reference edges with lean.py and segs.py. The 0 by its counter
+# and its extremes (top 67 units left of bottom), the 2 by its base, the 4 by
+# its stem and its bars. The others measured square and are left as drawn.
+TURN = {'0': -10.0, '2': 5.0, '4': 5.5}
 
 src, dst = sys.argv[1], sys.argv[2]
 extra = json.load(open(sys.argv[3])) if len(sys.argv) > 3 else {}
@@ -66,6 +72,7 @@ report = {}
 for ch in '0123456789':
     name = cmap[ord(ch)]
     g0 = glyph_geom(gs, name)
+    if ch in TURN: g0 = affinity.rotate(g0, TURN[ch], origin='centroid')
     bx0, by0, bx1, by1 = g0.bounds
     h0 = by1 - by0
     hair0, med0, stem0 = strokes(g0)
