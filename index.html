@@ -2076,6 +2076,14 @@ function migrateNumerals(st){
   if(allowed.length && allowed.indexOf(nm.material) < 0) nm.material = allowed[0];
   /* a flag from an older shape that nothing has read for a long time */
   delete nm.applied;
+  /* Applied figures drew at their own weight whatever "Thickness" held (only
+     diamond-set ones took it), and the slider was hidden for them. Now it
+     works for every figure, so a value a design carried unseen is cleared
+     once, and the design opens looking exactly as it was saved. */
+  if(!nm.weightLive){
+    if(nm.tech === "applied" && !(typeof paveOn === "function" && paveOn(st))) nm.weight = 0;
+    nm.weightLive = true;
+  }
   return st;
 }
 /* The engraved bands were two fixed slots, inner and outer, so a dial could
@@ -2275,7 +2283,7 @@ const APP_BUILD = "__BUILD__";
 /* The version people see, raised with every change that reaches them:
    major for a new way of working, minor for something new to do, patch for
    a fix. Shown on the watch screen, so any screenshot says which it was. */
-const APP_VERSION = "4.40.1";
+const APP_VERSION = "4.40.2";
 const APP_DATE = "__DATE__";
 
 /* Every route that replaces S passes through one of these three, which is
@@ -6143,10 +6151,29 @@ function buildSVG(st, o={}){
       }
 
       const weight = nm.weight || 0;
-      const wrap = inner => {
-        const strokeAttr = weight > 0
-          ? ` stroke="${paint}" stroke-width="${f(weight,3)}" stroke-linejoin="round" paint-order="stroke fill"`
-          : weight < 0 ? ` stroke="${st.dial.color}" stroke-width="${f(-weight,3)}" stroke-linejoin="round"` : "";
+      /* Thinner figures: the figure's own shape taken in by w/2 all round, as
+         a mask (the figure, less a band of width w along its edge). It used to
+         be faked with an outline in the dial's colour, which showed as a flat
+         edge on any dial with a texture and could not be used on an applied
+         piece at all; this is exact on every dial, finish and technique. */
+      /* k: the scale the figure's own drawing sits under (the path-drawn
+         Vernoy figures are drawn at 100 and scaled), so the band is w on the
+         dial whatever the drawing's units; k 0: the face thins itself (Breguet) */
+      const kOf = ns => styleUsed === "vernoy" ? ns/100 : styleUsed === "breguet" ? 0 : 1;
+      const thinned = (markup, w, k = 1) => {
+        if(!(w > 0) || !(k > 0)) return markup;
+        w = w/k;
+        const mid = id("nthin"), plain = markup.replace(/\sfilter="[^"]*"/g, "");
+        const white = plain.replace(/fill="[^"]*"/g, 'fill="#fff"').replace(/\sstroke(-[a-z]+)?="[^"]*"/g, "");
+        const edge = plain.replace(/fill="[^"]*"/g, 'fill="none"').replace(/\sstroke(-[a-z]+)?="[^"]*"/g, "");
+        defs.push(`<mask id="${mid}" maskUnits="userSpaceOnUse" x="-60" y="-60" width="120" height="120"><g fill="#fff">${white}</g>`
+          + `<g fill="none" stroke="#000" stroke-width="${f(w,3)}" stroke-linejoin="round">${edge}</g></mask>`);
+        return `<g mask="url(#${mid})">${markup}</g>`;
+      };
+      const wrap = (inner0, k = 1) => {
+        const inner = weight < 0 ? thinned(inner0, -weight, k) : inner0;
+        const strokeAttr = weight > 0 && k > 0
+          ? ` stroke="${paint}" stroke-width="${f(weight/k,3)}" stroke-linejoin="round" paint-order="stroke fill"` : "";
         const glass = MA.glass
           ? `<g fill="none" stroke="${tint(nm.color,0.9)}" stroke-width="${f(nm.size*0.022,3)}" stroke-opacity="0.9">${inner}</g>` : "";
         return `<g${strokeAttr}${extraAttr}>${inner}</g>${glass}`;
@@ -6365,7 +6392,7 @@ function buildSVG(st, o={}){
       if(o.numInfo){
         const scales = {};
         for(const n of set){ const PN = placeNum(n, (n%12)*30); scales[n] = PN ? PN.s : 0; }
-        const stroke = MK.cut ? 0 : MK.piece ? (paveOn(st) && MA.metal && !arcSet && !drawnOutline && weight > 0 ? weight : 0) : weight;
+        const stroke = MK.cut ? 0 : MK.piece ? (weight > 0 ? weight : 0) : weight;
         Object.assign(o.numInfo, {style:styleUsed, fsz, scales, gap:lsGap, perGlyph, stroke, drawn:drawnOutline});
       }
       /* "Use markers": ١١ and ١ give way to a short baton each, in the
@@ -6437,8 +6464,8 @@ function buildSVG(st, o={}){
            it bold for production), and its shadow is the offset copy the
            gems cast, since the stones sit on it. */
         const pave = paveOn(st) && MA.metal && !arcSet && !drawnOutline;
-        const pw = pave && weight > 0 ? weight : 0;
-        const pwA = col => pw ? ` stroke="${col}" stroke-width="${f(pw,3)}" stroke-linejoin="round"` : "";
+        const pw = weight > 0 && kOf(1) > 0 ? weight : 0;          // thicker: every layer of the piece outlined in its own colour
+        const pwA = (col, k = 1) => pw ? ` stroke="${col}" stroke-width="${f(pw/k,3)}" stroke-linejoin="round"` : "";
         const paveNums = [];
         for(const n of set){
           const PN = placeNum(n, (n%12)*30); if(!PN) continue;
@@ -6458,7 +6485,7 @@ function buildSVG(st, o={}){
                 return `<text x="${f(ix,3)}" y="${f(iy,3)}" font-family="${famUsed}" font-size="${f(fs,3)}" font-weight="400"
                  ${spacing(numeralLabel(n, sys))} fill="inherit" text-anchor="middle"
                 ${ligaOff}>${numeralLabel(n, sys)}</text>`; })();
-          defs.push(`<g id="${gid}">${glyph}</g>`);
+          defs.push(`<g id="${gid}">${weight < 0 ? thinned(glyph, -weight, kOf(ns)) : glyph}</g>`);   // thinner: the piece's shape itself taken in
           // the side walls lean away from the dial centre, as they do under a
           // camera looking down the middle of the watch
           const rr = Math.hypot(p[0], p[1]) || 1e-6;
@@ -6472,9 +6499,9 @@ function buildSVG(st, o={}){
           for(let i=steps; i>=1; i--){
             const t2 = i/steps;
             const sideCol = mix(shade(MT.lo,0.30), MT.base, 1-t2*0.75);
-            stack += `<use href="#${gid}" x="${f(p[0]+ex*reach*t2,3)}" y="${f(p[1]+ey*reach*t2,3)}" fill="${sideCol}"${pwA(sideCol)}/>`;
+            stack += `<use href="#${gid}" x="${f(p[0]+ex*reach*t2,3)}" y="${f(p[1]+ey*reach*t2,3)}" fill="${sideCol}"${pwA(sideCol, kOf(ns))}/>`;
           }
-          stack += `<use href="#${gid}" x="${f(p[0],3)}" y="${f(p[1],3)}" fill="${topPaint}"${pwA(topPaint)} filter="url(#${bev})"/>`;
+          stack += `<use href="#${gid}" x="${f(p[0],3)}" y="${f(p[1],3)}" fill="${topPaint}"${pwA(topPaint, kOf(ns))} filter="url(#${bev})"/>`;
           if(pave){
             const label = numeralLabel(n, sys), d = nm.paveD || 0.80;
             const cs = paveCentres(famUsed, label, fs, d, pw) || [];
@@ -6521,11 +6548,12 @@ function buildSVG(st, o={}){
           /* the rotation lives in the definition, so every copy and every
              offset is taken in the dial's frame and the light stays put */
           const gid = id("ng");
-          defs.push(`<g id="${gid}">${rot && !onArc ? `<g${rot}>${g}</g>` : g}</g>`);
+          const gT = weight < 0 ? thinned(g, -weight, kOf(ns)) : g;          // an engraving cut finer
+          defs.push(`<g id="${gid}">${rot && !onArc ? `<g${rot}>${gT}</g>` : gT}</g>`);
           body.push(engrave(gid));
           continue;
         }
-        const wrapped = wrap(g);
+        const wrapped = wrap(g, kOf(ns));
         body.push(rot && !onArc ? `<g${rot}>${wrapped}</g>` : wrapped);
       }
     }
@@ -19270,7 +19298,7 @@ Object.assign(GWORD.ar, {
           /* thickness thickens a printed figure's ink; an applied piece is cut
              to its outline and ignores it, except a diamond-set one, whose
              strokes have to be bold enough to hold the stones */
-          if(n.tech !== "applied" || n.pave) h += slider("numerals.weight", "Thickness", -0.1, 0.45, 0.01, n.weight || 0);
+          h += slider("numerals.weight", "Thickness", -0.1, 0.45, 0.01, n.weight || 0);   // applied figures too, thinner or thicker
           if(fit && fit.touching) h += `<p class="gNote" style="color:var(--g-warn-ink)">${gT("w.dayTouch")}</p>`;
           h += `<p class="gNote">${gT("mk.underWindows")}</p>`;
         }

@@ -474,3 +474,15 @@ test('Pilot Study (v4.40.0)', () => {
   for (const k of ["'unline'", "'boost'", "'box'", "'keep_px'"]) assert.ok(lift.includes(k), k);
   assert.ok(!fs.readdirSync(dir).some(f => /\.(jpe?g|png)$/i.test(f)), 'the photograph is not kept');
 });
+
+test('thickness for every figure, thinner too (v4.40.2)', () => {
+  assert.match(source, /h \+= slider\("numerals\.weight", "Thickness", -0\.1, 0\.45, 0\.01, n\.weight \|\| 0\);/, 'shown for applied figures too');
+  assert.doesNotMatch(source, /stroke="\$\{st\.dial\.color\}" stroke-width="\$\{f\(-weight,3\)\}"/, 'no outline in the dial colour');
+  assert.match(source, /const thinned = \(markup, w, k = 1\) => \{/);
+  assert.match(source, /<mask id="\$\{mid\}" maskUnits="userSpaceOnUse"/);
+  assert.match(source, /defs\.push\(`<g id="\$\{gid\}">\$\{weight < 0 \? thinned\(glyph, -weight, kOf\(ns\)\) : glyph\}<\/g>`\);/, 'applied pieces thinned');
+  assert.match(source, /const pw = weight > 0 && kOf\(1\) > 0 \? weight : 0;/, 'applied pieces thickened, not only diamond-set ones');
+  assert.match(source, /const wrapped = wrap\(g, kOf\(ns\)\);/);
+  const M = chunk('function migrateNumerals(st){', '\n}\n');
+  assert.match(M, /if\(!nm\.weightLive\)\{\n    if\(nm\.tech === "applied" && !\(typeof paveOn === "function" && paveOn\(st\)\)\) nm\.weight = 0;\n    nm\.weightLive = true;/, 'a value carried unseen cleared once');
+});

@@ -200,6 +200,19 @@ stored in a design file do not change. In the full editor at laptop widths
 the toolbar sits tighter, and on a narrower window it takes a second row
 rather than pushing Share and Export off the screen.
 
+## Thickness for every figure, thinner too (v4.40.2)
+
+"Thickness" under Markers › Size was hidden for applied figures, and they
+drew at their font's own weight whatever it held (only diamond-set ones took
+it). It now works on every figure, applied metal included, both ways: thicker
+grows each layer of a piece (top face, side walls) by its own colour; thinner
+takes the figure's own shape in all round. Thinner used to be an outline in
+the dial's colour, which showed as a flat edge on any textured dial; it is a
+mask now, exact on every dial, finish and technique, engraving included. The
+path-drawn Vernoy figures take the same width on the dial as type does. A
+value a design carried unseen on applied figures is cleared once on opening,
+so every saved design looks as it did.
+
 ## Pilot Study: the 0, 2 and 7 traced whole (v4.40.1)
 
 In IWC's photograph the hands stand at 10:10 and lie over the 0, the 2 and
