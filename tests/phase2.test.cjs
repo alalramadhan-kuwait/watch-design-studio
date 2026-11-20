@@ -377,7 +377,7 @@ test('the logo comes with the case (v4.36.0)', () => {
 });
 
 test('even figures (v4.36.1)', () => {
-  assert.match(source, /"FPJ":\{family:"wdsfpj", src:/, 'FPJ is even in the font itself since 4.36.2, so it needs no flag');
+  assert.match(source, /"FPJ":\{family:"wdsfpj", (seated:true, )?src:/, 'FPJ is even in the font itself since 4.36.2, so it needs no flag');
   assert.match(source, /if\(!F \|\| !F\.even \|\| drawnOutline \|\| arcSet\) return \(\) => 1;/, 'other fonts as they were');
   assert.match(source, /return label => \{ const m = inkMetrics\(famUsed, label\); return m && m\.h > 0 \? Math\.max\(1, Math\.min\(1\.6, top\/m\.h\)\) : 1; \};/, 'each brought to the tallest');
   assert.match(source, /const label = numeralLabel\(n, sys\), sc = sc0\*evenK\(label\), fz = fsz\*sc;/);
@@ -387,13 +387,24 @@ test('the FPJ font rebuilt: one figure height, clean outlines (v4.36.2)', () => 
   const dir = path.join(__dirname, '../tools/fpj-font');
   for (const f of ['rebuild.py', 'glyphs.py', 'specimen.py', 'fpj-traced.woff2', 'fpj.woff2', 'README.md']) assert.ok(fs.existsSync(path.join(dir, f)), f);
   const b64 = fs.readFileSync(path.join(dir, 'fpj.woff2')).toString('base64');
-  assert.ok(source.includes('"FPJ":{family:"wdsfpj", src:"data:font/woff2;base64,' + b64 + '"'), 'the studio carries the rebuilt font');
+  assert.ok(source.includes('"FPJ":{family:"wdsfpj", seated:true, src:"data:font/woff2;base64,' + b64 + '"'), 'the studio carries the rebuilt font');
   assert.match(fs.readFileSync(path.join(dir, 'rebuild.py'), 'utf8'), /^H = 700 /m, 'one height for all ten');
 });
 
 test('FPJ figures upright (v4.36.3)', () => {
   const dir = path.join(__dirname, '../tools/fpj-font');
-  assert.match(fs.readFileSync(path.join(dir, 'rebuild.py'), 'utf8'), /^TURN = \{'0': -10\.0, '2': 5\.0, '4': 5\.5\}$/m, 'the 0, 2 and 4 stood upright');
+  assert.match(fs.readFileSync(path.join(dir, 'rebuild.py'), 'utf8'), /^TURN = \{'0': -13\.0, '2': 5\.0, '4': 5\.5, '5': 2\.5, '6': -2\.0, '7': -2\.0, '8': 1\.0\}$/m, 'the 0, 2 and 4 stood upright');
   for (const f of ['lean.py', 'segs.py', 'guides.py']) assert.ok(fs.existsSync(path.join(dir, f)), f + ' kept to measure them again');
-  assert.match(source, /the 0, 2 and 4, which the trace left leaning, stood upright/);
+  assert.match(source, /every figure stood upright and seated one by one/);
+});
+
+test('FPJ figures seated, one by one (v4.36.4)', () => {
+  const rb = fs.readFileSync(path.join(__dirname, '../tools/fpj-font/rebuild.py'), 'utf8');
+  assert.match(rb, /^OVER = 10$/m, 'round and pointed edges dip past the lines');
+  assert.match(rb, /^ROUND_TOP = set\('012346789'\)$/m); assert.match(rb, /^ROUND_BOTTOM = set\('035689'\)$/m);
+  assert.match(rb, /^SEAT_ON_BASE = \{'2'\}$/m, 'the 2 on its base, not its tail');
+  assert.match(rb, /^WIDTH = \{'2': 660\}$/m);
+  assert.match(source, /"FPJ":\{family:"wdsfpj", seated:true, src:/, 'one baseline on the dial');
+  assert.match(source, /if\(SF && SF\.seated && !drawnOutline\)\{ const mS = inkMetrics\(famUsed, NUM_SYSTEM\[sys\] \|\| "0123456789"\); if\(mS\) iy = -mS\.cy\*fz; \}/);
+  for (const f of ['measure.py', 'big.py', 'turns.py']) assert.ok(fs.existsSync(path.join(__dirname, '../tools/fpj-font', f)), f);
 });

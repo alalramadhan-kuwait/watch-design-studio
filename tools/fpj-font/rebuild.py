@@ -29,7 +29,20 @@ RSB = 96         # right side bearing every digit had
 # on its own reference edges with lean.py and segs.py. The 0 by its counter
 # and its extremes (top 67 units left of bottom), the 2 by its base, the 4 by
 # its stem and its bars. The others measured square and are left as drawn.
-TURN = {'0': -10.0, '2': 5.0, '4': 5.5}
+TURN = {'0': -13.0, '2': 5.0, '4': 5.5, '5': 2.5, '6': -2.0, '7': -2.0, '8': 1.0}
+# Seating, one figure at a time. A round or pointed edge dips OVER units past
+# its line, as type does, or it looks smaller than the flat ones and seems to
+# float; a flat edge (the 1's and 4's feet, the 2's base, the 5's bar, the 7's
+# foot) sits on the line exactly.
+OVER = 10
+ROUND_TOP = set('012346789')
+ROUND_BOTTOM = set('035689')
+# The 2 stood on the point of its tail, its base 85 units up. The tail is
+# trimmed at the base's own underside, so the base stands on the line.
+SEAT_ON_BASE = {'2'}
+# Brought to full height from its 615-unit body, the 2 came out the widest
+# figure (731) and the heaviest; it is drawn to the 0's width instead.
+WIDTH = {'2': 660}
 
 src, dst = sys.argv[1], sys.argv[2]
 extra = json.load(open(sys.argv[3])) if len(sys.argv) > 3 else {}
@@ -73,6 +86,11 @@ for ch in '0123456789':
     name = cmap[ord(ch)]
     g0 = glyph_geom(gs, name)
     if ch in TURN: g0 = affinity.rotate(g0, TURN[ch], origin='centroid')
+    if ch in SEAT_ON_BASE:
+        from shapely.geometry import box
+        X0, Y0, X1, Y1 = g0.bounds; w = X1 - X0
+        base = g0.intersection(box(X0 + 0.45 * w, Y0 - 1, X0 + 0.85 * w, Y0 + 0.4 * (Y1 - Y0)))
+        g0 = g0.intersection(box(X0 - 50, base.bounds[1] - 2, X1 + 50, Y1 + 50)).buffer(0)
     bx0, by0, bx1, by1 = g0.bounds
     h0 = by1 - by0
     hair0, med0, stem0 = strokes(g0)
@@ -92,6 +110,12 @@ for ch in '0123456789':
     # a last true-up of the height, a fraction of a percent
     t = H / (out.bounds[3] - out.bounds[1])
     out = affinity.scale(out, t, t, origin=(0, 0))
+    if ch in WIDTH: out = affinity.scale(out, WIDTH[ch] / out.bounds[2], 1, origin=(0, 0))
+    # the dip past the lines: a round top and bottom both, or one of them
+    top, bot = ch in ROUND_TOP, ch in ROUND_BOTTOM
+    if top or bot:
+        sy = (H + OVER * (top + bot)) / H
+        out = affinity.scale(out, 1, sy, origin=(0, H / 2 if top and bot else 0 if top else H))
     f['glyf'][name] = to_glyph(out)
     w = out.bounds[2]
     f['hmtx'][name] = (int(round(w + RSB)), 0)

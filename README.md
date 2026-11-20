@@ -200,6 +200,20 @@ stored in a design file do not change. In the full editor at laptop widths
 the toolbar sits tighter, and on a narrower window it takes a second row
 rather than pushing Share and Export off the screen.
 
+## FPJ figures seated, one by one (v4.36.4)
+
+Each figure checked on its own, large on guides, and corrected where it was
+off. Upright: the 0 by its counter and its mirror symmetry (a further 3°), the
+5 by its top bar (+2.5°), the 6 by its bowl (−2°), the 7 by its bar end to
+end (−2°), the 8 by its stacked counters (+1°); the 1, 3, 4 and 9 measured
+square. Seated: the 2 had stood on the point of its tail with its base 85
+units up, so the tail is trimmed and the base stands on the line, drawn to the
+0's width; round and pointed edges now dip 10 units past the baseline and the
+top line, as type does, while flat feet and bars sit on them. On the dial the
+font is marked `seated`, so the figures share one baseline in their own frame
+(each still centred across on its own ink): flat feet at 1.42–1.43 mm from the
+circle, round bottoms at 1.46–1.47.
+
 ## FPJ figures upright (v4.36.3)
 
 The trace had left three figures leaning, each traced off a dial where it sat
