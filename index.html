@@ -1638,6 +1638,8 @@ const BASE = {
   chapter:{on:true, outerD:30.5, innerD:27.0, color:"#003087", finish:"flat", separator:true, sepColor:"#8BB8E8"},
   /* a printed ring between the dial and the bezel, on the photograph */
   rehaut:{on:false, color:"#141A24", marks:"dots", markColor:"#EDEFF2"},
+  /* a power-reserve sector: off unless chosen */
+  power:{on:false, at:3, dist:10.8, r:6.0, empty:305, full:235, value:0.8, numSize:0.62, labels:["56","42","28","14","0"], color:"", ink:"#EDE7D6", handColor:"#EDE7D6"},
   sector:{on:false, waveGrowth:0, wavePhase:0, radialPhase:0, stamp:0, outerD:26.0, innerD:20.0, color:"#D6D2C4", ringColor:"#A89968", finish:"matte", band:true, arms:true, lineW:0.16,
           pattern:"same as dial", cell:0.85, pitch:0.42, rays:200, waveAmp:0.35, waveN:12, wall:32},
   minute:{on:true, diameter:29.6, thickness:.30, style:"dots", color:"#FFFFFF", fives:true, fiveLen:.9,
@@ -2242,7 +2244,7 @@ const APP_BUILD = "__BUILD__";
 /* The version people see, raised with every change that reaches them:
    major for a new way of working, minor for something new to do, patch for
    a fix. Shown on the watch screen, so any screenshot says which it was. */
-const APP_VERSION = "4.32.0";
+const APP_VERSION = "4.33.0";
 const APP_DATE = "__DATE__";
 
 /* Every route that replaces S passes through one of these three, which is
@@ -6463,9 +6465,49 @@ function buildSVG(st, o={}){
       if(sd.on===false)continue;
       const p = pt(sd.dist, sd.at*30), r = sd.diameter/2;
       let g = `<g transform="translate(${f(p[0],3)},${f(p[1],3)})"><circle r="${r}" fill="${sd.color}"/><circle r="${r}" fill="none" stroke="${sd.ring}" stroke-width="0.12"/>`;
-      if(sd.track) for(let i=0;i<60;i+=5){ const q0=pt(r-0.5,i*6), q1=pt(r-0.15,i*6);
+      /* the track: a tick every five seconds, as it always was, or every
+         second with the fives longer (ticks "60") */
+      if(sd.track && sd.ticks === "60") for(let i=0;i<60;i++){ const five = i%5===0, q0=pt(r-0.15-(five?0.42:0.26),i*6), q1=pt(r-0.15,i*6);
+        g+=`<line x1="${f(q0[0],3)}" y1="${f(q0[1],3)}" x2="${f(q1[0],3)}" y2="${f(q1[1],3)}" stroke="${sd.ring}" stroke-width="${five ? 0.10 : 0.06}"/>`; }
+      else if(sd.track) for(let i=0;i<60;i+=5){ const q0=pt(r-0.5,i*6), q1=pt(r-0.15,i*6);
         g+=`<line x1="${f(q0[0],3)}" y1="${f(q0[1],3)}" x2="${f(q1[0],3)}" y2="${f(q1[1],3)}" stroke="${sd.ring}" stroke-width="0.11"/>`; }
-      body.push(g+`<circle r="0.22" fill="${sd.ring}"/></g>`);
+      /* a small seconds hand: a fine needle with a ring for a counterweight,
+         set to the seconds the watch shows */
+      if(sd.hand){
+        const sec = (st.meta && st.meta.time && Number.isFinite(+st.meta.time.s)) ? +st.meta.time.s : 37, hc = sd.handColor || "#EDE7D6";
+        const L = r*0.86, T = r*0.40, ringR = Math.max(0.22, r*0.085);
+        g += `<g transform="rotate(${f(sec*6,2)})"><line x1="0" y1="${f(T - ringR,3)}" x2="0" y2="${f(-L,3)}" stroke="${hc}" stroke-width="0.10" stroke-linecap="round"/>`
+          + `<circle cy="${f(T,3)}" r="${f(ringR,3)}" fill="none" stroke="${hc}" stroke-width="0.10"/><circle r="0.30" fill="${hc}"/></g>`;
+      }
+      body.push(g+`<circle r="${sd.hand ? 0.10 : 0.22}" fill="${sd.hand ? shade(sd.color, 0.5) : sd.ring}"/></g>`);
+    }
+    /* A power-reserve indicator: a sector sunk into the dial, its scale on an
+       arc round the hand's pivot (full at one end, empty at the other), and
+       a small hand pointing at what is left. Angles are compass bearings
+       from the pivot (0 toward 12, clockwise). */
+    const pw = st.power;
+    if(pw && pw.on){
+      const P = pt(+pw.dist || 10.8, (+pw.at || 3)*30), R = +pw.r > 0 ? +pw.r : 6.0;
+      const aE = pw.empty !== undefined ? +pw.empty : 305, aF = pw.full !== undefined ? +pw.full : 235;
+      const lo = Math.min(aE, aF) - 7, hi = Math.max(aE, aF) + 7, Rp = R + 0.75, col = /^#[0-9a-f]{6}$/i.test(pw.color || "") ? pw.color : shade(d.color, 0.10);
+      const ink = /^#[0-9a-f]{6}$/i.test(pw.ink || "") ? pw.ink : "#EDE7D6", hc = /^#[0-9a-f]{6}$/i.test(pw.handColor || "") ? pw.handColor : ink;
+      const at = (rr, a) => { const q = pt(rr, a); return [P[0] + q[0], P[1] + q[1]]; };
+      const e0 = at(Rp, lo), e1 = at(Rp, hi);
+      let g = `<path d="M${f(P[0],3)} ${f(P[1],3)} L${f(e0[0],3)} ${f(e0[1],3)} A${f(Rp,3)} ${f(Rp,3)} 0 0 1 ${f(e1[0],3)} ${f(e1[1],3)}Z" fill="${col}" stroke="${shade(col,0.45)}" stroke-width="0.06"/>`;
+      /* the sunk edge: shadow along the side away from the light */
+      g += `<path d="M${f(P[0],3)} ${f(P[1],3)} L${f(e1[0],3)} ${f(e1[1],3)}" stroke="#000" stroke-opacity=".28" stroke-width="0.16"/>`;
+      const labels = Array.isArray(pw.labels) && pw.labels.length > 1 ? pw.labels : ["56","42","28","14","0"], n = labels.length;
+      const famP = letterFam(pw.font || "sans", "sans", defs), ns = +pw.numSize > 0 ? +pw.numSize : 0.62;
+      for(let i = 0; i < n; i++){ const a = aF + (aE - aF)*i/(n - 1), q = at(R - 0.9, a), rot = a > 90 && a < 270 ? a + 180 : a;
+        g += `<text x="0" y="0" transform="translate(${f(q[0],3)},${f(q[1],3)}) rotate(${f(rot,2)})" font-family="${famP}" font-size="${f(ns,3)}" fill="${ink}" text-anchor="middle" dominant-baseline="central">${esc(String(labels[i]))}</text>`;
+        if(i < n - 1){ const m = at(R - 0.9, a + (aE - aF)/(n - 1)/2); g += `<circle cx="${f(m[0],3)}" cy="${f(m[1],3)}" r="0.07" fill="${ink}"/>`; } }
+      const v = Math.max(0, Math.min(1, pw.value !== undefined ? +pw.value : 0.8)), ah = aE + (aF - aE)*v, Lh = R*0.52;
+      /* the hand: a small lance, full in the bulb, its pivot a disc */
+      const w = (t) => (0.17 - 0.08*Math.min(1, t/.55) + 0.24*Math.exp(-Math.pow((t - .74)/.12, 2)))*(t > .86 ? Math.max(0, (1 - t)/.14) : 1);
+      const side = [], other = [];
+      for(let i = 0; i <= 20; i++){ const t = i/20; side.push(`${f(w(t),3)} ${f(-Lh*t,3)}`); other.unshift(`${f(-w(t),3)} ${f(-Lh*t,3)}`); }
+      g += `<g transform="translate(${f(P[0],3)},${f(P[1],3)}) rotate(${f(ah,2)})"><path d="M${side.join(" L")} L${other.join(" L")}Z" fill="${hc}" stroke="${shade(hc,0.35)}" stroke-width="0.02"/><circle r="0.36" fill="${hc}"/><circle r="0.11" fill="${shade(col,0.4)}"/></g>`;
+      body.push(`<g data-layer="power">${g}</g>`);
     }
     /* day window: an arc cut over the movement's day disc, with a polished frame */
     const dy = st.day;
@@ -8572,23 +8614,49 @@ function photoPartAt(P, x, y, fe){
 function photoPlan(st, K){
   const c = st.case || {}, two = twoToneOf(st), full = goldOf(c.material), gem = gemBezelOn(st);
   if(!two && !full && !gem) return null;
-  if(!K || !K.photoParts) return two || gem ? false : null;
+  /* a whole gold case needs no map of the parts: the whole picture takes the
+     gold, and the dial and the strap are drawn over it */
+  if(!K || !K.photoParts) return two || gem ? false : (full && K && K.photoFile ? {full, two:null, gem:false} : null);
   return {full, two, gem};
 }
 /* The photograph's pixels with the plan laid on: src is RGBA, cal places
    the dial centre (cx, cy in pixels) and the scale (s, pixels per mm).
    A whole gold case takes the whole picture: the dial is drawn over it and
    the white ground maps to white. */
-function photoTintPixels(src, w, h, cal, P, plan){
+/* Without a parts map, a whole gold case is kept to the case's own outline
+   (the F77's figures): the bezel and the flanks running to the lug blocks,
+   and the crown, so the ground and the strap keep their own colours. */
+function f77Inside(K, x, y){
+  const F = K && K.f77; if(!F) return true;
+  const Z = F.bezel, B = F.body, ax = Math.abs(x), ay = Math.abs(y);
+  if(ax >= F.crown.x0 - 0.3 && ax <= F.crown.x1 - 0.05 && x > 0 && ay <= K.crownD/2 - 0.05) return "crown";
+  if(Math.pow(ax/(Z.rx + 0.45), 2) + Math.pow(ay/(Z.ry + 0.45), 2) <= 1) return true;
+  if(ay > B.lugEnd + 0.15) return false;
+  /* the flank, from the lug block's outer corner to where it meets the bezel */
+  let lo = 0, hi = Math.PI/2;
+  for(let i = 0; i < 30; i++){ const t = (lo + hi)/2, tx = Z.rx*Math.cos(t), ty = Z.ry*Math.sin(t);
+    ((B.lugOut - tx)*Math.cos(t)/Z.rx + (B.lugEnd - ty)*Math.sin(t)/Z.ry) > 1e-9 ? (hi = t) : (lo = t); }
+  const t = (lo + hi)/2, TX = Z.rx*Math.cos(t), TY = Z.ry*Math.sin(t);
+  if(ay < TY) return false;
+  const fx = B.lugOut + (TX - B.lugOut)*(B.lugEnd - ay)/(B.lugEnd - TY);
+  return ax <= fx + 0.9 && (ay <= B.top + 0.15 || ax >= F.lugIn - 0.15);
+}
+function photoTintPixels(src, w, h, cal, P, plan, K){
   const out = new Uint8ClampedArray(src), tone = plan && (plan.full || plan.two);
   if(!tone) return out;
   const lut = luxRampLUT(tone), s = cal.s, fe = 1.1/s, part = !plan.full;
   /* nothing right of the crown can be a part */
   const xMax = part ? (P.crown.x1 + fe)*s + cal.cx : w;
+  /* the ground's own colour, from the picture's corner: never gold */
+  const bg = [src[0], src[1], src[2]];
   for(let j = 0; j < h; j++){
     const y = (j + 0.5 - cal.cy)/s;
     for(let i = 0; i < w; i++){
       let m = 1;
+      if(!part && !P && K && K.f77){ const ins = f77Inside(K, (i + 0.5 - cal.cx)/s, y); if(!ins) continue;
+        const o0 = (j*w + i)*4, dbg = Math.abs(src[o0] - bg[0]) + Math.abs(src[o0 + 1] - bg[1]) + Math.abs(src[o0 + 2] - bg[2]);
+        const Z0 = K.f77.bezel, xm = (i + 0.5 - cal.cx)/s, deep = Math.pow(xm/(Z0.rx - 0.7), 2) + Math.pow(y/(Z0.ry - 0.7), 2) <= 1;
+        if(!deep && dbg < (ins === "crown" ? 45 : 14)) continue; }
       if(part){
         if(i > xMax) break;
         const x = (i + 0.5 - cal.cx)/s;
@@ -9248,13 +9316,13 @@ const STYLE_W = {
   "sword":2.5, "syringe":1.7, "dauphine":3.0, "feuille":2.2, "leaf":2.6,
   "baton":1.9, "alpha":2.4, "pencil":2.0, "obelisque":2.2, "cathedral":2.8,
   "mercedes":2.2, "stick":1.6, "day-date":1.9, "dd-seconds":1.6,
-  "royal-oak":2.25, "ro-seconds":1.6, "f77":2.0, "f77-seconds":1.6
+  "royal-oak":2.25, "ro-seconds":1.6, "f77":2.0, "f77-seconds":1.6, "lance":2.2
 };
 /* How wide a hand is drawn for a base width of 1, at its widest point, as
    measured on the drawn shapes: the factor itself, except for the blades
    that taper before they reach it (leaf, feuille, obelisk). For the pomme,
    English, Mercedes and counterweight hands it is the stem. */
-const HAND_DRAWN = {leaf:2.36, feuille:2.08, obelisque:2.1};
+const HAND_DRAWN = {leaf:2.36, feuille:2.08, obelisque:2.1, lance:1.82};
 function handDrawnK(style){ return HAND_DRAWN[style] || STYLE_W[style] || 1; }
 /* Supplied hand artwork carried as geometry rather than as a photograph: one
    compound path per hand, drawn pointing to 12 with the pivot at the origin,
@@ -9495,6 +9563,11 @@ const FACET = {
                   return [-L*t, .10*(1-t) + .40*Math.pow(Math.sin(Math.PI*Math.pow(t,.85)), 1)]; })),
   "feuille":   (L,T) => [[T,.08]].concat(Array.from({length:25}, (_,i) => { const t = i/24;
                   return [-L*t, .07*(1-t) + .43*Math.pow(Math.sin(Math.PI*Math.pow(t,.72)), 1.25)]; })),
+  /* the lance: a slender shank narrowing from the hub, swelling into a
+     pointed bulb about four fifths of the way out, then a fine point */
+  "lance":     (L,T) => [[T,.16]].concat(Array.from({length:33}, (_,i) => { const t = i/32;
+                  const shank = .30 - .15*Math.min(1, t/.62), bulb = .26*Math.exp(-Math.pow((t - .80)/.085, 2)), end = t > .86 ? Math.max(0, (1 - t)/.14) : 1;
+                  return [-L*t, (shank + bulb)*Math.pow(end, .85)]; })),
   /* the Day-Date baton: a straight bar, two facets on a centre ridge, cut
      square at the tip and at the tail (no point) */
   /* full width for the first two thirds, then narrowing about 0.06 mm per
@@ -10426,14 +10499,14 @@ function photoPixels(K){
   return null;
 }
 function tintedPhoto(K, plan, strapHex, fab){
-  const key = K.photoFile + "|" + (plan.full || "") + "|" + (plan.two || "") + "|" + (strapHex || "") + "|" + (fab ? "fabric" + (fab.stitch || "") : "");
+  const key = K.photoFile + "|" + (plan.full || "") + "|" + (plan.two || "") + "|" + (strapHex || "") + "|" + (fab ? (fab.type || "fabric") + (fab.stitch || "") : "");
   if(PHOTO_TINT.has(key)) return PHOTO_TINT.get(key);
   const px = photoPixels(K); if(!px) return null;
   const C = K.photoCal, w = px.width, h = px.height;
   const cal = {cx:w*C.cx/100, cy:h*C.cy/100, s:w*C.dia/100/K.opening};
   const cv = document.createElement("canvas"); cv.width = w; cv.height = h;
   const g = cv.getContext("2d"), out = g.createImageData(w, h);
-  const data = plan.full || plan.two ? photoTintPixels(px.data, w, h, cal, K.photoParts, plan) : new Uint8ClampedArray(px.data);
+  const data = plan.full || plan.two ? photoTintPixels(px.data, w, h, cal, K.photoParts, plan, K) : new Uint8ClampedArray(px.data);
   if(strapHex) strapTintPixels(data, w, h, cal, K.photoStrap, strapHex, fab);
   out.data.set(data);
   g.putImageData(out, 0, 0);
@@ -10462,6 +10535,30 @@ function fabricTex(x, y){
   const fuzz = (mHash(Math.floor(x*26), Math.floor(y*26)) - 0.5)*0.18 + (mHash(Math.floor(x*9 + 3), Math.floor(y*11)) - 0.5)*0.10;
   return Math.max(0.10, 0.20 + 0.80*bump*lit + fuzz);
 }
+/* Alligator: rows of rectangular scales about 5 mm wide and 4 mm long, the
+   joins of each row set off from the last, each scale a little domed and its
+   own shade, deep grooves between, and the leather's fine grain. */
+function alligatorTex(x, y){
+  /* x across the strap from its centre line, y along it, in mm. The scales
+     run in columns, widest down the middle (about 4.6 mm) and narrowing to
+     the edges; each column breaks into scales on its own rhythm, so no row
+     lines up across the strap. Between them a dark groove 0.25 mm wide; each
+     scale is domed and catches the light on its crown. */
+  const W0 = 4.4, A = 7.5, wx = A*Math.sinh(x/A), cf = wx/W0 + 0.5, col = Math.floor(cf), u = cf - col;
+  const xc = A*Math.asinh(col*W0/A), sx = 1/Math.cosh(xc/A), cw = W0*sx;               // the column's width, at its middle
+  const rh = (1.6 + 2.0*sx)*(0.9 + 0.2*mHash(col, 4.4)), yy = y + mHash(col, 8.1)*rh*3;
+  const row = Math.floor(yy/rh), rl = rh*(0.82 + 0.36*mHash(col*3.1, row*1.7)), v = (yy - row*rh)/rl;
+  const cwi = cw, rr = Math.min(cwi, rl)*0.2;
+  const qx = Math.abs(u - 0.5)*cwi - (cwi/2 - rr), qy = Math.abs(Math.min(v, 1.2) - 0.5)*rl - (rl/2 - rr);
+  const sd = Math.hypot(Math.max(qx, 0), Math.max(qy, 0)) + Math.min(Math.max(qx, qy), 0) - rr;  // < 0 inside the scale
+  const edge = Math.max(0, Math.min(1, (-sd - 0.03)/0.09));                                        // 0 in the groove, 1 well inside
+  const du = 2*u - 1, dv = 2*Math.min(v, 1) - 1, dome = Math.max(0, 1 - 0.5*du*du - 0.5*dv*dv);
+  const crown = Math.exp(-(Math.pow(du + 0.25, 2) + Math.pow(dv + 0.3, 2))/0.18);                 // the light falls from above left
+  const jit = mHash(col*1.3 + row*7.1, 2.2), grain = (mHash(Math.floor(x*22), Math.floor(y*22)) - 0.5)*0.04;
+  const gloss = 0.06*Math.exp(-Math.pow(x/3.2, 2));
+  const body = 0.82 + 0.07*dome + 0.08*crown + 0.07*(jit - 0.5);
+  return 0.56 + (body - 0.56)*edge + grain + gloss;
+}
 function strapTintPixels(d, W, H, cal, P, hex, fab){
   const rgb = hex2rgb(hex), sti = fab && fab.stitch ? hex2rgb(fab.stitch) : null;
   for(let j = 0; j < H; j++){
@@ -10475,11 +10572,16 @@ function strapTintPixels(d, W, H, cal, P, hex, fab){
       if(fab){
         /* fabric: the weave's own light over the photograph's shading, and the
            seam's dashes 1.0 mm in from each edge */
-        const x = (i + 0.5 - cal.cx)/cal.s, ay = Math.abs(y), tex = fabricTex(x + 40, y + 60);
+        const x = (i + 0.5 - cal.cx)/cal.s, ay = Math.abs(y), gator = fab.type === "alligator", tex = gator ? alligatorTex(x, y + 60) : fabricTex(x + 40, y + 60);
         const shadeK = Math.max(0.55, Math.min(1.15, 1 + 0.6*(L - 22)/120));
-        let col = [0, 1, 2].map(c => Math.min(255, rgb[c]*tex*shadeK*1.25));
+        let col = [0, 1, 2].map(c => Math.min(255, rgb[c]*tex*shadeK*(gator ? 1.12 : 1.25)));
         /* the seam: a twisted cord, 0.36 mm thick, its twist catching the light */
-        if(sti && beyond && fab.half){
+        /* leather is stitched: separate stitches 0.9 mm long, 1.0 mm in */
+        if(sti && beyond && fab.half && gator){
+          const hw = fab.half(ay), off = Math.abs(x) - (hw - 1.0), dx = Math.abs(off), ph = (ay % 1.45)/1.45;
+          if(dx < 0.15 && ph < 0.62){ const rnd = Math.cos(dx/0.15*Math.PI/2)*Math.sin(Math.PI*ph/0.62); col = [0, 1, 2].map(c => Math.min(255, sti[c]*(0.55 + 0.6*rnd)*shadeK)); }
+        }
+        else if(sti && beyond && fab.half){
           const hw = fab.half(ay), off = Math.abs(x) - (hw - 1.0), dx = Math.abs(off);
           if(dx < 0.18){ const tw = 0.62 + 0.38*Math.cos(2*Math.PI*(ay/0.42 + off*1.6)), rnd = Math.cos(dx/0.18*Math.PI/2);
             col = [0, 1, 2].map(c => Math.min(255, sti[c]*(0.45 + 0.75*tw*rnd)*shadeK)); }
@@ -10495,10 +10597,10 @@ function strapTintPixels(d, W, H, cal, P, hex, fab){
 /* a fabric strap on the photograph: its stitching and its half-width along
    its length (the F77's strap figures), or null for rubber */
 const photoFabric = (st, K) => {
-  const c = st.case || {}; if(c.strapType !== "fabric" || !K.photoStrap || K.bracelet || c.strap === false) return null;
+  const c = st.case || {}; if((c.strapType !== "fabric" && c.strapType !== "alligator") || !K.photoStrap || K.bracelet || c.strap === false) return null;
   const F = K.f77 && K.f77.strap, E = K.f77 && K.f77.body ? K.f77.body.lugEnd : 23.1;
   const half = F ? (ay => ay <= E ? F.w0 : F.w0 + (F.w1 - F.w0)*(ay - E)/(F.y1 - E)) : null;
-  return {stitch:/^#[0-9a-f]{6}$/i.test(c.stitch || "") ? c.stitch : null, half};
+  return {type:c.strapType, stitch:/^#[0-9a-f]{6}$/i.test(c.stitch || "") ? c.stitch : null, half};
 };
 /* the strap colour the photograph has to be re-coloured to, or null */
 const photoStrapHex = (st, K) => {
@@ -10666,6 +10768,7 @@ const LAYER_GROUPS = [
   ["Details", [
     ["text","Text","text.on"],
     ["sub","Sub-dial","sub.on"],
+    ["power","Power reserve","power.on"],
     ["day","Day window","day.on"],
     ["date","Date window","date.on"]]],
   ["Scene", [
@@ -11334,8 +11437,14 @@ const SCHEMA = {
   cross:{title:"Crosshair", hint:"Classic scientific-dial cross through the centre.", fields:[
     N("cross.length","Arm length",2,22), N("cross.width","Line width",.05,.6,.01), C("cross.color","Colour")]},
   sub:{title:"Sub-dial", hint:"Position is given as an hour marker plus a distance from centre.", fields:[
-    N("sub.at","Position (hour)",1,12,1,"h"), N("sub.dist","Distance from centre",2,18),
-    N("sub.diameter","Diameter",3,20), C("sub.color","Colour"), C("sub.ring","Track colour"), CK("sub.track","Show track")]},
+    N("sub.at","Position (hour)",1,12,.05,"h"), N("sub.dist","Distance from centre",2,18),
+    N("sub.diameter","Diameter",3,20), C("sub.color","Colour"), C("sub.ring","Track colour"), CK("sub.track","Show track"),
+    SEL("sub.ticks","Track marks",["12","60"]), CK("sub.hand","Small seconds hand"), ...(S.sub.hand ? [C("sub.handColor","Hand colour")] : [])]},
+  power:{title:"Power reserve", hint:"A sector sunk into the dial with its scale and a small hand. The pivot is given as an hour plus a distance from centre; the scale runs between two bearings from the pivot (0 is toward 12).", fields:[
+    CK("power.on","Show a power reserve"),
+    N("power.at","Pivot position (hour)",1,12,.05,"h"), N("power.dist","Pivot from centre",2,14,.05), N("power.r","Scale radius",3,10,.05),
+    N("power.empty","Empty end (bearing)",0,360,1,"°"), N("power.full","Full end (bearing)",0,360,1,"°"), N("power.value","Reserve shown",0,1,.01,""),
+    N("power.numSize","Figure height",.3,1.2,.02), C("power.color","Sector colour"), C("power.ink","Figures colour"), C("power.handColor","Hand colour")]},
   date:{title:"Date window", get hint(){ const K = CASE_SPEC.calendar;
       return K ? `The ${CASE_SPEC.movement} date ring shows through ${f(K.dateW)} × ${f(K.dateH)} mm, centred ${f(K.dateC)} mm from the centre at 3. A larger window shows the ring edge or the next date.` : ""; },
     fields:()=>[
@@ -11468,7 +11577,7 @@ function handSchema(k,title){
     ...HAND_VEC_NAMES.map(n=>"vector · "+n),
     "pomme-ouverte","pomme-pleine","pomme-facetee",
     "english","a-tact","retrograde","counter",
-    "day-date","dd-seconds","royal-oak","ro-seconds","f77","f77-seconds","sword","syringe","dauphine","feuille","leaf","baton","alpha","pencil","obelisque","cathedral","mercedes","stick"
+    "day-date","dd-seconds","royal-oak","ro-seconds","f77","f77-seconds","sword","syringe","dauphine","feuille","leaf","lance","baton","alpha","pencil","obelisque","cathedral","mercedes","stick"
   ];
   return {title, hint:"Length runs from the centre of the movement to the tip. The pomme settings drive the whole Breguet family.", fields:()=>[
     /* The linked state has to be obvious: you are either editing the whole
@@ -16278,6 +16387,11 @@ async function makeMakerPDF(){
     }
     { const mt=st.minute||{}; if(mt.on&&(mt.nums==='minutes'||mt.nums==='hours')){ const R=(mt.numR>0?+mt.numR:mt.diameter/2+mt.thickness+0.55)+(mt.numSize>0?+mt.numSize:0.8)*0.55;
       add(R<=r-0.30,'Track numbers in view',`The numbers reach R${f(R,2)} mm; the opening is R${f(r,2)} mm${R<=r-0.30?'':', so keep 0.30 mm: bring them in or make them smaller'}.`,'minute'); } }
+    /* complications the movement must have: a power reserve, and small seconds */
+    { const K2=typeof caseOf==='function'?caseOf(st):{}, mv=K2.movement||'the movement';
+      if(st.power&&st.power.on)add(!!K2.powerReserve,'Power reserve and the movement',K2.powerReserve?`The ${mv} indicates its power reserve.`:`The ${mv} has no power-reserve indication: the sector and its hand need a movement or a module that drives one. Ask ${typeof makerOf==='function'?makerOf(st):'the maker'}.`,'dial');
+      const sh=st.sub&&st.sub.on&&[st.sub].concat(Array.isArray(st.sub.extra)?st.sub.extra:[]).some(x=>x&&x.on!==false&&x.hand);
+      if(sh)add(!!K2.smallSeconds,'Small seconds and the movement',K2.smallSeconds?`The ${mv} has small seconds.`:`The ${mv} shows its seconds at the centre: a small seconds hand needs a movement with its seconds there (or a module). Ask ${typeof makerOf==='function'?makerOf(st):'the maker'}.`,'dial'); }
     if(st.date&&st.date.on&&st.date.big)add(!!(cal&&cal.bigDate),'Big date movement',cal&&cal.bigDate?`The ${CASE_SPEC.movement} carries a big-date module.`:`A big date needs separate tens and units discs, from a big-date module; the ${CASE_SPEC.movement||'movement'} has ${cal?'one date ring':'no date mechanism'}. Ask the maker for a movement with a big-date module${cal?', or use one window':''}.`,'date');
     if(cal&&st.date&&st.date.on&&!st.date.big){
       add(st.date.w<=cal.dateW+1e-6&&st.date.h<=cal.dateH+1e-6,'Date window size',`${f(st.date.w,2)} × ${f(st.date.h,2)} mm against the movement's ${f(cal.dateW,2)} × ${f(cal.dateH,2)} mm aperture; larger shows the ring edge or the next date.`,'date');
@@ -17546,7 +17660,7 @@ const GWORD = {ar:{
   "Extra high":"مرتفع جداً", "High":"مرتفع", "height:Standard":"عادي", "Window width":"عرض النافذة", "Narrow":"ضيقة", "Standard":"قياسية", "Wide":"عريضة",
   "Move them aside":"أزحهما جانباً", "Make them smaller":"صغّرهما", "Use markers":"ضع مؤشرين", "Leave them off":"احذفهما", "Let them touch":"اتركهما متلامسين",
   "Day font":"خط اليوم", "Arabic font":"الخط العربي", "English font":"الخط الإنجليزي", "In the window":"في النافذة", "Day disc":"قرص اليوم",
-  "Day lettering":"لون كتابة اليوم", "Window edge":"حافة النافذة", "Lume colour":"لون المادة المضيئة", "Lume fill":"تعبئة مضيئة", "Green-white":"أبيض مخضر", "Old radium":"راديوم قديم", "Vintage cream":"كريمي عتيق", "Five-minute marks":"علامات الخمس دقائق", "Run inward":"ممتدة للداخل", "Flared":"متسعة", "Gap at 6":"فراغ عند ٦", "Track width":"عرض المسار", "Rail weight":"وزن الخط", "Tick weight":"وزن العلامة", "Turn this hour":"اتجاه هذه الساعة", "Toward the centre":"نحو المركز", "On point":"على رأسه", "Across":"بالعرض", "Size of this hour":"حجم هذه الساعة", "Figure height":"ارتفاع الرقم", "Letter height":"ارتفاع الحروف", "Thin line":"خط رفيع", "Digit height":"ارتفاع الأرقام", "Bevelled cut":"قطع مشطوف", "Applied frame":"إطار مركّب", "Keep off the watch":"أسماء ممنوعة على الساعة", "Outer chapter ring (rehaut)":"الحلقة المدرّجة الخارجية (ريهو)", "Ring colour":"لون الحلقة", "Ring track":"مسار الحلقة", "Midnight":"كحلي غامق", "Graphite":"غرافيتي", "Strap":"السير", "Fabric (Velcro)":"قماش (فيلكرو)", "Stitching":"الخياطة", "Sand":"رملي", "Square":"مربع", "Minute marks":"علامات الدقايق", "Ticks start from":"العلامات تبدأ من", "Inner edge":"الحافة الداخلية", "Outer edge":"الحافة الخارجية", "Minute tick length":"طول علامة الدقيقة", "Fifths between the minutes":"أخماس بين الدقايق", "Fifth tick length":"طول علامة الخُمس", "Minute marks on the dial":"علامات الدقايق على الميناء", "Mark length":"طول العلامة", "Marks' outer edge (diameter)":"الحافة الخارجية للعلامات (القطر)", "Mark width":"عرض العلامة", "Granular":"محبّب خشن", "Grain size":"حجم الحبيبات", "Grain strength":"قوة الحبيبات", "Painted":"مصبوغ", "Paint colour":"لون الصبغ", "Blue":"أزرق", "Track numbers":"أرقام المسار", "5 to 60":"٥ إلى ٦٠", "1 to 12":"١ إلى ١٢", "Number height":"ارتفاع الأرقام", "Numbers from centre":"بُعد الأرقام عن المركز", "The line under it moves with the logo":"السطر اللي تحته يتحرك مع الشعار", "Dial artwork (PDF)":"رسومات الميناء (PDF)", "Plan, inks and stones":"المخطط والأحبار والأحجار", "Show the colour as made":"اعرض اللون مثل ما ينصنع", "Drawn bezel":"البيزل المرسوم", "As Nivada's drawing":"مثل رسمة نيفادا", "As the prototype":"مثل النموذج", "Hand heights":"ارتفاعات العقارب", "I have the maker's hand heights":"عندي ارتفاعات العقارب من المصنّع", "Windows":"النوافذ", "One window":"نافذة وحدة", "Big date":"تاريخ كبير", "Centre bar":"الفاصل الوسطي", "Dates 1 to 9":"التواريخ من ١ إلى ٩",
+  "Day lettering":"لون كتابة اليوم", "Window edge":"حافة النافذة", "Lume colour":"لون المادة المضيئة", "Lume fill":"تعبئة مضيئة", "Green-white":"أبيض مخضر", "Old radium":"راديوم قديم", "Vintage cream":"كريمي عتيق", "Five-minute marks":"علامات الخمس دقائق", "Run inward":"ممتدة للداخل", "Flared":"متسعة", "Gap at 6":"فراغ عند ٦", "Track width":"عرض المسار", "Rail weight":"وزن الخط", "Tick weight":"وزن العلامة", "Turn this hour":"اتجاه هذه الساعة", "Toward the centre":"نحو المركز", "On point":"على رأسه", "Across":"بالعرض", "Size of this hour":"حجم هذه الساعة", "Figure height":"ارتفاع الرقم", "Letter height":"ارتفاع الحروف", "Thin line":"خط رفيع", "Digit height":"ارتفاع الأرقام", "Bevelled cut":"قطع مشطوف", "Applied frame":"إطار مركّب", "Keep off the watch":"أسماء ممنوعة على الساعة", "Track marks":"علامات المسار", "Small seconds hand":"عقرب الثواني الصغير", "Hand colour":"لون العقرب", "Pivot position":"موضع المحور", "Pivot from centre":"بُعد المحور عن المركز", "Scale radius":"نصف قطر التدريج", "Empty end":"طرف الفراغ", "Full end":"طرف الامتلاء", "Reserve shown":"الاحتياطي المعروض", "Sector colour":"لون القطاع", "Figures colour":"لون الأرقام", "Every five seconds":"كل خمس ثواني", "Every second":"كل ثانية", "Power reserve":"احتياطي الطاقة", "Show a power reserve":"اعرض احتياطي الطاقة", "Alligator leather":"جلد تمساح", "Lance":"رمح", "Outer chapter ring (rehaut)":"الحلقة المدرّجة الخارجية (ريهو)", "Ring colour":"لون الحلقة", "Ring track":"مسار الحلقة", "Midnight":"كحلي غامق", "Graphite":"غرافيتي", "Strap":"السير", "Fabric (Velcro)":"قماش (فيلكرو)", "Stitching":"الخياطة", "Sand":"رملي", "Square":"مربع", "Minute marks":"علامات الدقايق", "Ticks start from":"العلامات تبدأ من", "Inner edge":"الحافة الداخلية", "Outer edge":"الحافة الخارجية", "Minute tick length":"طول علامة الدقيقة", "Fifths between the minutes":"أخماس بين الدقايق", "Fifth tick length":"طول علامة الخُمس", "Minute marks on the dial":"علامات الدقايق على الميناء", "Mark length":"طول العلامة", "Marks' outer edge (diameter)":"الحافة الخارجية للعلامات (القطر)", "Mark width":"عرض العلامة", "Granular":"محبّب خشن", "Grain size":"حجم الحبيبات", "Grain strength":"قوة الحبيبات", "Painted":"مصبوغ", "Paint colour":"لون الصبغ", "Blue":"أزرق", "Track numbers":"أرقام المسار", "5 to 60":"٥ إلى ٦٠", "1 to 12":"١ إلى ١٢", "Number height":"ارتفاع الأرقام", "Numbers from centre":"بُعد الأرقام عن المركز", "The line under it moves with the logo":"السطر اللي تحته يتحرك مع الشعار", "Dial artwork (PDF)":"رسومات الميناء (PDF)", "Plan, inks and stones":"المخطط والأحبار والأحجار", "Show the colour as made":"اعرض اللون مثل ما ينصنع", "Drawn bezel":"البيزل المرسوم", "As Nivada's drawing":"مثل رسمة نيفادا", "As the prototype":"مثل النموذج", "Hand heights":"ارتفاعات العقارب", "I have the maker's hand heights":"عندي ارتفاعات العقارب من المصنّع", "Windows":"النوافذ", "One window":"نافذة وحدة", "Big date":"تاريخ كبير", "Centre bar":"الفاصل الوسطي", "Dates 1 to 9":"التواريخ من ١ إلى ٩",
   "All seven days in the window":"أيام الأسبوع السبعة في النافذة", "The disc in order":"القرص بالترتيب",
   "Date window at 3":"نافذة التاريخ عند 3", "Magnifier":"المكبّر", "Digits":"الأرقام", "Date font":"خط التاريخ", "Date disc":"قرص التاريخ",
   "Date digits colour":"لون أرقام التاريخ", "Frame":"الإطار", "All window settings":"كل إعدادات النوافذ",
@@ -17586,6 +17700,8 @@ const G_CHECK_AR = {
   "Date window envelope":"نافذة التاريخ تمتد تحت الإطار.",
   "Date window size":"نافذة التاريخ أكبر من تاريخ المحرك.",
   "Big date movement":"التاريخ الكبير يحتاج محرك فيه وحدة تاريخ كبير.",
+  "Power reserve and the movement":"هالمحرك ما يبين احتياطي الطاقة.",
+  "Small seconds and the movement":"هالمحرك يبين الثواني في الوسط، مو في ميناء صغير.",
   "Date and the movement":"هالمحرك ما فيه قرص تاريخ، فالنافذة بتبين المحرك.",
   "Lines of writing apart":"سطرين من الكتابة داخلين في بعض.",
   "Lettering clear of the opening":"الكتابة اللي على الطرف قريبة واجد من فتحة القالب.",
@@ -17616,7 +17732,7 @@ const GLOSS_OPT = {matte:"Matte", gloss:"Gloss", sunburst:"Sunburst", guilloche:
   "double printed":"Raised print", "applied metal":"Applied metal", "polished steel":"Steel", "blued steel":"Blued steel",
   "blackened steel":"Black", "yellow gold":"Gold",
   "gloss on matte":"Gloss on matte", "brushed across":"Brushed across the grain", "uv ink":"UV ink",
-  single:"One window", big:"Big date", minutes:"5 to 60", hours:"1 to 12", centre:"Centre", inner:"Inner edge", outer:"Outer edge", minuteMarks:"Minute marks", zero:"With a 0 (0 7)", blank:"Tens blank (  7)"};
+  "12":"Every five seconds", "60":"Every second", single:"One window", big:"Big date", minutes:"5 to 60", hours:"1 to 12", centre:"Centre", inner:"Inner edge", outer:"Outer edge", minuteMarks:"Minute marks", zero:"With a 0 (0 7)", blank:"Tens blank (  7)"};
 const glossOpt = o => typeof o !== "string" ? o : (GLOSS_OPT[o] || (/^[a-z]/.test(o) ? o[0].toUpperCase() + o.slice(1) : o));
 
 /* Where to pick up after a reload. Back within half an hour, the step you
@@ -17738,6 +17854,8 @@ const G_CHECK_WORDS = {
   "Date window envelope":["calendar","The date window runs under the bezel."],
   "Date window size":["calendar","The date window is bigger than the movement's date."],
   "Big date movement":["calendar","A big date needs a movement with a big-date module."],
+  "Power reserve and the movement":["dial","This movement has no power-reserve indication."],
+  "Small seconds and the movement":["dial","This movement shows its seconds at the centre, not in a sub-dial."],
   "Date and the movement":["calendar","This movement has no date disc, so a window would show the movement."],
   "Lines of writing apart":["text","Two lines of writing run into each other."],
   "Lettering clear of the opening":["text","The lettering round the edge comes too close to the opening."],
@@ -17806,7 +17924,8 @@ const G_MORE = {
       paths:["borders.bands.#.on","borders.bands.#.dia","borders.bands.#.band","borders.bands.#.line","borders.bands.#.depth","borders.bands.#.spacing",
         "borders.bands.#.angle","borders.bands.#.metal","borders.bands.#.color","act:borderDel:#","act:borderAdd"]},
     {id:"cross", t:"Crosshair", src:"cross", on:"cross.on", onLabel:"Show the crosshair", paths:["cross.length","cross.width","cross.color"]},
-    {id:"sub", t:"Sub-dial", src:"sub", on:"sub.on", onLabel:"Show the sub-dial", paths:["sub.at","sub.dist","sub.diameter","sub.color","sub.ring","sub.track"]}],
+    {id:"sub", t:"Sub-dial", src:"sub", on:"sub.on", onLabel:"Show the sub-dial", paths:["sub.at","sub.dist","sub.diameter","sub.color","sub.ring","sub.track","sub.ticks","sub.hand","sub.handColor"]},
+    {id:"power", t:"Power reserve", src:"power", on:"power.on", onLabel:"Show a power reserve", paths:["power.at","power.dist","power.r","power.empty","power.full","power.value","power.numSize","power.color","power.ink","power.handColor"]}],
   markers:[
     {id:"layout", t:"Numeral layout", src:"numerals", show:"numerals.on", paths:["numerals.system","numerals.set","numerals.heightMM","numerals.gap",
       "numerals.radius","numerals.orient","numerals.align","numerals.arc","numerals.slant"]},
@@ -17876,6 +17995,9 @@ const G_MORE_LABEL = {
   "borders.bands.#.angle":"Cut angle", "borders.bands.#.metal":"Metal", "borders.bands.#.color":"Colour",
   "act:borderDel:#":"Remove this band", "act:borderAdd":"Add a band",
   "cross.length":"Arm length", "cross.width":"Line width", "cross.color":"Colour",
+  "sub.ticks":"Track marks", "sub.hand":"Small seconds hand", "sub.handColor":"Hand colour",
+  "power.at":"Pivot position", "power.dist":"Pivot from centre", "power.r":"Scale radius", "power.empty":"Empty end", "power.full":"Full end",
+  "power.value":"Reserve shown", "power.numSize":"Figure height", "power.color":"Sector colour", "power.ink":"Figures colour", "power.handColor":"Hand colour",
   "sub.at":"Position", "sub.dist":"Distance from centre", "sub.diameter":"Diameter", "sub.color":"Colour", "sub.ring":"Track colour", "sub.track":"Show the track",
   "numerals.system":"Numerals", "numerals.set":"Which hours", "numerals.heightMM":"Figure height", "numerals.gap":"Spacing", "numerals.radius":"Numerals from centre",
   "numerals.orient":"Direction", "numerals.align":"Line up by", "numerals.arc":"Follow the curve", "numerals.slant":"Slant",
@@ -18836,8 +18958,8 @@ Object.assign(GWORD.ar, {
       if(!K.bracelet && S.case.strap) h += `<h3>${gW("Strap colour")}</h3>` + swatches("case.strapColor", [["#4E3629","Brown"],["#1E1E20","Black"],["#1E2B45","Navy"],["#A0744A","Tan"],["#2F3B2E","Green"],["#7A2433","Burgundy"]], S.case.strapColor, {row:true});
       /* the strap's material on the photograph: its rubber, or a woven Velcro strap with a stitched seam */
       if(!K.bracelet && S.case.strap && K.photoStrap){
-        h += `<h3>${gW("Strap")}</h3>` + chips("case.strapType", [["rubber","Rubber"],["fabric","Fabric (Velcro)"]], S.case.strapType === "fabric" ? "fabric" : "rubber");
-        if(S.case.strapType === "fabric") h += `<h3>${gW("Stitching")}</h3>` + swatches("case.stitch", [["#00000000","None"],["#F2701E","Orange"],["#F2F2EF","White"],["#D7262E","Red"],["#E3C27A","Sand"]], /^#[0-9a-f]{6}$/i.test(S.case.stitch || "") ? S.case.stitch : "#00000000", {row:true});
+        h += `<h3>${gW("Strap")}</h3>` + chips("case.strapType", [["rubber","Rubber"],["fabric","Fabric (Velcro)"],["alligator","Alligator leather"]], S.case.strapType === "fabric" || S.case.strapType === "alligator" ? S.case.strapType : "rubber");
+        if(S.case.strapType === "fabric" || S.case.strapType === "alligator") h += `<h3>${gW("Stitching")}</h3>` + swatches("case.stitch", [["#00000000","None"],["#F2701E","Orange"],["#F2F2EF","White"],["#D7262E","Red"],["#E3C27A","Sand"]], /^#[0-9a-f]{6}$/i.test(S.case.stitch || "") ? S.case.stitch : "#00000000", {row:true});
       }
       if(hasPhoto(K)){ h += toggle("tpl.on", "Show as a photograph", S.tpl.on); if(S.tpl.on) h += `<p class="gNote">${gT(K.photoParts ? "case.photoGold" : "case.photoNote")}</p>`; }
       return h + more("case", "All case settings");
@@ -19031,7 +19153,7 @@ Object.assign(GWORD.ar, {
       const hh = S.hHand;
       const METALS6 = [["polished steel","Steel"],["white gold","White gold"],["blued steel","Blued steel"],["yellow gold","Gold"],["rose gold","Rose gold"],["blackened steel","Black"]];
       if(tab === "shape"){
-        const styles = [["day-date","Day-date"],["royal-oak","Royal Oak"],["f77","Nivada F77"],["dauphine","Dauphine"],["baton","Baton"],["sword","Sword"],["leaf","Leaf"],["feuille","Feuille"],["alpha","Alpha"],["pencil","Pencil"],["obelisque","Obelisk"],["syringe","Syringe"],["pomme-ouverte","Breguet"],["mercedes","Mercedes"]];
+        const styles = [["day-date","Day-date"],["royal-oak","Royal Oak"],["f77","Nivada F77"],["dauphine","Dauphine"],["baton","Baton"],["sword","Sword"],["leaf","Leaf"],["feuille","Feuille"],["lance","Lance"],["alpha","Alpha"],["pencil","Pencil"],["obelisque","Obelisk"],["syringe","Syringe"],["pomme-ouverte","Breguet"],["mercedes","Mercedes"]];
         let h = `<div class="gCards">${styles.map(([v,l]) => `<button type="button" class="gCard ${hh.style===v?"on":""}" data-ghand="${v}"><div class="gPic">${handPic(v)}</div><div class="gName">${gW(l)}</div></button>`).join("")}</div>`;
         const hp = handPainted(hh);
         h += `<h3>${gW("Metal")}</h3>` + chips("hands.material", METALS6.concat([["painted","Painted"]]), hp ? "painted" : hh.material || "polished steel");
@@ -19381,7 +19503,8 @@ Object.assign(GWORD.ar, {
     else if(path === "ui.metal"){ if(/^two:/.test(v)){ S.case.material = LUX_STEEL; S.case.twoTone = v.slice(4); } else { S.case.material = v; S.case.twoTone = "none"; } }
     /* the classic colours named ombré are ombré */
     /* the strap's material, and the maker's sheet says the same */
-    else if(path === "case.strapType"){ S.case.strapType = v; ensureSheet(S); S.sheet.strap.type = v === "fabric" ? "fabric Velcro" : "rubber"; }
+    else if(path === "case.strapType"){ S.case.strapType = v; ensureSheet(S); S.sheet.strap.type = v === "fabric" ? "fabric Velcro" : v === "alligator" ? "leather" : "rubber";
+      if(v === "alligator" && !/^#[0-9a-f]{6}$/i.test(S.case.stitch || "")) S.case.stitch = "#8A5A3C"; }
     else if(path === "dial.color"){ S.dial.color = v; const cl = classicOf(v); if(cl && /ombré/.test(cl[0]) && !(S.dial.ombre > 0)) S.dial.ombre = 0.7; }
     else if(path === "minute.style"){ if(v === "none") S.minute.on = false; else { S.minute.on = true; S.minute.style = v; } }
     /* the line under the logo goes where the logo goes, unless set apart */

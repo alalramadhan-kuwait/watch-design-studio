@@ -275,10 +275,10 @@ test('square plots and a woven Velcro strap (v4.30.0)', () => {
   assert.match(source, /function fabricTex\(x, y\)\{/);
   assert.match(source, /const cw = 0\.90, bl = 0\.45, col = Math\.floor\(x\/cw\)/);
   assert.match(source, /const tw = 0\.62 \+ 0\.38\*Math\.cos\(2\*Math\.PI\*\(ay\/0\.42 \+ off\*1\.6\)\)/);
-  assert.match(source, /if\(c\.strapType !== "fabric" \|\| !K\.photoStrap \|\| K\.bracelet \|\| c\.strap === false\) return null;/);
-  assert.match(source, /\+ "\|" \+ \(fab \? "fabric" \+ \(fab\.stitch \|\| ""\) : ""\);/, 'cached apart from rubber');
-  assert.match(source, /chips\("case\.strapType", \[\["rubber","Rubber"\],\["fabric","Fabric \(Velcro\)"\]\]/);
-  assert.match(source, /S\.sheet\.strap\.type = v === "fabric" \? "fabric Velcro" : "rubber";/, 'the maker\'s sheet says so');
+  assert.match(source, /if\(\(c\.strapType !== "fabric" && c\.strapType !== "alligator"\) \|\| !K\.photoStrap \|\| K\.bracelet \|\| c\.strap === false\) return null;/);
+  assert.match(source, /\+ "\|" \+ \(fab \? \(fab\.type \|\| "fabric"\) \+ \(fab\.stitch \|\| ""\) : ""\);/, 'cached apart from rubber');
+  assert.match(source, /chips\("case\.strapType", \[\["rubber","Rubber"\],\["fabric","Fabric \(Velcro\)"\],\["alligator","Alligator leather"\]\]/);
+  assert.match(source, /S\.sheet\.strap\.type = v === "fabric" \? "fabric Velcro" : v === "alligator" \? "leather" : "rubber";/, 'the maker\'s sheet says so');
 });
 
 test('printed rehaut ring (v4.31.0): a ring outside the dial on the photograph, with a minute track of its own', () => {
@@ -304,4 +304,21 @@ test('concepts (v4.32.0): the studio\'s designs kept in the repository and on th
   assert.match(source, /fetch\("\.\/concepts\/index\.json"\)/);
   assert.match(source, /else if\(id\.startsWith\("c:"\)\)\{ const c = conceptRefs\.find\(x => x\.id === id\);/);
   assert.match(fs.readFileSync(path.join(__dirname, '../sw.js'), 'utf8'), /"\.\/concepts\/index\.json",/, 'offline too');
+});
+
+test('power reserve, small seconds, lance, alligator (v4.33.0)', () => {
+  assert.match(source, /  power:\{on:false, at:3, dist:10\.8, r:6\.0,/, 'off unless chosen');
+  assert.match(source, /<g data-layer="power">/);
+  assert.match(source, /\["power","Power reserve","power\.on"\],/, 'listed with the parts');
+  assert.match(source, /CK\("power\.on","Show a power reserve"\),/);
+  assert.match(source, /SEL\("sub\.ticks","Track marks",\["12","60"\]\)/);
+  assert.match(source, /CK\("sub\.hand","Small seconds hand"\)/);
+  assert.match(source, /"Lance":"رمح"/);
+  const g = chunk('function alligatorTex(x, y){', 'function strapTintPixels(');
+  assert.match(g, /wx = A\*Math\.sinh\(x\/A\)/, 'columns narrow toward the edges');
+  assert.match(g, /yy = y \+ mHash\(col, 8\.1\)\*rh\*3;/, 'each column on its own rhythm');
+  assert.match(source, /tex = gator \? alligatorTex\(x, y \+ 60\) : fabricTex\(x \+ 40, y \+ 60\);/, 'measured from the strap\'s centre line');
+  for (const t of ['Power reserve and the movement', 'Small seconds and the movement']) assert.ok(source.includes(t), t);
+  const list = JSON.parse(fs.readFileSync(path.join(__dirname, '../concepts/index.json'), 'utf8'));
+  assert.equal(list[0].id, 'chocolat-77', 'the newest concept first');
 });

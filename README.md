@@ -200,6 +200,25 @@ stored in a design file do not change. In the full editor at laptop widths
 the toolbar sits tighter, and on a narrower window it takes a second row
 rather than pushing Share and Export off the screen.
 
+## Power reserve, small seconds hand, lance hands, alligator strap (v4.33.0)
+
+For dials laid out like a chronometer's, as in **Chocolat 77**:
+
+- Dial › More › **Power reserve** (`power`): a sector sunk into the dial with
+  its scale (56 · 42 · 28 · 14 · 0 by default) and a small hand. Its pivot is
+  set as an hour and a distance from the centre; the scale runs between two
+  bearings, and the figures turn to stay readable.
+- The sub-dial can carry a **small seconds hand** with a ring counterweight,
+  and a track marked every second (`sub.ticks` "60") rather than every five.
+- A **Lance** hand: long, slender, tapering from a round boss.
+- Case › Strap › **Alligator leather**: columns of domed scales, widest down
+  the middle and narrowing to the edges, each column on its own rhythm, with
+  separate stitches; the maker's sheet says leather.
+- A full gold F77 is tinted on its photograph, the crown included.
+- Two new checks say when the movement cannot drive what the dial shows: the
+  Soprod P024 has no power-reserve indication and keeps its seconds at the
+  centre, so both need another movement or a module (ask Nivada).
+
 ## Concepts (v4.32.0)
 
 The designs made in the studio are kept in the repository, in `concepts/`
