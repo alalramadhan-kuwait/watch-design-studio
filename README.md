@@ -200,6 +200,19 @@ stored in a design file do not change. In the full editor at laptop widths
 the toolbar sits tighter, and on a narrower window it takes a second row
 rather than pushing Share and Export off the screen.
 
+## FPJ figures retraced from the watch (v4.36.5)
+
+The figures are lifted again from a clear photograph of the Journe dial, each
+upright along its own radius (the dial's centre fitted to its edge) and
+outlined between pixels at ten times the photograph's resolution, so the
+shapes are Journe's: the slim 1 with its small flag and foot, the 2's swash
+base, the open 4, the fine ball terminals. All at one height; each keeps the
+weight printed on the watch, except the 7 and 8, which Journe printed small
+beside his small seconds and which are thinned as they grow so their strokes
+match. Outlines smoothed without wedges, corners kept. The dial has no 3, so
+the 3 stays the studio's own. Tools and the lifted outlines:
+`tools/fpj-font/retrace/`.
+
 ## FPJ figures seated, one by one (v4.36.4)
 
 Each figure checked on its own, large on guides, and corrected where it was

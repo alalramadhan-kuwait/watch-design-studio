@@ -395,7 +395,7 @@ test('FPJ figures upright (v4.36.3)', () => {
   const dir = path.join(__dirname, '../tools/fpj-font');
   assert.match(fs.readFileSync(path.join(dir, 'rebuild.py'), 'utf8'), /^TURN = \{'0': -13\.0, '2': 5\.0, '4': 5\.5, '5': 2\.5, '6': -2\.0, '7': -2\.0, '8': 1\.0\}$/m, 'the 0, 2 and 4 stood upright');
   for (const f of ['lean.py', 'segs.py', 'guides.py']) assert.ok(fs.existsSync(path.join(dir, f)), f + ' kept to measure them again');
-  assert.match(source, /every figure stood upright and seated one by one/);
+  assert.match(source, /retraced from the photograph of the watch \(tools\/fpj-font\/retrace\)/, 'since 4.36.5 retraced from the watch');
 });
 
 test('FPJ figures seated, one by one (v4.36.4)', () => {
@@ -407,4 +407,17 @@ test('FPJ figures seated, one by one (v4.36.4)', () => {
   assert.match(source, /"FPJ":\{family:"wdsfpj", seated:true, src:/, 'one baseline on the dial');
   assert.match(source, /if\(SF && SF\.seated && !drawnOutline\)\{ const mS = inkMetrics\(famUsed, NUM_SYSTEM\[sys\] \|\| "0123456789"\); if\(mS\) iy = -mS\.cy\*fz; \}/);
   for (const f of ['measure.py', 'big.py', 'turns.py']) assert.ok(fs.existsSync(path.join(__dirname, '../tools/fpj-font', f)), f);
+});
+
+test('FPJ figures retraced from the watch (v4.36.5)', () => {
+  const dir = path.join(__dirname, '../tools/fpj-font/retrace');
+  for (const f of ['extract.py', 'build.py', 'outlines.json', 'circle.txt', 'turn.json', 'base-for-3.woff2', 'README.md']) assert.ok(fs.existsSync(path.join(dir, f)), f);
+  const o = JSON.parse(fs.readFileSync(path.join(dir, 'outlines.json'), 'utf8'));
+  assert.deepEqual(Object.keys(o).sort(), ['0', '1', '2', '4', '5', '6', '7', '8', '9'], 'every figure the dial has; the 3 it has not');
+  const b = fs.readFileSync(path.join(dir, 'build.py'), 'utf8');
+  assert.match(b, /^WEIGHT_FULL = set\('7 8'\.split\(\)\)/m, 'only the 7 and 8 brought to the set weight');
+  assert.match(b, /^WEIGHT_PART = 0\.0 /m, 'the others as printed on the watch');
+  assert.match(b, /out = out\.buffer\(-4, join_style=1\)\.buffer\(4, join_style=1\)/, 'spurs trimmed');
+  assert.deepEqual(JSON.parse(fs.readFileSync(path.join(dir, 'turn.json'), 'utf8')), { 1: -2.6, 8: 1.8 });
+  assert.ok(!fs.existsSync(path.join(dir, 'journe.jpg')), 'the photograph is not kept in the repository');
 });
