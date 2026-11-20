@@ -200,6 +200,26 @@ stored in a design file do not change. In the full editor at laptop widths
 the toolbar sits tighter, and on a narrower window it takes a second row
 rather than pushing Share and Export off the screen.
 
+## Red gold, the photo tent, leather that reads as leather (v4.35.0)
+
+Colours are now matched by measurement, not by eye: the reference and the
+render are sampled at the same places and the colour is corrected until the
+render reads what the reference does.
+
+- **Red gold (5N)** joins the case metals: the warmer gold of a polished 5N
+  case, its tones measured off a photograph of one. Rose gold is unchanged.
+- **Photo tent** (Dial › More › View › Light): the dial lit as a maker
+  photographs one, looking back at a dark tent instead of a bright sky, so a
+  dark dial keeps its colour instead of taking a grey veil of reflection.
+- **Alligator leather** redrawn from a photograph of a strap: one broad
+  scale down the middle and narrower ones to the edges, meeting in thin
+  creases with a lit rim; waxy mottling; padded edges that darken as they
+  roll over; a soft sheen; and saddle stitching as a twisted cord that dives
+  into the leather every 3 mm.
+- Chocolat 77 measured against the reference: case #DCB394 (reference
+  #DFB493), dial #5C3B26, centre #5A3926, strap #93401B, all as on the
+  reference photograph.
+
 ## Designs tab; complications only with a movement that drives them (v4.34.0)
 
 - **Designs**, the first tab of the Case step, holds every design in one

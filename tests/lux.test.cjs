@@ -70,7 +70,7 @@ test('two-tone is gold parts on a steel case; a gold case is gold all over', () 
   assert.equal(G.twoToneOf(norel(s => { s.case.twoTone = 'rose gold'; })), 'rose gold');
   assert.equal(G.twoToneOf(norel(s => { s.case.twoTone = 'white gold'; })), null, 'two-tone is yellow or rose');
   assert.equal(G.twoToneOf(norel(s => { s.case.twoTone = 'yellow gold'; s.case.material = G.LUX_GOLD['rose gold']; })), null, 'a gold case has no steel to set it on');
-  for (const k of ['yellow gold', 'rose gold', 'white gold']) assert.equal(G.goldOf(G.LUX_GOLD[k].toLowerCase()), k);
+  for (const k of ['yellow gold', 'rose gold', 'red gold', 'white gold']) assert.equal(G.goldOf(G.LUX_GOLD[k].toLowerCase()), k);
   assert.equal(G.goldOf('#3B3D42'), null);
   // the photograph with its parts measured can show either; one without cannot, so the drawn case shows
   assert.deepEqual({...G.photoPlan(norel(s => { s.case.twoTone = 'rose gold'; }), G.NOREL_R4)}, {full:null, two:'rose gold', gem:false});

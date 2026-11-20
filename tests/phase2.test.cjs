@@ -315,8 +315,8 @@ test('power reserve, small seconds, lance, alligator (v4.33.0)', () => {
   assert.match(source, /CK\("sub\.hand","Small seconds hand"\)/);
   assert.match(source, /"Lance":"رمح"/);
   const g = chunk('function alligatorTex(x, y){', 'function strapTintPixels(');
-  assert.match(g, /wx = A\*Math\.sinh\(x\/A\)/, 'columns narrow toward the edges');
-  assert.match(g, /yy = y \+ mHash\(col, 8\.1\)\*rh\*3;/, 'each column on its own rhythm');
+  assert.match(g, /B = \[4\.5, 7\.9\]/, 'a broad scale down the middle, narrower to the edges');
+  assert.match(g, /mHash\(id, 8\.1\)\*rl/, 'each column on its own rhythm');
   assert.match(source, /tex = gator \? alligatorTex\(x, y \+ 60\) : fabricTex\(x \+ 40, y \+ 60\);/, 'measured from the strap\'s centre line');
   for (const t of ['Power reserve and the movement', 'Small seconds and the movement']) assert.ok(source.includes(t), t);
   const list = JSON.parse(fs.readFileSync(path.join(__dirname, '../concepts/index.json'), 'utf8'));
@@ -340,4 +340,20 @@ test('designs tab and the movement rule (v4.34.0)', () => {
     if (st.case.model === 'Time Keeper × Nivada · F77') assert.ok(!(st.date && st.date.on), c.id + ': the P024 in the F77 has no date');
   }
   assert.match(fs.readFileSync(path.join(__dirname, '../CLAUDE.md'), 'utf8'), /Complications need a movement that drives them/);
+});
+
+test('red gold, the photo tent and leather that reads as leather (v4.35.0)', () => {
+  assert.match(source, /"red gold":"#D39B78"/, 'a 5N red gold beside the rose');
+  assert.match(source, /  "red gold":   \[\[0,"#140905"\],\[\.18,"#402416"\],\[\.40,"#9E5834"\],\[\.60,"#C09072"\]/, 'measured off a photograph of a polished 5N case');
+  assert.match(source, /\[LUX_GOLD\["red gold"\],"Red gold \(5N\)"\]/, 'offered with the case metals');
+  assert.match(source, /"rose gold":  \[\[0,"#130806"\],\[\.18,"#43221A"\]/, 'the rose gold as it was: designs in it unchanged');
+  assert.match(source, /  tent:    \{az:135, el:52, key:1\.5, skyFloor:0\.02, skyTop:0\.14,/, 'a dark surround: no grey veil on a dark dial');
+  assert.match(source, /SEL\("render\.mode","Renderer",\["old","studio","tent","neutral"\]\)/);
+  assert.match(source, /tent:"Photo tent"/); assert.match(source, /"Photo tent":"خيمة تصوير"/);
+  const g = chunk('function alligatorTex(x, y){', 'function strapTintPixels(');
+  assert.match(g, /crease = 0\.30\*Math\.exp\(-Math\.pow\(d\/0\.11, 2\)\), rim = 0\.09\*/, 'thin creases with a lit rim, not gaps');
+  assert.match(source, /pad = hwP \? 1 - 0\.32\*Math\.pow\(Math\.min\(1, Math\.abs\(x\)\/hwP\), 5\) : 1;/, 'padded: darker as it rolls over');
+  assert.match(source, /seg = \(\(\(ay % 3\.0\) \+ 3\.0\) % 3\.0\)\/3\.0/, 'a twisted cord diving in every 3 mm');
+  const c = JSON.parse(fs.readFileSync(path.join(__dirname, '../concepts/chocolat-77.json'), 'utf8'));
+  assert.equal(c.case.material, '#D39B78'); assert.equal(c.render.mode, 'tent'); assert.equal(c.dial.color, '#694229');
 });
