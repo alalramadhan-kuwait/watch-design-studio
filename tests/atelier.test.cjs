@@ -142,6 +142,8 @@ test('a Breguet pomme wall never reaches past the pomme, so the circle radius st
     assert.ok(g.ring < g.pr && g.pr - g.ring > 0, 'wall ' + ringW + ' leaves a hole');
   }
   assert.equal(drawCtx.d.handGeom({length:12, width:0.4, pommeD:1.5, ringW:0.3}).ring, 0.36, 'a sane wall is unchanged (L*0.03 floor)');
+  assert.equal(drawCtx.d.handGeom({length:12, width:0.4, pommeD:1.5, ringW:0.3, fineRing:true}).ring, 0.3, 'a wall set on the hand is drawn as asked (since 4.42.0)');
+  assert.equal(drawCtx.d.handGeom({length:12.5, width:0.3, pommeD:1.0, fineRing:true}).pr, 0.5, 'and a fine pomme');
 });
 // Simple mode's own helpers, out of its IIFE.
 const guideCtx = vm.createContext({S:null, set:(o,p,v)=>{const k=p.split('.');let t=o;while(k.length>1)t=t[k.shift()];t[k[0]]=v;}});

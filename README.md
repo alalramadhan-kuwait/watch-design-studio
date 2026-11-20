@@ -200,6 +200,35 @@ stored in a design file do not change. In the full editor at laptop widths
 the toolbar sits tighter, and on a narrower window it takes a second row
 rather than pushing Share and Export off the screen.
 
+## Or Damier, and the Vernoy photograph in gold (v4.42.0)
+
+A new design under Designs, **Or Damier**, after the gold basket-weave Vernoy
+(the picture sent): the yellow gold cushion on a black alligator, a gold dial
+brushed outside with a checker (damier) guilloché centre edged in beads, two
+bead rings with the blue minute dots between them, blue enamel Roman numerals
+cut into the dial and set radially (the Vernoy Radial Roman, a little
+widened), VERNOY bent along a raised arched plaque, open-ring hands in
+blackened steel and SWISS • MADE in the dot row at 6. No complication: the
+picture has none, and the case's movement 1062 shows hours and minutes only,
+so there is no seconds hand. Its colours were matched to the picture by
+measuring the brushed ring and the guilloché in both (studio light).
+
+**The Vernoy's photograph takes gold and any strap colour.** It used to show
+steel on its brown strap only, and a gold Vernoy switched to the flat drawn
+case. The case, lugs and crown are now found on the photograph by where they
+are (`builtinTint` in the case record, in mm from the dial centre) and by
+being steel-grey, and a whole gold case is laid onto them by their light, as
+on the F77; the strap takes another colour by its own light, so its scales and
+grain stay. The ruby cabochon and the white ground are left alone. Two-tone or
+another finish still switches to the drawing. The presets on the Vernoy with
+a strap colour of their own now show it on the photograph.
+
+**Fine pomme rings.** A pomme was never drawn smaller than 0.17 of its hand's
+length (its wall 0.030), so a long minute hand's open ring stayed 2 mm or more
+whatever was set. Once a pomme or a wall is set on a hand (`fineRing`) the
+floors drop to 0.07 and 0.012 for it and the hands linked to it; every design
+saved before draws as it did.
+
 ## Tap the watch to edit what you tapped (v4.41.0)
 
 In simple mode a tap on the watch opens what edits that part: its step, the

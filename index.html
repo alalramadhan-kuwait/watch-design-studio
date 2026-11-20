@@ -1386,6 +1386,15 @@ const VERNOY_CASE = {
      a dark brown strap, which is what it can show. "strap" names that strap
      in the words simple mode uses when it puts it back. */
   photoOwn:{finish:"polished", strapColor:"#4E3629", strap:"brown"},
+  /* Where the steel and the strap are on that photograph, in mm from the
+     dial centre, measured off it: the cushion (a rounded square, half-width
+     and corner radius; "deep" is well inside its edge, where a near-white
+     highlight is still the case), the lugs (|x| from-to, reaching |y|), the
+     crown (x from-to, half-height) and the strap (half-width, from |y|). A
+     whole gold case is laid onto the steel there, by its light, and the strap
+     takes another colour by its own (builtinTintPixels); the ruby cabochon
+     and the white ground are left as they are. */
+  builtinTint:{body:[18.7, 10.5], deep:[17.6, 9.6], lug:[9.5, 12.6, 21.9], crown:[17.4, 20.6, 2.7], strap:[10.7, 16.5], strapL:58},
   /* what the maker's sheet says when the design says nothing: the brand on
      its footer, the movement, and the strap and buckle */
   sheet:{brand:"VERNOY", movement:"Movement 1062", strap:{type:"leather", buckle:"pin buckle", buckleColor:"steel", buckleLogo:"engraved"}}
@@ -2283,7 +2292,7 @@ const APP_BUILD = "__BUILD__";
 /* The version people see, raised with every change that reaches them:
    major for a new way of working, minor for something new to do, patch for
    a fix. Shown on the watch screen, so any screenshot says which it was. */
-const APP_VERSION = "4.41.0";
+const APP_VERSION = "4.42.0";
 const APP_DATE = "__DATE__";
 
 /* Every route that replaces S passes through one of these three, which is
@@ -9641,12 +9650,19 @@ const STYLE_ALIAS_HAND = {
   "moon-tip":      ["pomme-ouverte","line"],
   "souscription":  ["pomme-ouverte","solid"]
 };
+/* The smallest pomme and ring wall a hand is drawn with, as shares of its
+   length: 0.17 and 0.030, which keeps a pomme readable when nothing is
+   asked. Once a pomme or a wall has been set on a hand (fineRing, set by
+   fieldInput) the floors drop to 0.07 and 0.012, so a fine Breguet-style
+   ring, near 0.09 of a long minute hand, is drawn as asked rather than at
+   2 mm. Every design saved before draws as it did. */
 const handGeom = h => {
-  const L=h.length, pr=Math.max(h.pommeD ?? h.width*2.1, L*0.17)/2;
+  const POMME_MIN = h.fineRing ? 0.07 : 0.17, RING_MIN = h.fineRing ? 0.012 : 0.030;
+  const L=h.length, pr=Math.max(h.pommeD ?? h.width*2.1, L*POMME_MIN)/2;
   const pc=-L*((h.pommePos ?? 72)/100);
   /* the wall is kept inside the pomme: one wider than its radius drew a
      circle with a negative radius, and the open pomme came out solid */
-  return {L, pr, pc, ring:Math.min(pr*0.8, Math.max(h.ringW ?? h.width*0.24, L*0.030)),
+  return {L, pr, pc, ring:Math.min(pr*0.8, Math.max(h.ringW ?? h.width*0.24, L*RING_MIN)),
           tipW:h.tipW ?? Math.max(.12,h.width*0.26), taper:h.taper ?? 0.66,
           tipLen:Math.max(0, L - (Math.abs(pc)+pr))};
 };
@@ -10727,6 +10743,55 @@ function strapTintPixels(d, W, H, cal, P, hex, fab){
   }
   return d;
 }
+/* The built-in Vernoy photograph in gold or with another strap: its pixels
+   decoded once, each look made once and kept (as the cases with photographs
+   of their own are, photoPixels and tintedPhoto). Null until the pixels are
+   in, and the drawn case stands in meanwhile. */
+const vernoyGold = st => { const K = caseOf(st), c = st.case || {}; return K.builtinTint && !twoToneOf(st) ? goldOf(c.material) : null; };
+const vernoyStrapHex = st => { const K = caseOf(st), c = st.case || {}, own = (K.photoOwn || {}).strapColor;
+  return K.builtinTint && own && c.strap !== false && /^#[0-9a-f]{6}$/i.test(c.strapColor || "") && c.strapColor.toUpperCase() !== own.toUpperCase() ? c.strapColor : null; };
+function builtinTinted(K, gold, strapHex){
+  const key = "builtin|" + (gold || "") + "|" + (strapHex || "");
+  if(PHOTO_TINT.has(key)) return PHOTO_TINT.get(key);
+  const px = photoPixels({photoFile:"builtin:vernoy", photoData:BUILTIN_CASE}); if(!px) return null;
+  const w = px.width, h = px.height, C = BUILTIN_CASE_CAL;
+  const cal = {cx:w*C.cx/100, cy:h*C.cy/100, s:w*C.dia/100/K.opening};
+  const cv = document.createElement("canvas"); cv.width = w; cv.height = h;
+  const g = cv.getContext("2d"), out = g.createImageData(w, h);
+  out.data.set(builtinTintPixels(px.data, w, h, cal, K.builtinTint, gold, strapHex));
+  g.putImageData(out, 0, 0);
+  const url = cv.toDataURL("image/jpeg", 0.92);
+  if(PHOTO_TINT.size > 5) PHOTO_TINT.clear();
+  PHOTO_TINT.set(key, url);
+  return url;
+}
+function builtinTintPixels(src, w, h, cal, T, gold, strapHex){
+  const out = new Uint8ClampedArray(src), lut = gold ? luxRampLUT(gold) : null, rgb = strapHex ? hex2rgb(strapHex) : null;
+  const rsq = (x, y, half, rc) => Math.hypot(Math.max(0, Math.abs(x) - (half - rc)), Math.max(0, Math.abs(y) - (half - rc))) <= rc;
+  for(let j = 0; j < h; j++){
+    const y = (j + 0.5 - cal.cy)/cal.s, ay = Math.abs(y);
+    for(let i = 0; i < w; i++){
+      const x = (i + 0.5 - cal.cx)/cal.s, ax = Math.abs(x), o = (j*w + i)*4;
+      const r = src[o], gg = src[o + 1], b = src[o + 2], mx = Math.max(r, gg, b), mn = Math.min(r, gg, b);
+      const sat = (mx - mn)/Math.max(1, mx), dw = (255 - r) + (255 - gg) + (255 - b);
+      const lug = ax >= T.lug[0] && ax <= T.lug[1] && ay <= T.lug[2];
+      const inCase = rsq(x, y, T.body[0], T.body[1]) || lug || (x >= T.crown[0] && x <= T.crown[1] && ay <= T.crown[2]);
+      const isCase = inCase && sat < 0.16 && ((rsq(x, y, T.deep[0], T.deep[1]) && !lug) || dw > 14);
+      if(isCase){
+        if(!lut) continue;
+        const L = Math.round(0.299*r + 0.587*gg + 0.114*b)*3;
+        out[o] = lut[L]; out[o + 1] = lut[L + 1]; out[o + 2] = lut[L + 2];
+        continue;
+      }
+      if(rgb && ax < T.strap[0] && ay > T.strap[1] && dw > 40){
+        /* the leather's own light carried over: its grain and its scales stay */
+        const L = 0.299*r + 0.587*gg + 0.114*b, k = Math.max(0.35, Math.min(2.6, L/T.strapL)), a = Math.min(1, (dw - 40)/60);
+        for(let c = 0; c < 3; c++) out[o + c] = src[o + c] + (Math.min(255, rgb[c]*k) - src[o + c])*a;
+      }
+    }
+  }
+  return out;
+}
 /* a fabric strap on the photograph: its stitching and its half-width along
    its length (the F77's strap figures), or null for rubber */
 const photoFabric = (st, K) => {
@@ -10751,7 +10816,13 @@ function buildTemplate(st, o){
   const fab = K.photoFile ? photoFabric(st, K) : null;
   if(fab && !strapHex && K.photoStrap) strapHex = (st.case && st.case.strapColor) || (K.photoOwn && K.photoOwn.strapColor) || "#1E1E20";
   if(own && ((plan && (plan.full || plan.two)) || strapHex)){ own = tintedPhoto(K, plan || {}, strapHex, fab); if(!own) return buildSVG(st, {scope:"full"}); }
-  const IMG = own || tplImage, IW = own ? K.photoCal.w : tplW, IH = own ? K.photoCal.h : tplH;
+  /* the Vernoy's built-in photograph in gold, or on another strap */
+  let builtinOwn = null;
+  if(!own && K.builtinTint && tplImage === BUILTIN_CASE && (vernoyGold(st) || vernoyStrapHex(st))){
+    builtinOwn = builtinTinted(K, vernoyGold(st), vernoyStrapHex(st));
+    if(!builtinOwn) return buildSVG(st, {scope:"full"});
+  }
+  const IMG = own || builtinOwn || tplImage, IW = own ? K.photoCal.w : tplW, IH = own ? K.photoCal.h : tplH;
   if(!IMG) return buildSVG(st, {scope:"full"});
   const T = own ? Object.assign({}, st.tpl, {cx:K.photoCal.cx, cy:K.photoCal.cy, dia:K.photoCal.dia, rot:0}) : st.tpl;
   const cx = IW*T.cx/100, cy = IH*T.cy/100;
@@ -12761,6 +12832,13 @@ function fieldInput(p, v){
   if(/^gem(Alt)?\.(cut|n)$/.test(p)){ const k = p.split(".")[0], g = gemNorm(S[k], k === "gemAlt"); S[k].n = g.n; S[k].setting = g.setting;
     if(p.endsWith(".cut")) Object.assign(S[k], gemCutDefaults(g.cut, g.n)); }
   if(/^(hHand|mHand|sHand)\.style$/.test(p)) snapVectorLengths(p.split(".")[0]);
+  /* a pomme or a wall asked for is drawn at that size: the hand, and the
+     hands linked to it, leave the readable-size floors behind */
+  if(/^(hHand|mHand|sHand)\.(pommeD|ringW)$/.test(p)){
+    const k = p.split(".")[0], L = S.handSet && S.handSet.link !== "off" && S.handSet.link;
+    const ks = L && k !== "sHand" ? ["hHand","mHand"].concat(S.handSet.includeSeconds ? ["sHand"] : []) : [k];
+    for(const x of ks) if(S[x]) S[x].fineRing = true;
+  }
   if(/^handSet\./.test(p)) syncHands("hHand");
 }
 function fieldChosen(p){
@@ -17516,6 +17594,7 @@ const GSTR = {en:{
   "mk.marks":"Marks and notes on Version A", "mk.auto":"Automatic", "mk.noMark":"No mark", "mk.notePh":"Note, e.g. (same as before)",
   "toast.drawnCase":"Showing the drawing: the photograph cannot show this. “Show the real photo” goes back to it.",
   "case.photoGold":"Blue Creations' photograph of the steel watch: gold and two-tone are laid onto it. A finish or a strap it cannot show switches to the drawing.",
+  "case.photoTint":"The photograph is the real watch in steel: a gold case is laid onto it, and its strap takes any colour. Two-tone or another finish switches to the drawing.",
   "photo.show":"Show the real photo", "photo.on":"Showing the real photo.", "photo.again":"Back on the real photo.",
   "photo.changed": list => `Showing the real photo: ${list}, as photographed.`,
   "photo.steel":"steel", "photo.plainBezel":"the plain bezel", "photo.finish": f => `${f.toLowerCase()} finish`,
@@ -17713,6 +17792,7 @@ GSTR.ar = {
   "mk.marks":"علامات وملاحظات على الإصدار A", "mk.auto":"تلقائية", "mk.noMark":"بلا علامة", "mk.notePh":"ملاحظة، مثل (same as before)",
   "toast.drawnCase":"يظهر الرسم الآن: الصورة لا تستطيع إظهار هذا الاختيار. زر «اعرض الصورة الحقيقية» يعيدها.",
   "case.photoGold":"صورة Blue Creations للساعة الستيل، والذهب واللونان يُضافان عليها. التشطيب أو الحزام الذي لا تُظهره يعرض الرسم.",
+  "case.photoTint":"الصورة هي الساعة الحقيقية من الستيل: الذهب يُضاف على القالب، والحزام يأخذ أي لون. اللونان أو تشطيب آخر يعرض الرسم.",
   "photo.show":"اعرض الصورة الحقيقية", "photo.on":"تظهر الصورة الحقيقية.", "photo.again":"عادت الصورة الحقيقية.",
   "photo.changed": list => `تظهر الصورة الحقيقية: ${list}، كما في الصورة.`,
   "photo.steel":"الستيل", "photo.plainBezel":"الإطار السادة", "photo.finish": f => `التشطيب ${f}`,
@@ -19188,7 +19268,7 @@ Object.assign(GWORD.ar, {
         h += `<h3>${gW("Strap")}</h3>` + chips("case.strapType", [["rubber","Rubber"],["fabric","Fabric (Velcro)"],["alligator","Alligator leather"]], S.case.strapType === "fabric" || S.case.strapType === "alligator" ? S.case.strapType : "rubber");
         if(S.case.strapType === "fabric" || S.case.strapType === "alligator") h += `<h3>${gW("Stitching")}</h3>` + swatches("case.stitch", [["#00000000","None"],["#F2701E","Orange"],["#F2F2EF","White"],["#D7262E","Red"],["#E3C27A","Sand"]], /^#[0-9a-f]{6}$/i.test(S.case.stitch || "") ? S.case.stitch : "#00000000", {row:true});
       }
-      if(hasPhoto(K)){ h += toggle("tpl.on", "Show as a photograph", S.tpl.on); if(S.tpl.on) h += `<p class="gNote">${gT(K.photoParts ? "case.photoGold" : "case.photoNote")}</p>`; }
+      if(hasPhoto(K)){ h += toggle("tpl.on", "Show as a photograph", S.tpl.on); if(S.tpl.on) h += `<p class="gNote">${gT(K.photoParts ? "case.photoGold" : K.builtinTint ? "case.photoTint" : "case.photoNote")}</p>`; }
       return h + more("case", "All case settings");
     },
     dial(tab){
@@ -19665,14 +19745,14 @@ Object.assign(GWORD.ar, {
      choice it can show leaves it on screen; one it cannot switches to the
      drawing, and "Show the real photo" on the preview goes back to it. */
   const steelish = m => { const u = String(m || "").toUpperCase(); return isHex(u) && [1, 3, 5].every(i => Math.abs(parseInt(u.slice(i, i + 2), 16) - parseInt(LUX_STEEL.slice(i, i + 2), 16)) <= 8); };
-  const metalShows = (K, m) => steelish(m) || (!!K.photoParts && !!goldOf(m));
+  const metalShows = (K, m) => steelish(m) || ((!!K.photoParts || !!K.builtinTint) && !!goldOf(m));
   function photoShows(K, path, v){
     const own = K.photoOwn || {};
     if(path === "ui.metal") return /^two:/.test(v) ? !!K.photoParts : metalShows(K, v);
     if(path === "case.material") return metalShows(K, v);
     if(path === "case.finish") return v === own.finish;
     if(path === "case.strap") return !!v;
-    if(path === "case.strapColor") return !!K.bracelet || !!K.photoStrap || String(v).toUpperCase() === String(own.strapColor || "").toUpperCase();
+    if(path === "case.strapColor") return !!K.bracelet || !!K.photoStrap || !!K.builtinTint || String(v).toUpperCase() === String(own.strapColor || "").toUpperCase();
     return true;
   }
   /* the whole design as its photograph can show it */
@@ -19680,7 +19760,7 @@ Object.assign(GWORD.ar, {
     const K = caseOf(st), c = st.case, own = K.photoOwn || {};
     if(!hasPhoto(K)) return false;
     return (twoToneOf(st) ? !!K.photoParts : metalShows(K, c.material)) && (!own.finish || c.finish === own.finish) && c.strap !== false
-      && (!!K.bracelet || !!K.photoStrap || !own.strapColor || String(c.strapColor).toUpperCase() === own.strapColor.toUpperCase()) && photoPlan(st, K) !== false;
+      && (!!K.bracelet || !!K.photoStrap || !!K.builtinTint || !own.strapColor || String(c.strapColor).toUpperCase() === own.strapColor.toUpperCase()) && photoPlan(st, K) !== false;
   }
   /* true while the drawing is on screen because of a choice, not because the
      person turned the photograph off: a later choice that fits brings it back */
@@ -19694,7 +19774,7 @@ Object.assign(GWORD.ar, {
     if(gemBezelOn(S) && !K.photoParts){ c.gemBezel = "none"; done.push(gT("photo.plainBezel")); }
     if(own.finish && c.finish !== own.finish){ c.finish = own.finish; done.push(gT("photo.finish", gW(GLOSS_OPT[own.finish] || own.finish))); }
     if(c.strap === false){ c.strap = true; done.push(gT(K.bracelet ? "photo.bracelet" : "photo.strap")); }
-    if(!K.bracelet && !K.photoStrap && own.strapColor && String(c.strapColor).toUpperCase() !== own.strapColor.toUpperCase()){ c.strapColor = own.strapColor; done.push(gT(own.strap === "brown" ? "photo.brownStrap" : "photo.blackStrap")); }
+    if(!K.bracelet && !K.photoStrap && !K.builtinTint && own.strapColor && String(c.strapColor).toUpperCase() !== own.strapColor.toUpperCase()){ c.strapColor = own.strapColor; done.push(gT(own.strap === "brown" ? "photo.brownStrap" : "photo.blackStrap")); }
     S.tpl.on = true; photoAuto = false;
     commit(); paintAll();
     toast(done.length ? gT("photo.changed", gT("list", done)) : gT("photo.on"));

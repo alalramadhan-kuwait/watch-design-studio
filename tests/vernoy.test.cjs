@@ -40,7 +40,7 @@ test('every case has a photograph, the Vernoy its built-in one', () => {
   assert.match(guide, /C = K\.photoFile \? K\.photoCal : \{w:tplW, h:tplH, cx:st\.tpl\.cx, cy:st\.tpl\.cy, dia:st\.tpl\.dia\}/);
 });
 
-test('the Vernoy photograph keeps steel, polished and its brown strap, and nothing else', () => {
+test('the Vernoy photograph shows steel or a whole gold case, polished, on a strap of any colour (since 4.42.0), and nothing else', () => {
   const ctx = vm.createContext({});
   vm.runInContext(chunk('const LUX_GOLD = {', '/* Two-tone in the Rolesor way')
     + '\nconst isHex = c => /^#[0-9a-f]{6}$/i.test(c || "");\n'
@@ -49,12 +49,12 @@ test('the Vernoy photograph keeps steel, polished and its brown strap, and nothi
   const { photoShows, LUX_STEEL, LUX_GOLD } = ctx.t, V = C.VERNOY_CASE;
   assert.equal(photoShows(V, 'ui.metal', LUX_STEEL), true);
   assert.equal(photoShows(V, 'case.material', '#C8C9C7'), true, 'the design\'s own steel');
-  assert.equal(photoShows(V, 'ui.metal', LUX_GOLD['yellow gold']), false);
+  assert.equal(photoShows(V, 'ui.metal', LUX_GOLD['yellow gold']), true, 'gold laid onto the steel');
   assert.equal(photoShows(V, 'ui.metal', 'two:rose gold'), false);
   assert.equal(photoShows(V, 'case.finish', 'polished'), true);
   assert.equal(photoShows(V, 'case.finish', 'brushed'), false);
   assert.equal(photoShows(V, 'case.strapColor', '#4e3629'), true);
-  assert.equal(photoShows(V, 'case.strapColor', '#1E1E20'), false);
+  assert.equal(photoShows(V, 'case.strapColor', '#1E1E20'), true, 'the strap takes another colour');
   assert.equal(photoShows(V, 'case.strap', false), false);
   // putting the strap back names it
   assert.match(guide, /gT\(own\.strap === "brown" \? "photo\.brownStrap" : "photo\.blackStrap"\)/);

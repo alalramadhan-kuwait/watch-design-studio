@@ -1,5 +1,12 @@
 [
  {
+  "id": "or-damier",
+  "file": "or-damier.json",
+  "picture": "or-damier.jpg",
+  "name": "Or Damier",
+  "sub": "After the gold basket-weave Vernoy"
+ },
+ {
   "id": "chocolat-77",
   "file": "chocolat-77.json",
   "picture": "chocolat-77.jpg",

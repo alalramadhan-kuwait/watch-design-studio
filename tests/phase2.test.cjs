@@ -320,7 +320,7 @@ test('power reserve, small seconds, lance, alligator (v4.33.0)', () => {
   assert.match(source, /tex = gator \? alligatorTex\(x, y \+ 60\) : fabricTex\(x \+ 40, y \+ 60\);/, 'measured from the strap\'s centre line');
   for (const t of ['Power reserve and the movement', 'Small seconds and the movement']) assert.ok(source.includes(t), t);
   const list = JSON.parse(fs.readFileSync(path.join(__dirname, '../concepts/index.json'), 'utf8'));
-  assert.equal(list[0].id, 'chocolat-77', 'the newest concept first');
+  assert.ok(list.findIndex(x => x.id === 'chocolat-77') >= 0, 'listed among the concepts (the newest first: or-damier since 4.42.0)');
 });
 
 test('designs tab and the movement rule (v4.34.0)', () => {
@@ -516,4 +516,39 @@ test('tap the watch to edit what you tapped (v4.41.0)', () => {
   assert.match(source, /if\(ctm && ctm\.a && window\.WatchGuidePick\(k, \(e\.clientX - ctm\.e\)\/ctm\.a, \(e\.clientY - ctm\.f\)\/ctm\.d\)\) return;/);
   assert.match(source, /findGo\(\{i, tab: tab \|\| undefined, sec: t\.sec \? t\.step \+ ":" \+ t\.sec : undefined\}\);/);
   assert.match(source, /if\(Date\.now\(\) - stageDragAt < 400\) return;/, 'the end of a drag is not a tap');
+});
+
+test('Or Damier, the Vernoy photograph in gold, fine pomme rings (v4.42.0)', () => {
+  // the design: the Vernoy cushion in gold on its photograph, Vernoy's own logo, no complication
+  const list = JSON.parse(fs.readFileSync(path.join(__dirname, '../concepts/index.json'), 'utf8'));
+  assert.equal(list[0].id, 'or-damier');
+  const d = JSON.parse(fs.readFileSync(path.join(__dirname, '../concepts/or-damier.json'), 'utf8'));
+  assert.equal(d.case.model, 'Vernoy cushion · RD26-0172');
+  assert.equal(d.case.material, '#D7B56D', 'yellow gold');
+  assert.equal(d.tpl.on, true, 'on the photograph');
+  assert.equal(d.text.logoMark, 'Vernoy wordmark (traced)', 'the case\'s own logo');
+  assert.equal(d.sHand.on, false, 'the 1062 has no seconds');
+  assert.equal(d.date.on, false); assert.equal(d.power.on, false); assert.equal(d.sub.on, false);
+  assert.equal(d.numerals.system, 'roman I–XII'); assert.equal(d.numerals.tech, 'engraved + filled'); assert.equal(d.numerals.material, 'lacquer / enamel');
+  assert.equal(d.sector.zones.some(z => z.pattern === 'damier' && z.edge === 'beads'), true, 'the checker centre edged in beads');
+  assert.ok(fs.existsSync(path.join(__dirname, '../concepts/or-damier.jpg')));
+  // the photograph: gold and the strap laid on by where the steel and the strap are
+  assert.match(source, /builtinTint:\{body:\[18\.7, 10\.5\], deep:\[17\.6, 9\.6\], lug:\[9\.5, 12\.6, 21\.9\], crown:\[17\.4, 20\.6, 2\.7\], strap:\[10\.7, 16\.5\], strapL:58\}/);
+  assert.match(source, /if\(!own && K\.builtinTint && tplImage === BUILTIN_CASE && \(vernoyGold\(st\) \|\| vernoyStrapHex\(st\)\)\)\{/);
+  assert.match(source, /const metalShows = \(K, m\) => steelish\(m\) \|\| \(\(!!K\.photoParts \|\| !!K\.builtinTint\) && !!goldOf\(m\)\);/);
+  const vm = require('node:vm'), ctx = vm.createContext({});
+  vm.runInContext(chunk('const LUX_RAMP = {', '\n};\n') + '\n};\n' + chunk('function luxRampLUT(tone){', '\n}\n') + '\n}\n'
+    + 'const hex2rgb = h => [parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)];\n'
+    + chunk('function builtinTintPixels(', '\n/* a fabric strap') + '\nthis.r = builtinTintPixels;', ctx);
+  const T = {body:[18.7, 10.5], deep:[17.6, 9.6], lug:[9.5, 12.6, 21.9], crown:[17.4, 20.6, 2.7], strap:[10.7, 16.5], strapL:58};
+  // three pixels in a row, 1 px per mm about x = 0: steel on the case at (16, 0), the white ground, a brown strap pixel
+  const px = (r, g, b) => [r, g, b, 255];
+  const W = 3, src = new Uint8ClampedArray([...px(150, 152, 154), ...px(255, 255, 255), ...px(78, 54, 41)]);
+  const one = (i, y) => ctx.r(src, W, 1, {cx: [-15.5, -29.5, -1.5][i], cy: y, s: 1}, T, 'yellow gold', '#1E1E20').slice(i*4, i*4 + 3);
+  const steel = one(0, 0.5); assert.ok(steel[0] > steel[2] + 20, 'steel on the case turns gold ' + steel);
+  assert.deepEqual([...one(1, 0.5)], [255, 255, 255], 'the ground stays white');
+  const strap = one(2, -19.5); assert.ok(strap[0] < 60 && Math.abs(strap[0] - strap[2]) < 12, 'the brown strap turns black ' + strap);
+  // fine pomme rings once one is set
+  assert.match(source, /const POMME_MIN = h\.fineRing \? 0\.07 : 0\.17, RING_MIN = h\.fineRing \? 0\.012 : 0\.030;/);
+  assert.match(source, /if\(\/\^\(hHand\|mHand\|sHand\)\\\.\(pommeD\|ringW\)\$\/\.test\(p\)\)\{/);
 });
