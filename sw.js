@@ -47,6 +47,16 @@ const SHELL = [
      its Start card opens */
   "./app/case-timekeeper-nivada.jpg",
   "./designs/timekeeper-nivada.json",
+  /* the concepts on the start screen, so they open offline too */
+  "./concepts/index.json",
+  "./concepts/piste-77-noir-rose.json",
+  "./concepts/piste-77-meteorite.json",
+  "./concepts/sommet-77.json",
+  "./concepts/porcelaine-77.json",
+  "./concepts/basalt-nuit.json",
+  "./concepts/lazuli.json",
+  "./concepts/nachtschrift.json",
+  "./concepts/huit-carres.json",
   /* the maker's sheet: the two PDF libraries (about 450 KB together, the
      page loads them only when a sheet is first made) and the owner's two
      drawings of the F77 that stand in its technical row */

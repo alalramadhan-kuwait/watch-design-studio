@@ -1,0 +1,58 @@
+[
+ {
+  "id": "piste-77-noir-rose",
+  "file": "piste-77-noir-rose.json",
+  "picture": "piste-77-noir-rose.jpg",
+  "name": "Piste 77 · Noir Rosé",
+  "sub": "After the rubber-strap Daytona"
+ },
+ {
+  "id": "piste-77-meteorite",
+  "file": "piste-77-meteorite.json",
+  "picture": "piste-77-meteorite.jpg",
+  "name": "Piste 77 · Météorite",
+  "sub": "After the rubber-strap Daytona"
+ },
+ {
+  "id": "sommet-77",
+  "file": "sommet-77.json",
+  "picture": "sommet-77.jpg",
+  "name": "Sommet 77",
+  "sub": "After the Overseas Everest"
+ },
+ {
+  "id": "porcelaine-77",
+  "file": "porcelaine-77.json",
+  "picture": "porcelaine-77.jpg",
+  "name": "Porcelaine 77",
+  "sub": "F77 challenge · after Patek"
+ },
+ {
+  "id": "basalt-nuit",
+  "file": "basalt-nuit.json",
+  "picture": "basalt-nuit.jpg",
+  "name": "Basalt Nuit",
+  "sub": "F77 challenge · after AP"
+ },
+ {
+  "id": "lazuli",
+  "file": "lazuli.json",
+  "picture": "lazuli.jpg",
+  "name": "Lazuli",
+  "sub": "F77 challenge · after Piaget"
+ },
+ {
+  "id": "nachtschrift",
+  "file": "nachtschrift.json",
+  "picture": "nachtschrift.jpg",
+  "name": "Nachtschrift",
+  "sub": "F77 challenge · after Lange"
+ },
+ {
+  "id": "huit-carres",
+  "file": "huit-carres.json",
+  "picture": "huit-carres.jpg",
+  "name": "Huit Carrés",
+  "sub": "F77 challenge · jewellery"
+ }
+]

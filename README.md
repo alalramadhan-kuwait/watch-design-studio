@@ -200,6 +200,17 @@ stored in a design file do not change. In the full editor at laptop widths
 the toolbar sits tighter, and on a narrower window it takes a second row
 rather than pushing Share and Export off the screen.
 
+## Concepts (v4.32.0)
+
+The designs made in the studio are kept in the repository, in `concepts/`
+(each its design file and a picture, listed in `concepts/index.json`), and
+shown on the start screen under **Concepts**, so each opens in one tap and
+offline: Piste 77 (Noir Rosé, Météorite), Sommet 77, and the F77 challenge's
+Porcelaine 77, Basalt Nuit, Lazuli, Nachtschrift and Huit Carrés. To add one,
+put its file and picture in `concepts/` and a line in the index.
+The Time Keeper × Nivada maker files (dial artwork, print layers, numerals,
+maker's sheet) are kept in `deliverables/timekeeper-nivada/`.
+
 ## Outer chapter ring (rehaut) (v4.31.0, named so in v4.31.1)
 
 Dial › Minute track › **Outer chapter ring (rehaut)** (`rehaut`), on a case

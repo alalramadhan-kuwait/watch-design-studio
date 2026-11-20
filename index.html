@@ -2242,7 +2242,7 @@ const APP_BUILD = "__BUILD__";
 /* The version people see, raised with every change that reaches them:
    major for a new way of working, minor for something new to do, patch for
    a fix. Shown on the watch screen, so any screenshot says which it was. */
-const APP_VERSION = "4.31.1";
+const APP_VERSION = "4.32.0";
 const APP_DATE = "__DATE__";
 
 /* Every route that replaces S passes through one of these three, which is
@@ -17113,6 +17113,7 @@ const GSTR = {en:{
   "prog": (name, n, total) => `<b>${name}</b><span> · <i>step </i>${n} of ${total}</span>`,
   "prog.aria": (name, n, total) => `${name}, step ${n} of ${total}. Show all steps`,
   "find.ph":"Find a setting", "find.none":"Nothing by that name in this design.",
+  "start.concepts":"Concepts",
   "rehaut.note":"The outer chapter ring, or rehaut: the ring between the dial and the bezel, printed with a minute at every dot or tick. It shows on the photograph of the case. The Chapter ring under More options is the band on the dial itself.",
   "dial.granNote":"A coarse grain, each grain a little lighter or darker than the next and the light ones catching the light, as a granular sports dial. Sized in millimetres, so it is the same in every picture.",
   "text.secHidden":"The seconds hand is left out of the picture on this step, so the lettering under it can be read. It is back on the next step.",
@@ -17308,6 +17309,7 @@ GSTR.ar = {
   "prog": (name, n, total) => `<b>${name}</b><span> · <i>الخطوة </i>${n} من ${total}</span>`,
   "prog.aria": (name, n, total) => `${name}، الخطوة ${n} من ${total}. عرض كل الخطوات`,
   "find.ph":"ابحث عن إعداد", "find.none":"ما في شي بهالاسم في هالتصميم.",
+  "start.concepts":"التصاميم المقترحة",
   "rehaut.note":"الحلقة المدرّجة الخارجية (الريهو): الحلقة اللي بين الميناء والبيزل، مطبوع عليها دقيقة عند كل نقطة أو علامة. تبين على صورة القالب. أما «الحلقة المدرّجة» تحت «خيارات أخرى» فهي الشريط اللي على الميناء نفسه.",
   "dial.granNote":"حبيبات خشنة، كل حبة أفتح أو أغمق شوي من اللي جنبها، والفاتحة تلمع مع الضوء، مثل ميناء الساعات الرياضية المحبّب. مقاسها بالملم، فتطلع نفس الشي في كل صورة.",
   "text.secHidden":"عقرب الثواني مخفي من الصورة في هالخطوة عشان تنقرا الكتابة اللي تحته. ويرجع في الخطوة الجاية.",
@@ -18380,7 +18382,12 @@ Object.assign(GWORD.ar, {
     }catch(e){ return ""; }
     return ph ? svg : memo(k, () => svg);
   }
-  let noreRef = null, tkRef = null;
+  let noreRef = null, tkRef = null, conceptRefs = [];
+  /* the concepts kept in the repository (concepts/index.json): each a design
+     file made in the studio, shown as a card on the start screen */
+  fetch("./concepts/index.json").then(r => r.ok ? r.json() : []).then(list => Promise.all((Array.isArray(list) ? list : []).slice(0, 40).map(c =>
+    fetch("./concepts/" + encodeURIComponent(c.file)).then(r => r.ok ? r.json() : null).then(j => j ? {id:"c:" + c.id, name:String(c.name || ""), sub:String(c.sub || ""), ref:j} : null).catch(() => null))))
+    .then(all => { conceptRefs = all.filter(Boolean); if(conceptRefs.length && STEPS[step].k === "case") paint(); }).catch(() => {});
   /* the second watch, the Time Keeper × Nivada; a first visit still opens on the NOREL */
   fetch("./designs/timekeeper-nivada.json").then(r => r.ok ? r.json() : null).then(j => { if(j){ tkRef = j; casePhoto(caseOf(j)); if(STEPS[step].k === "case") paint(); } }).catch(()=>{});
   fetch("./designs/norel-concept-d-powder-blue.json").then(r => r.ok ? r.json() : null).then(j => { if(j){ noreRef = j; casePhoto(caseOf(j)); firstOpen(); if(STEPS[step].k === "case") paint(); } }).catch(()=>{});
@@ -18778,6 +18785,7 @@ Object.assign(GWORD.ar, {
       + `<div class="gSub">${rec.at ? esc2(gT("start.edited", when(rec.at), STEPS[back].t)) : ""}</div>`
       + `<button type="button" class="gGo" data-gcontinue="${back}">${gT("start.continue")}</button></div></div>`;
     if(ours.length) h += (back || first ? `<h3>${gT("start.yours")}</h3>` : "") + `<div class="gCards">${ours.map(card).join("")}</div>`;
+    if(conceptRefs.length) h += `<h3>${gT("start.concepts")}</h3><div class="gCards">${conceptRefs.map(c => card({id:c.id, name:c.name, sub:c.sub, st:migrateHands(deep(BASE, c.ref))})).join("")}</div>`;
     /* everything else to start from, folded away until asked for */
     if(noreRef) cards.push({id:"norel-gems", name:gT("card.gems"), sub:gT("card.gemsSub"), st:gemExample("gems")},
                            {id:"norel-pave", name:gT("card.pave"), sub:gT("card.paveSub"), st:gemExample("pave")});
@@ -19842,6 +19850,7 @@ Object.assign(GWORD.ar, {
         else if(id === "norel-pave" && noreRef) st = gemExample("pave");
         else if(id.startsWith("p:")){ const n = id.slice(2); st = migrateHands(deep(BASE, PRESETS[n])); st.meta.name = n; }
         else if(id.startsWith("v:")){ const v = versions[+id.slice(2)]; if(v) st = migrateHands(deep(BASE, v.state)); }
+        else if(id.startsWith("c:")){ const c = conceptRefs.find(x => x.id === id); if(c) st = migrateHands(deep(BASE, c.ref)); }
         if(st) openDesign(st, id === "fresh" ? gT("start.fresh") : gT("start.loaded"));
       });
       return;

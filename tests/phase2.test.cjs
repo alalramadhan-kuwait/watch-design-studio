@@ -292,3 +292,16 @@ test('printed rehaut ring (v4.31.0): a ring outside the dial on the photograph, 
   assert.match(source, /chips\("rehaut\.marks", \[\["dots","Dots"\],\["ticks","Ticks"\],\["none","None"\]\]/);
   assert.match(source, /if\(rh && rh\.on\) add\("Outer chapter ring \(rehaut\)", `printed, between the dial and the bezel/);
 });
+
+test('concepts (v4.32.0): the studio\'s designs kept in the repository and on the start screen', () => {
+  const list = JSON.parse(fs.readFileSync(path.join(__dirname, '../concepts/index.json'), 'utf8'));
+  assert.ok(list.length >= 8);
+  for (const c of list) {
+    const st = JSON.parse(fs.readFileSync(path.join(__dirname, '../concepts', c.file), 'utf8'));
+    assert.ok(st.case && st.dial && st.meta, c.id + ' is a design');
+    assert.ok(fs.existsSync(path.join(__dirname, '../concepts', c.picture)), c.id + ' has its picture');
+  }
+  assert.match(source, /fetch\("\.\/concepts\/index\.json"\)/);
+  assert.match(source, /else if\(id\.startsWith\("c:"\)\)\{ const c = conceptRefs\.find\(x => x\.id === id\);/);
+  assert.match(fs.readFileSync(path.join(__dirname, '../sw.js'), 'utf8'), /"\.\/concepts\/index\.json",/, 'offline too');
+});
