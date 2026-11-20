@@ -2292,7 +2292,7 @@ const APP_BUILD = "__BUILD__";
 /* The version people see, raised with every change that reaches them:
    major for a new way of working, minor for something new to do, patch for
    a fix. Shown on the watch screen, so any screenshot says which it was. */
-const APP_VERSION = "4.42.0";
+const APP_VERSION = "4.43.0";
 const APP_DATE = "__DATE__";
 
 /* Every route that replaces S passes through one of these three, which is
@@ -7731,7 +7731,7 @@ function buildSVG(st, o={}){
   if(scope==="dial" && o.guides !== false){
     over.push(`<circle r="${dialD/2}" fill="none" stroke="#1F4E6B" stroke-width="0.06"/>`);
     over.push(`<circle r="${opening/2}" fill="none" stroke="#B3312A" stroke-width="0.06" stroke-dasharray="0.8 0.6"/>`);
-    over.push(`<text x="0" y="${f(dialD/2+1.2,2)}" font-family="'IBM Plex Mono',monospace" font-size="0.8" fill="#1F4E6B" text-anchor="middle">Ø${f(dialD)} blank · Ø${f(opening)} visible · ${f(CASE_SPEC.dialT)} brass</text>`);
+    over.push(`<text x="0" y="${f(dialD/2+1.2,2)}" font-family="'IBM Plex Mono',monospace" font-size="0.8" fill="#1F4E6B" text-anchor="middle">Ø${f(dialD)} blank · Ø${f(opening)} visible · ${f(CASE_SPEC.dialT)} ${dialBlank(st)}</text>`);
   }
 
   /* ---------------- MEASUREMENT OVERLAY ---------------- */
@@ -9068,7 +9068,7 @@ function luxChecks(st, pv){
       + `${K.model || "This case"} is drawn with a fluted steel bezel: ${makerOf(st)} must make a gem-set bezel (its seats, height over the crystal and the bezel fixing) and quote it.`, "case");
   }
   if(paveDialOn(st)){
-    const d = paveDialD(st), n = pv && pv.n, dialT = gemDialT(st), mat = (K.dialMat || "brass");
+    const d = paveDialD(st), n = pv && pv.n, dialT = gemDialT(st), mat = typeof dialBlank === "function" ? dialBlank(st) : (K.dialMat || "brass");
     add(false, "Pavé dial", `${n ? n + " stones" : "Stones"} of Ø${mm(d)} mm${n ? `, about ${gf(n*0.0037*Math.pow(d, 3), 2)} ct,` : ""} grain-set over the ${st.dial.pave === "centre" ? "centre field" : st.dial.pave === "ring" ? "outer ring" : "whole dial"}. `
       + `The dial blank is ${mat} Ø${mm(K.dialD || 0)} × ${mm(dialT)} mm; a pavé dial is normally an 18k gold base about 0.8–1.0 mm thick, so the stones can be seated. `
       + `${makerOf(st)} must confirm the stack height (hands${caseOf(st).calendar ? ", day and date discs" : ""}, crystal) before a pavé dial is offered.`, "dial");
@@ -10276,6 +10276,11 @@ function radialDims(st){
 }
 /* anything printed beyond this radius disappears under the bezel */
 const visR = st => (st.case.locked ? caseOf(st).opening : st.case.opening)/2;
+/* What the dial blank is made of: the case's own (its drawing set says, brass
+   on every case here) unless the design names a solid gold one. It is a
+   material, not a colour: the colour is still the dial's. */
+const DIAL_BLANKS = ["18k yellow gold", "18k rose gold", "18k white gold"];
+const dialBlank = st => { const b = st && st.dial && st.dial.blank; return DIAL_BLANKS.indexOf(b) >= 0 ? b : (caseOf(st).dialMat || "brass"); };
 
 /* ---------------------------------------------------------------------
    Matched hand sets. An hour and minute hand from the same family share
@@ -11371,6 +11376,7 @@ const SCHEMA = {
       C("dial.color","Dial colour"),
       N("dial.dome","Doming (− dished, + domed)",-0.60,0.60,.01,""),
     N("dial.satin","Satin overlay",0,1,.02,""),
+    SEL("dial.blank","Dial made of",[["","the case's (brass)"],...DIAL_BLANKS]),
     SEL("dial.finish","Finish",["matte","gloss","sunburst","guilloche","brushedsteel","brushed","grained","granular","sandblasted","enamel","lacquer","stone","metallic","circular","mop"]),
     ...(S.dial.finish === "granular" ? [N("dial.granSize","Grain size",.04,.30,.01), N("dial.granAmt","Grain strength",0,1.5,.05,"")] : []),
     N("dial.ombre","Ombré (darker toward the edge)",0,1,.02,""),
@@ -12090,7 +12096,7 @@ function caseSpecRows(){
       <div><span>Total height</span><b>${f(K.height)} mm</b></div>
       <div><span>Visible opening</span><b>Ø${f(K.opening)} mm</b></div>
       <div><span>Glass</span><b>Ø${f(K.glassD)} sapphire${K.cyclops ? ` · cyclops ${f(K.cyclops.w,1)} × ${f(K.cyclops.h,1)}` : ""}</b></div>
-      <div><span>Dial blank</span><b>Ø${f(K.dialD)} × ${f(K.dialT)} ${K.dialMat}</b></div>
+      <div><span>Dial blank</span><b>Ø${f(K.dialD)} × ${f(K.dialT)} ${dialBlank(S)}</b></div>
       <div><span>Movement</span><b>${K.movement} · Ø${f(K.movHolder)} fit</b></div>
       ${K.calendar ? `<div><span>Day window</span><b>R${f(K.calendar.dayRin)}–${f(K.calendar.dayRout)} · ≤ ${K.calendar.dayArcMax}°</b></div>
       <div><span>Date window</span><b>${f(K.calendar.dateW)} × ${f(K.calendar.dateH)} at ${f(K.calendar.dateC)} mm</b></div>` : `<div><span>Calendar</span><b>none</b></div>`}
@@ -12108,7 +12114,7 @@ function caseSpecRows(){
       <div><span>Visible opening</span><b>Ø${f(K.opening)} mm</b></div>
       <div><span>Glass</span><b>Ø${f(K.glassD)} × ${f(K.glassT)} sapphire</b></div>
       <div><span>Glass seat</span><b>Ø${f(K.glassSeat)} mm</b></div>
-      <div><span>Dial blank</span><b>Ø${f(K.dialD)} × ${f(K.dialT)} ${K.dialMat}</b></div>
+      <div><span>Dial blank</span><b>Ø${f(K.dialD)} × ${f(K.dialT)} ${dialBlank(S)}</b></div>
       <div><span>Movement holder</span><b>Ø${f(K.movHolder)} · cal. ${K.movement}</b></div>
       <div><span>Crown</span><b>Ø${f(K.crownD)} · cabochon Ø${f(K.cabochon)}</b></div>
       <div><span>Material / WR</span><b>${K.steel} · ${K.wr}</b></div>
@@ -13767,7 +13773,7 @@ function specSheet(){
     ["Visible dial opening","Ø"+f(K.opening)+" mm"],
     ["Glass","sapphire Ø"+f(K.glassD)+" × "+f(K.glassT)+" mm, "+K.glassBevel],
     ["Glass seat","Ø"+f(K.glassSeat)+" mm"],
-    ["Dial blank","Ø"+f(K.dialD)+" × "+f(K.dialT)+" mm "+K.dialMat+", holder Ø"+f(K.dialHolder)],
+    ["Dial blank","Ø"+f(K.dialD)+" × "+f(K.dialT)+" mm "+dialBlank(S)+", holder Ø"+f(K.dialHolder)],
     ["Crown","Ø"+f(K.crownD)+" mm at 3H"+(K.cabochon ? ", cabochon Ø"+f(K.cabochon) : "")+", tube Ø"+f(K.crownTube)],
     ["General tolerance",K.tol]
   ];
@@ -13837,7 +13843,7 @@ td:first-child{color:#666;width:38%}
 <h1>${esc(S.meta.name)}</h1>
 <p class="s">Dial and hand specification · case ${esc(K.ref)} · all dimensions in millimetres · ${new Date().toISOString().slice(0,10)}</p>
 <div class="two">${buildSVG(S,{scope:"full",measure:true,tag:"sp",material:false})}${buildSVG(S,{scope:"dial",tag:"sd",material:false})}</div>
-<div class="note">The case is fixed to drawing set ${esc(K.ref)}. Dial artwork is printed on the Ø${f(K.dialD)} × ${f(K.dialT)} brass blank; only Ø${f(vis)} is visible through the bezel, so all printing and applied parts must stay inside R${f(vis/2)}.</div>
+<div class="note">The case is fixed to drawing set ${esc(K.ref)}. Dial artwork is printed on the Ø${f(K.dialD)} × ${f(K.dialT)} ${esc(dialBlank(S))} blank; only Ø${f(vis)} is visible through the bezel, so all printing and applied parts must stay inside R${f(vis/2)}.</div>
 <h2>Case — supplied, fixed</h2>${T(caseRows)}
 <h2>Dial and hands — this design</h2>${T(dialRows)}
 <h2>Colour schedule</h2>${T(colourRows)}
@@ -14939,6 +14945,8 @@ function sheetRows(st){
     [sp.type, sp.style, sp.maker, c.strap !== false], [String(c.strapColor || "").toUpperCase()]);
   /* dial */
   let dialText = d.finish === "stone" ? `${sheetCap(sheetDialFinish(d))} stone dial` : `${sheetColourName(d.color)} ${sheetDialFinish(d)} dial`;
+  /* a solid gold blank leads: it is what the dial is, the colour and finish what is done to it */
+  if(/^18k (yellow|rose|white) gold$/.test(d.blank || "") && d.finish !== "stone") dialText = `Solid ${d.blank} dial, ${sheetDialFinish(d)}, ${sheetColourName(d.color)}`;
   if(d.ombre > 0) dialText += ", ombré";
   if(d.pave && d.pave !== "none") dialText += `, pavé ${d.pave}`;
   row("dial", "Dial:", dialText, [d.finish, d.brushDir, d.pattern, d.stone, d.pave, d.ombre > 0, d.dome, st.sector && st.sector.on, st.chapter && st.chapter.on],
@@ -16659,7 +16667,7 @@ async function makeMakerPDF(){
     if(typeof lineTechsUsed==='function'){const used=lineTechsUsed(st),mk=x=>x&&MINUTE_TECH.indexOf(x)>=0?[x]:[];
      const all=used.concat(st.minute&&st.minute.on&&st.minute.style!=='beads'?mk(st.minute.tech):[],st.indices&&st.indices.on&&!st.indices.applied?mk(st.indices.tech):[]);
      const dT=(typeof caseOf==='function'&&caseOf(st).dialT)||.40;
-     if(all.some(t=>t==='engraved + filled'||t==='engraved'))add(dT>=.35,'Engraved lettering',`Cut about 0.05 mm deep into a ${f(dT,2)} mm dial${dT>=.35?'; 0.40 mm brass is fine for that depth':'; under 0.35 mm the dial is too thin to cut safely'}. Confirm the depth with the dial maker.`,'text');
+     if(all.some(t=>t==='engraved + filled'||t==='engraved'))add(dT>=.35,'Engraved lettering',`Cut about 0.05 mm deep into a ${f(dT,2)} mm dial${dT>=.35?`; ${f(dT,2)} mm ${typeof dialBlank==='function'?dialBlank(S):'brass'} is fine for that depth`:'; under 0.35 mm the dial is too thin to cut safely'}. Confirm the depth with the dial maker.`,'text');
      if(all.some(t=>t==='engraved'||t==='gloss on matte'))add(false,'Faint lettering','Tone-on-tone and gloss-on-matte lettering is seen only by the light on it and may be hard to read. Check a sample in shop light and daylight.','text');
      if(used.indexOf('brushed across')>=0)add(LINE_BRUSHED_FINISH.has(st.dial.finish),'Brushed lettering',LINE_BRUSHED_FINISH.has(st.dial.finish)?'The letters are brushed at right angles to the dial: the dial maker masks and re-brushes them.':'The dial is not brushed, so the brushed-across lettering is shown engraved tone on tone instead.','text');
      if(used.indexOf('uv ink')>=0)add(false,'UV ink','UV ink cannot be seen in daylight. The supplier must confirm the ink, its glow under the lamp and how long it lasts.','text');}
@@ -17604,6 +17612,7 @@ const GSTR = {en:{
   "case.gemNote": (n, ct, metal) => `${n} stones · ≈ ${ct} ct · set in 18k ${metal}. Blue Creations would have to make this bezel.`,
   "case.gemRound":"Round brilliants are drawn on the round NOREL case only.",
   "dial.paveNote": (n, ct) => `${n} stones · ≈ ${ct} ct. A pavé dial is 18k gold about 0.8–1.0 mm thick, not the 0.40 mm brass blank: Blue Creations to confirm.`,
+  "dial.blankNote": b => `The dial blank is cut from solid ${b}, not the case's brass: the maker's sheet and the dial artwork say so. Its colour is still the one under Colour; left in its own metal, set that to the gold.`,
   "dial.ombreNote":"Darkens the colour toward the edge, as a sprayed gradient does over a sunburst.",
   /* More options: each step's other settings, on a sheet of their own */
   "more.btn":"More", "more.aria": name => `More options: ${name}`, "more.title":"More options", "more.done":"Done",
@@ -17802,6 +17811,7 @@ GSTR.ar = {
   "case.gemNote": (n, ct, metal) => `${arCount(n, "حجر واحد", "حجران", "أحجار", "حجراً")} · ≈ ${ct} قيراط · مرصّعة في ${({"yellow gold":"ذهب أصفر", "rose gold":"ذهب وردي", "white gold":"ذهب أبيض"})[metal] || metal} عيار 18. على Blue Creations أن تصنع هذا الإطار.`,
   "case.gemRound":"الإطار المرصّع يُرسم على قالب NOREL الدائري فقط.",
   "dial.paveNote": (n, ct) => `${arCount(n, "حجر واحد", "حجران", "أحجار", "حجراً")} · ≈ ${ct} قيراط. الميناء المرصّع بالكامل من ذهب عيار 18 بسماكة 0.8–1.0 ملم تقريباً، لا من النحاس بسماكة 0.40 ملم: على Blue Creations أن تؤكد ذلك.`,
+  "dial.blankNote": b => `قاعدة الميناء من ${({"18k yellow gold":"الذهب الأصفر عيار ١٨","18k rose gold":"الذهب الوردي عيار ١٨","18k white gold":"الذهب الأبيض عيار ١٨"})[b] || b} الخالص، لا من نحاس القالب، وهذا مكتوب في ورقة المصنع وملف الطباعة. اللون يبقى من «اللون»؛ إذا تُرك الميناء بلون معدنه، اختر لون الذهب هناك.`,
   "dial.ombreNote":"يُغمِّق اللون نحو الحافة، كما يفعل الطلاء المتدرّج فوق النقش الشمسي.",
   "more.btn":"المزيد", "more.aria": name => `خيارات أخرى: ${name}`, "more.title":"خيارات أخرى", "more.done":"تم",
   "more.open.case":"خيارات أخرى للقالب", "more.open.dial":"خيارات أخرى للميناء", "more.open.markers":"خيارات أخرى للمؤشرات",
@@ -18428,6 +18438,7 @@ Object.assign(GWORD.ar, {
   "Show this band":"إظهار هذا الشريط", "Diameter":"القطر", "Band width":"عرض الشريط", "Edge line width":"عرض خط الحافة",
   "Engraving depth":"عمق الحفر", "Cut spacing":"تباعد الحزوز", "Cut angle":"زاوية الحزوز", "Remove this band":"حذف هذا الشريط", "Add a band":"إضافة شريط",
   "Arm length":"طول الذراع", "Track colour":"لون المسار", "Show the track":"إظهار المسار",
+  "Dial made of":"الميناء مصنوع من", "18k yellow gold":"ذهب أصفر عيار ١٨", "18k rose gold":"ذهب وردي عيار ١٨", "18k white gold":"ذهب أبيض عيار ١٨", "Brass":"نحاس",
   "Which hours":"أي الساعات", "Spacing":"التباعد", "Direction":"الاتجاه", "Line up by":"المحاذاة حسب", "Slant":"الميل",
   "Material":"المادة", "Use the loaded metal texture":"استخدام نقشة المعدن المحمّلة", "Thickness of the piece":"سماكة القطعة", "Bevel":"الشطف",
   "Depth":"العمق", "Bevel width":"عرض الشطف", "Shadow":"الظل", "Highlight":"اللمعة", "Darkness inside":"العتمة في الداخل", "Light from":"اتجاه الضوء",
@@ -19299,7 +19310,11 @@ Object.assign(GWORD.ar, {
            full editor's "mop" finish is something else, a pearl sheen over the
            dial colour, so it gets its own chip rather than lighting this one. */
         const isMop = d.finish === "stone" && d.stone === "mother of pearl";
-        let h = chips("dial.finish", [["sunburst","Sunburst"],["brushedsteel","Brushed steel"],["matte","Matte"],["guilloche","Guilloché"],["enamel","Enamel"],["lacquer","Lacquer"],["gloss","Gloss"],["grained","Grained"],["granular","Granular"],["stone","Stone"],["nacre","Mother of pearl"]]
+        /* the blank itself: the case's brass, or solid gold */
+        let h = `<h3>${gW("Dial made of")}</h3>` + chips("dial.blank", [["", sheetCap(caseOf(S).dialMat || "brass")]].concat(DIAL_BLANKS.map(b => [b, b])), DIAL_BLANKS.indexOf(d.blank) >= 0 ? d.blank : "")
+          + (DIAL_BLANKS.indexOf(d.blank) >= 0 ? `<p class="gNote">${gT("dial.blankNote", d.blank)}</p>` : "")
+          + `<h3>${gW("Finish")}</h3>`;
+        h += chips("dial.finish", [["sunburst","Sunburst"],["brushedsteel","Brushed steel"],["matte","Matte"],["guilloche","Guilloché"],["enamel","Enamel"],["lacquer","Lacquer"],["gloss","Gloss"],["grained","Grained"],["granular","Granular"],["stone","Stone"],["nacre","Mother of pearl"]]
           .concat(d.finish === "mop" ? [["mop","Pearl sheen"]] : []), isMop ? "nacre" : d.finish);
         if(d.finish === "stone" && !isMop){
           h += `<h3>${gW("Stone")}</h3>` + chips("ui.stone", STONE_FAMILIES.filter(f => f !== "other" && f !== "mother of pearl" && BUILTIN_STONE[f]).map(f => [f, f[0].toUpperCase() + f.slice(1)]), d.stone);

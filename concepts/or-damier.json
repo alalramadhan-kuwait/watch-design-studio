@@ -103,7 +103,8 @@
     "twist": 0.08,
     "waveAmp": 0.35,
     "waveN": 12,
-    "wall": 18
+    "wall": 18,
+    "blank": "18k yellow gold"
   },
   "borders": {
     "on": false,
@@ -522,7 +523,7 @@
         {
           "id": "R1",
           "title": "Vernoy cushion, yellow gold, gold basket-weave dial, blue Roman numerals (the picture sent)",
-          "note": "Taken: the yellow gold cushion, the gold dial brushed outside with a checker guilloché centre edged in beads, the two bead rings with the blue minute dots between them, the blue enamel Roman numerals set radially, VERNOY on its raised cartouche, the open-ring gunmetal hands, SWISS • MADE at 6 and the black alligator. No complication: the picture has none, and the case's movement 1062 shows hours and minutes, so there is no seconds hand either."
+          "note": "Taken: the yellow gold cushion, the dial cut from solid 18k yellow gold, brushed outside with a checker guilloché centre edged in beads, the two bead rings with the blue minute dots between them, the blue enamel Roman numerals set radially, VERNOY on its raised cartouche, the open-ring gunmetal hands, SWISS • MADE at 6 and the black alligator. No complication: the picture has none, and the case's movement 1062 shows hours and minutes, so there is no seconds hand either."
         }
       ],
       "avoid": ""

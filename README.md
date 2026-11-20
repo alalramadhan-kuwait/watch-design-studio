@@ -200,6 +200,18 @@ stored in a design file do not change. In the full editor at laptop widths
 the toolbar sits tighter, and on a narrower window it takes a second row
 rather than pushing Share and Export off the screen.
 
+## A solid gold dial (v4.43.0)
+
+What the dial is made of was fixed by the case (the drawing set's brass blank)
+and could not be changed. It is a choice now, at the top of Dial › Surface
+(and "Dial made of" in the full editor): the case's brass, or a blank of solid
+18k yellow, rose or white gold (`dial.blank`, read by `dialBlank`). It is a
+material, not a colour: the dial keeps the colour set under Colour. The
+maker's sheet leads with it ("Solid 18k yellow gold dial, vertical brush,
+PANTONE 134 C"), and the dial blank line of the specification, the case
+note, the drawing guides, the pavé note and the engraving check all name it.
+Or Damier's dial is 18k yellow gold, as the watch it follows is.
+
 ## Or Damier, and the Vernoy photograph in gold (v4.42.0)
 
 A new design under Designs, **Or Damier**, after the gold basket-weave Vernoy

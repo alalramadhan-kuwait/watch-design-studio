@@ -552,3 +552,15 @@ test('Or Damier, the Vernoy photograph in gold, fine pomme rings (v4.42.0)', () 
   assert.match(source, /const POMME_MIN = h\.fineRing \? 0\.07 : 0\.17, RING_MIN = h\.fineRing \? 0\.012 : 0\.030;/);
   assert.match(source, /if\(\/\^\(hHand\|mHand\|sHand\)\\\.\(pommeD\|ringW\)\$\/\.test\(p\)\)\{/);
 });
+
+test('a solid gold dial (v4.43.0)', () => {
+  assert.match(source, /const DIAL_BLANKS = \["18k yellow gold", "18k rose gold", "18k white gold"\];/);
+  assert.match(source, /const dialBlank = st => \{ const b = st && st\.dial && st\.dial\.blank; return DIAL_BLANKS\.indexOf\(b\) >= 0 \? b : \(caseOf\(st\)\.dialMat \|\| "brass"\); \};/);
+  assert.match(source, /let h = `<h3>\$\{gW\("Dial made of"\)\}<\/h3>` \+ chips\("dial\.blank"/, 'the choice in Dial › Surface');
+  assert.match(source, /SEL\("dial\.blank","Dial made of",/, 'and in the full editor');
+  assert.match(source, /dialText = `Solid \$\{d\.blank\} dial, \$\{sheetDialFinish\(d\)\}, \$\{sheetColourName\(d\.color\)\}`;/, 'the maker\'s sheet leads with it');
+  assert.match(source, /<div><span>Dial blank<\/span><b>Ø\$\{f\(K\.dialD\)\} × \$\{f\(K\.dialT\)\} \$\{dialBlank\(S\)\}<\/b><\/div>/);
+  assert.doesNotMatch(source, /\$\{f\(K\.dialT\)\} brass blank/, 'no blank called brass whatever it is');
+  const d = JSON.parse(fs.readFileSync(path.join(__dirname, '../concepts/or-damier.json'), 'utf8'));
+  assert.equal(d.dial.blank, '18k yellow gold', 'Or Damier\'s dial is solid gold');
+});
