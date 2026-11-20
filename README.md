@@ -200,6 +200,15 @@ stored in a design file do not change. In the full editor at laptop widths
 the toolbar sits tighter, and on a narrower window it takes a second row
 rather than pushing Share and Export off the screen.
 
+## Or Damier as made (v4.43.1)
+
+Or Damier's numerals are printed, in a raised (double) print of blue ink, not
+cut and filled with enamel; and its hands follow the watch: open rings with
+broad spear tips beyond them, painted a dark satin grey (#38322F) rather than
+blackened steel, on slightly broader stems. A painted hand's tip had the
+polished-metal ridge a steel tip has, drawn as a bright stripe down a broad
+spear; on paint it is now a soft sheen (steel and the other metals as before).
+
 ## A solid gold dial (v4.43.0)
 
 What the dial is made of was fixed by the case (the drawing set's brass blank)

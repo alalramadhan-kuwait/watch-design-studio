@@ -2292,7 +2292,7 @@ const APP_BUILD = "__BUILD__";
 /* The version people see, raised with every change that reaches them:
    major for a new way of working, minor for something new to do, patch for
    a fix. Shown on the watch screen, so any screenshot says which it was. */
-const APP_VERSION = "4.43.0";
+const APP_VERSION = "4.43.1";
 const APP_DATE = "__DATE__";
 
 /* Every route that replaces S passes through one of these three, which is
@@ -10164,7 +10164,8 @@ function handPath(h, ctx){
       out += `<path d="M${f(-tw/2,3)} ${f(y0,3)}`
            + `C${f(-tw*0.34,3)} ${f(y0-g.tipLen*0.45,3)} ${f(-tw*0.10,3)} ${f(y0-g.tipLen*0.80,3)} 0 ${f(-L,3)}`
            + `C${f(tw*0.10,3)} ${f(y0-g.tipLen*0.80,3)} ${f(tw*0.34,3)} ${f(y0-g.tipLen*0.45,3)} ${f(tw/2,3)} ${f(y0,3)}Z" fill="${FILL}"/>`;
-      out += `<path d="M${f(tw*0.10*lit,3)} ${f(y0-0.04,3)} L0 ${f(-L,3)}" fill="none" stroke="${edgeLite}" stroke-opacity="0.7" stroke-width="${f(tw*0.3,3)}" stroke-linecap="round"/>`;
+      /* the tip's polished ridge; a painted hand is lacquer, with only a soft sheen there */
+      out += `<path d="M${f(tw*0.10*lit,3)} ${f(y0-0.04,3)} L0 ${f(-L,3)}" fill="none" stroke="${edgeLite}" stroke-opacity="${MAT === "painted" ? 0.15 : 0.7}" stroke-width="${f(tw*0.3,3)}" stroke-linecap="round"/>`;
     }
     if(T > W*1.8){
       out += `<path d="M${f(-W*0.42,3)} ${f(T-W*0.5,3)}`

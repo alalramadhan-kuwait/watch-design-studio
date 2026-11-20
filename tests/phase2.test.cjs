@@ -529,7 +529,7 @@ test('Or Damier, the Vernoy photograph in gold, fine pomme rings (v4.42.0)', () 
   assert.equal(d.text.logoMark, 'Vernoy wordmark (traced)', 'the case\'s own logo');
   assert.equal(d.sHand.on, false, 'the 1062 has no seconds');
   assert.equal(d.date.on, false); assert.equal(d.power.on, false); assert.equal(d.sub.on, false);
-  assert.equal(d.numerals.system, 'roman I–XII'); assert.equal(d.numerals.tech, 'engraved + filled'); assert.equal(d.numerals.material, 'lacquer / enamel');
+  assert.equal(d.numerals.system, 'roman I–XII'); assert.equal(d.numerals.tech, 'double printed', 'raised print (since 4.43.1)'); assert.equal(d.numerals.material, 'ink');
   assert.equal(d.sector.zones.some(z => z.pattern === 'damier' && z.edge === 'beads'), true, 'the checker centre edged in beads');
   assert.ok(fs.existsSync(path.join(__dirname, '../concepts/or-damier.jpg')));
   // the photograph: gold and the strap laid on by where the steel and the strap are
@@ -563,4 +563,16 @@ test('a solid gold dial (v4.43.0)', () => {
   assert.doesNotMatch(source, /\$\{f\(K\.dialT\)\} brass blank/, 'no blank called brass whatever it is');
   const d = JSON.parse(fs.readFileSync(path.join(__dirname, '../concepts/or-damier.json'), 'utf8'));
   assert.equal(d.dial.blank, '18k yellow gold', 'Or Damier\'s dial is solid gold');
+});
+
+test('Or Damier as made: raised-print numerals, painted spear-tipped hands (v4.43.1)', () => {
+  const d = JSON.parse(fs.readFileSync(path.join(__dirname, '../concepts/or-damier.json'), 'utf8'));
+  for (const k of ['hHand', 'mHand']) {
+    assert.equal(d[k].style, 'pomme-ouverte'); assert.equal(d[k].paint, true); assert.equal(d[k].material, '', 'paint, not a metal');
+    assert.equal(d[k].color, '#38322F', 'a dark satin grey'); assert.equal(d[k].finish, 'brushed'); assert.equal(d[k].fineRing, true);
+  }
+  assert.ok(d.hHand.tipW >= 0.6 && d.mHand.tipW >= 0.45, 'spear tips beyond the ring');
+  assert.equal(d.dial.blank, '18k yellow gold');
+  // a painted hand's tip has a soft sheen, not a polished metal ridge
+  assert.match(source, /stroke-opacity="\$\{MAT === "painted" \? 0\.15 : 0\.7\}" stroke-width="\$\{f\(tw\*0\.3,3\)\}"/);
 });
