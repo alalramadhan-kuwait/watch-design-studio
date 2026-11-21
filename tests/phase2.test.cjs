@@ -247,7 +247,7 @@ test('granular dial (v4.28.0): a fine hard grain sized in mm, each grain light o
   assert.match(source, /if\(finish === "granular"\)\{ if\(st\.dial\.granSize > 0\) surf\.granSize = \+st\.dial\.granSize;/);
   assert.match(source, /surf \? \[surf\.dome, surf\.satin, surf\.granSize, surf\.granite\]\.join\("\."\) : "-",/);
   // offered, named, and drawn in the plain drawing too
-  assert.match(source, /\["grained","Grained"\],\["granular","Granular"\],/);
+  assert.match(source, /\["grained","Grained"\],(\["sandblasted","Sandblasted"\],)?\["granular","Granular"\],/);
   assert.match(source, /slider\("dial\.granSize", "Grain size", 0\.04, 0\.30, 0\.01,/);
   assert.match(source, /\} else if\(finish==="granular"\)\{/);
   assert.match(source, /granular:"granular, coarse grain"/);
@@ -575,4 +575,16 @@ test('Or Damier as made: raised-print numerals, painted spear-tipped hands (v4.4
   assert.equal(d.dial.blank, '18k yellow gold');
   // a painted hand's tip has a soft sheen, not a polished metal ridge
   assert.match(source, /stroke-opacity="\$\{MAT === "painted" \? 0\.15 : 0\.7\}" stroke-width="\$\{f\(tw\*0\.3,3\)\}"/);
+});
+
+test('a real sandblasted finish (v4.44.0)', () => {
+  assert.match(source, /let FROST_SIZE = 0\.035, FROST_K = 1\.7, FROST_TILT = 1\.0, FROST_G = 3\.2, FROST_SHARP = 2\.8;/);
+  assert.match(source, /  sandblasted: \{rough:0\.82, metal:0\.60, aniso:0\.00, groove:"none",   coat:0\.02, grain:0\.095, dish:0\.015, frost:1\},/);
+  const F = chunk('      if(M.frost > 0){', '      if(M.grain > 0 && M.groove === "none"){');
+  assert.match(F, /mVnoise\(ux\/fs, uy\/fs\)/, 'grains in mm, not pixels');
+  assert.match(F, /granK \*= /); assert.match(F, /granG \+= /); assert.match(F, /nx \+= \(f1 - 0\.5\)\*fa\*FROST_TILT/);
+  assert.match(source, /\["grained","Grained"\],\["sandblasted","Sandblasted"\],\["granular","Granular"\]/, 'offered in simple mode');
+  assert.match(source, /\} else if\(finish==="sandblasted"\)\{/, 'and drawn in the plain view');
+  for (const dir of ['designs', 'concepts']) for (const f of fs.readdirSync(path.join(__dirname, '..', dir)).filter(f => f.endsWith('.json')))
+    assert.doesNotMatch(fs.readFileSync(path.join(__dirname, '..', dir, f), 'utf8'), /"finish": ?"sandblasted"/, f + ' did not use it, so it draws as before');
 });

@@ -2292,7 +2292,7 @@ const APP_BUILD = "__BUILD__";
 /* The version people see, raised with every change that reaches them:
    major for a new way of working, minor for something new to do, patch for
    a fix. Shown on the watch screen, so any screenshot says which it was. */
-const APP_VERSION = "4.43.1";
+const APP_VERSION = "4.44.0";
 const APP_DATE = "__DATE__";
 
 /* Every route that replaces S passes through one of these three, which is
@@ -3726,10 +3726,18 @@ function mVnoise(x, y){
 /* the granular finish's contrast: how hard each grain is cut, how far
    light and dark go, and how bright the glint of a light one */
 let GRAN_SHARP = 3, GRAN_K = 1.3, GRAN_G = 2.2;
+/* the sandblasted finish's frost, matched to a photograph of a sandblasted,
+   silver-plated 18k gold dial: grains about FROST_SIZE mm, sized in mm so
+   they are the same at any picture size; how far each grain goes lighter or
+   darker, how much each tilts to take the light, and the glint of the
+   brightest */
+let FROST_SIZE = 0.035, FROST_K = 1.7, FROST_TILT = 1.0, FROST_G = 3.2, FROST_SHARP = 2.8;
 const MFINISH = {
   matte:       {rough:0.88, metal:0.00, aniso:0.00, groove:"none",   coat:0.00, grain:0.030, dish:0.015},
   grained:     {rough:0.74, metal:0.04, aniso:0.00, groove:"none",   coat:0.05, grain:0.075, dish:0.015},
-  sandblasted: {rough:0.82, metal:0.30, aniso:0.00, groove:"none",   coat:0.02, grain:0.095, dish:0.015},
+  /* sandblasted metal: a matte, finely frosted surface that is still metal,
+     so it keeps the metal's own colour in its reflection (the frost, above) */
+  sandblasted: {rough:0.82, metal:0.60, aniso:0.00, groove:"none",   coat:0.02, grain:0.095, dish:0.015, frost:1},
   /* fine hard grain, as a granular sports dial: grains of about 0.07 mm, each
      lighter or darker than the next, the light ones catching the light */
   granular:    {rough:0.62, metal:0.06, aniso:0.00, groove:"none",   coat:0.08, grain:0,     dish:0.012, granite:1, granSize:0.07},
@@ -4651,6 +4659,17 @@ function renderDialPixels(opt){
         granG = ga*Math.max(0, gn - 0.72)*GRAN_G;
         nx += (n1 - 0.5)*ga*0.35; ny += (n2 - 0.5)*ga*0.35;
       }
+      /* Frost: the sandblasted surface, a crowd of tiny pits and peaks. Each
+         grain is its own shade and its own tilt, so across the dial the light
+         breaks into a fine speckle with the odd bright glint. */
+      if(M.frost > 0){
+        const fs = FROST_SIZE, fa = M.frost;
+        const f1 = mVnoise(ux/fs, uy/fs), f2 = mVnoise(ux/(fs*0.55) + 31.7, uy/(fs*0.55) - 12.9);
+        const fg = Math.max(0, Math.min(1, 0.5 + (0.4*f1 + 0.6*f2 - 0.5)*FROST_SHARP));
+        granK *= Math.max(0.15, 1 + fa*FROST_K*(fg - 0.5));
+        granG += fa*Math.max(0, fg - 0.78)*FROST_G;
+        nx += (f1 - 0.5)*fa*FROST_TILT; ny += (f2 - 0.5)*fa*FROST_TILT;
+      }
       if(M.grain > 0 && M.groove === "none"){
         const gN = (mVnoise(x*0.9, y*0.9) - 0.5) + 0.5*(mVnoise(x*2.7, y*2.7) - 0.5);
         nx += gN*M.grain*1.2; ny += gN*M.grain*0.9;
@@ -5025,6 +5044,12 @@ function buildSVG(st, o={}){
       const fid=id("t"), gs = st.dial.granSize > 0 ? +st.dial.granSize : 0.07, ga = st.dial.granAmt !== undefined && st.dial.granAmt >= 0 ? +st.dial.granAmt : 1;
       defs.push(`<filter id="${fid}" x="-20%" y="-20%" width="140%" height="140%"><feTurbulence type="fractalNoise" baseFrequency="${f(0.9/gs,2)}" numOctaves="2" seed="11"/><feColorMatrix type="saturate" values="0"/><feComponentTransfer><feFuncR type="linear" slope="2.2" intercept="-0.6"/><feFuncG type="linear" slope="2.2" intercept="-0.6"/><feFuncB type="linear" slope="2.2" intercept="-0.6"/></feComponentTransfer></filter>`);
       inner.push(`<circle r="${rOut}" filter="url(#${fid})" opacity="${f(Math.min(0.75, 0.42*ga),2)}" style="mix-blend-mode:overlay"/>`);
+      inner.push(vignette(0.18,0.30));
+    } else if(finish==="sandblasted"){
+      /* the frost in the plain drawing: a fine speckle, lighter and darker */
+      const fid=id("t");
+      defs.push(`<filter id="${fid}" x="-20%" y="-20%" width="140%" height="140%"><feTurbulence type="fractalNoise" baseFrequency="${f(0.9/FROST_SIZE,1)}" numOctaves="2" seed="23"/><feColorMatrix type="saturate" values="0"/><feComponentTransfer><feFuncR type="linear" slope="1.8" intercept="-0.4"/><feFuncG type="linear" slope="1.8" intercept="-0.4"/><feFuncB type="linear" slope="1.8" intercept="-0.4"/></feComponentTransfer></filter>`);
+      inner.push(`<circle r="${rOut}" filter="url(#${fid})" opacity="0.32" style="mix-blend-mode:overlay"/>`);
       inner.push(vignette(0.18,0.30));
     } else if(finish==="grained"||finish==="stone"){
       const fid=id("t");
@@ -19315,7 +19340,7 @@ Object.assign(GWORD.ar, {
         let h = `<h3>${gW("Dial made of")}</h3>` + chips("dial.blank", [["", sheetCap(caseOf(S).dialMat || "brass")]].concat(DIAL_BLANKS.map(b => [b, b])), DIAL_BLANKS.indexOf(d.blank) >= 0 ? d.blank : "")
           + (DIAL_BLANKS.indexOf(d.blank) >= 0 ? `<p class="gNote">${gT("dial.blankNote", d.blank)}</p>` : "")
           + `<h3>${gW("Finish")}</h3>`;
-        h += chips("dial.finish", [["sunburst","Sunburst"],["brushedsteel","Brushed steel"],["matte","Matte"],["guilloche","Guilloché"],["enamel","Enamel"],["lacquer","Lacquer"],["gloss","Gloss"],["grained","Grained"],["granular","Granular"],["stone","Stone"],["nacre","Mother of pearl"]]
+        h += chips("dial.finish", [["sunburst","Sunburst"],["brushedsteel","Brushed steel"],["matte","Matte"],["guilloche","Guilloché"],["enamel","Enamel"],["lacquer","Lacquer"],["gloss","Gloss"],["grained","Grained"],["sandblasted","Sandblasted"],["granular","Granular"],["stone","Stone"],["nacre","Mother of pearl"]]
           .concat(d.finish === "mop" ? [["mop","Pearl sheen"]] : []), isMop ? "nacre" : d.finish);
         if(d.finish === "stone" && !isMop){
           h += `<h3>${gW("Stone")}</h3>` + chips("ui.stone", STONE_FAMILIES.filter(f => f !== "other" && f !== "mother of pearl" && BUILTIN_STONE[f]).map(f => [f, f[0].toUpperCase() + f.slice(1)]), d.stone);

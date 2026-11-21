@@ -200,6 +200,21 @@ stored in a design file do not change. In the full editor at laptop widths
 the toolbar sits tighter, and on a narrower window it takes a second row
 rather than pushing Share and Export off the screen.
 
+## A real sandblasted finish (v4.44.0)
+
+"Sandblasted" drew as plain matte: its grain was measured in picture pixels,
+so on a dial of any size it faded to nothing (a brightness spread of 6 where a
+photograph of an F.P. Journe sandblasted, silver-plated 18k gold dial shows
+12 to 27). It now carries a frost: grains of about 0.035 mm, sized in mm so
+they are the same at any picture size, each its own shade and its own tilt,
+the brightest glinting (`FROST_*`, `M.frost`). Being metal, it keeps more of
+the metal's colour in its reflection (metallic share 0.60, was 0.30). The
+plain drawing (cards, the simple view) has a matching fine speckle, and simple
+mode offers "Sandblasted" in Dial › Surface. With a solid gold blank (v4.43.0)
+this is the frosted gold dial of the Journe: the maker's sheet reads "Solid
+18k yellow gold dial, sandblasted, …". No saved design used the finish, so
+every one draws as it did.
+
 ## Or Damier as made (v4.43.1)
 
 Or Damier's numerals are printed, in a raised (double) print of blue ink, not
