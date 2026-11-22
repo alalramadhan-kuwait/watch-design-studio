@@ -2292,7 +2292,7 @@ const APP_BUILD = "__BUILD__";
 /* The version people see, raised with every change that reaches them:
    major for a new way of working, minor for something new to do, patch for
    a fix. Shown on the watch screen, so any screenshot says which it was. */
-const APP_VERSION = "4.44.0";
+const APP_VERSION = "4.44.1";
 const APP_DATE = "__DATE__";
 
 /* Every route that replaces S passes through one of these three, which is
@@ -11627,7 +11627,7 @@ const SCHEMA = {
     {t:"font"},
     SEL("numerals.set","Which numerals",["all","even","quarters","1212"]),
     N("numerals.heightMM","Figure height",.7,5,.05),
-    N("numerals.weight","Thickness",-0.10,0.45,.01),
+    N("numerals.weight","Thickness",-0.30,0.45,.01),
     N("numerals.gap","Spacing",-24,20,.5,""),
     N("numerals.radius","Position from centre",3,22),
     SEL("numerals.orient","Orientation",["upright","radial"]),
@@ -17638,6 +17638,7 @@ const GSTR = {en:{
   "case.gemNote": (n, ct, metal) => `${n} stones · ≈ ${ct} ct · set in 18k ${metal}. Blue Creations would have to make this bezel.`,
   "case.gemRound":"Round brilliants are drawn on the round NOREL case only.",
   "dial.paveNote": (n, ct) => `${n} stones · ≈ ${ct} ct. A pavé dial is 18k gold about 0.8–1.0 mm thick, not the 0.40 mm brass blank: Blue Creations to confirm.`,
+  "num.thinNote":"Taken in this far, a figure's thinnest parts (a hairline, a serif, the hook of a 1) can thin to nothing: check each figure in the preview before you send the design.",
   "dial.blankNote": b => `The dial blank is cut from solid ${b}, not the case's brass: the maker's sheet and the dial artwork say so. Its colour is still the one under Colour; left in its own metal, set that to the gold.`,
   "dial.ombreNote":"Darkens the colour toward the edge, as a sprayed gradient does over a sunburst.",
   /* More options: each step's other settings, on a sheet of their own */
@@ -17837,6 +17838,7 @@ GSTR.ar = {
   "case.gemNote": (n, ct, metal) => `${arCount(n, "حجر واحد", "حجران", "أحجار", "حجراً")} · ≈ ${ct} قيراط · مرصّعة في ${({"yellow gold":"ذهب أصفر", "rose gold":"ذهب وردي", "white gold":"ذهب أبيض"})[metal] || metal} عيار 18. على Blue Creations أن تصنع هذا الإطار.`,
   "case.gemRound":"الإطار المرصّع يُرسم على قالب NOREL الدائري فقط.",
   "dial.paveNote": (n, ct) => `${arCount(n, "حجر واحد", "حجران", "أحجار", "حجراً")} · ≈ ${ct} قيراط. الميناء المرصّع بالكامل من ذهب عيار 18 بسماكة 0.8–1.0 ملم تقريباً، لا من النحاس بسماكة 0.40 ملم: على Blue Creations أن تؤكد ذلك.`,
+  "num.thinNote":"لما ترقّق الأرقام لهالدرجة، أنحف أجزاءها (الخطوط الرفيعة، والزوائد، ورأس الرقم ١) ممكن تختفي: تأكد من كل رقم في المعاينة قبل ما ترسل التصميم.",
   "dial.blankNote": b => `قاعدة الميناء من ${({"18k yellow gold":"الذهب الأصفر عيار ١٨","18k rose gold":"الذهب الوردي عيار ١٨","18k white gold":"الذهب الأبيض عيار ١٨"})[b] || b} الخالص، لا من نحاس القالب، وهذا مكتوب في ورقة المصنع وملف الطباعة. اللون يبقى من «اللون»؛ إذا تُرك الميناء بلون معدنه، اختر لون الذهب هناك.`,
   "dial.ombreNote":"يُغمِّق اللون نحو الحافة، كما يفعل الطلاء المتدرّج فوق النقش الشمسي.",
   "more.btn":"المزيد", "more.aria": name => `خيارات أخرى: ${name}`, "more.title":"خيارات أخرى", "more.done":"تم",
@@ -19484,7 +19486,8 @@ Object.assign(GWORD.ar, {
           /* thickness thickens a printed figure's ink; an applied piece is cut
              to its outline and ignores it, except a diamond-set one, whose
              strokes have to be bold enough to hold the stones */
-          h += slider("numerals.weight", "Thickness", -0.1, 0.45, 0.01, n.weight || 0);   // applied figures too, thinner or thicker
+          h += slider("numerals.weight", "Thickness", -0.3, 0.45, 0.01, n.weight || 0);   // applied figures too, thinner or thicker
+          if((n.weight || 0) < -0.15) h += `<p class="gNote">${gT("num.thinNote")}</p>`;
           if(fit && fit.touching) h += `<p class="gNote" style="color:var(--g-warn-ink)">${gT("w.dayTouch")}</p>`;
           h += `<p class="gNote">${gT("mk.underWindows")}</p>`;
         }

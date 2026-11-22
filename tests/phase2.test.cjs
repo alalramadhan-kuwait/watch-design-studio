@@ -476,7 +476,7 @@ test('Pilot Study (v4.40.0)', () => {
 });
 
 test('thickness for every figure, thinner too (v4.40.2)', () => {
-  assert.match(source, /h \+= slider\("numerals\.weight", "Thickness", -0\.1, 0\.45, 0\.01, n\.weight \|\| 0\);/, 'shown for applied figures too');
+  assert.match(source, /h \+= slider\("numerals\.weight", "Thickness", -0\.3, 0\.45, 0\.01, n\.weight \|\| 0\);/, 'shown for applied figures too (to -0.3 since 4.44.1)');
   assert.doesNotMatch(source, /stroke="\$\{st\.dial\.color\}" stroke-width="\$\{f\(-weight,3\)\}"/, 'no outline in the dial colour');
   assert.match(source, /const thinned = \(markup, w, k = 1\) => \{/);
   assert.match(source, /<mask id="\$\{mid\}" maskUnits="userSpaceOnUse"/);
@@ -587,4 +587,10 @@ test('a real sandblasted finish (v4.44.0)', () => {
   assert.match(source, /\} else if\(finish==="sandblasted"\)\{/, 'and drawn in the plain view');
   for (const dir of ['designs', 'concepts']) for (const f of fs.readdirSync(path.join(__dirname, '..', dir)).filter(f => f.endsWith('.json')))
     assert.doesNotMatch(fs.readFileSync(path.join(__dirname, '..', dir, f), 'utf8'), /"finish": ?"sandblasted"/, f + ' did not use it, so it draws as before');
+});
+
+test('thinner figures (v4.44.1)', () => {
+  assert.match(source, /N\("numerals\.weight","Thickness",-0\.30,0\.45,\.01\),/, 'the full editor');
+  assert.match(source, /if\(\(n\.weight \|\| 0\) < -0\.15\) h \+= `<p class="gNote">\$\{gT\("num\.thinNote"\)\}<\/p>`;/, 'a note past -0.15');
+  assert.match(source, /"num\.thinNote":"Taken in this far/); assert.match(source, /"num\.thinNote":"لما ترقّق/);
 });

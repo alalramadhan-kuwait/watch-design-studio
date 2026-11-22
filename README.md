@@ -200,6 +200,14 @@ stored in a design file do not change. In the full editor at laptop widths
 the toolbar sits tighter, and on a narrower window it takes a second row
 rather than pushing Share and Export off the screen.
 
+## Thinner figures (v4.44.1)
+
+"Thickness" now goes down to −0.30 mm (it stopped at −0.10), in simple mode
+and the full editor, for printed and applied figures alike: the figure's own
+shape is taken in by half that all round (the mask of v4.40.2). Past −0.15 a
+note says that the thinnest parts of a figure (a hairline, a serif, the hook
+of a 1) can thin to nothing, so each figure is checked in the preview.
+
 ## A real sandblasted finish (v4.44.0)
 
 "Sandblasted" drew as plain matte: its grain was measured in picture pixels,
