@@ -554,7 +554,7 @@ test('Or Damier, the Vernoy photograph in gold, fine pomme rings (v4.42.0)', () 
 });
 
 test('a solid gold dial (v4.43.0)', () => {
-  assert.match(source, /const DIAL_BLANKS = \["18k yellow gold", "18k rose gold", "18k white gold"\];/);
+  assert.match(source, /const DIAL_BLANKS = \[("stainless steel", )?"18k yellow gold", "18k rose gold", "18k white gold"\];/);
   assert.match(source, /const dialBlank = st => \{ const b = st && st\.dial && st\.dial\.blank; return DIAL_BLANKS\.indexOf\(b\) >= 0 \? b : \(caseOf\(st\)\.dialMat \|\| "brass"\); \};/);
   assert.match(source, /let h = `<h3>\$\{gW\("Dial made of"\)\}<\/h3>` \+ chips\("dial\.blank"/, 'the choice in Dial › Surface');
   assert.match(source, /SEL\("dial\.blank","Dial made of",/, 'and in the full editor');
@@ -691,4 +691,17 @@ test('changing the figures keeps the hour plots (v4.48.3)', () => {
   const F = chunk('  function setMarkers(k){', '\n  /* ---- framing');
   assert.match(F, /if\(!n\.on \|\| S\.markers\.perHour\) ix\.on = false;\n      n\.on = true;/, 'indices go only when figures replace batons or nothing');
   assert.doesNotMatch(F, /n\.on = true; ix\.on = false;/);
+});
+
+test('a stainless steel dial (v4.49.0)', () => {
+  const vm = require('node:vm'), ctx = vm.createContext({});
+  vm.runInContext('const LUX_GOLD = {"yellow gold":"#D7B56D", "rose gold":"#D9A48C", "red gold":"#D39B78", "white gold":"#E3E4E6"}; const LUX_STEEL = "#C8C9C7";\n'
+    + chunk('const DIAL_COVERS = ', '\n/* The tabs a step') + '\nthis.r = dialBlankSet;', ctx);
+  const st = { dial: { color: '#0A0B0C', finish: 'sunburst', blank: '' } };
+  ctx.r(st, 'stainless steel'); assert.equal(st.dial.color, '#C8C9C7', 'the dial shows the steel');
+  ctx.r(st, '18k yellow gold'); assert.equal(st.dial.color, '#D7B56D');
+  ctx.r(st, ''); assert.equal(st.dial.color, '#0A0B0C', 'brass puts the colour before back');
+  assert.match(source, /const DIAL_BLANKS = \["stainless steel", "18k yellow gold", "18k rose gold", "18k white gold"\];/);
+  assert.match(source, /else if\(d\.blank === "stainless steel" && d\.finish !== "stone"\) dialText = `Stainless steel dial, /, "the maker's sheet");
+  assert.match(source, /"stainless steel":"ستيل"/);
 });

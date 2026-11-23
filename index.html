@@ -2292,7 +2292,7 @@ const APP_BUILD = "__BUILD__";
 /* The version people see, raised with every change that reaches them:
    major for a new way of working, minor for something new to do, patch for
    a fix. Shown on the watch screen, so any screenshot says which it was. */
-const APP_VERSION = "4.48.3";
+const APP_VERSION = "4.49.0";
 const APP_DATE = "__DATE__";
 
 /* Every route that replaces S passes through one of these three, which is
@@ -10314,7 +10314,7 @@ const visR = st => (st.case.locked ? caseOf(st).opening : st.case.opening)/2;
 /* What the dial blank is made of: the case's own (its drawing set says, brass
    on every case here) unless the design names a solid gold one. It is a
    material, not a colour: the colour is still the dial's. */
-const DIAL_BLANKS = ["18k yellow gold", "18k rose gold", "18k white gold"];
+const DIAL_BLANKS = ["stainless steel", "18k yellow gold", "18k rose gold", "18k white gold"];
 const dialBlank = st => { const b = st && st.dial && st.dial.blank; return DIAL_BLANKS.indexOf(b) >= 0 ? b : (caseOf(st).dialMat || "brass"); };
 
 /* ---------------------------------------------------------------------
@@ -15023,6 +15023,7 @@ function sheetRows(st){
   let dialText = d.finish === "stone" ? `${sheetCap(sheetDialFinish(d))} stone dial` : `${sheetColourName(d.color)} ${sheetDialFinish(d)} dial`;
   /* a solid gold blank leads: it is what the dial is, the colour and finish what is done to it */
   if(/^18k (yellow|rose|white) gold$/.test(d.blank || "") && d.finish !== "stone") dialText = `Solid ${d.blank} dial, ${sheetDialFinish(d)}, ${sheetColourName(d.color)}`;
+  else if(d.blank === "stainless steel" && d.finish !== "stone") dialText = `Stainless steel dial, ${sheetDialFinish(d)}, ${sheetColourName(d.color)}`;
   if(d.ombre > 0) dialText += ", ombré";
   if(d.pave && d.pave !== "none") dialText += `, pavé ${d.pave}`;
   row("dial", "Dial:", dialText, [d.finish, d.brushDir, d.pattern, d.stone, d.pave, d.ombre > 0, d.dome, st.sector && st.sector.on, st.chapter && st.chapter.on],
@@ -17699,7 +17700,7 @@ const GSTR = {en:{
   "mk.strapAt":"The band and the buckle are on the Strap step.",
   "dial.extrasNote":"A complication is offered only where the case's movement drives it.",
   "num.thinNote":"Taken in this far, a figure's thinnest parts (a hairline, a serif, the hook of a 1) can thin to nothing: check each figure in the preview before you send the design.",
-  "dial.blankNote": b => `The dial blank is cut from solid ${b}, not the case's brass, and the maker's sheet says so. The dial shows the gold under any finish that leaves the metal bare; enamel, lacquer, stone and mother of pearl cover it. Colour can still tint it.`,
+  "dial.blankNote": b => `The dial blank is cut from ${b === "stainless steel" ? "stainless steel" : "solid " + b}, not the case's brass, and the maker's sheet says so. The dial shows the metal under any finish that leaves it bare (brushed, sunburst, sandblasted, guilloché…); enamel, lacquer, stone and mother of pearl cover it. Colour can still tint it.`,
   "dial.ombreNote":"Darkens the colour toward the edge, as a sprayed gradient does over a sunburst.",
   /* More options: each step's other settings, on a sheet of their own */
   "more.btn":"More", "more.aria": name => `More options: ${name}`, "more.title":"More options", "more.done":"Done",
@@ -17904,7 +17905,7 @@ GSTR.ar = {
   "mk.strapAt":"نوع الحزام والإبزيم في خطوة الحزام.",
   "dial.extrasNote":"التعقيدة ما تنعرض إلا إذا محرك القالب يشغّلها.",
   "num.thinNote":"لما ترقّق الأرقام لهالدرجة، أنحف أجزاءها (الخطوط الرفيعة، والزوائد، ورأس الرقم ١) ممكن تختفي: تأكد من كل رقم في المعاينة قبل ما ترسل التصميم.",
-  "dial.blankNote": b => `قاعدة الميناء من ${({"18k yellow gold":"الذهب الأصفر عيار ١٨","18k rose gold":"الذهب الوردي عيار ١٨","18k white gold":"الذهب الأبيض عيار ١٨"})[b] || b} الخالص، لا من نحاس القالب، ومكتوب في ورقة المصنع. الميناء يبيّن لون الذهب مع أي تشطيب يخلّي المعدن ظاهر؛ الإينامل واللاكيه والحجر والصدف تغطيه. وتقدر تغيّر اللون من «اللون».`,
+  "dial.blankNote": b => `قاعدة الميناء من ${({"18k yellow gold":"الذهب الأصفر عيار ١٨","18k rose gold":"الذهب الوردي عيار ١٨","18k white gold":"الذهب الأبيض عيار ١٨","stainless steel":"الستيل المقاوم للصدأ"})[b] || b} الخالص، لا من نحاس القالب، ومكتوب في ورقة المصنع. الميناء يبيّن لون المعدن مع أي تشطيب يخلّيه ظاهر؛ الإينامل واللاكيه والحجر والصدف تغطيه. وتقدر تغيّر اللون من «اللون».`,
   "dial.ombreNote":"يُغمِّق اللون نحو الحافة، كما يفعل الطلاء المتدرّج فوق النقش الشمسي.",
   "more.btn":"المزيد", "more.aria": name => `خيارات أخرى: ${name}`, "more.title":"خيارات أخرى", "more.done":"تم",
   "more.open.case":"خيارات أخرى للقالب", "more.open.dial":"خيارات أخرى للميناء", "more.open.markers":"خيارات أخرى للمؤشرات",
@@ -18157,13 +18158,16 @@ function numDirSet(st, v){
    back. The colour can still be changed under Colour afterwards. */
 const DIAL_COVERS = ["enamel", "lacquer", "stone", "mop"];
 const dialBlankHex = b => ({"18k yellow gold":"yellow gold", "18k rose gold":"rose gold", "18k white gold":"white gold"})[b];
+/* the colour a bare blank shows: its gold, or steel's own grey */
+const blankColour = b => b === "stainless steel" ? (typeof LUX_STEEL !== "undefined" ? LUX_STEEL : "#C8C9C7")
+  : dialBlankHex(b) && typeof LUX_GOLD !== "undefined" ? LUX_GOLD[dialBlankHex(b)] : null;
 function dialBlankSet(st, v){
   const d = st.dial; if(!d) return;
-  const was = d.color, wasGold = dialBlankHex(d.blank) && typeof LUX_GOLD !== "undefined" ? LUX_GOLD[dialBlankHex(d.blank)] : null;
+  const was = d.color, wasGold = blankColour(d.blank);
   const stillGold = wasGold && String(was).toUpperCase() === wasGold.toUpperCase();
   const back = stillGold && d.colorBefore ? d.colorBefore : was;
   d.blank = v;
-  const g = dialBlankHex(v) && typeof LUX_GOLD !== "undefined" ? LUX_GOLD[dialBlankHex(v)] : null;
+  const g = blankColour(v);
   let to = g && DIAL_COVERS.indexOf(d.finish) < 0 ? g : (stillGold ? back : null);
   if(!to || String(to).toUpperCase() === String(was).toUpperCase()) return;
   if(g && !stillGold) d.colorBefore = was;
@@ -18562,7 +18566,7 @@ Object.assign(GWORD.ar, {
   "Show this band":"إظهار هذا الشريط", "Diameter":"القطر", "Band width":"عرض الشريط", "Edge line width":"عرض خط الحافة",
   "Engraving depth":"عمق الحفر", "Cut spacing":"تباعد الحزوز", "Cut angle":"زاوية الحزوز", "Remove this band":"حذف هذا الشريط", "Add a band":"إضافة شريط",
   "Arm length":"طول الذراع", "Track colour":"لون المسار", "Show the track":"إظهار المسار",
-  "Dial made of":"الميناء مصنوع من", "18k yellow gold":"ذهب أصفر عيار ١٨", "18k rose gold":"ذهب وردي عيار ١٨", "18k white gold":"ذهب أبيض عيار ١٨", "Brass":"نحاس",
+  "Dial made of":"الميناء مصنوع من", "stainless steel":"ستيل", "Stainless steel":"ستيل", "18k yellow gold":"ذهب أصفر عيار ١٨", "18k rose gold":"ذهب وردي عيار ١٨", "18k white gold":"ذهب أبيض عيار ١٨", "Brass":"نحاس",
   "Which hours":"أي الساعات", "Spacing":"التباعد", "Direction":"الاتجاه", "Line up by":"المحاذاة حسب", "Slant":"الميل",
   "Material":"المادة", "Use the loaded metal texture":"استخدام نقشة المعدن المحمّلة", "Thickness of the piece":"سماكة القطعة", "Bevel":"الشطف",
   "Depth":"العمق", "Bevel width":"عرض الشطف", "Shadow":"الظل", "Highlight":"اللمعة", "Darkness inside":"العتمة في الداخل", "Light from":"اتجاه الضوء",
@@ -19488,7 +19492,7 @@ Object.assign(GWORD.ar, {
            dial colour, so it gets its own chip rather than lighting this one. */
         const isMop = d.finish === "stone" && d.stone === "mother of pearl";
         /* the blank itself: the case's brass, or solid gold */
-        let h = `<h3>${gW("Dial made of")}</h3>` + chips("dial.blank", [["", sheetCap(caseOf(S).dialMat || "brass")]].concat(DIAL_BLANKS.map(b => [b, b])), DIAL_BLANKS.indexOf(d.blank) >= 0 ? d.blank : "")
+        let h = `<h3>${gW("Dial made of")}</h3>` + chips("dial.blank", [["", sheetCap(caseOf(S).dialMat || "brass")]].concat(DIAL_BLANKS.map(b => [b, b === "stainless steel" ? "Stainless steel" : b])), DIAL_BLANKS.indexOf(d.blank) >= 0 ? d.blank : "")
           + (DIAL_BLANKS.indexOf(d.blank) >= 0 ? `<p class="gNote">${gT("dial.blankNote", d.blank)}</p>` : "")
           + `<h3>${gW("Finish")}</h3>`;
         h += chips("dial.finish", [["sunburst","Sunburst"],["brushedsteel","Brushed steel"],["matte","Matte"],["guilloche","Guilloché"],["enamel","Enamel"],["lacquer","Lacquer"],["gloss","Gloss"],["grained","Grained"],["sandblasted","Sandblasted"],["granular","Granular"],["stone","Stone"],["nacre","Mother of pearl"]]

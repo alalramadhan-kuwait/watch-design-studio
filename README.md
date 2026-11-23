@@ -200,6 +200,15 @@ stored in a design file do not change. In the full editor at laptop widths
 the toolbar sits tighter, and on a narrower window it takes a second row
 rather than pushing Share and Export off the screen.
 
+## A stainless steel dial (v4.49.0)
+
+"Dial made of" offers stainless steel beside brass and the three golds. Like
+a gold blank, under a finish that leaves the metal bare it turns the dial
+steel's own grey (`blankColour`); enamel, lacquer, stone and mother of pearl
+cover it; back to brass puts the colour before back. The maker's sheet reads
+"Stainless steel dial, …". ("Brushed steel" under Finish is a look, the
+grain and light of brushed steel, on whatever the dial is made of.)
+
 ## Changing the figures keeps the hour plots (v4.48.3)
 
 Markers › Style: choosing Arabic-Indic, Western or Roman figures turned the
