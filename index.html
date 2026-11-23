@@ -1574,7 +1574,46 @@ const TK_NIVADA = {
      there, as the gold of a two-tone case is laid on its parts. */
   photoStrap:{ends:[-22.45, 22.75], tongue:{x:7.70, y:18.85}}
 };
-const CASES = {[VERNOY_CASE.model]:VERNOY_CASE, [NOREL_R3.model]:NOREL_R3, [NOREL_D.model]:NOREL_D, [NOREL_R4.model]:NOREL_R4, [TK_NIVADA.model]:TK_NIVADA};
+/* The F77 in 41 mm (v4.53.0), drawn, beside the 38. Nivada's F77 MK2 41 mm
+   pages give 41 mm across, 50 mm lug to lug, 12.05 mm thick and the same
+   Soprod P024 (here without date, as the 38). Nothing else is published, so
+   the rest is the 38 mm drawing (103277_3) moved by what Nivada's own front
+   renders of the 38 and the 41 show, measured on three matching pairs (Blue,
+   Black, Meteorite), each scaled to its own published width:
+     - the dial the same size within 0.2 mm, so the opening stays 28.00;
+     - the bezel 1.50 wider each side at 3 and 9 (19.00 to 20.50), its outer
+       chamfer as wide (0.75 to 0.90 against 0.80 to 0.85), its brushed top
+       starting 0.50 further out (16.10 to 16.60) and so 0.90 wider; the
+       polished bevel to the crystal moves out with it;
+     - the screws on a circle 1.25 larger (17.08 to 18.34 measured where the
+       drawing has 17.06), at the same angles, heads the same Ø1.50;
+     - the lug blocks about 1.1 wider across, and 2.0 further apart, as the
+       bracelet grows from 22 to 24 mm at the lugs (Nivada's pages);
+     - the markers 0.27 longer outward and the hands the same, which the
+       markers and hand styles already follow from the opening.
+   The bezel at 12 and 6, the crown and the polished strips keep the 38's
+   proportions. No photograph: these are estimates until Nivada sends a
+   41 mm drawing. The 38's technical drawings are not used for it. */
+const TK_NIVADA_41 = Object.assign({}, TK_NIVADA, {
+  model:"Time Keeper × Nivada · F77 41",
+  ref:"Nivada Grenchen F77 MK2 41 mm · Time Keeper study",
+  flat:41.00, diagonal:41.00, rSide:20.50, rCorner:20.50,                // Nivada: 41 mm
+  midFlat:41.00, midDiagonal:41.00, midRSide:20.50, midRCorner:20.50,
+  bezelOD:41.00, bezelID:31.26, land:0.35,
+  lugToLug:50.00, lugWidth:16.30, springBar:1.80,                        // 50 Nivada; the lug width an estimate
+  height:12.05,                                                          // Nivada
+  opening:28.00, glassSeat:31.55, glassD:31.34,
+  dialD:29.00, crownD:6.00,
+  tol:"41.00, 50.00 and 12.05 from Nivada's F77 MK2 41 mm pages; the rest from the 38 mm drawing 103277_3 moved by what Nivada's renders of the 38 and the 41 show: estimates until Nivada sends a 41 mm drawing",
+  band:"black rubber, flat (as the 38 mm; Nivada's 41 mm comes on a 24 × 18 bracelet)",
+  photoFile:undefined, photoCal:undefined, photoOwn:undefined, photoStrap:undefined, photoParts:undefined,
+  f77:{bezel:{rx:20.50, ry:20.05, chRx:19.80, chRy:19.48, flat:31.96, oct:{a:19.25, h:8.20, ch:0.70}},
+       body:{top:20.05, lugEnd:25.00, lugOut:11.95, polish:{to:9.93, c:[13.81, 14.13]}},
+       lugIn:8.15, screws:{r:18.31, top:23.8, side:22.2, d:1.50},
+       crown:{x0:20.65, xb:21.05, x1:23.85, collar:5.05}, strap:{w0:12.25, w1:10.20, y1:34.50}},
+  sheet:Object.assign({}, TK_NIVADA.sheet, {drawings:null})
+});
+const CASES = {[VERNOY_CASE.model]:VERNOY_CASE, [NOREL_R3.model]:NOREL_R3, [NOREL_D.model]:NOREL_D, [NOREL_R4.model]:NOREL_R4, [TK_NIVADA.model]:TK_NIVADA, [TK_NIVADA_41.model]:TK_NIVADA_41};
 const CASE_MODELS = Object.keys(CASES);
 const caseOf = st => (st && st.case && CASES[st.case.model]) || VERNOY_CASE;
 /* The logo is the case's brand's, never what is typed: a Nivada case carries
@@ -2292,7 +2331,7 @@ const APP_BUILD = "__BUILD__";
 /* The version people see, raised with every change that reaches them:
    major for a new way of working, minor for something new to do, patch for
    a fix. Shown on the watch screen, so any screenshot says which it was. */
-const APP_VERSION = "4.52.0";
+const APP_VERSION = "4.53.0";
 const APP_DATE = "__DATE__";
 
 /* Every route that replaces S passes through one of these three, which is
@@ -17657,7 +17696,7 @@ const GSTR = {en:{
   /* the third watch; its reference is joined by a hyphen that does not
      break, so a narrow card wraps it after the name, not inside it */
   "card.vernoyRd":"Vernoy RD26‑0172", "card.vernoyRdSub":"Cushion · 36 mm",
-  "case.tk":"Nivada F77 · Time Keeper", "case.tkSub":"38 mm · rubber strap",
+  "case.tk":"Nivada F77 · Time Keeper", "case.tkSub":"38 mm · rubber strap", "case.tk41":"Nivada F77 41 · Time Keeper", "case.tk41Sub":"41 mm · drawn, figures estimated",
   "case.norel":"NOREL", "case.norelSub":"41 mm round · current drawing", "case.vernoy":"Vernoy cushion", "case.vernoySub":"36 mm · strap",
   "case.r3":"NOREL R3", "case.r3Sub":"Earlier drawing", "case.d":"NOREL Concept D", "case.dSub":"Earlier proposal",
   "case.cases":"Case", "case.earlier":"Earlier NOREL drawings", "case.metal":"Metal", "case.finish":"Finish",
@@ -17863,7 +17902,7 @@ GSTR.ar = {
   "card.vernoy":"Vernoy", "card.study":"دراسة تصميم",
   "start.yours":"ساعاتك", "card.tk":"تايم كيبر × نيفادا", "card.tkSub":"فضي وذهبي وردي",
   "card.vernoyRd":"فيرنوي RD26‑0172", "card.vernoyRdSub":"وسادية · 36 ملم",
-  "case.tk":"نيفادا F77 · تايم كيبر", "case.tkSub":"38 ملم · حزام مطاطي",
+  "case.tk":"نيفادا F77 · تايم كيبر", "case.tkSub":"38 ملم · حزام مطاطي", "case.tk41":"نيفادا F77 41 · تايم كيبر", "case.tk41Sub":"41 ملم · مرسوم، المقاسات تقديرية",
   "case.norel":"NOREL", "case.norelSub":"دائرية 41 ملم · الرسم الحالي", "case.vernoy":"Vernoy وسادية", "case.vernoySub":"36 ملم · حزام",
   "case.r3":"NOREL R3", "case.r3Sub":"رسم سابق", "case.d":"NOREL Concept D", "case.dSub":"مقترح سابق",
   "case.cases":"القالب", "case.earlier":"رسومات NOREL السابقة", "case.metal":"المعدن", "case.finish":"التشطيب",
@@ -19511,9 +19550,9 @@ Object.assign(GWORD.ar, {
           try{ S = clone(keep); applyCaseModel(K.model, m); st = S; }finally{ S = keep; }
           return thumb(st, "case:" + m);
         };
-        const name = {[VERNOY_CASE.model]:["case.vernoy","case.vernoySub"], [NOREL_R3.model]:["case.r3","case.r3Sub"], [NOREL_D.model]:["case.d","case.dSub"], [NOREL_R4.model]:["case.norel","case.norelSub"], [TK_NIVADA.model]:["case.tk","case.tkSub"]};
+        const name = {[VERNOY_CASE.model]:["case.vernoy","case.vernoySub"], [NOREL_R3.model]:["case.r3","case.r3Sub"], [NOREL_D.model]:["case.d","case.dSub"], [NOREL_R4.model]:["case.norel","case.norelSub"], [TK_NIVADA.model]:["case.tk","case.tkSub"], [TK_NIVADA_41.model]:["case.tk41","case.tk41Sub"]};
         const card = m => `<button type="button" class="gCard ${m===K.model?"on":""}" data-gcase="${esc2(m)}" title="${esc2(m)}"><div class="gPic">${pic(m)}</div><div class="gName">${esc2(name[m] ? gT(name[m][0]) : m)}</div><div class="gSub">${esc2(name[m] ? gT(name[m][1]) : "")}</div></button>`;
-        const now = [NOREL_R4.model, TK_NIVADA.model, VERNOY_CASE.model].filter(m => CASE_MODELS.indexOf(m) >= 0), earlier = CASE_MODELS.filter(m => now.indexOf(m) < 0);
+        const now = [NOREL_R4.model, TK_NIVADA.model, TK_NIVADA_41.model, VERNOY_CASE.model].filter(m => CASE_MODELS.indexOf(m) >= 0), earlier = CASE_MODELS.filter(m => now.indexOf(m) < 0);
         return `<h3>${gT("case.cases")}</h3><div class="gCards">${now.map(card).join("")}</div>`
           + (earlier.length ? `<h3>${gT("case.earlier")}</h3><div class="gCards">${earlier.map(card).join("")}</div>` : "");
       }

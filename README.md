@@ -200,6 +200,21 @@ stored in a design file do not change. In the full editor at laptop widths
 the toolbar sits tighter, and on a narrower window it takes a second row
 rather than pushing Share and Export off the screen.
 
+## The F77 in 41 mm (v4.53.0)
+
+A new case, **Nivada F77 41 · Time Keeper**, beside the 38. Nivada's F77
+MK2 41 mm pages give 41 mm across, 50 mm lug to lug, 12.05 mm thick and
+the same Soprod P024. Nothing else is published, so it is the 38 mm drawing
+(Nivada 103277_3) moved by what Nivada's own front renders of the 38 and
+the 41 show, measured on three matching pairs (Blue, Black, Meteorite),
+each scaled to its own published width: the dial the same size within
+0.2 mm (the opening stays 28.00), the bezel 1.50 wider each side, its
+brushed top 0.90 wider and its outer chamfer the same, the screws on a
+circle 1.25 larger, the lug blocks about 1.1 wider and 2.0 further apart.
+It has no photograph and is always drawn; its figures are estimates until
+Nivada sends a 41 mm drawing, and the 38's technical drawings are not used
+for it. Moving a design to it keeps the dial as designed.
+
 ## Hida Breguet Study (v4.52.0)
 
 A new numeral face, **Hida Breguet Study**: Naoya Hida & Co.'s own Breguet

@@ -766,3 +766,26 @@ test('Hida Breguet Study, and Gin wears it (v4.52.0)', () => {
   assert.equal(d.sheet.research.avoid, 'Naoya Hida, Tokyo', "the maker's name stays off the dial");
   assert.equal(d.text.logoMark, 'Vernoy wordmark (traced)', "the case's own logo");
 });
+
+test('the F77 in 41 mm (v4.53.0)', () => {
+  const vm = require('node:vm');
+  const ctx = vm.createContext({});
+  const a = source.indexOf('const VERNOY_CASE = {'), b = source.indexOf('const CASE_SPEC = new Proxy');
+  vm.runInContext(source.slice(a, b) + '\nthis.r={CASES,TK_NIVADA,TK_NIVADA_41};', ctx);
+  const { CASES, TK_NIVADA: K38, TK_NIVADA_41: K } = ctx.r;
+  assert.equal(CASES['Time Keeper × Nivada · F77 41'], K);
+  // Nivada's published figures
+  assert.equal(K.flat, 41); assert.equal(K.lugToLug, 50); assert.equal(K.height, 12.05);
+  assert.equal(K.movement, K38.movement, 'the same Soprod P024, without date'); assert.equal(K.calendar, undefined);
+  assert.deepEqual(K.logo, K38.logo, "Nivada's own logo");
+  // estimated from the renders: the same dial, a wider bezel
+  assert.equal(K.opening, 28); assert.equal(K.dialD, 29);
+  assert.equal(K.f77.bezel.rx, 20.5); assert.equal(K.f77.bezel.flat, 31.96); assert.equal(K.f77.screws.r, 18.31);
+  assert.equal(K.f77.body.lugEnd, 25); assert.equal(K.outline, 'f77');
+  assert.match(K.tol, /estimates until Nivada sends a 41 mm drawing/);
+  // drawn: no photograph, and not the 38's drawings
+  assert.equal(K.photoFile, undefined); assert.equal(K.sheet.drawings, null); assert.ok(K38.sheet.drawings, 'the 38 keeps its own');
+  assert.match(source, /const now = \[NOREL_R4\.model, TK_NIVADA\.model, TK_NIVADA_41\.model, VERNOY_CASE\.model\]/);
+  assert.match(source, /"case\.tk41":"Nivada F77 41 · Time Keeper", "case\.tk41Sub":"41 mm · drawn, figures estimated"/);
+  assert.match(source, /"case\.tk41":"نيفادا F77 41 · تايم كيبر"/);
+});
