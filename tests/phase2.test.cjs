@@ -275,10 +275,10 @@ test('square plots and a woven Velcro strap (v4.30.0)', () => {
   assert.match(source, /function fabricTex\(x, y\)\{/);
   assert.match(source, /const cw = 0\.90, bl = 0\.45, col = Math\.floor\(x\/cw\)/);
   assert.match(source, /const tw = 0\.62 \+ 0\.38\*Math\.cos\(2\*Math\.PI\*\(ay\/0\.42 \+ off\*1\.6\)\)/);
-  assert.match(source, /if\(\(c\.strapType !== "fabric" && c\.strapType !== "alligator"\) \|\| !K\.photoStrap \|\| K\.bracelet \|\| c\.strap === false\) return null;/);
+  assert.match(source, /if\(\(c\.strapType !== "fabric" && c\.strapType !== "alligator"( && c\.strapType !== "bracelet")?\) \|\| !K\.photoStrap \|\| K\.bracelet \|\| c\.strap === false\) return null;/);
   assert.match(source, /\+ "\|" \+ \(fab \? \(fab\.type \|\| "fabric"\) \+ \(fab\.stitch \|\| ""\) : ""\);/, 'cached apart from rubber');
-  assert.match(source, /chips\("case\.strapType", \[\["rubber","Rubber"\],\["fabric","Fabric \(Velcro\)"\],\["alligator","Alligator leather"\]\]/);
-  assert.match(source, /S\.sheet\.strap\.type = v === "fabric" \? "fabric Velcro" : v === "alligator" \? "leather" : "rubber";/, 'the maker\'s sheet says so');
+  assert.match(source, /chips\("case\.strapType", \[\["rubber","Rubber"\],\["fabric","Fabric \(Velcro\)"\],\["alligator","Alligator leather"\](,\["bracelet","Steel bracelet"\])?\]/);
+  assert.match(source, /S\.sheet\.strap\.type = v === "fabric" \? "fabric Velcro" : v === "alligator" \? "leather" : (v === "bracelet" \? "bracelet" : )?"rubber";/, 'the maker\'s sheet says so');
 });
 
 test('printed rehaut ring (v4.31.0): a ring outside the dial on the photograph, with a minute track of its own', () => {
@@ -521,7 +521,7 @@ test('tap the watch to edit what you tapped (v4.41.0)', () => {
 test('Or Damier, the Vernoy photograph in gold, fine pomme rings (v4.42.0)', () => {
   // the design: the Vernoy cushion in gold on its photograph, Vernoy's own logo, no complication
   const list = JSON.parse(fs.readFileSync(path.join(__dirname, '../concepts/index.json'), 'utf8'));
-  assert.equal(list[0].id, 'or-damier');
+  assert.ok(list.findIndex(x => x.id === 'or-damier') >= 0, 'listed (newest first: noir-77 since 4.45.0)');
   const d = JSON.parse(fs.readFileSync(path.join(__dirname, '../concepts/or-damier.json'), 'utf8'));
   assert.equal(d.case.model, 'Vernoy cushion · RD26-0172');
   assert.equal(d.case.material, '#D7B56D', 'yellow gold');
@@ -593,4 +593,29 @@ test('thinner figures (v4.44.1)', () => {
   assert.match(source, /N\("numerals\.weight","Thickness",-0\.30,0\.45,\.01\),/, 'the full editor');
   assert.match(source, /if\(\(n\.weight \|\| 0\) < -0\.15\) h \+= `<p class="gNote">\$\{gT\("num\.thinNote"\)\}<\/p>`;/, 'a note past -0.15');
   assert.match(source, /"num\.thinNote":"Taken in this far/); assert.match(source, /"num\.thinNote":"لما ترقّق/);
+});
+
+test('Noir 77, a steel bracelet for the F77, a rounded line face (v4.45.0)', () => {
+  const list = JSON.parse(fs.readFileSync(path.join(__dirname, '../concepts/index.json'), 'utf8'));
+  assert.equal(list[0].id, 'noir-77');
+  const d = JSON.parse(fs.readFileSync(path.join(__dirname, '../concepts/noir-77.json'), 'utf8'));
+  assert.equal(d.case.model, 'Time Keeper × Nivada · F77'); assert.equal(d.case.strapType, 'bracelet'); assert.equal(d.sheet.strap.type, 'bracelet');
+  assert.ok(['Nivada script', 'Nivada shield + script', 'Nivada shield'].includes(d.text.logoMark), 'the case\'s own logo');
+  assert.equal(d.date.on, false, 'the P024 has no date'); assert.equal(d.numerals.set, 'all', 'so the 3 is a figure');
+  assert.equal(d.text.line2Font, 'Comfortaa');
+  assert.match(d.sheet.research.avoid, /Royal Oak/);
+  for (const k of ['hHand', 'mHand']) assert.notEqual(d[k].style, 'royal-oak', 'no hand named for the watch followed');
+  assert.equal(d.sHand.secTip, 'arrow');
+  // the bracelet on the photograph
+  assert.match(source, /function braceletTex\(x, ay, hw, y0\)\{/);
+  assert.match(source, /c\.strapType !== "alligator" && c\.strapType !== "bracelet"\) \|\| !K\.photoStrap/);
+  assert.match(source, /\["alligator","Alligator leather"\],\["bracelet","Steel bracelet"\]/);
+  assert.match(source, /v === "bracelet" \? "bracelet" : "rubber"/);
+  const vm = require('node:vm'), ctx = vm.createContext({});
+  vm.runInContext(chunk('function mHash(x, y){', '\n') + '\n' + chunk('function vNoise(x, y){', '\n}\n') + '\n}\n' + chunk('function braceletTex(x, ay, hw, y0){', '\n}\n') + '\n}\nthis.r = braceletTex;', ctx);
+  const join = ctx.r(0, 22.5 + 0.03 + 4.4/2, 10, 22.5), centre = ctx.r(0, 22.5 + 4.4, 10, 22.5), outer = ctx.r(6, 22.5 + 2.2, 10, 22.5);
+  assert.ok(join[1] < 60, 'a dark join between links'); assert.ok(centre[1] > 200, 'a bright polished centre link'); assert.ok(outer[1] > 120 && outer[1] < 220, 'a brushed outer link');
+  // the rounded line face
+  assert.match(source, /"Comfortaa":\{family:"wdstxcomfortaa", latin:"sans", latinOnly:true, src:"data:font\/woff2;base64,/);
+  assert.match(source, /A && !A\.latinOnly && !hasArabic\(txt\)/);
 });

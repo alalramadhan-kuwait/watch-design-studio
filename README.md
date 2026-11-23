@@ -200,6 +200,33 @@ stored in a design file do not change. In the full editor at laptop widths
 the toolbar sits tighter, and on a narrower window it takes a second row
 rather than pushing Share and Export off the screen.
 
+## Noir 77, a steel bracelet for the F77, a rounded line face (v4.45.0)
+
+A new design under Designs, **Noir 77**: the Time Keeper × Nivada F77 after
+the black Arabic-numeral Royal Oak (the picture sent). The steel octagon on a
+steel bracelet, a deep black dial, bold rounded figures in white raised print
+(Reverso Study), white minute ticks with a square lume plot every five
+minutes, lumed sword hands and an arrow-tipped seconds hand, Nivada's own
+script under 12, "Time Keeper" in a rounded face with AUTOMATIC beneath it
+above 6, and SWISS MADE either side of 6. Left out: the date at 3, which the
+Soprod P024 does not drive, so the 3 is a figure like the others; the
+maker's name and model are kept off (the design's research note names them
+to avoid, and the design check holds it to that).
+
+What the app did not have, added for it:
+- **A steel bracelet on the F77's photograph** (Case › Metal and strap ›
+  Strap › Steel bracelet). The strap's measured outline (`photoStrap`,
+  `f77.strap`) takes rows of links in place of the rubber: a narrow polished
+  centre link set half a link off the brushed outer links, dark joins, each
+  link's lit edge bright and its far edge in shade, the brushing along the
+  bracelet, lit as the photograph's strap is (`braceletTex`). The maker's
+  sheet names a bracelet on a folding clasp. Nivada makes the F77 on an
+  integrated bracelet; the edition's sheet names the rubber strap, and the
+  app says to confirm the bracelet with Nivada.
+- **A rounded Latin face for the lines**, Comfortaa SemiBold (SIL Open Font
+  License 1.1, Latin subset, embedded), for a model line set the way a sports
+  dial sets one. Its tile in the font picker shows the words typed.
+
 ## Thinner figures (v4.44.1)
 
 "Thickness" now goes down to −0.30 mm (it stopped at −0.10), in simple mode
