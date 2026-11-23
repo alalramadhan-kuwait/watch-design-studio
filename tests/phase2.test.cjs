@@ -41,7 +41,7 @@ test('honeycomb guilloché and a brushed-steel chapter ring (v4.15.0)', () => {
   assert.match(g, /const hd = Math\.max\(qx, qx\*0\.5 \+ qy\*0\.8660254\);/, 'the hexagonal distance');
   assert.match(g, /return \(0\.5 - hd\)\*c\*tw\*\(P\.facet \|\| 1\);/);
   assert.match(source, /S\.dial\.pattern === "clous" \|\| S\.dial\.pattern === "nid"/, 'lay and facet offered as for clous');
-  assert.match(source, /SEL\("chapter\.finish","Finish",\["flat","matte","gloss","sunburst","grained","enamel","brushedsteel"\]\)/);
+  assert.match(source, /SEL\("chapter\.finish","Finish",\["flat","matte","gloss","sunburst","grained","enamel","brushedsteel"(,"circular","sandblasted")?\]\)/);
 });
 
 test('each hour its own size and turn (v4.16.0), for markers and stones, and the maker is told', () => {
@@ -585,7 +585,7 @@ test('a real sandblasted finish (v4.44.0)', () => {
   assert.match(F, /granK \*= /); assert.match(F, /granG \+= /); assert.match(F, /nx \+= \(f1 - 0\.5\)\*fa\*FROST_TILT/);
   assert.match(source, /\["grained","Grained"\],\["sandblasted","Sandblasted"\],\["granular","Granular"\]/, 'offered in simple mode');
   assert.match(source, /\} else if\(finish==="sandblasted"\)\{/, 'and drawn in the plain view');
-  for (const dir of ['designs', 'concepts']) for (const f of fs.readdirSync(path.join(__dirname, '..', dir)).filter(f => f.endsWith('.json')))
+  for (const dir of ['designs', 'concepts']) for (const f of fs.readdirSync(path.join(__dirname, '..', dir)).filter(f => f.endsWith('.json') && f !== 'gin.json'))   // gin (4.51.0) was made after it
     assert.doesNotMatch(fs.readFileSync(path.join(__dirname, '..', dir, f), 'utf8'), /"finish": ?"sandblasted"/, f + ' did not use it, so it draws as before');
 });
 
@@ -597,7 +597,7 @@ test('thinner figures (v4.44.1)', () => {
 
 test('Noir 77, a steel bracelet for the F77, a rounded line face (v4.45.0)', () => {
   const list = JSON.parse(fs.readFileSync(path.join(__dirname, '../concepts/index.json'), 'utf8'));
-  assert.equal(list[0].id, 'noir-77');
+  assert.ok(list.findIndex(x => x.id === 'noir-77') >= 0, 'listed (newest first: gin since 4.51.0)');
   const d = JSON.parse(fs.readFileSync(path.join(__dirname, '../concepts/noir-77.json'), 'utf8'));
   assert.equal(d.case.model, 'Time Keeper × Nivada · F77'); assert.equal(d.case.strapType, 'bracelet'); assert.equal(d.sheet.strap.type, 'bracelet');
   assert.ok(['Nivada script', 'Nivada shield + script', 'Nivada shield'].includes(d.text.logoMark), 'the case\'s own logo');
@@ -728,4 +728,17 @@ test('German silver, a dial engraved throughout, crackled leather (v4.50.0)', ()
   const share = cracked / n; assert.ok(share > 0.03 && share < 0.25, 'cracks and flecks cover a part of the strap, not all of it: ' + share.toFixed(3));
   assert.match(source, /\["alligator","Alligator leather"\],\["crackle","Vintage crackle leather"\],\["bracelet","Steel bracelet"\]/);
   assert.match(source, /if\(K\.builtinTint && c\.strap !== false && c\.strapType === "crackle"\)/, "on the Vernoy's photograph too");
+});
+
+test('Gin: a hand-engraved German silver dial (v4.51.0)', () => {
+  const list = JSON.parse(fs.readFileSync(path.join(__dirname, '../concepts/index.json'), 'utf8'));
+  assert.equal(list[0].id, 'gin');
+  const d = JSON.parse(fs.readFileSync(path.join(__dirname, '../concepts/gin.json'), 'utf8'));
+  assert.equal(d.case.model, 'Vernoy cushion · RD26-0172'); assert.equal(d.text.logoMark, 'Vernoy wordmark (traced)', "the case's own logo");
+  assert.equal(d.dial.blank, 'German silver'); assert.equal(d.dial.finish, 'sandblasted');
+  assert.equal(d.numerals.tech, 'engraved + filled'); assert.equal(d.minute.tech, 'engraved + filled'); assert.equal(d.text.logoTech, 'engraved');
+  assert.equal(d.chapter.finish, 'circular'); assert.equal(d.case.strapType, 'crackle');
+  assert.equal(d.sHand.on, false); assert.equal(d.sub.on, false, 'no small seconds: the 1062 does not drive one');
+  assert.match(d.sheet.research.avoid, /Naoya Hida/);
+  assert.match(source, /SEL\("chapter\.finish","Finish",\["flat","matte","gloss","sunburst","grained","enamel","brushedsteel","circular","sandblasted"\]\)/);
 });

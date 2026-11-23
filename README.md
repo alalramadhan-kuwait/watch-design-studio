@@ -200,6 +200,20 @@ stored in a design file do not change. In the full editor at laptop widths
 the toolbar sits tighter, and on a narrower window it takes a second row
 rather than pushing Share and Export off the screen.
 
+## Gin: a hand-engraved German silver dial (v4.51.0)
+
+A new design under Designs, **Gin** (銀, silver), on the Vernoy cushion,
+after a hand-engraved German silver dial from Tokyo (the picture sent): a
+solid German silver dial bead-blasted to an even frost; Breguet-style
+figures cut into it and filled with black lacquer, the cut walls left bright;
+a separate outer ring brushed in fine circles carrying a dot at every minute,
+larger at the fives, cut and filled the same; the case's own Vernoy wordmark
+engraved and filled, nothing printed; slender heat-blued leaf hands on a
+large boss; a crackled vintage leather strap in a light thread. Left out: the
+small seconds at 9, which the Vernoy's 1062 does not drive, so every figure
+stands. The chapter ring can now be brushed in circles ("circular") or
+sandblasted.
+
 ## German silver, a dial engraved throughout, crackled leather (v4.50.0)
 
 Three things a hand-engraved dial (as Naoya Hida & Co. make them in Tokyo)

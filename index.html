@@ -2292,7 +2292,7 @@ const APP_BUILD = "__BUILD__";
 /* The version people see, raised with every change that reaches them:
    major for a new way of working, minor for something new to do, patch for
    a fix. Shown on the watch screen, so any screenshot says which it was. */
-const APP_VERSION = "4.50.0";
+const APP_VERSION = "4.51.0";
 const APP_DATE = "__DATE__";
 
 /* Every route that replaces S passes through one of these three, which is
@@ -11665,7 +11665,7 @@ const SCHEMA = {
     }},
   chapter:{title:"Chapter ring", hint:"Outer band carrying the minute track.", fields:[
     N("chapter.outerD","Outer diameter",8,44), N("chapter.innerD","Inner diameter",4,42),
-    C("chapter.color","Colour"), SEL("chapter.finish","Finish",["flat","matte","gloss","sunburst","grained","enamel","brushedsteel"]),
+    C("chapter.color","Colour"), SEL("chapter.finish","Finish",["flat","matte","gloss","sunburst","grained","enamel","brushedsteel","circular","sandblasted"]),
     CK("chapter.separator","Separator lines"), C("chapter.sepColor","Separator colour")]},
   minute:{title:"Minute track", hint:"60 divisions. Diameter is the centre line of the track.", fields:()=>[
     N("minute.diameter","Track diameter",6,44),
