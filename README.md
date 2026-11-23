@@ -200,6 +200,53 @@ stored in a design file do not change. In the full editor at laptop widths
 the toolbar sits tighter, and on a narrower window it takes a second row
 rather than pushing Share and Export off the screen.
 
+## Precise Arabic numeral typography, and five new faces (v4.57.0)
+
+**A precise numeral layout** (Markers › Size › Layout: Precise), for every
+new design. Each figure is set by its own outline:
+- *Height in mm*: the figure height is the median ink height of ١ to ٩ on
+  the dial. The earlier layout measured ٠١٢٣٤٥٦٧٨٩ as one run, so a face
+  whose ٦ or ٧ hangs low (Ruqaa, Markazi) drew small for the same setting.
+- *١٠, ١١, ١٢ as groups*: each digit drawn on its own, left to right, from
+  the face itself, with a set space between their inks (Space inside 10,
+  11, 12, mm), the same in every face. ٠ beside another digit is centred on
+  its height and the space beside it taken in a little (NUM_OPTICS, with
+  exceptions for the calligraphic faces that place ٠ themselves).
+- *Placed by the outline* on its hour, every 30°: the outermost ink on one
+  circle (Outer edge) or the ink centre on the circle (Centre).
+- *Weight*: the faces built in several weights can be set in any of them.
+- *Kept clear*: the outermost ink stays 0.30 mm inside the visible opening
+  and inside the minute track's inner edge; the panel says how far the
+  figures were pulled in, how far they are inside the track, and where the
+  hour hand ends against them, with a button to end it at the figures.
+- *No substitution*: each digit is checked to come from the face; a face
+  missing one is reported, and not offered in the comparison.
+- The design checks measure the figures (Numeral envelope, Numerals and
+  the minute track, Hour hand and the numerals, Numeral face), and the
+  maker's artwork composes ١٠, ١١, ١٢ from the outlines as the dial does,
+  in the weight chosen.
+
+Designs saved before keep the layout they were drawn in ("As before") and
+draw exactly as they did; switching one to Precise keeps its figures'
+height.
+
+**Five new faces**, from Google Fonts under the SIL Open Font License, cut
+to the figures: Noto Kufi Arabic (300–700), IBM Plex Sans Arabic (200–700),
+Kufam (400–700), Alexandria (300–700) and Ruwudu (400–700; it has no
+Persian figures, so it is not offered for them). Every weight has all ten
+Arabic-Indic figures. DIN Next LT Arabic is a commercial Monotype face and
+is not included; a licensed copy can be imported with Import a font.
+
+**Compare the faces on the dial** (Markers › Font): every face that writes
+the design's figures, side by side, on the design's own case and dial or on
+the F77 41 in silver and rose gold, all at the same height and spacing, each
+with its weights and whether it has every figure. The height and spacing
+are the design's own; Use puts the face, in the weight shown, on the design.
+
+app/font-outlines.json is regenerated, with each weight as "Face@600"; it
+had fallen behind the built-in fonts (FPJ's outlines, and the study faces
+added since).
+
 ## Three haute-horlogerie dials for the F77 41 (v4.56.0)
 
 The four silver dials of 4.55.0 are set aside: they made the 41 look

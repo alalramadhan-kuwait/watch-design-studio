@@ -864,3 +864,53 @@ test('three haute-horlogerie dials for the F77 41 (v4.56.0)', () => {
   assert.equal(B.numerals.style, 'Markazi Text'); assert.equal(B.numerals.tech, 'printed'); assert.equal(B.sector.zones.length, 2); assert.equal(B.hHand.style, 'lance');
   assert.equal(C.numerals.style, 'Aref Ruqaa'); assert.equal(C.sector.zones[0].pattern, 'clous'); assert.equal(C.hHand.style, 'pomme-ouverte');
 });
+
+test('precise Arabic numeral typography and five new faces (v4.57.0)', () => {
+  const vm = require('node:vm');
+  // the new faces: every weight has the ten Arabic-Indic figures (the outlines are read from the embedded files)
+  const OUT = JSON.parse(fs.readFileSync(path.join(__dirname, '../app/font-outlines.json'), 'utf8'));
+  const W = {'Noto Kufi Arabic':[300,500,600,700], 'IBM Plex Sans Arabic':[200,300,500,600,700], 'Kufam':[500,600,700], 'Alexandria':[300,500,600,700], 'Ruwudu':[500,600,700]};
+  for (const [face, ws] of Object.entries(W)) for (const k of [face].concat(ws.map(w => face + '@' + w))) {
+    assert.ok(OUT[k], k); for (const c of '٠١٢٣٤٥٦٧٨٩') assert.ok(OUT[k].g[c], k + ' has ' + c);
+    assert.match(source, new RegExp('"' + face + '":\\{family:"wds[a-z]+", src:"data:font/woff2;base64,[A-Za-z0-9+/=]+", ar:true' + (face === 'Ruwudu' ? ', noFa:true' : '') + ', weights:\\{'));
+  }
+  assert.ok(!/DIN Next/.test(source.slice(source.indexOf('const BUILTIN_FONTS = {'), source.indexOf('\n};', source.indexOf('const BUILTIN_FONTS = {')))), 'no unlicensed DIN Next');
+  // designs saved before keep their layout; new ones are precise
+  assert.match(source, /numerals:\{on:true, layout:"precise", style:"vernoy"/);
+  const ctx = vm.createContext({});
+  const i = source.indexOf('const deep = (a,b)=>'), j = source.indexOf('\n', i);
+  vm.runInContext('const clone = o => JSON.parse(JSON.stringify(o)); const BASE = {numerals:{layout:"precise", size:3}};' + source.slice(i, j) + '\nthis.r={deep,BASE};', ctx);
+  assert.equal(ctx.r.deep(ctx.r.BASE, {numerals:{size:4}}).numerals.layout, 'legacy');
+  assert.equal(ctx.r.deep(ctx.r.BASE, {numerals:{size:4, layout:'precise'}}).numerals.layout, 'precise');
+  assert.equal(ctx.r.deep(ctx.r.BASE, {}).numerals.layout, 'precise');
+  // the precise layout: figures by their ink, groups digit by digit, kept clear
+  for (const re of [/const hRef = hs\[hs\.length >> 1\], size = \+nm\.size > 0 \? \+nm\.size : 3/, /if\(i\) x \+= gapMM\*sc\*\(c === zero \|\| chars\[i-1\] === zero \? opt\.zeroGap : 1\)/,
+    /if\(R \+ sup > PR\.limit\)\{ pulled = R \+ sup - PR\.limit; R -= pulled; \}/, /if\(PRE\)\{ const q = numPlacePrecise\(st, PRE, numeralLabel\(n, sys\), a, sc0\); if\(q\) return q; \}/,
+    /font-weight="\$\{PRE\.W\}"/, /if\(typeof numIsPrecise === "function" && numIsPrecise\(nm\)\) return 1;/])
+    assert.match(source, re);
+  // the track's inner edge and the limit it sets
+  const c2 = vm.createContext({});
+  const a2 = source.indexOf('function trackInnerEdge(st)'), b2 = source.indexOf('/* the layout of one design', a2);
+  vm.runInContext('const visR = st => st.case.opening/2;' + source.slice(a2, b2) + '\nthis.r={trackInnerEdge,numOuterLimit};', c2);
+  const st = {case:{opening:29.17}, numerals:{radius:11.9}, minute:{on:true, style:'railroad', diameter:27.9, thickness:0.065, fives:true}};
+  const ti = c2.r.trackInnerEdge(st), rail = Math.max(0.045, Math.min(0.08, 0.065*0.18));
+  assert.ok(Math.abs(ti - (13.95 - 0.065 - 0.065*1.2 - rail/2)) < 1e-9);
+  assert.ok(Math.abs(c2.r.numOuterLimit(st) - (ti - 0.30)) < 1e-9);
+  st.minute.on = false; assert.ok(Math.abs(c2.r.numOuterLimit(st) - (14.585 - 0.30)) < 1e-9);
+  // the artwork: the space between the inks, ٠ centred on its partner
+  const c3 = vm.createContext({});
+  const a3 = source.indexOf('function numArtRunInk('), b3 = source.indexOf('/* drawn with its ink centred on cx', a3);
+  vm.runInContext(source.slice(a3, b3) + '\nthis.r={numArtRunInk};', c3);
+  const G = {'١':{a:0.3, d:'', b:[0.05, -0.7, 0.15, 0]}, '٠':{a:0.3, d:'', b:[0.1, -0.2, 0.2, -0.1]}};
+  const r = c3.r.numArtRunInk(G, '١٠', 10, 0.4, {opt:{zero:'mid', zeroGap:0.85}, zero:'٠'});
+  assert.ok(Math.abs((r.parts[1].x + 0.1*10) - (r.parts[0].x + 0.15*10) - 0.4*0.85) < 1e-9, 'the space between the inks');
+  assert.ok(Math.abs((r.parts[1].y + (-0.15)*10) - (-0.35*10)) < 1e-9, '٠ centred on ١');
+  // the comparison and the controls
+  assert.match(source, /function numCompareBlock\(\)\{/); assert.match(source, /data-gset="num\.use" data-gv='\$\{gv\(face \+ "\|" \+ w\)\}'/);
+  assert.match(source, /else if\(path === "num\.layout"\) numLayoutSet\(S, v\);/);
+  assert.match(source, /slider\("numerals\.pairGapUi", "Space inside 10, 11, 12", 0, 1\.2, 0\.02/);
+  for (const k of ['Numerals and the minute track', 'Hour hand and the numerals', 'Numeral face', 'Numerals kept clear'])
+    assert.equal((source.match(new RegExp('"' + k + '":', 'g')) || []).length, 2, k + ' in both tables');
+  assert.ok(fs.existsSync(path.join(__dirname, '../tools/font-outlines.py')));
+  assert.match(fs.readFileSync(path.join(__dirname, '../tools/font-outlines.py'), 'utf8'), /yield m\.group\(1\) \+ "@" \+ wm\.group\(1\), wm\.group\(2\)/);
+});

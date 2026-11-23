@@ -69,7 +69,7 @@ test('sizes are shown as heights on the dial: the figures\' ink, the letters\' c
   for (const k of ['heightMM', 'line2CapMM', 'footCapMM', 'splitCapMM']) assert.match(chunk('const VIRTUAL = {', '\n};'), new RegExp('\\n  ' + k + ':\\{get:'));
   assert.match(source, /function numFigureK\(nm\)\{/);
   assert.match(chunk('function numFigureK(nm){', '\n}\n'), /return Math\.max\(0\.6, Math\.min\(2\.4, 0\.72\/m\.h\)\)\*m\.h;/, 'the dial\'s own rule for the font size');
-  assert.match(source, /slider\("numerals\.heightMM", "Figure height", 1\.0, 4\.0, 0\.05, get\(S, "numerals\.heightMM"\)\)/);
+  assert.match(source, /slider\("numerals\.heightMM", "Figure height", (1\.0|pre \? 1\.5 : 1\.0), (4\.0|pre \? 5\.0 : 4\.0), 0\.05, get\(S, "numerals\.heightMM"\)\)/);
   assert.match(source, /slider\("text\.footCapMM", "Letter height", 0\.25, 1\.5, 0\.02, get\(S, "text\.footCapMM"\)\)/);
   assert.match(source, /N\("numerals\.heightMM","Figure height",\.7,5,\.05\)/);
   assert.doesNotMatch(source, /slider\("numerals\.size", "Size"/);

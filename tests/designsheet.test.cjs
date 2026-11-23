@@ -343,14 +343,16 @@ test('the artwork\'s figures are the dial\'s own: its spacing, kerning, stroke a
   const OUT = JSON.parse(fs.readFileSync(path.join(root, 'app/font-outlines.json'), 'utf8'));
   // the only kerning among the built-in figures: Vernoy's Roman pairs
   assert.deepEqual(OUT['Vernoy Radial Roman'].k, {IV:-0.014, IX:-0.014, VI:-0.02, XI:-0.016});
-  assert.equal(Object.keys(OUT).filter(f => OUT[f].k).length, 1);
+  // (since 4.57.0 the new faces carry their own figure kerning, which the precise layout
+  // does not use: it sets the space between the two inks itself)
+  assert.ok(Object.keys(OUT).filter(f => OUT[f].k).every(f => !/^(Noto Naskh Arabic|Amiri|AlTarikh Study)$/.test(f)));
   // the dial spaces Arabic and Persian figures glyph by glyph (dx): Chrome sets
   // no letter-spacing in Arabic script and WebKit does, so this draws alike everywhere
   assert.match(source, /const spacing = label => !perGlyph \? `letter-spacing="\$\{f\(lsGap,3\)\}"`/);
   assert.equal((source.match(/\$\{spacing\((numeralLabel\(n, sys\)|label)\)\}/g) || []).length, 4, 'every numeral <text> uses it');
   assert.doesNotMatch(source, /letter-spacing="\$\{f\(nm\.gap\*fsz\*0\.011,3\)\}"/);
   // numInfo, asked for by the artwork, tells it what the dial drew with
-  assert.match(source, /Object\.assign\(o\.numInfo, \{style:styleUsed, fsz, scales, gap:lsGap, perGlyph, stroke, drawn:drawnOutline\}\)/);
+  assert.match(source, /Object\.assign\(o\.numInfo, \{style:styleUsed, fsz, scales, gap:lsGap, perGlyph, stroke, drawn:drawnOutline[,}]/);
   const A = '٠١٢٣٤٥٦٧٨٩', labels = Array.from({length:12}, (_, i) => String(i + 1).split('').map(d => A[+d]).join(''));
   const st = tk(), M = G.numArtMetrics(st, OUT);
   const dial = {fsz:M.fsz, gap:0.05, stroke:0.04, scales:{1:0.8, 11:0.8, 2:1, 3:1, 4:1, 5:1, 6:1, 7:1, 8:1, 9:1, 10:1, 12:1}};

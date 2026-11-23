@@ -8,8 +8,9 @@ app/font-outlines.json, written here with fontTools.
 
 Each glyph is an SVG path in em units (1 = the font size), y down, the
 origin on the baseline at the glyph's left side bearing, with its advance
-and its ink box. Run from the repository root after adding or changing a
-built-in font:  python3 tools/font-outlines.py
+and its ink box. A font built in several weights (its weights:{} in BUILTIN_FONTS) has each
+other weight under "Name@weight". Run from the repository root after adding
+or changing a built-in font:  python3 tools/font-outlines.py
 """
 import base64, io, json, re, sys
 from fontTools.ttLib import TTFont
@@ -77,8 +78,15 @@ def num(v):
     return "0" if t in ("", "-0") else t
 
 out = {}
-for m in re.finditer(r'\n  "([^"]+)":\{family:"[^"]+",[^}]*?src:"data:font/[a-z0-9]+;base64,([A-Za-z0-9+/=]+)"', src[i:j]):
-    name, data = m.group(1), m.group(2)
+def faces():
+    """each built-in font, and each of its other weights as "Name@600" """
+    for m in re.finditer(r'\n  "([^"]+)":\{family:"[^"]+",[^}]*?src:"data:font/[a-z0-9]+;base64,([A-Za-z0-9+/=]+)"([^\n]*)', src[i:j]):
+        yield m.group(1), m.group(2)
+        w = re.search(r'weights:\{(.*)\}\}', m.group(3))
+        if w:
+            for wm in re.finditer(r'(\d+):"data:font/[a-z0-9]+;base64,([A-Za-z0-9+/=]+)"', w.group(1)):
+                yield m.group(1) + "@" + wm.group(1), wm.group(2)
+for name, data in faces():
     f = TTFont(io.BytesIO(base64.b64decode(data)))
     upm = f["head"].unitsPerEm
     gs, cmap = f.getGlyphSet(), f.getBestCmap()
