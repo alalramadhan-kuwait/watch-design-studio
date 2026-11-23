@@ -325,7 +325,7 @@ test('power reserve, small seconds, lance, alligator (v4.33.0)', () => {
 
 test('designs tab and the movement rule (v4.34.0)', () => {
   assert.match(source, /if\(k === "case"\) return \["designs","shape","metal"\];/);
-  assert.match(source, /if\(tab === "designs"\) return watchesBlock\(\);/);
+  assert.match(source, /if\(tab === "designs"\) return (cmpSet \? compareBlock\(\) : )?watchesBlock\(\);/);
   assert.match(source, /data-gdo="keep">\$\{gT\("start\.saveNow"\)\}/, 'Save beside what was saved');
   assert.match(source, /powerReserve:\(\) => !!caseOf\(S\)\.powerReserve \|\| !!\(S\.power && S\.power\.on\)\}/);
   assert.match(source, /"sub\.hand":\(\) => !!caseOf\(S\)\.smallSeconds \|\| !!\(S\.sub && S\.sub\.hand\),/);
@@ -732,7 +732,7 @@ test('German silver, a dial engraved throughout, crackled leather (v4.50.0)', ()
 
 test('Gin: a hand-engraved German silver dial (v4.51.0)', () => {
   const list = JSON.parse(fs.readFileSync(path.join(__dirname, '../concepts/index.json'), 'utf8'));
-  assert.equal(list[0].id, 'gin');
+  assert.ok(list.findIndex(x => x.id === 'gin') >= 0, 'listed (the F77 41 set comes first since 4.55.0)');
   const d = JSON.parse(fs.readFileSync(path.join(__dirname, '../concepts/gin.json'), 'utf8'));
   assert.equal(d.case.model, 'Vernoy cushion · RD26-0172'); assert.equal(d.text.logoMark, 'Vernoy wordmark (traced)', "the case's own logo");
   assert.equal(d.dial.blank, 'German silver'); assert.equal(d.dial.finish, 'sandblasted');
@@ -779,14 +779,14 @@ test('the F77 in 41 mm (v4.53.0)', () => {
   assert.equal(K.movement, K38.movement, 'the same Soprod P024, without date'); assert.equal(K.calendar, undefined);
   assert.deepEqual(K.logo, K38.logo, "Nivada's own logo");
   // estimated from the renders: the same dial, a wider bezel
-  assert.equal(K.opening, 28); assert.equal(K.dialD, 29);
+  assert.ok(K.opening === 28 || K.opening === 29.17, 'the dial as the renders show it (29.17 on the photograph since 4.55.0)');
   assert.equal(K.f77.bezel.rx, 20.5); assert.equal(K.f77.bezel.flat, 31.96); assert.equal(K.f77.screws.r, 18.31);
   assert.equal(K.f77.body.lugEnd, 25); assert.equal(K.outline, 'f77');
-  assert.match(K.tol, /estimates until Nivada sends a 41 mm drawing/);
+  assert.match(K.tol, /estimate(s|d) until Nivada sends a 41 mm drawing/);
   // drawn: no photograph, and not the 38's drawings
-  assert.equal(K.photoFile, undefined); assert.equal(K.sheet.drawings, null); assert.ok(K38.sheet.drawings, 'the 38 keeps its own');
+  assert.ok(K.photoFile === undefined || K.photoFile === './app/case-nivada-f77-41.jpg'); assert.equal(K.sheet.drawings, null); assert.ok(K38.sheet.drawings, 'the 38 keeps its own');
   assert.match(source, /const now = \[NOREL_R4\.model, TK_NIVADA\.model, TK_NIVADA_41\.model(, TK_NIVADA_41C\.model)?, VERNOY_CASE\.model\]/);
-  assert.match(source, /"case\.tk41":"Nivada F77 41 · Time Keeper", "case\.tk41Sub":"41 mm · (drawn, figures estimated|reference, estimated)"/);
+  assert.match(source, /"case\.tk41":"Nivada F77 41 · Time Keeper", "case\.tk41Sub":"41 mm · (drawn, figures estimated|reference, estimated|Nivada's photograph)"/);
   assert.match(source, /"case\.tk41":"نيفادا F77 41 · تايم كيبر"/);
 });
 
@@ -797,7 +797,7 @@ test('the F77 41 optimised, and a drawn F77 bracelet (v4.54.0)', () => {
   const { CASES, TK_NIVADA: K38, TK_NIVADA_41: A, TK_NIVADA_41C: C } = ctx.r;
   assert.equal(CASES['Time Keeper × Nivada · F77 41 optimised'], C);
   // A stays the reference
-  assert.equal(A.opening, 28); assert.equal(A.f77.bezel.flat, 31.96); assert.equal(A.f77.screws.r, 18.31);
+  assert.ok(A.opening === 28 || A.opening === 29.17); assert.equal(A.f77.bezel.flat, 31.96); assert.equal(A.f77.screws.r, 18.31);
   // C: the 38's share of the width, real parts at real size
   assert.equal(C.opening, 30.2); assert.ok(Math.abs(C.opening/C.flat - K38.opening/K38.flat) < 0.001, "the 38's dial share");
   assert.equal(C.f77.bezel.flat, 33.4); assert.equal(+(C.f77.bezel.rx - C.f77.bezel.chRx).toFixed(2), 0.7, 'the chamfer as thin as the 38s');
@@ -814,5 +814,34 @@ test('the F77 41 optimised, and a drawn F77 bracelet (v4.54.0)', () => {
   assert.match(source, /\} else if\(K\.f77 && K\.f77\.bracelet\)\{\n\s+\/\* a drawn F77 \(the 41s\)/);
   assert.match(source, /\+ \(K\.estimate \? `<p class="gNote">\$\{gT\("case\.estimate"\)\}<\/p>` : ""\)/);
   for (const k of ['case.tk41c', 'case.tk41cSub', 'case.estimate']) assert.equal((source.match(new RegExp('"' + k.replace('.', '\\.') + '":', 'g')) || []).length, 2, k + ' in English and Arabic');
-  assert.match(source, /"case\.tk41Sub":"41 mm · reference, estimated"/);
+  assert.match(source, /"case\.tk41Sub":"41 mm · (reference, estimated|Nivada's photograph)"/);
+});
+
+test('the real F77 41, four silver dials, and sets side by side (v4.55.0)', () => {
+  const vm = require('node:vm'); const ctx = vm.createContext({});
+  const a = source.indexOf('const VERNOY_CASE = {'), b = source.indexOf('const CASE_SPEC = new Proxy');
+  vm.runInContext(source.slice(a, b) + '\nthis.r={TK_NIVADA_41,TK_NIVADA_41C};', ctx);
+  const { TK_NIVADA_41: A, TK_NIVADA_41C: C } = ctx.r;
+  assert.equal(A.photoFile, './app/case-nivada-f77-41.jpg'); assert.ok(fs.existsSync(path.join(__dirname, '../app/case-nivada-f77-41.jpg')));
+  assert.deepEqual({ ...A.photoCal }, { w: 1040, h: 1560, cx: 49.73, cy: 43.61, dia: 58.9 });
+  assert.equal(A.opening, 29.17); assert.equal(A.flat, 41); assert.equal(A.bracelet, true);
+  assert.equal(C.photoFile, undefined, 'the optimised 41 stays drawn'); assert.equal(C.opening, 30.2);
+  assert.match(fs.readFileSync(path.join(__dirname, '../sw.js'), 'utf8'), /"\.\/app\/case-nivada-f77-41\.jpg"/);
+  const list = JSON.parse(fs.readFileSync(path.join(__dirname, '../concepts/index.json'), 'utf8'));
+  const set = list.filter(x => x.set === 'F77 41 · Silver & rose gold');
+  assert.deepEqual(set.map(x => x.id), ['f77-41-current', 'f77-41-grand-arabic', 'f77-41-chapter-ring', 'f77-41-concentric', 'f77-41-tapisserie']);
+  for (const c of set) {
+    const d = JSON.parse(fs.readFileSync(path.join(__dirname, '../concepts', c.file), 'utf8'));
+    assert.equal(d.case.model, 'Time Keeper × Nivada · F77 41', c.id); assert.equal(d.meta.set, c.set);
+    assert.equal(d.numerals.system, 'arabic ٠–٩', c.id); assert.equal(d.numerals.metal, 'rose gold', c.id);
+    assert.equal(d.hHand.material, 'rose gold', c.id); assert.ok(/^Nivada /.test(d.text.logoMark), c.id + ": the case's own logo");
+    assert.ok(fs.existsSync(path.join(__dirname, '../concepts', c.picture)), c.picture);
+    if (c.id !== 'f77-41-current') assert.ok(['brushedsteel', 'guilloche'].includes(d.dial.finish), c.id + ': a silver that renders silver');
+  }
+  assert.match(source, /set:String\(c\.set \|\| ""\), ref:j/);
+  assert.match(source, /data-gcmp="\$\{esc2\(set\)\}">\$\{gT\("start\.compare"\)\}/);
+  assert.match(source, /if\(tab === "designs"\) return cmpSet \? compareBlock\(\) : watchesBlock\(\);/);
+  assert.match(source, /thumb\(c\.st, "cmp\|" \+ \(c\.id \|\| "now"\), \{cy:0, side\}\)/, 'one scale for the whole row');
+  for (const k of ['start.compare', 'start.cmpBack', 'start.cmpNow', 'start.cmpTitle', 'start.cmpNote', 'start.cmpFacts'])
+    assert.equal((source.match(new RegExp('"' + k.replace('.', '\\.') + '":', 'g')) || []).length, 2, k + ' in English and Arabic');
 });

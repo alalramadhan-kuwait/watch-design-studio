@@ -1600,20 +1600,33 @@ const TK_NIVADA = {
    The bezel at 12 and 6, the crown and the polished strips keep the 38's
    proportions. No photograph: these are estimates until Nivada sends a
    41 mm drawing. The 38's technical drawings are not used for it. */
+/* v4.55.0: the 41 is now Nivada's own F77 MK2 41 mm front image (the Blue,
+   nivadagrenchenofficial.com), with the dial taken out, the way the 38's
+   photograph is: straightened by its eight bezel screws, which lie on one
+   circle (the camera stood about 20 degrees below square on), set on the
+   studio's grey at 21.0 px a millimetre from the published 41.00 width, the
+   dial area cleared to flat grey, and the old blue dial's reflection in the
+   polished flange turned grey (its brightness kept). The case, bezel,
+   screws, flange, crown, lugs and bracelet are the photograph's own. The
+   visible opening fits a circle of Ø29.17 to half a pixel: that is the
+   opening a dial is drawn into here. The drawing below stays for when the
+   photograph is off. */
 const TK_NIVADA_41 = Object.assign({}, TK_NIVADA, {
   model:"Time Keeper × Nivada · F77 41",
   ref:"Nivada Grenchen F77 MK2 41 mm · Time Keeper study",
   flat:41.00, diagonal:41.00, rSide:20.50, rCorner:20.50,                // Nivada: 41 mm
   midFlat:41.00, midDiagonal:41.00, midRSide:20.50, midRCorner:20.50,
   bezelOD:41.00, bezelID:31.26, land:0.35,
-  lugToLug:50.00, lugWidth:16.30, springBar:1.80,                        // 50 Nivada; the lug width an estimate
+  lugToLug:50.00, lugWidth:24.00, springBar:1.80,                        // 50 Nivada; the bracelet 24 at the lugs (Nivada)
   height:12.05,                                                          // Nivada
-  opening:28.00, glassSeat:31.55, glassD:31.34,
-  dialD:29.00, crownD:6.00,
-  tol:"41.00, 50.00 and 12.05 from Nivada's F77 MK2 41 mm pages; the rest from the 38 mm drawing 103277_3 moved by what Nivada's renders of the 38 and the 41 show: estimates until Nivada sends a 41 mm drawing",
-  band:"black rubber, flat (as the 38 mm; Nivada's 41 mm comes on a 24 × 18 bracelet)",
+  opening:29.17, glassSeat:31.55, glassD:31.34,
+  dialD:30.00, crownD:6.00,
+  tol:"41.00, 50.00 and 12.05 from Nivada's F77 MK2 41 mm pages; the visible opening Ø29.17 measured on Nivada's own front image scaled to the published width; the dial under the flange (Ø30.00) and the drawn case's figures estimated until Nivada sends a 41 mm drawing",
+  band:"Nivada's integrated three-link steel bracelet, 24 × 18 mm (the 41 mm Black and Meteorite pages; the Blue's says 22 × 16)",
+  bracelet:true, clasp:18.00,
   estimate:true,
-  photoFile:undefined, photoCal:undefined, photoOwn:undefined, photoStrap:undefined, photoParts:undefined,
+  photoFile:"./app/case-nivada-f77-41.jpg", photoCal:{w:1040, h:1560, cx:49.73, cy:43.61, dia:58.90},
+  photoOwn:{finish:"brushed"}, photoStrap:undefined, photoParts:undefined,
   f77:{bezel:{rx:20.50, ry:20.05, chRx:19.80, chRy:19.48, flat:31.96, oct:{a:19.25, h:8.20, ch:0.70}},
        body:{top:20.05, lugEnd:25.00, lugOut:11.95, polish:{to:9.93, c:[13.81, 14.13]}},
        lugIn:8.15, screws:{r:18.31, top:23.8, side:22.2, d:1.50},
@@ -1646,6 +1659,8 @@ const TK_NIVADA_41 = Object.assign({}, TK_NIVADA, {
    proposal. */
 const TK_NIVADA_41C = Object.assign({}, TK_NIVADA_41, {
   model:"Time Keeper × Nivada · F77 41 optimised",
+  photoFile:undefined, photoCal:undefined, photoOwn:undefined, bracelet:false, lugWidth:16.30,
+  band:"black rubber, flat (as the 38 mm)",
   ref:"Time Keeper F77 41 mm · optimised proposal (not a Nivada reference)",
   opening:30.20, dialD:31.20, bezelID:32.70, land:0.35, glassSeat:32.99, glassD:32.78,
   tol:"41.00, 50.00 and 12.05 from Nivada's F77 MK2 41 mm pages; everything else a design proposal: the 38's proportions (dial 73.7 % of the width, its bezel steps), real parts at real size; not a Nivada specification. The Ø30.20 opening needs a Ø31.2 dial over the P024 on a larger casing ring, and hands 0.9 / 0.7 mm longer: for Nivada to confirm",
@@ -2371,7 +2386,7 @@ const APP_BUILD = "__BUILD__";
 /* The version people see, raised with every change that reaches them:
    major for a new way of working, minor for something new to do, patch for
    a fix. Shown on the watch screen, so any screenshot says which it was. */
-const APP_VERSION = "4.54.0";
+const APP_VERSION = "4.55.0";
 const APP_DATE = "__DATE__";
 
 /* Every route that replaces S passes through one of these three, which is
@@ -2417,7 +2432,7 @@ function migrateCaseFigures(st){
   const c = st && st.case;
   if(!c || !c.locked || !st.dial || typeof c.opening !== "number") return st;
   const K = CASES[c.model];
-  if(K !== TK_NIVADA || c.opening === K.opening) return st;
+  if((K !== TK_NIVADA && K !== TK_NIVADA_41) || c.opening === K.opening) return st;
   /* deep() hands arrays over by reference, so a design opened from a saved
      version shares its zones, bands and extra sub-dials with the version;
      copy them first, or the version itself would be rescaled in memory */
@@ -17423,6 +17438,10 @@ body.guided .stage.gPhoto{ background:#fff }
 .gWelcome{ font:600 21px/1.2 var(--sans); margin:4px 0 2px; letter-spacing:-.015em; color:var(--ds-text) }
 .gCards.all{ display:grid !important; grid-template-columns:repeat(auto-fill,minmax(96px,1fr)); overflow:visible !important; margin:0 !important; padding:2px 0 6px !important }
 .gCards.all .gCard{ flex:none }
+.gCards.gCmp{ display:grid !important; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)) !important; overflow:visible !important; margin:0 !important; padding:2px 0 8px !important; -webkit-mask-image:none !important; mask-image:none !important }
+.gCards.gCmp .gCard{ flex:none }
+.gCards.gCmp .gName{ white-space:normal; line-height:1.2 }
+.gCards.gCmp .gFacts{ font-size:11px; line-height:1.3; white-space:normal; margin-top:3px; color:var(--ds-muted, #6b6b6b) }
 /* choices as pictures: the part the choice changes, drawn small, three across */
 .gCards.gOpts .gPic{ background:#E9E7E1 }
 .gCards.gOpts .gName{ white-space:normal; line-height:1.2; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; margin-top:3px; font-size:12px }
@@ -17724,6 +17743,10 @@ const GSTR = {en:{
   "prog.aria": (name, n, total) => `${name}, step ${n} of ${total}. Show all steps`,
   "find.ph":"Find a setting", "find.none":"Nothing by that name in this design.",
   "start.concepts":"Concepts",
+  "start.compare":"Compare side by side", "start.cmpBack":"All designs", "start.cmpNow":"Open now, as edited",
+  "start.cmpTitle": set => `${set}: side by side`,
+  "start.cmpNote":"Each on its own case at the same scale. Tap one to open it and edit every part of the dial.",
+  "start.cmpFacts": (n, ml, mw, hl, op) => `Numerals ${n} · minute hand ${ml} × ${mw} mm · hour hand ${hl} mm · opening Ø${op}`,
   "rehaut.note":"The outer chapter ring, or rehaut: the ring between the dial and the bezel, printed with a minute at every dot or tick. It shows on the photograph of the case. The Chapter ring under More options is the band on the dial itself.",
   "dial.granNote":"A coarse grain, each grain a little lighter or darker than the next and the light ones catching the light, as a granular sports dial. Sized in millimetres, so it is the same in every picture.",
   "text.secHidden":"The seconds hand is left out of the picture on this step, so the lettering under it can be read. It is back on the next step.",
@@ -17763,7 +17786,7 @@ const GSTR = {en:{
   /* the third watch; its reference is joined by a hyphen that does not
      break, so a narrow card wraps it after the name, not inside it */
   "card.vernoyRd":"Vernoy RD26‑0172", "card.vernoyRdSub":"Cushion · 36 mm",
-  "case.tk":"Nivada F77 · Time Keeper", "case.tkSub":"38 mm · rubber strap", "case.tk41":"Nivada F77 41 · Time Keeper", "case.tk41Sub":"41 mm · reference, estimated", "case.tk41c":"Nivada F77 41 · optimised", "case.tk41cSub":"41 mm · proposal, estimated",
+  "case.tk":"Nivada F77 · Time Keeper", "case.tkSub":"38 mm · rubber strap", "case.tk41":"Nivada F77 41 · Time Keeper", "case.tk41Sub":"41 mm · Nivada's photograph", "case.tk41c":"Nivada F77 41 · optimised", "case.tk41cSub":"41 mm · proposal, estimated",
   "case.estimate":"This case's figures are estimates. Only its width, lug-to-lug length, thickness and movement come from Nivada; the rest is measured from Nivada's pictures or proposed for this design, and the design sheet lists it that way.",
   "case.norel":"NOREL", "case.norelSub":"41 mm round · current drawing", "case.vernoy":"Vernoy cushion", "case.vernoySub":"36 mm · strap",
   "case.r3":"NOREL R3", "case.r3Sub":"Earlier drawing", "case.d":"NOREL Concept D", "case.dSub":"Earlier proposal",
@@ -17933,6 +17956,10 @@ GSTR.ar = {
   "prog.aria": (name, n, total) => `${name}، الخطوة ${n} من ${total}. عرض كل الخطوات`,
   "find.ph":"ابحث عن إعداد", "find.none":"ما في شي بهالاسم في هالتصميم.",
   "start.concepts":"التصاميم المقترحة",
+  "start.compare":"قارن جنب بعض", "start.cmpBack":"كل التصاميم", "start.cmpNow":"المفتوح الحين، مع تعديلاتك",
+  "start.cmpTitle": set => `${set}: جنب بعض`,
+  "start.cmpNote":"كل تصميم على قالبه وبنفس المقاس. اضغط على أي واحد عشان تفتحه وتعدّل كل جزء في الميناء.",
+  "start.cmpFacts": (n, ml, mw, hl, op) => `الأرقام ${n} · عقرب الدقايق ${ml} × ${mw} ملم · عقرب الساعات ${hl} ملم · الفتحة Ø${op}`,
   "rehaut.note":"الحلقة المدرّجة الخارجية (الريهو): الحلقة اللي بين الميناء والبيزل، مطبوع عليها دقيقة عند كل نقطة أو علامة. تبين على صورة القالب. أما «الحلقة المدرّجة» تحت «خيارات أخرى» فهي الشريط اللي على الميناء نفسه.",
   "dial.granNote":"حبيبات خشنة، كل حبة أفتح أو أغمق شوي من اللي جنبها، والفاتحة تلمع مع الضوء، مثل ميناء الساعات الرياضية المحبّب. مقاسها بالملم، فتطلع نفس الشي في كل صورة.",
   "text.secHidden":"عقرب الثواني مخفي من الصورة في هالخطوة عشان تنقرا الكتابة اللي تحته. ويرجع في الخطوة الجاية.",
@@ -17970,7 +17997,7 @@ GSTR.ar = {
   "card.vernoy":"Vernoy", "card.study":"دراسة تصميم",
   "start.yours":"ساعاتك", "card.tk":"تايم كيبر × نيفادا", "card.tkSub":"فضي وذهبي وردي",
   "card.vernoyRd":"فيرنوي RD26‑0172", "card.vernoyRdSub":"وسادية · 36 ملم",
-  "case.tk":"نيفادا F77 · تايم كيبر", "case.tkSub":"38 ملم · حزام مطاطي", "case.tk41":"نيفادا F77 41 · تايم كيبر", "case.tk41Sub":"41 ملم · مرجع، تقديري", "case.tk41c":"نيفادا F77 41 · مُحسَّن", "case.tk41cSub":"41 ملم · مقترح، تقديري",
+  "case.tk":"نيفادا F77 · تايم كيبر", "case.tkSub":"38 ملم · حزام مطاطي", "case.tk41":"نيفادا F77 41 · تايم كيبر", "case.tk41Sub":"41 ملم · صورة نيفادا", "case.tk41c":"نيفادا F77 41 · مُحسَّن", "case.tk41cSub":"41 ملم · مقترح، تقديري",
   "case.estimate":"مقاسات هذا القالب تقديرية. العرض والطول من العروة للعروة والسماكة والمحرك فقط من نيفادا، والباقي مقاس من صور نيفادا أو مقترح لهذا التصميم، وورقة التصميم تذكره كذلك.",
   "case.norel":"NOREL", "case.norelSub":"دائرية 41 ملم · الرسم الحالي", "case.vernoy":"Vernoy وسادية", "case.vernoySub":"36 ملم · حزام",
   "case.r3":"NOREL R3", "case.r3Sub":"رسم سابق", "case.d":"NOREL Concept D", "case.dSub":"مقترح سابق",
@@ -19160,7 +19187,7 @@ Object.assign(GWORD.ar, {
   /* the concepts kept in the repository (concepts/index.json): each a design
      file made in the studio, shown as a card on the start screen */
   fetch("./concepts/index.json").then(r => r.ok ? r.json() : []).then(list => Promise.all((Array.isArray(list) ? list : []).slice(0, 40).map(c =>
-    fetch("./concepts/" + encodeURIComponent(c.file)).then(r => r.ok ? r.json() : null).then(j => j ? {id:"c:" + c.id, name:String(c.name || ""), sub:String(c.sub || ""), ref:j} : null).catch(() => null))))
+    fetch("./concepts/" + encodeURIComponent(c.file)).then(r => r.ok ? r.json() : null).then(j => j ? {id:"c:" + c.id, name:String(c.name || ""), sub:String(c.sub || ""), set:String(c.set || ""), ref:j} : null).catch(() => null))))
     .then(all => { conceptRefs = all.filter(Boolean); if(conceptRefs.length && STEPS[step].k === "case") paint(); }).catch(() => {});
   /* the second watch, the Time Keeper × Nivada; a first visit still opens on the NOREL */
   fetch("./designs/timekeeper-nivada.json").then(r => r.ok ? r.json() : null).then(j => { if(j){ tkRef = j; casePhoto(caseOf(j)); if(STEPS[step].k === "case") paint(); } }).catch(()=>{});
@@ -19593,7 +19620,14 @@ Object.assign(GWORD.ar, {
     const vers = (versions || []).map((v,i) => ({id:"v:"+i, name:v.name, sub:v.at ? when(v.at) : gT("start.version"), st:v.state ? migrateHands(deep(BASE, v.state)) : null})).filter(c => c.st).reverse();
     h += `<div class="gSavedHead"><h3>${gT("start.versions", vers.length)}</h3><button type="button" class="gGo" data-gdo="keep">${gT("start.saveNow")}</button></div>`
       + (vers.length ? `<div class="gCards">${vers.map(card).join("")}</div>` : `<p class="gNote">${gT("start.noneSaved")}</p>`);
-    if(conceptRefs.length) h += `<h3>${gT("start.concepts")}</h3><div class="gCards">${conceptRefs.map(c => card({id:c.id, name:c.name, sub:c.sub, st:migrateHands(deep(BASE, c.ref))})).join("")}</div>`;
+    /* concepts made as a set (a brief answered several ways) come together,
+       each set with its way to line them up side by side */
+    const sets = [...new Set(conceptRefs.map(c => c.set).filter(Boolean))];
+    for(const set of sets)
+      h += `<div class="gSavedHead"><h3>${esc2(set)}</h3><button type="button" class="gGo" data-gcmp="${esc2(set)}">${gT("start.compare")}</button></div>`
+        + `<div class="gCards">${conceptRefs.filter(c => c.set === set).map(c => card({id:c.id, name:c.name, sub:c.sub, st:migrateHands(deep(BASE, c.ref))})).join("")}</div>`;
+    const loose = conceptRefs.filter(c => !c.set);
+    if(loose.length) h += `<h3>${gT("start.concepts")}</h3><div class="gCards">${loose.map(c => card({id:c.id, name:c.name, sub:c.sub, st:migrateHands(deep(BASE, c.ref))})).join("")}</div>`;
     /* everything else to start from, folded away until asked for */
     if(noreRef) cards.push({id:"norel-gems", name:gT("card.gems"), sub:gT("card.gemsSub"), st:gemExample("gems")},
                            {id:"norel-pave", name:gT("card.pave"), sub:gT("card.paveSub"), st:gemExample("pave")});
@@ -19604,12 +19638,30 @@ Object.assign(GWORD.ar, {
     }
     return h;
   }
+  /* A set of designs side by side (v4.55.0): every design in it on its own
+     case, each picture the same number of millimetres across, so a dial
+     larger or smaller in one reads that way; the design open now, when it
+     belongs to the set, first as it stands. Tap one to open it and edit it.
+     The figures under each are the ones the eye weighs first. */
+  let cmpSet = "";
+  function compareBlock(){
+    const list = conceptRefs.filter(c => c.set === cmpSet).map(c => ({id:c.id, name:c.name, sub:c.sub, st:migrateHands(deep(BASE, c.ref))}));
+    if(S.meta && S.meta.set === cmpSet) list.unshift({id:"", name:S.meta.name, sub:gT("start.cmpNow"), st:S});
+    const side = Math.max(...list.map(c => caseOf(c.st).flat))*1.12;
+    const facts = st => { const n = st.numerals || {}, nm = n.on ? `${get(st, "numerals.heightMM").toFixed(1)} mm` : "—";
+      return gT("start.cmpFacts", nm, f(st.mHand.length, 1), f(st.mHand.width, 2), f(st.hHand.length, 1), f(+st.case.opening, 2)); };
+    let h = `<div class="gSavedHead"><h3>${esc2(gT("start.cmpTitle", cmpSet))}</h3><button type="button" class="gGo" data-gcmp="">${gT("start.cmpBack")}</button></div>`;
+    h += `<p class="gNote">${gT("start.cmpNote")}</p><div class="gCards gCmp">` + list.map(c =>
+      `<button type="button" class="gCard" ${c.id ? `data-gstart="${esc2(c.id)}"` : `data-gstep="1"`}><div class="gPic">${thumb(c.st, "cmp|" + (c.id || "now"), {cy:0, side})}</div>`
+      + `<div class="gName">${esc2(c.name)}</div><div class="gSub">${esc2(c.sub)}</div><div class="gSub gFacts">${esc2(facts(c.st))}</div></button>`).join("") + `</div>`;
+    return h;
+  }
   const VIEW = {
     case(tab){
       const K = caseOf(S);
       /* every design in one place: the watches being made, the studio's
          concepts and the versions saved here, with Save at hand */
-      if(tab === "designs") return watchesBlock();
+      if(tab === "designs") return cmpSet ? compareBlock() : watchesBlock();
       if(tab === "shape"){
         /* each case is shown wearing this dial, the way picking it would leave it */
         const pic = m => {
@@ -20765,8 +20817,9 @@ Object.assign(GWORD.ar, {
     }
     if(d.gmark){ const k = d.gmark; soon(t, () => setMarkers(k)); return; }
     if(d.ghand){ const hs = d.ghand; soon(t, () => setHand(hs)); return; }
+    if(d.gcmp !== undefined){ cmpSet = d.gcmp; paint(); const b = document.querySelector(".gBody"); if(b) b.scrollTop = 0; return; }
     if(d.gstart){
-      const id = d.gstart;
+      const id = d.gstart; cmpSet = "";
       soon(t, () => {
         let st = null;
         if(id === "fresh") st = freshState();

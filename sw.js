@@ -46,9 +46,15 @@ const SHELL = [
   /* the second watch: the Time Keeper × Nivada case photograph and the design
      its Start card opens */
   "./app/case-timekeeper-nivada.jpg",
+  "./app/case-nivada-f77-41.jpg",
   "./designs/timekeeper-nivada.json",
   /* the concepts on the start screen, so they open offline too */
   "./concepts/index.json",
+  "./concepts/f77-41-current.json",
+  "./concepts/f77-41-grand-arabic.json",
+  "./concepts/f77-41-chapter-ring.json",
+  "./concepts/f77-41-concentric.json",
+  "./concepts/f77-41-tapisserie.json",
   "./concepts/chocolat-77.json",
   "./concepts/piste-77-noir-rose.json",
   "./concepts/piste-77-meteorite.json",

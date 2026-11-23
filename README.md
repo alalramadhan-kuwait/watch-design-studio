@@ -200,6 +200,37 @@ stored in a design file do not change. In the full editor at laptop widths
 the toolbar sits tighter, and on a narrower window it takes a second row
 rather than pushing Share and Export off the screen.
 
+## The real F77 41, four silver dials for it, and sets side by side (v4.55.0)
+
+**The F77 41 is Nivada's own photograph.** The 41 mm case is now Nivada's
+front image of the F77 MK2 41 mm, prepared as the 38's photograph is:
+straightened by its eight bezel screws, set on the studio's grey at 21 px a
+millimetre from the published 41 mm, the dial taken out and the old dial's
+blue reflection in the flange turned grey. The case, bezel, screws, flange,
+crown and bracelet are the photograph's own; the dial is drawn into its
+visible opening, Ø29.17 measured on the image. The drawn 41 (optimised)
+stays as it was, a proposal on the drawing.
+
+**Four silver dials for it**, with Arabic numerals and rose gold, made with
+the studio's own tools and kept as designs, beside the current design moved
+onto the 41 as the reference to beat (Designs, "F77 41 · Silver & rose
+gold"):
+- *Grand Arabic*: numerals 3.9 mm (from 3.0), bolder, out to the edge;
+  broad dauphine hands; a rose-gold minute track; a larger logo.
+- *Chapter Ring*: a satin ring from Ø26.6 to the flange carries a railroad
+  track and a rose-gold line, so the dial reads out to the steel; baton
+  hands.
+- *Concentric*: circular-brushed silver that draws the eye outward; finer
+  numerals 3.6 mm; leaf hands; rose-gold dots at every minute.
+- *Tapisserie*: woven silver, the quarters in numerals 4.0 mm, rose-gold
+  F77 batons between, the F77 hands.
+
+**Sets side by side.** Designs made as a set come together under Designs,
+with **Compare side by side**: every design in the set on its own case at
+the same scale, with its numeral height, hand sizes and opening under it.
+Tap one to open it and edit any part; the design open now leads the row as
+edited.
+
 ## The F77 41 optimised, and a drawn bracelet (v4.54.0)
 
 A second 41 mm case, **Nivada F77 41 · optimised**, beside the 41 mm
