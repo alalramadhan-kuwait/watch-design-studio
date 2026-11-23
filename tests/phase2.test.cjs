@@ -666,3 +666,9 @@ test('a Strap step (v4.48.0)', () => {
   assert.match(source, /"step\.strap":"Strap"/); assert.match(source, /"step\.strap":"الحزام"/);
   assert.match(source, /<g>|stepIcon/); assert.match(chunk('const STEP_ICON = {', '\n  };'), /\n    strap:'</);
 });
+
+test('larger step icons (v4.48.1)', () => {
+  assert.match(source, /\.gProg\{ display:flex; flex-wrap:wrap;/, 'the steps on a row of their own');
+  assert.match(source, /\.gProgBar\{ flex:1 1 100%;/);
+  assert.match(source, /\.gProgBar button b\{ display:grid; place-items:center; width:100%; height:42px;/);
+});

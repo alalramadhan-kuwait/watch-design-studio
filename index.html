@@ -2292,7 +2292,7 @@ const APP_BUILD = "__BUILD__";
 /* The version people see, raised with every change that reaches them:
    major for a new way of working, minor for something new to do, patch for
    a fix. Shown on the watch screen, so any screenshot says which it was. */
-const APP_VERSION = "4.48.0";
+const APP_VERSION = "4.48.1";
 const APP_DATE = "__DATE__";
 
 /* Every route that replaces S passes through one of these three, which is
@@ -17398,16 +17398,18 @@ body:not(.guided) #gStartMore{ display:none }
   body.guided #mTop .ico[aria-label="Export"]{ display:none !important }
   body.guided #mTop .ico{ width:44px; height:44px; font-size:19px }
   .gSteps{ display:none }
-  .gProg{ display:flex; align-items:center; gap:10px; padding:4px 12px 2px 16px; flex:none }
+  /* the step's name on its own line, the eight steps on a row of their own
+     under it, full width, so each icon is large enough to read and to tap */
+  .gProg{ display:flex; flex-wrap:wrap; align-items:center; gap:2px 10px; padding:4px 12px 2px 16px; flex:none }
   .gProgLbl{ flex:none; display:flex; align-items:center; gap:4px; min-height:44px; border:0; background:none; padding:0;
     font:600 15px/1.2 var(--sans); color:var(--ds-text); white-space:nowrap; cursor:pointer }
   .gProgLbl span{ font-weight:400; color:var(--ds-text-2) }
   .gProgLbl i{ font-style:normal }
   .gProgLbl::after{ content:"▾"; font-size:11px; color:var(--ds-text-2); margin-left:2px }
-  .gProgBar{ flex:1; min-width:0; display:flex; gap:3px }
-  .gProgBar button{ flex:1 1 0; min-width:0; height:44px; border:0; background:none; padding:0; position:relative; cursor:pointer;
+  .gProgBar{ flex:1 1 100%; min-width:0; display:flex; gap:5px }
+  .gProgBar button{ flex:1 1 0; min-width:0; height:48px; border:0; background:none; padding:0; position:relative; cursor:pointer;
     display:grid; place-items:center }
-  .gProgBar button b{ display:grid; place-items:center; width:100%; height:30px; border-radius:8px; background:var(--ds-fill, rgba(120,120,128,.14));
+  .gProgBar button b{ display:grid; place-items:center; width:100%; height:42px; border-radius:10px; background:var(--ds-fill, rgba(120,120,128,.14));
     font:600 12px/1 var(--sans); color:var(--ds-text-2) }
   .gProgBar button b svg{ display:block }
   .gProgBar button.done b{ background:var(--ds-brand); color:#15181C }
@@ -20260,7 +20262,7 @@ Object.assign(GWORD.ar, {
     stepsEl.innerHTML = STEPS.map((s,i) => `<button type="button" role="tab" aria-selected="${i===step}" data-gstep="${i}" class="${cls(i)}"><b>${stepIcon(s.k, 13)}</b>${s.t}</button>`).join("");
     const s = STEPS[step];
     progEl.innerHTML = `<button type="button" class="gProgLbl" data-glist="1" aria-label="${esc2(gT("prog.aria", s.t, step+1, STEPS.length))}">${gT("prog", s.t, step+1, STEPS.length)}</button>`
-      + `<div class="gProgBar">${STEPS.map((x,i) => `<button type="button" data-gstep="${i}" class="${cls(i)}" aria-label="${esc2(x.t)}${warnNow[x.k] ? " — " + esc2(warnNow[x.k][0].text) : ""}" title="${esc2(x.t)}"><b>${stepIcon(x.k, 19)}</b></button>`).join("")}</div>`;
+      + `<div class="gProgBar">${STEPS.map((x,i) => `<button type="button" data-gstep="${i}" class="${cls(i)}" aria-label="${esc2(x.t)}${warnNow[x.k] ? " — " + esc2(warnNow[x.k][0].text) : ""}" title="${esc2(x.t)}"><b>${stepIcon(x.k, 26)}</b></button>`).join("")}</div>`;
     const tabs = tabsNow(), tab = curTab();
     tabsEl.hidden = !tabs.length;
     const wt = warnTab[s.k] || {}, wTabs = new Set((warnNow[s.k] || []).map(w => wt[w.fix] || w.tab).filter(Boolean));

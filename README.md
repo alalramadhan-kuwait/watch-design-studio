@@ -200,6 +200,12 @@ stored in a design file do not change. In the full editor at laptop widths
 the toolbar sits tighter, and on a narrower window it takes a second row
 rather than pushing Share and Export off the screen.
 
+## Larger step icons (v4.48.1)
+
+On a phone the eight step icons sat in a row beside the step's name, each
+about 30 px. They have a row of their own under it now, full width: each
+button 42 px tall and nearly half again as wide, the icon 26 px (was 19).
+
 ## A Strap step (v4.48.0)
 
 The strap or bracelet has a step of its own, the seventh of eight, between the
