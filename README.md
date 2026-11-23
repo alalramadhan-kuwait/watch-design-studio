@@ -200,6 +200,17 @@ stored in a design file do not change. In the full editor at laptop widths
 the toolbar sits tighter, and on a narrower window it takes a second row
 rather than pushing Share and Export off the screen.
 
+## The Breguet figures take their thickness (v4.51.1)
+
+The drawn Breguet set ignored "Thickness" altogether: it is drawn at 100
+units and scaled to the figure, and its weight was never applied, printed,
+applied or engraved. It now takes it as the Vernoy set does, in mm on the
+dial (`kOf`). A widened engraved cut keeps its fill: its bevel is a bright
+wall drawn round the widened figure and the fill laid over it, where before a
+band as wide as the widening was drawn over a thin stroke and greyed it.
+Gin's figures are 0.08 thicker, to the stroke weight of the dial it follows.
+Every other saved design draws as before.
+
 ## Gin: a hand-engraved German silver dial (v4.51.0)
 
 A new design under Designs, **Gin** (銀, silver), on the Vernoy cushion,

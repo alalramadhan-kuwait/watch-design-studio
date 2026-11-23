@@ -2292,7 +2292,7 @@ const APP_BUILD = "__BUILD__";
 /* The version people see, raised with every change that reaches them:
    major for a new way of working, minor for something new to do, patch for
    a fix. Shown on the watch screen, so any screenshot says which it was. */
-const APP_VERSION = "4.51.0";
+const APP_VERSION = "4.51.1";
 const APP_DATE = "__DATE__";
 
 /* Every route that replaces S passes through one of these three, which is
@@ -6193,7 +6193,9 @@ function buildSVG(st, o={}){
       /* k: the scale the figure's own drawing sits under (the path-drawn
          Vernoy figures are drawn at 100 and scaled), so the band is w on the
          dial whatever the drawing's units; k 0: the face thins itself (Breguet) */
-      const kOf = ns => styleUsed === "vernoy" ? ns/100 : styleUsed === "breguet" ? 0 : 1;
+      /* both drawn sets are drawn at 100 and scaled to the figure (since
+         4.51.1 the Breguet set too: its thickness had done nothing) */
+      const kOf = ns => styleUsed === "vernoy" || styleUsed === "breguet" ? ns/100 : 1;
       const thinned = (markup, w, k = 1) => {
         if(!(w > 0) || !(k > 0)) return markup;
         w = w/k;
@@ -6255,13 +6257,13 @@ function buildSVG(st, o={}){
                 + `<feGaussianBlur stdDeviation="${f((1-E.sharp)*0.35*E.s,4)}"/></filter>`);
       }
       const cutW = weight > 0 ? weight : 0;
-      const engrave = gid => {
+      const engrave = (gid, kE = 1) => {      // kE: the scale the figure is drawn under, so a widened cut is mm on the dial
         const mb = id("nmb"), md = id("nmd"), ml = id("nml");
         const box = ` maskUnits="userSpaceOnUse" x="-40" y="-40" width="80" height="80"`;
         /* a widened cut widens every copy the same way, so the bands follow
            the widened outline rather than the letter's own */
         const thick = cutW > 0
-          ? ` stroke-width="${f(cutW,3)}" stroke-linejoin="round" paint-order="stroke fill"` : "";
+          ? ` stroke-width="${f(cutW/kE,4)}" stroke-linejoin="round" paint-order="stroke fill"` : "";
         const solid = (fill, dx, dy, extra) =>
           `<use href="#${gid}" x="${f(dx,4)}" y="${f(dy,4)}" fill="${fill}"`
           + (cutW > 0 ? ` stroke="${fill}"${thick}` : ` stroke="none"`) + (extra||"") + `/>`;
@@ -6276,9 +6278,23 @@ function buildSVG(st, o={}){
         defs.push(`<mask id="${md}"${box}>${solid("#fff",0,0)}${solid("#000",-nlx*E.s,-nly*E.s)}</mask>`);
         defs.push(`<mask id="${ml}"${box}>${solid("#fff",0,0)}${solid("#000", nlx*E.h, nly*E.h)}</mask>`);
         const soft = softId ? ` filter="url(#${softId})"` : "";
+        /* A widened cut: its bevel is the bright wall round the fill, a band
+           E.b wide outside the widened figure, so it is drawn first, masked
+           to the figure grown by the bevel, and the fill laid over it; drawn
+           over the fill, as before, a band as wide as the widening swallowed
+           a thin stroke and greyed the fill. */
+        if(cutW > 0 && E.b > 0.0005){
+          const mw = id("nmw");
+          defs.push(`<mask id="${mw}"${box}><use href="#${gid}" fill="#fff" stroke="#fff" stroke-width="${f((cutW + 2*E.b)/kE,4)}" stroke-linejoin="round"/></mask>`);
+          return `<g><use href="#${gid}" fill="${cutBevel}" stroke="${cutBevel}" stroke-width="${f((cutW + 2*E.b)/kE,4)}" stroke-linejoin="round" mask="url(#${mw})" opacity="0.85"/>`
+            + solid(floorCol,0,0,floorOp)
+            + solid(cutDark, 0, 0, ` mask="url(#${md})" opacity="${f(E.sh,3)}"${soft}`)
+            + solid(cutLite, 0, 0, ` mask="url(#${ml})" opacity="${f(E.hi,3)}"${soft}`)
+            + `</g>`;
+        }
         return `<g>${solid(floorCol,0,0,floorOp)}`
           + (E.b > 0.0005
-              ? `<use href="#${gid}" fill="none" stroke="${cutBevel}" stroke-width="${f(cutW+2*E.b,4)}"`
+              ? `<use href="#${gid}" fill="none" stroke="${cutBevel}" stroke-width="${f((cutW+2*E.b)/kE,4)}"`
                 + ` stroke-linejoin="round" mask="url(#${mb})" opacity="0.5"/>` : "")
           + solid(cutDark, 0, 0, ` mask="url(#${md})" opacity="${f(E.sh,3)}"${soft}`)
           + solid(cutLite, 0, 0, ` mask="url(#${ml})" opacity="${f(E.hi,3)}"${soft}`)
@@ -6593,7 +6609,7 @@ function buildSVG(st, o={}){
           const gid = id("ng");
           const gT = weight < 0 ? thinned(g, -weight, kOf(ns)) : g;          // an engraving cut finer
           defs.push(`<g id="${gid}">${rot && !onArc ? `<g${rot}>${gT}</g>` : gT}</g>`);
-          body.push(engrave(gid));
+          body.push(engrave(gid, kOf(ns)));
           continue;
         }
         const wrapped = wrap(g, kOf(ns));

@@ -742,3 +742,12 @@ test('Gin: a hand-engraved German silver dial (v4.51.0)', () => {
   assert.match(d.sheet.research.avoid, /Naoya Hida/);
   assert.match(source, /SEL\("chapter\.finish","Finish",\["flat","matte","gloss","sunburst","grained","enamel","brushedsteel","circular","sandblasted"\]\)/);
 });
+
+test('the Breguet figures take their thickness (v4.51.1)', () => {
+  assert.match(source, /const kOf = ns => styleUsed === "vernoy" \|\| styleUsed === "breguet" \? ns\/100 : 1;/);
+  assert.match(source, /body\.push\(engrave\(gid, kOf\(ns\)\)\);/);
+  assert.match(source, /stroke-width="\$\{f\(cutW\/kE,4\)\}"/, 'a widened cut is mm on the dial');
+  assert.match(source, /if\(cutW > 0 && E\.b > 0\.0005\)\{/, 'the bevel under the fill when widened');
+  const d = JSON.parse(fs.readFileSync(path.join(__dirname, '../concepts/gin.json'), 'utf8'));
+  assert.equal(d.numerals.style, 'breguet'); assert.equal(d.numerals.weight, 0.08);
+});
