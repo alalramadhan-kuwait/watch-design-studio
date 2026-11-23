@@ -686,3 +686,9 @@ test('the dial shows what it is made of (v4.48.2)', () => {
   assert.match(source, /else if\(path === "dial\.blank"\) dialBlankSet\(S, v\);/, 'simple mode');
   assert.match(source, /if\(p === "dial\.blank" && typeof dialBlankSet === "function"\)\{ dialBlankSet\(S, v\); return; \}/, 'the full editor');
 });
+
+test('changing the figures keeps the hour plots (v4.48.3)', () => {
+  const F = chunk('  function setMarkers(k){', '\n  /* ---- framing');
+  assert.match(F, /if\(!n\.on \|\| S\.markers\.perHour\) ix\.on = false;\n      n\.on = true;/, 'indices go only when figures replace batons or nothing');
+  assert.doesNotMatch(F, /n\.on = true; ix\.on = false;/);
+});

@@ -2292,7 +2292,7 @@ const APP_BUILD = "__BUILD__";
 /* The version people see, raised with every change that reaches them:
    major for a new way of working, minor for something new to do, patch for
    a fix. Shown on the watch screen, so any screenshot says which it was. */
-const APP_VERSION = "4.48.2";
+const APP_VERSION = "4.48.3";
 const APP_DATE = "__DATE__";
 
 /* Every route that replaces S passes through one of these three, which is
@@ -20129,7 +20129,11 @@ Object.assign(GWORD.ar, {
     if(k === "batons"){ n.on = false; ix.on = true; ix.style = ix.style || "baton"; }
     else if(k === "none"){ n.on = false; ix.on = false; }
     else {
-      n.on = true; ix.on = false;
+      /* from batons or a clean dial, the figures take the indices' place;
+         from other figures, only the figures change: the plots, batons or
+         dots between them stay as they were */
+      if(!n.on || S.markers.perHour) ix.on = false;
+      n.on = true;
       const sys = {arabic:"arabic ٠–٩", western:"western 0–9", roman:"roman I–XII"}[k];
       n.system = sys; const ok = stylesFor(sys); if(ok.indexOf(n.style) < 0) n.style = ok[0];
     }

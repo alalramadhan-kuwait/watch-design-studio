@@ -200,6 +200,14 @@ stored in a design file do not change. In the full editor at laptop widths
 the toolbar sits tighter, and on a narrower window it takes a second row
 rather than pushing Share and Export off the screen.
 
+## Changing the figures keeps the hour plots (v4.48.3)
+
+Markers › Style: choosing Arabic-Indic, Western or Roman figures turned the
+indices off every time, so on Noir 77 the square plots went with the
+Western figures. Now that happens only when figures replace batons or a
+clean dial; going from one set of figures to another changes only the
+figures, and the plots, batons or dots between them stay.
+
 ## The dial shows what it is made of (v4.48.2)
 
 Choosing a solid gold blank under "Dial made of" only told the maker's
