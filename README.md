@@ -200,6 +200,31 @@ stored in a design file do not change. In the full editor at laptop widths
 the toolbar sits tighter, and on a narrower window it takes a second row
 rather than pushing Share and Export off the screen.
 
+## The F77 41 optimised, and a drawn bracelet (v4.54.0)
+
+A second 41 mm case, **Nivada F77 41 · optimised**, beside the 41 mm
+reference (A), which stays as it was: Nivada's proportions as their renders
+show them. The optimised case is a design proposal, not a Nivada
+reference. It keeps the 38's balance where it shapes the look, and leaves
+real parts at their real size rather than scaling everything:
+- the dial opening at the 38's share of the width, 41 × 28/38 = 30.2 (a
+  Ø31.2 dial over the P024 on a larger casing ring, for Nivada to confirm);
+  a design moved onto it has its numerals, logo, lines and hands grown with
+  the opening;
+- the bezel's brushed top from Ø33.40, with the polished bevel (0.35) and
+  the outer chamfer (0.70) as thin as the 38's;
+- the screws Ø1.50 as on the 38, at the same place across the brushed top
+  (R18.44);
+- outline, lugs, crown, strap and bracelet as the 41 reference.
+
+Both 41s are drawn, and both now draw Nivada's three-link bracelet when
+Steel bracelet is chosen: 24 × 18 mm on the 41s, 22 × 16 on the 38 (from
+Nivada's pages; the taper, link pitch and centre link are estimates). The
+Strap step offers Rubber or Steel bracelet on them, as on the 38's
+photograph. The Case step says, under the cards, when a case's figures are
+estimates, and the 41 reference is labelled as such. Only 41 mm, 50 mm lug
+to lug, 12.05 mm and the movement are Nivada's figures for either 41.
+
 ## The F77 in 41 mm (v4.53.0)
 
 A new case, **Nivada F77 41 · Time Keeper**, beside the 38. Nivada's F77

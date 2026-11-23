@@ -24,8 +24,8 @@ vm.runInContext(chunk('const VERNOY_CASE = {', 'const CASE_SPEC = new Proxy')
   + '\nthis.r={CASES,CASE_MODELS,VERNOY_CASE,NOREL_R3,NOREL_D,NOREL_R4,TK_NIVADA,hasPhoto};', cases);
 const C = cases.r;
 
-test('every case has a photograph, the Vernoy its built-in one (the F77 41 is drawn)', () => {
-  for (const m of C.CASE_MODELS) assert.equal(C.hasPhoto(C.CASES[m]), m !== 'Time Keeper × Nivada · F77 41', m);
+test('every case has a photograph, the Vernoy its built-in one (the F77 41s are drawn)', () => {
+  for (const m of C.CASE_MODELS) assert.equal(C.hasPhoto(C.CASES[m]), !/F77 41/.test(m), m);
   assert.equal(C.VERNOY_CASE.photoFile, undefined, 'the Vernoy keeps no file of its own');
   assert.equal(C.VERNOY_CASE.photo, true);
   assert.deepEqual({ ...C.VERNOY_CASE.photoOwn }, { finish: 'polished', strapColor: '#4E3629', strap: 'brown' });

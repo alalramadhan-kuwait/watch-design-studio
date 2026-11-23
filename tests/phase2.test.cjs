@@ -785,7 +785,34 @@ test('the F77 in 41 mm (v4.53.0)', () => {
   assert.match(K.tol, /estimates until Nivada sends a 41 mm drawing/);
   // drawn: no photograph, and not the 38's drawings
   assert.equal(K.photoFile, undefined); assert.equal(K.sheet.drawings, null); assert.ok(K38.sheet.drawings, 'the 38 keeps its own');
-  assert.match(source, /const now = \[NOREL_R4\.model, TK_NIVADA\.model, TK_NIVADA_41\.model, VERNOY_CASE\.model\]/);
-  assert.match(source, /"case\.tk41":"Nivada F77 41 · Time Keeper", "case\.tk41Sub":"41 mm · drawn, figures estimated"/);
+  assert.match(source, /const now = \[NOREL_R4\.model, TK_NIVADA\.model, TK_NIVADA_41\.model(, TK_NIVADA_41C\.model)?, VERNOY_CASE\.model\]/);
+  assert.match(source, /"case\.tk41":"Nivada F77 41 · Time Keeper", "case\.tk41Sub":"41 mm · (drawn, figures estimated|reference, estimated)"/);
   assert.match(source, /"case\.tk41":"نيفادا F77 41 · تايم كيبر"/);
+});
+
+test('the F77 41 optimised, and a drawn F77 bracelet (v4.54.0)', () => {
+  const vm = require('node:vm'); const ctx = vm.createContext({});
+  const a = source.indexOf('const VERNOY_CASE = {'), b = source.indexOf('const CASE_SPEC = new Proxy');
+  vm.runInContext(source.slice(a, b) + '\nthis.r={CASES,TK_NIVADA,TK_NIVADA_41,TK_NIVADA_41C};', ctx);
+  const { CASES, TK_NIVADA: K38, TK_NIVADA_41: A, TK_NIVADA_41C: C } = ctx.r;
+  assert.equal(CASES['Time Keeper × Nivada · F77 41 optimised'], C);
+  // A stays the reference
+  assert.equal(A.opening, 28); assert.equal(A.f77.bezel.flat, 31.96); assert.equal(A.f77.screws.r, 18.31);
+  // C: the 38's share of the width, real parts at real size
+  assert.equal(C.opening, 30.2); assert.ok(Math.abs(C.opening/C.flat - K38.opening/K38.flat) < 0.001, "the 38's dial share");
+  assert.equal(C.f77.bezel.flat, 33.4); assert.equal(+(C.f77.bezel.rx - C.f77.bezel.chRx).toFixed(2), 0.7, 'the chamfer as thin as the 38s');
+  assert.equal(C.f77.screws.d, 1.5); assert.equal(C.f77.screws.r, 18.44); assert.equal(C.crownD, 6);
+  assert.equal(C.lugToLug, 50); assert.equal(C.height, 12.05); assert.equal(C.movement, K38.movement); assert.equal(C.calendar, undefined);
+  assert.deepEqual(C.logo, K38.logo); assert.equal(C.photoFile, undefined); assert.equal(C.sheet.drawings, null);
+  assert.ok(A.estimate && C.estimate && !K38.estimate, 'the 41s are marked as estimates');
+  assert.match(C.tol, /design proposal/); assert.match(C.tol, /not a Nivada specification/);
+  // the bracelet: Nivada's widths
+  assert.deepEqual([K38.f77.bracelet.w0*2, K38.f77.bracelet.w1*2], [22, 16]);
+  assert.deepEqual([A.f77.bracelet.w0*2, A.f77.bracelet.w1*2], [24, 18]); assert.equal(C.f77.bracelet, A.f77.bracelet);
+  assert.match(source, /const BR = c\.strap && c\.strapType === "bracelet" && F\.bracelet;/);
+  assert.match(source, /if\(c\.strap && !BR\)\{/, 'the rubber strap only when no bracelet');
+  assert.match(source, /\} else if\(K\.f77 && K\.f77\.bracelet\)\{\n\s+\/\* a drawn F77 \(the 41s\)/);
+  assert.match(source, /\+ \(K\.estimate \? `<p class="gNote">\$\{gT\("case\.estimate"\)\}<\/p>` : ""\)/);
+  for (const k of ['case.tk41c', 'case.tk41cSub', 'case.estimate']) assert.equal((source.match(new RegExp('"' + k.replace('.', '\\.') + '":', 'g')) || []).length, 2, k + ' in English and Arabic');
+  assert.match(source, /"case\.tk41Sub":"41 mm · reference, estimated"/);
 });

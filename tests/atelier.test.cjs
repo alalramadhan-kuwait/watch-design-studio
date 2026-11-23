@@ -68,7 +68,7 @@ vm.runInContext(chunk('const VERNOY_CASE = {','const CASE_SPEC = new Proxy')+chu
   +chunk('  function contrast(a,b)', '  function brief()')+'\nthis.r={CASES,caseOf,VERNOY_CASE,NOREL_R3,NOREL_D,NOREL_R4,checks};',caseCtx);
 const {CASES,caseOf,VERNOY_CASE,NOREL_R3,NOREL_D,NOREL_R4,checks:caseChecks}=caseCtx.r;
 test('the NOREL cases carry the SW240-1 calendar, and an unknown case falls back to the Vernoy',()=>{
-  assert.equal(Object.keys(CASES).length,6);
+  assert.equal(Object.keys(CASES).length,7);
   assert.equal(caseOf({case:{model:'no such case'}}),VERNOY_CASE);
   assert.equal(caseOf({case:{}}),VERNOY_CASE);
   for(const K of [NOREL_R3,NOREL_D,NOREL_R4]){

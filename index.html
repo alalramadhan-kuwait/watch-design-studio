@@ -1555,7 +1555,13 @@ const TK_NIVADA = {
   f77:{bezel:{rx:19.00, ry:18.55, chRx:18.30, chRy:17.98, flat:30.96, oct:{a:17.75, h:7.60, ch:0.70}},
        body:{top:18.55, lugEnd:23.10, lugOut:11.40, polish:{to:9.20, c:[12.80, 13.10]}},
        lugIn:7.15, screws:{r:17.06, top:23.8, side:22.2, d:1.50},
-       crown:{x0:19.15, xb:19.55, x1:22.35, collar:5.05}, strap:{w0:11.25, w1:9.20, y1:32.6}},
+       crown:{x0:19.15, xb:19.55, x1:22.35, collar:5.05}, strap:{w0:11.25, w1:9.20, y1:32.6},
+       /* Nivada's integrated three-link bracelet, drawn when a bracelet is
+          chosen and the photograph is off: 22 mm at the lugs tapering to 16
+          at the clasp (Nivada's F77 MK2 38 mm page); the taper's length, the
+          link pitch and the centre link's share are estimates read off
+          Nivada's front render */
+       bracelet:{w0:11.00, w1:8.00, taper:60, pitch:5.8, centre:0.43}},
   back:["NIVADA GRENCHEN · TIME KEEPER", "ALL STAINLESS STEEL", "10 ATM WATER RESISTANT"],
   /* The maker's sheet, as Nivada's 103277_3 writes it: their brand on the
      footer, the movement, the black flat rubber strap on a brushed pin
@@ -1606,14 +1612,48 @@ const TK_NIVADA_41 = Object.assign({}, TK_NIVADA, {
   dialD:29.00, crownD:6.00,
   tol:"41.00, 50.00 and 12.05 from Nivada's F77 MK2 41 mm pages; the rest from the 38 mm drawing 103277_3 moved by what Nivada's renders of the 38 and the 41 show: estimates until Nivada sends a 41 mm drawing",
   band:"black rubber, flat (as the 38 mm; Nivada's 41 mm comes on a 24 × 18 bracelet)",
+  estimate:true,
   photoFile:undefined, photoCal:undefined, photoOwn:undefined, photoStrap:undefined, photoParts:undefined,
   f77:{bezel:{rx:20.50, ry:20.05, chRx:19.80, chRy:19.48, flat:31.96, oct:{a:19.25, h:8.20, ch:0.70}},
        body:{top:20.05, lugEnd:25.00, lugOut:11.95, polish:{to:9.93, c:[13.81, 14.13]}},
        lugIn:8.15, screws:{r:18.31, top:23.8, side:22.2, d:1.50},
-       crown:{x0:20.65, xb:21.05, x1:23.85, collar:5.05}, strap:{w0:12.25, w1:10.20, y1:34.50}},
+       crown:{x0:20.65, xb:21.05, x1:23.85, collar:5.05}, strap:{w0:12.25, w1:10.20, y1:34.50},
+       /* 24 at the lugs to 18 at the clasp, as Nivada's 41 mm Black and
+          Meteorite pages give it (the Blue 41 page says 22 × 16) */
+       bracelet:{w0:12.00, w1:9.00, taper:60, pitch:5.8, centre:0.43}},
   sheet:Object.assign({}, TK_NIVADA.sheet, {drawings:null})
 });
-const CASES = {[VERNOY_CASE.model]:VERNOY_CASE, [NOREL_R3.model]:NOREL_R3, [NOREL_D.model]:NOREL_D, [NOREL_R4.model]:NOREL_R4, [TK_NIVADA.model]:TK_NIVADA, [TK_NIVADA_41.model]:TK_NIVADA_41};
+/* The F77 41 optimised (v4.54.0): a design proposal, not Nivada's 41. The
+   41 above (A) keeps Nivada's own proportions as their renders show them:
+   the 38's dial in a wider frame, the dial 68 % of the width against the
+   38's 74 %, the steel round it 0.40 of the dial's radius against 0.31.
+   This one keeps the 38's balance where it shapes the look and leaves
+   real parts at their real size, rather than scaling everything:
+     - the dial opening at the 38's share of the width, 41 × 28/38 = 30.2
+       (a dial of about Ø31.2 over the Ø25.6 P024, on a larger casing
+       ring: for Nivada to confirm), and the dial's furniture, numerals
+       and hands grow with it when a design moves here;
+     - the bezel's steps in the 38's proportion to the dial: the brushed
+       top from Ø33.40 (the 38's Ø30.96 × 41/38), the polished bevel to the
+       crystal 0.35 wide and the outer chamfer 0.70 wide as on the 38,
+       thin bright lines rather than scaled-up bands;
+     - the screws, heads Ø1.50 as on the 38, at the same place across the
+       brushed top as the 38's (56 % of the way out: R18.44);
+     - the case outline, lugs, crown (Ø6.00), strap and bracelet as the 41
+       above: 50 lug to lug and 12.05 thick are Nivada's, the rest
+       estimated.
+   Every figure but 41, 50, 12.05 and the movement is an estimate or a
+   proposal. */
+const TK_NIVADA_41C = Object.assign({}, TK_NIVADA_41, {
+  model:"Time Keeper × Nivada · F77 41 optimised",
+  ref:"Time Keeper F77 41 mm · optimised proposal (not a Nivada reference)",
+  opening:30.20, dialD:31.20, bezelID:32.70, land:0.35, glassSeat:32.99, glassD:32.78,
+  tol:"41.00, 50.00 and 12.05 from Nivada's F77 MK2 41 mm pages; everything else a design proposal: the 38's proportions (dial 73.7 % of the width, its bezel steps), real parts at real size; not a Nivada specification. The Ø30.20 opening needs a Ø31.2 dial over the P024 on a larger casing ring, and hands 0.9 / 0.7 mm longer: for Nivada to confirm",
+  f77:Object.assign({}, TK_NIVADA_41.f77, {
+    bezel:{rx:20.50, ry:20.05, chRx:19.80, chRy:19.48, flat:33.40, oct:TK_NIVADA_41.f77.bezel.oct},
+    screws:{r:18.44, top:23.8, side:22.2, d:1.50}})
+});
+const CASES = {[VERNOY_CASE.model]:VERNOY_CASE, [NOREL_R3.model]:NOREL_R3, [NOREL_D.model]:NOREL_D, [NOREL_R4.model]:NOREL_R4, [TK_NIVADA.model]:TK_NIVADA, [TK_NIVADA_41.model]:TK_NIVADA_41, [TK_NIVADA_41C.model]:TK_NIVADA_41C};
 const CASE_MODELS = Object.keys(CASES);
 const caseOf = st => (st && st.case && CASES[st.case.model]) || VERNOY_CASE;
 /* The logo is the case's brand's, never what is typed: a Nivada case carries
@@ -2331,7 +2371,7 @@ const APP_BUILD = "__BUILD__";
 /* The version people see, raised with every change that reaches them:
    major for a new way of working, minor for something new to do, patch for
    a fix. Shown on the watch screen, so any screenshot says which it was. */
-const APP_VERSION = "4.53.0";
+const APP_VERSION = "4.54.0";
 const APP_DATE = "__DATE__";
 
 /* Every route that replaces S passes through one of these three, which is
@@ -5287,9 +5327,43 @@ function buildSVG(st, o={}){
         + `L${P(-L, E)}L${P(-L, T)}L${P(L, T)}L${P(L, E)}L${P(XO, E)}` + side(1, false)
         + `L${P(L, -E)}L${P(L, -T)}Z`;
     };
+    /* brushed upright, as the sheet says of the lug tops: fine lines a
+       quarter of a millimetre apart, clipped to the brushed surface */
+    const brush = (clip, x0, x1, lim, col) => {
+      let a = "", b = "";
+      for(let i = 0, x = x0; x < x1; x += 0.24, i++){ const sg = `M${f(x,2)} ${f(-lim,2)}V${f(lim,2)}`; if(i % 2) a += sg; else b += sg; }
+      return `<g clip-path="url(#${clip})"><path d="${a}" stroke="${tint(col,0.7)}" stroke-opacity=".18" stroke-width="0.07"/><path d="${b}" stroke="${shade(col,0.3)}" stroke-opacity=".09" stroke-width="0.06"/></g>`;
+    };
+    /* --- a bracelet, when one is chosen: the end piece between the lug
+       blocks down to the case, then rows of three links, a wide centre link
+       between two outer ones, tapering away from the case, all brushed
+       lengthwise (K.f77.bracelet) --- */
+    const BR = c.strap && c.strapType === "bracelet" && F.bracelet;
+    if(BR){
+      const W = F.bracelet, top = K.lugToLug/2 + 13, half = y => W.w0 - (W.w0 - W.w1)*Math.max(0, y - E)/W.taper;
+      const gO = lgr(st3(shade(M0,0.30), tint(M0,0.40), shade(M0,0.24)), 0), gC = lgr(st3(shade(M0,0.10), tint(M0,0.66), shade(M0,0.08)), 0);
+      const quad = (x0, x1, y0, y1, xa, xb) => `M${P(x0, y0)}L${P(x1, y0)}L${P(xb, y1)}L${P(xa, y1)}Z`;
+      for(const sy of [-1, 1]){
+        let all = quad(-L, L, sy*(T - 0.4), sy*E, -L, L), rows = "";
+        for(let y = E + 0.15; y < top; y += W.pitch){
+          const y1 = Math.min(top, y + W.pitch - 0.25), h0 = half(y), h1 = half(y1), c0 = h0*W.centre, c1 = h1*W.centre;
+          const cen = quad(-c0, c0, sy*y, sy*y1, -c1, c1), lft = quad(-h0, -c0 - 0.12, sy*y, sy*y1, -h1, -c1 - 0.12), rgt = quad(c0 + 0.12, h0, sy*y, sy*y1, c1 + 0.12, h1);
+          all += cen + lft + rgt;
+          /* the gaps between the links show dark beneath; the centre link's long edges catch the light */
+          rows += `<path d="${quad(-h0, h0, sy*(y - 0.15), sy*(y1 + 0.25), -h1, h1)}" fill="${shade(M0,0.62)}"/>`
+            + `<path d="${lft}${rgt}" fill="url(#${gO})" stroke="${shade(M0,0.65)}" stroke-opacity=".8" stroke-width="0.08"/>`
+            + `<path d="${cen}" fill="url(#${gC})" stroke="${shade(M0,0.65)}" stroke-opacity=".8" stroke-width="0.08"/>`
+            + `<path d="M${P(-c0 + 0.12, sy*(y + 0.15))}L${P(-c1 + 0.12, sy*(y1 - 0.15))}M${P(c0 - 0.12, sy*(y + 0.15))}L${P(c1 - 0.12, sy*(y1 - 0.15))}" stroke="${tint(M0,0.92)}" stroke-opacity=".85" stroke-width="0.12" fill="none"/>`;
+        }
+        body.push(`<path d="${quad(-L, L, sy*(T - 0.4), sy*E, -L, L)}" fill="url(#${gC})" stroke="${shade(M0,0.65)}" stroke-opacity=".8" stroke-width="0.08"/>` + rows);
+        const cid = id("fbr");
+        defs.push(`<clipPath id="${cid}"><path d="${all}"/></clipPath>`);
+        body.push(brush(cid, -W.w0*k, W.w0*k, top*k, M0));
+      }
+    }
     /* --- the rubber strap: tapering away from the lugs, with its tongue
        between the lug blocks down to the case --- */
-    if(c.strap){
+    if(c.strap && !BR){
       const sc = c.strapColor || "#1E1E20", W = F.strap, top = K.lugToLug/2 + 13;
       const wAt = y => W.w0 + (W.w1 - W.w0)*(y - E)/(W.y1 - E);
       for(const sy of [-1, 1]){
@@ -5319,13 +5393,6 @@ function buildSVG(st, o={}){
     body.push(`<path d="${outline}" fill="url(#${gEdge})" stroke="${shade(M0,0.6)}" stroke-opacity=".75" stroke-width="0.09"/>`);
     const gTop = lgr(st3(tint(M0,0.22), shade(M0,0.04), shade(M0,0.20)), 90);
     body.push(`<path d="${brushedCase}" fill="url(#${gTop})" stroke="${shade(M0,0.45)}" stroke-opacity=".45" stroke-width="0.06"/>`);
-    /* brushed upright, as the sheet says of the lug tops: fine lines a
-       quarter of a millimetre apart, clipped to the brushed surface */
-    const brush = (clip, x0, x1, lim, col) => {
-      let a = "", b = "";
-      for(let i = 0, x = x0; x < x1; x += 0.24, i++){ const sg = `M${f(x,2)} ${f(-lim,2)}V${f(lim,2)}`; if(i % 2) a += sg; else b += sg; }
-      return `<g clip-path="url(#${clip})"><path d="${a}" stroke="${tint(col,0.7)}" stroke-opacity=".18" stroke-width="0.07"/><path d="${b}" stroke="${shade(col,0.3)}" stroke-opacity=".09" stroke-width="0.06"/></g>`;
-    };
     {
       const cid = id("fc");
       defs.push(`<clipPath id="${cid}"><path d="${brushedCase}"/></clipPath>`);
@@ -17696,7 +17763,8 @@ const GSTR = {en:{
   /* the third watch; its reference is joined by a hyphen that does not
      break, so a narrow card wraps it after the name, not inside it */
   "card.vernoyRd":"Vernoy RD26‑0172", "card.vernoyRdSub":"Cushion · 36 mm",
-  "case.tk":"Nivada F77 · Time Keeper", "case.tkSub":"38 mm · rubber strap", "case.tk41":"Nivada F77 41 · Time Keeper", "case.tk41Sub":"41 mm · drawn, figures estimated",
+  "case.tk":"Nivada F77 · Time Keeper", "case.tkSub":"38 mm · rubber strap", "case.tk41":"Nivada F77 41 · Time Keeper", "case.tk41Sub":"41 mm · reference, estimated", "case.tk41c":"Nivada F77 41 · optimised", "case.tk41cSub":"41 mm · proposal, estimated",
+  "case.estimate":"This case's figures are estimates. Only its width, lug-to-lug length, thickness and movement come from Nivada; the rest is measured from Nivada's pictures or proposed for this design, and the design sheet lists it that way.",
   "case.norel":"NOREL", "case.norelSub":"41 mm round · current drawing", "case.vernoy":"Vernoy cushion", "case.vernoySub":"36 mm · strap",
   "case.r3":"NOREL R3", "case.r3Sub":"Earlier drawing", "case.d":"NOREL Concept D", "case.dSub":"Earlier proposal",
   "case.cases":"Case", "case.earlier":"Earlier NOREL drawings", "case.metal":"Metal", "case.finish":"Finish",
@@ -17902,7 +17970,8 @@ GSTR.ar = {
   "card.vernoy":"Vernoy", "card.study":"دراسة تصميم",
   "start.yours":"ساعاتك", "card.tk":"تايم كيبر × نيفادا", "card.tkSub":"فضي وذهبي وردي",
   "card.vernoyRd":"فيرنوي RD26‑0172", "card.vernoyRdSub":"وسادية · 36 ملم",
-  "case.tk":"نيفادا F77 · تايم كيبر", "case.tkSub":"38 ملم · حزام مطاطي", "case.tk41":"نيفادا F77 41 · تايم كيبر", "case.tk41Sub":"41 ملم · مرسوم، المقاسات تقديرية",
+  "case.tk":"نيفادا F77 · تايم كيبر", "case.tkSub":"38 ملم · حزام مطاطي", "case.tk41":"نيفادا F77 41 · تايم كيبر", "case.tk41Sub":"41 ملم · مرجع، تقديري", "case.tk41c":"نيفادا F77 41 · مُحسَّن", "case.tk41cSub":"41 ملم · مقترح، تقديري",
+  "case.estimate":"مقاسات هذا القالب تقديرية. العرض والطول من العروة للعروة والسماكة والمحرك فقط من نيفادا، والباقي مقاس من صور نيفادا أو مقترح لهذا التصميم، وورقة التصميم تذكره كذلك.",
   "case.norel":"NOREL", "case.norelSub":"دائرية 41 ملم · الرسم الحالي", "case.vernoy":"Vernoy وسادية", "case.vernoySub":"36 ملم · حزام",
   "case.r3":"NOREL R3", "case.r3Sub":"رسم سابق", "case.d":"NOREL Concept D", "case.dSub":"مقترح سابق",
   "case.cases":"القالب", "case.earlier":"رسومات NOREL السابقة", "case.metal":"المعدن", "case.finish":"التشطيب",
@@ -19550,10 +19619,11 @@ Object.assign(GWORD.ar, {
           try{ S = clone(keep); applyCaseModel(K.model, m); st = S; }finally{ S = keep; }
           return thumb(st, "case:" + m);
         };
-        const name = {[VERNOY_CASE.model]:["case.vernoy","case.vernoySub"], [NOREL_R3.model]:["case.r3","case.r3Sub"], [NOREL_D.model]:["case.d","case.dSub"], [NOREL_R4.model]:["case.norel","case.norelSub"], [TK_NIVADA.model]:["case.tk","case.tkSub"], [TK_NIVADA_41.model]:["case.tk41","case.tk41Sub"]};
+        const name = {[VERNOY_CASE.model]:["case.vernoy","case.vernoySub"], [NOREL_R3.model]:["case.r3","case.r3Sub"], [NOREL_D.model]:["case.d","case.dSub"], [NOREL_R4.model]:["case.norel","case.norelSub"], [TK_NIVADA.model]:["case.tk","case.tkSub"], [TK_NIVADA_41.model]:["case.tk41","case.tk41Sub"], [TK_NIVADA_41C.model]:["case.tk41c","case.tk41cSub"]};
         const card = m => `<button type="button" class="gCard ${m===K.model?"on":""}" data-gcase="${esc2(m)}" title="${esc2(m)}"><div class="gPic">${pic(m)}</div><div class="gName">${esc2(name[m] ? gT(name[m][0]) : m)}</div><div class="gSub">${esc2(name[m] ? gT(name[m][1]) : "")}</div></button>`;
-        const now = [NOREL_R4.model, TK_NIVADA.model, TK_NIVADA_41.model, VERNOY_CASE.model].filter(m => CASE_MODELS.indexOf(m) >= 0), earlier = CASE_MODELS.filter(m => now.indexOf(m) < 0);
+        const now = [NOREL_R4.model, TK_NIVADA.model, TK_NIVADA_41.model, TK_NIVADA_41C.model, VERNOY_CASE.model].filter(m => CASE_MODELS.indexOf(m) >= 0), earlier = CASE_MODELS.filter(m => now.indexOf(m) < 0);
         return `<h3>${gT("case.cases")}</h3><div class="gCards">${now.map(card).join("")}</div>`
+          + (K.estimate ? `<p class="gNote">${gT("case.estimate")}</p>` : "")
           + (earlier.length ? `<h3>${gT("case.earlier")}</h3><div class="gCards">${earlier.map(card).join("")}</div>` : "");
       }
       let h = `<h3>${gT("case.metal")}</h3>` + metalRow();
@@ -19905,13 +19975,18 @@ Object.assign(GWORD.ar, {
           h += `<h3>${gW("Strap")}</h3><div class="gCards gOpts all">` + types.map(([v, l]) =>
             `<button type="button" class="gCard ${v === cur ? "on" : ""}" data-gset="case.strapType" data-gv='${gv(v)}'><div class="gPic">${thumb(Object.assign(clone(S), {case:Object.assign({}, c, {strapType:v})}), "strap|" + v, {cy:K.flat*0.7, side:K.flat*0.56})}</div><div class="gName">${esc2(gW(l))}</div></button>`).join("") + `</div>`;
           if(c.strapType === "bracelet") h += `<p class="gNote">${gT("case.braceletNote")}</p>`;
+        } else if(K.f77 && K.f77.bracelet){
+          /* a drawn F77 (the 41s): its rubber strap or Nivada's three-link bracelet, drawn */
+          const types = [["rubber","Rubber"],["bracelet","Steel bracelet"]], cur = c.strapType === "bracelet" ? "bracelet" : "rubber";
+          h += `<h3>${gW("Strap")}</h3><div class="gCards gOpts all">` + types.map(([v, l]) =>
+            `<button type="button" class="gCard ${v === cur ? "on" : ""}" data-gset="case.strapType" data-gv='${gv(v)}'><div class="gPic">${thumb(Object.assign(clone(S), {case:Object.assign({}, c, {strapType:v})}), "strap|" + v, {cy:K.flat*0.7, side:K.flat*0.56})}</div><div class="gName">${esc2(gW(l))}</div></button>`).join("") + `</div>`;
         } else if(K.builtinTint){
           /* the Vernoy's photograph: its own leather, or a crackled vintage one */
           const types = [["leather","Leather"],["crackle","Vintage crackle leather"]], cur = c.strapType === "crackle" ? "crackle" : "leather";
           h += `<h3>${gW("Strap")}</h3><div class="gCards gOpts all">` + types.map(([v, l]) =>
             `<button type="button" class="gCard ${v === cur ? "on" : ""}" data-gset="case.strapType" data-gv='${gv(v)}'><div class="gPic">${thumb(Object.assign(clone(S), {case:Object.assign({}, c, {strapType:v})}), "strap|" + v, {cy:K.flat*0.85, side:K.flat*0.6})}</div><div class="gName">${esc2(gW(l))}</div></button>`).join("") + `</div>`;
         } else h += `<h3>${gW("Band")}</h3>` + chips("sheet.strap.type", [["leather","Leather"],["rubber","Rubber"],["fabric Velcro","Fabric Velcro"],["bracelet","Bracelet"]], sp.type);
-        if(!(K.photoStrap && c.strapType === "bracelet"))
+        if(!((K.photoStrap || (K.f77 && K.f77.bracelet)) && c.strapType === "bracelet"))
           h += `<h3>${gW("Strap colour")}</h3>` + swatches("case.strapColor", [["#4E3629","Brown"],["#1E1E20","Black"],["#1E2B45","Navy"],["#A0744A","Tan"],["#2F3B2E","Green"],["#7A2433","Burgundy"]], c.strapColor, {row:true});
         if((K.photoStrap || K.builtinTint) && (c.strapType === "fabric" || c.strapType === "alligator" || c.strapType === "crackle"))
           h += `<h3>${gW("Stitching")}</h3>` + swatches("case.stitch", [["#00000000","None"],["#F2701E","Orange"],["#F2F2EF","White"],["#D7262E","Red"],["#E3C27A","Sand"]], /^#[0-9a-f]{6}$/i.test(c.stitch || "") ? c.stitch : "#00000000", {row:true});
