@@ -57,8 +57,9 @@ test('a reload goes back to the step for half an hour, then to the Case step', (
 });
 
 test('long steps split into tabs, and empty tabs are left out', () => {
-  assert.deepEqual([...G.gTabsFor('dial')], ['colour','surface','track']);
-  assert.deepEqual([...G.gTabsFor('text')], ['logo','lines','colour']);
+  assert.deepEqual([...G.gTabsFor('dial')], ['colour','surface','track','zones','extras'], 'the More sheet on the tabs since 4.47.0');
+  assert.deepEqual([...G.gTabsFor('hands')], ['shape','length','detail','seconds']);
+  assert.deepEqual([...G.gTabsFor('text')], ['logo','made','lines','colour']);
   assert.deepEqual([...G.gTabsFor('calendar', {hasCalendar:true})], ['day','daylook','date']);
   assert.deepEqual([...G.gTabsFor('calendar', {hasCalendar:false})], ['date'], 'no day window on a case without a calendar');
   assert.deepEqual([...G.gTabsFor('markers', {num:true})], ['style','font','made','size']);
@@ -134,8 +135,8 @@ test('the design check is put in plain words, on the step that fixes it', () => 
   assert.deepEqual(unworded, []);
 });
 
-test('simple mode is version 4.46.0 and the drawing code is not touched by its preview', () => {
-  assert.match(source, /const APP_VERSION = "4\.46\.0";/);
+test('simple mode is version 4.47.0 and the drawing code is not touched by its preview', () => {
+  assert.match(source, /const APP_VERSION = "4\.47\.0";/);
   // the preview's seconds-hand change is undone whatever happens while drawing
   const v = chunk('function viewSVG(){', 'function viewSVGOf(){');
   assert.match(v, /finally\{ S\.meta\.time = t; S\.sHand\.on = on; \}/);

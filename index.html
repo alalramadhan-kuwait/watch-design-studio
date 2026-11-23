@@ -2292,7 +2292,7 @@ const APP_BUILD = "__BUILD__";
 /* The version people see, raised with every change that reaches them:
    major for a new way of working, minor for something new to do, patch for
    a fix. Shown on the watch screen, so any screenshot says which it was. */
-const APP_VERSION = "4.46.0";
+const APP_VERSION = "4.47.0";
 const APP_DATE = "__DATE__";
 
 /* Every route that replaces S passes through one of these three, which is
@@ -17559,10 +17559,10 @@ const GSTR = {en:{
   "steps.all":"All steps", "steps.close":"Close", "steps.done":"Done", "steps.todo":"Not visited yet", "steps.here":"You are here",
   "next": name => `Next: ${name}`, "back":"Back", "done":"Done ✓",
   "tab.case.designs":"Designs", "tab.case.shape":"Case", "tab.case.metal":"Metal and strap",
-  "tab.dial.colour":"Colour", "tab.dial.surface":"Surface", "tab.dial.track":"Minute track",
+  "tab.dial.colour":"Colour", "tab.dial.surface":"Surface", "tab.dial.track":"Track", "tab.dial.zones":"Zones", "tab.dial.extras":"Extras",
   "tab.markers.style":"Style", "tab.markers.font":"Font", "tab.markers.shape":"Shape", "tab.markers.made":"Made by", "tab.markers.size":"Size", "tab.markers.gems":"Gems",
-  "tab.hands.shape":"Shape", "tab.hands.seconds":"Seconds",
-  "tab.text.logo":"Logo", "tab.text.lines":"Lines", "tab.text.colour":"Colour",
+  "tab.hands.shape":"Shape", "tab.hands.length":"Length", "tab.hands.detail":"Details", "tab.hands.seconds":"Seconds",
+  "tab.text.logo":"Logo", "tab.text.made":"Made by", "tab.text.lines":"Lines", "tab.text.colour":"Colour",
   "tab.calendar.day":"Day window", "tab.calendar.daylook":"Day lettering", "tab.calendar.date":"Date window",
   "start.welcome":"Welcome back",
   "start.first":"Your watch", "start.firstSub":"The NOREL B6098G-A1 is the watch being made. Pick one of your watches, then its case below.",
@@ -17691,6 +17691,7 @@ const GSTR = {en:{
   "case.gemRound":"Round brilliants are drawn on the round NOREL case only.",
   "dial.paveNote": (n, ct) => `${n} stones · ≈ ${ct} ct. A pavé dial is 18k gold about 0.8–1.0 mm thick, not the 0.40 mm brass blank: Blue Creations to confirm.`,
   "case.braceletNote":"Steel links in place of the strap, drawn on the photograph: a polished centre link between brushed outer links. Nivada makes the F77 on an integrated steel bracelet; this edition's sheet names the rubber strap, so confirm the bracelet with Nivada.",
+  "dial.extrasNote":"A complication is offered only where the case's movement drives it.",
   "num.thinNote":"Taken in this far, a figure's thinnest parts (a hairline, a serif, the hook of a 1) can thin to nothing: check each figure in the preview before you send the design.",
   "dial.blankNote": b => `The dial blank is cut from solid ${b}, not the case's brass: the maker's sheet and the dial artwork say so. Its colour is still the one under Colour; left in its own metal, set that to the gold.`,
   "dial.ombreNote":"Darkens the colour toward the edge, as a sprayed gradient does over a sunburst.",
@@ -17762,10 +17763,10 @@ GSTR.ar = {
   "steps.all":"كل الخطوات", "steps.close":"إغلاق", "steps.done":"تمّت", "steps.todo":"لم تُفتح بعد", "steps.here":"أنت هنا",
   "next": name => `التالي: ${name}`, "back":"رجوع", "done":"تم ✓",
   "tab.case.designs":"التصاميم", "tab.case.shape":"القالب", "tab.case.metal":"المعدن والحزام",
-  "tab.dial.colour":"اللون", "tab.dial.surface":"السطح", "tab.dial.track":"مسار الدقائق",
+  "tab.dial.colour":"اللون", "tab.dial.surface":"السطح", "tab.dial.track":"المسار", "tab.dial.zones":"المناطق", "tab.dial.extras":"إضافات",
   "tab.markers.style":"النوع", "tab.markers.font":"الخط", "tab.markers.shape":"الشكل", "tab.markers.made":"الصنع", "tab.markers.size":"المقاس", "tab.markers.gems":"الأحجار",
-  "tab.hands.shape":"الشكل", "tab.hands.seconds":"الثواني",
-  "tab.text.logo":"الشعار", "tab.text.lines":"الأسطر", "tab.text.colour":"اللون",
+  "tab.hands.shape":"الشكل", "tab.hands.length":"الطول", "tab.hands.detail":"التفاصيل", "tab.hands.seconds":"الثواني",
+  "tab.text.logo":"الشعار", "tab.text.made":"الصنع", "tab.text.lines":"الأسطر", "tab.text.colour":"اللون",
   "tab.calendar.day":"نافذة اليوم", "tab.calendar.daylook":"كتابة اليوم", "tab.calendar.date":"نافذة التاريخ",
   "start.welcome":"أهلاً بعودتك",
   "start.first":"ساعتك", "start.firstSub":"ساعة NOREL B6098G-A1 هي التي تُصنع الآن. اختر إحدى ساعاتك، ثم قالبها في الأسفل.",
@@ -17892,6 +17893,7 @@ GSTR.ar = {
   "case.gemRound":"الإطار المرصّع يُرسم على قالب NOREL الدائري فقط.",
   "dial.paveNote": (n, ct) => `${arCount(n, "حجر واحد", "حجران", "أحجار", "حجراً")} · ≈ ${ct} قيراط. الميناء المرصّع بالكامل من ذهب عيار 18 بسماكة 0.8–1.0 ملم تقريباً، لا من النحاس بسماكة 0.40 ملم: على Blue Creations أن تؤكد ذلك.`,
   "case.braceletNote":"حلقات ستيل مكان الحزام، مرسومة على الصورة: حلقة وسطى لامعة بين حلقات جانبية مُمشّطة. نيفادا تصنع F77 بسوار ستيل مدمج، لكن ورقة هالإصدار تذكر الحزام الربر، فتأكد من السوار مع نيفادا.",
+  "dial.extrasNote":"التعقيدة ما تنعرض إلا إذا محرك القالب يشغّلها.",
   "num.thinNote":"لما ترقّق الأرقام لهالدرجة، أنحف أجزاءها (الخطوط الرفيعة، والزوائد، ورأس الرقم ١) ممكن تختفي: تأكد من كل رقم في المعاينة قبل ما ترسل التصميم.",
   "dial.blankNote": b => `قاعدة الميناء من ${({"18k yellow gold":"الذهب الأصفر عيار ١٨","18k rose gold":"الذهب الوردي عيار ١٨","18k white gold":"الذهب الأبيض عيار ١٨"})[b] || b} الخالص، لا من نحاس القالب، وهذا مكتوب في ورقة المصنع وملف الطباعة. اللون يبقى من «اللون»؛ إذا تُرك الميناء بلون معدنه، اختر لون الذهب هناك.`,
   "dial.ombreNote":"يُغمِّق اللون نحو الحافة، كما يفعل الطلاء المتدرّج فوق النقش الشمسي.",
@@ -18125,14 +18127,29 @@ function gPickTarget(st, layer, x, y, pv){
   return null;
 }
 
+/* Which way the figures stand, as one choice (simple mode's Direction cards):
+   orientation, following the curve and turning the lower figures together.
+   Back to upright leaves the radial choices as they were, so going back to
+   radial finds them again. */
+const numDirOf = n => !n || n.orient !== "radial" ? "upright" : n.arc !== false ? "curve" : n.flipLower ? "radialUp" : "radial";
+function numDirSet(st, v){
+  const n = st.numerals; if(!n) return;
+  if(v === "upright"){ n.orient = "upright"; return; }
+  n.orient = "radial";
+  if(v === "curve"){ n.arc = true; n.flipLower = false; }
+  else { n.arc = false; n.flipLower = v === "radialUp"; }
+}
 /* The tabs a step is cut into, given what the design has on. A tab that
    would be empty is left out. */
 function gTabsFor(k, o){
   o = o || {};
   if(k === "case") return ["designs","shape","metal"];
-  if(k === "dial") return ["colour","surface","track"];
-  if(k === "hands") return ["shape","seconds"];
-  if(k === "text") return ["logo","lines","colour"];
+  /* since 4.47.0 what the More sheet held is on the tabs: the dial's zones
+     and borders, and its complications; the hands' length and details; how
+     the logo is made */
+  if(k === "dial") return ["colour","surface","track","zones","extras"];
+  if(k === "hands") return ["shape","length","detail","seconds"];
+  if(k === "text") return ["logo","made","lines","colour"];
   if(k === "calendar") return o.hasCalendar ? ["day","daylook","date"] : ["date"];
   if(k === "markers"){
     const t = ["style"];
@@ -18282,73 +18299,65 @@ function gPlainCheck(row){
    about the case (photo, calendar), opts narrows a list, cards draws a list
    as pictures. The words are below, by path, and their Arabic in GWORD. */
 const G_MORE = {
-  case:[
-    {id:"case", t:"Case", src:"case", paths:["case.cab","case.locked"]},
-    {id:"photo", t:"Photograph", src:"tpl", need:"photo", paths:["tpl.recess"]},
-    /* a case's own photograph is lined up already; one added in the full editor is lined up here */
-    {id:"align", t:"Line up the photograph", src:"tpl", need:"upload", paths:["tpl.cx","tpl.cy","tpl.dia","tpl.rot"]}],
+  /* the case's: on its Metal tab since 4.47.0 (the crown stone, the photograph's
+     shadow and lining it up); keeping to the factory drawing is the full editor's */
+  case:[],
   dial:[
-    {id:"surface", t:"Surface", src:"dial", paths:["dial.finish","dial.rays","dial.dome","dial.satin","dial.lock","dial.diameter"],
+    {id:"surface", tab:"surface", t:"Surface", src:"dial", paths:["dial.finish","dial.rays","dial.dome","dial.satin","dial.lock","dial.diameter"],
       opts:{"dial.finish":["brushed","sandblasted","metallic","circular"]}},
-    {id:"guilloche", t:"Guilloché", src:"dial", paths:["dial.lay","dial.facet","dial.cell","dial.pitch","dial.wall","dial.stamp","dial.rays2",
+    {id:"guilloche", tab:"surface", t:"Guilloché", src:"dial", paths:["dial.lay","dial.facet","dial.cell","dial.pitch","dial.wall","dial.stamp","dial.rays2",
       "dial.twist","dial.waveAmp","dial.waveN","dial.waveGrowth","dial.wavePhase","dial.radialPhase"]},
-    {id:"stone", t:"Stone", src:"dial", paths:["dial.stoneScale","dial.stoneRot","dial.stoneOffX","dial.stoneOffY","dial.stoneBump","act:slabCut",
+    {id:"stone", tab:"surface", t:"Stone", src:"dial", paths:["dial.stoneScale","dial.stoneRot","dial.stoneOffX","dial.stoneOffY","dial.stoneBump","act:slabCut",
       "dial.stAdv","head","act:stReset","dial.stEnv","dial.stRoughLo","dial.stRoughHi","dial.stCoat","dial.stMetal","dial.stSSS","dial.stIrid",
       "dial.stAniso","dial.stFibre","dial.stFibreAngle","dial.stInclThr","dial.stSparkle","dial.stoneTint"]},
-    {id:"minute", t:"Minute track", src:"minute", show:"minute.on", paths:["minute.diameter","minute.thickness","minute.trackWMM","minute.railW","minute.tickW","minute.fiveStyle","minute.gap6","minute.fives","minute.fiveLen",
+    {id:"minute", tab:"track", t:"Minute track", src:"minute", show:"minute.on", paths:["minute.diameter","minute.thickness","minute.trackWMM","minute.railW","minute.tickW","minute.fiveStyle","minute.gap6","minute.fives","minute.fiveLen",
       "minute.tech","minute.edgeLight","minute.textBreak","minute.textGap"]},
-    {id:"chapter", t:"Chapter ring", src:"chapter", on:"chapter.on", onLabel:"Show the chapter ring",
+    {id:"chapter", tab:"track", t:"Chapter ring", src:"chapter", on:"chapter.on", onLabel:"Show the chapter ring",
       paths:["chapter.outerD","chapter.innerD","chapter.color","chapter.finish","chapter.separator","chapter.sepColor"]},
-    {id:"hour", t:"Hour track", src:"hour", on:"hour.on", onLabel:"Show the hour track", paths:["hour.diameter","hour.thickness","hour.style","hour.color"]},
-    {id:"sector", t:"Dial zones", src:"sector", on:"sector.on", onLabel:"Show the dial zones",
+    {id:"hour", tab:"track", t:"Hour track", src:"hour", on:"hour.on", onLabel:"Show the hour track", paths:["hour.diameter","hour.thickness","hour.style","hour.color"]},
+    {id:"sector", tab:"zones", t:"Dial zones", src:"sector", on:"sector.on", onLabel:"Show the dial zones",
       paths:["sector.zones.#.on","sector.zones.#.outerD","sector.zones.#.innerD","sector.zones.#.lift","sector.zones.#.color","sector.zones.#.finish",
         "sector.zones.#.pattern","sector.zones.#.cell","sector.zones.#.pitch","sector.zones.#.lay","sector.zones.#.facet","sector.zones.#.rays",
         "sector.zones.#.waveAmp","sector.zones.#.waveN","sector.zones.#.waveGrowth","sector.zones.#.wavePhase","sector.zones.#.radialPhase",
         "sector.zones.#.wall","sector.zones.#.stamp","sector.zones.#.edge","sector.zones.#.beadD","sector.zones.#.beadGap","sector.zones.#.arms",
         "sector.zones.#.ringColor","sector.zones.#.lineW","act:zoneDel:#","act:zoneAdd"]},
-    {id:"borders", t:"Engraved borders", src:"borders", on:"borders.on", onLabel:"Show the engraved borders",
+    {id:"borders", tab:"zones", t:"Engraved borders", src:"borders", on:"borders.on", onLabel:"Show the engraved borders",
       paths:["borders.bands.#.on","borders.bands.#.dia","borders.bands.#.band","borders.bands.#.line","borders.bands.#.depth","borders.bands.#.spacing",
         "borders.bands.#.angle","borders.bands.#.metal","borders.bands.#.color","act:borderDel:#","act:borderAdd"]},
-    {id:"cross", t:"Crosshair", src:"cross", on:"cross.on", onLabel:"Show the crosshair", paths:["cross.length","cross.width","cross.color"]},
-    {id:"sub", t:"Sub-dial", src:"sub", on:"sub.on", onLabel:"Show the sub-dial", paths:["sub.at","sub.dist","sub.diameter","sub.color","sub.ring","sub.track","sub.ticks","sub.hand","sub.handColor"]},
-    {id:"power", t:"Power reserve", src:"power", need:"powerReserve", needSay:"more.noPower", on:"power.on", onLabel:"Show a power reserve", paths:["power.at","power.dist","power.r","power.empty","power.full","power.value","power.numSize","power.color","power.ink","power.handColor"]}],
+    {id:"cross", tab:"extras", t:"Crosshair", src:"cross", on:"cross.on", onLabel:"Show the crosshair", paths:["cross.length","cross.width","cross.color"]},
+    {id:"sub", tab:"extras", t:"Sub-dial", src:"sub", on:"sub.on", onLabel:"Show the sub-dial", paths:["sub.at","sub.dist","sub.diameter","sub.color","sub.ring","sub.track","sub.ticks","sub.hand","sub.handColor"]},
+    {id:"power", tab:"extras", t:"Power reserve", src:"power", need:"powerReserve", needSay:"more.noPower", on:"power.on", onLabel:"Show a power reserve", paths:["power.at","power.dist","power.r","power.empty","power.full","power.value","power.numSize","power.color","power.ink","power.handColor"]}],
   markers:[
-    {id:"layout", t:"Numeral layout", src:"numerals", show:"numerals.on", paths:["numerals.system","numerals.set","numerals.heightMM","numerals.gap",
-      "numerals.radius","numerals.orient","numerals.align","numerals.arc","numerals.flipLower","numerals.slant"]},
-    {id:"made", t:"How the numerals are made", src:"numerals", show:"numerals.on", paths:["numerals.tech","numerals.material","numerals.metal",
-      "numerals.metalTex","numerals.edgeLight","numerals.height","numerals.bevel"]},
-    {id:"engrave", t:"Engraving", src:"numerals", show:"numerals.on", paths:["numerals.engDepth","numerals.engBevel","numerals.engShadow",
+    {id:"layout", tab:"size", t:"Numeral layout", src:"numerals", show:"numerals.on", paths:["numerals.set","numerals.gap","numerals.align","numerals.slant"]},
+    {id:"made", tab:"made", t:"How the numerals are made", src:"numerals", show:"numerals.on", paths:["numerals.tech","numerals.material","numerals.metalTex","numerals.edgeLight","numerals.bevel"]},
+    {id:"engrave", tab:"made", t:"Engraving", src:"numerals", show:"numerals.on", paths:["numerals.engDepth","numerals.engBevel","numerals.engShadow",
       "numerals.engHilite","numerals.engRecess","render.az","numerals.engSharp"]},
-    {id:"indices", t:"Index markers", src:"indices", show:"indices.on", paths:["indices.style","indices.count","indices.radius","indices.skipNumerals","indices.tech"]}],
+    {id:"indices", tab:"style", t:"Index markers", src:"indices", show:"indices.on", paths:["indices.style","indices.count","indices.radius","indices.skipNumerals","indices.tech"]}],
   hands:[
-    {id:"shape", t:"Shape", src:"@", paths:["H.style"], cards:["H.style"]},
-    {id:"length", t:"Length", src:"@", paths:["H.reach","H.hourShare","H.reachTrim","H.length","say"]},
-    {id:"detail", t:"Shape details", src:"@", paths:["H.stem","H.widthMM","H.tail","H.boss","H.pommeD","H.pommePos","H.ringW","H.tipW","H.taper","H.waist"]},
-    {id:"metal", t:"Metal and finish", src:"@", paths:["H.material","H.finish","H.lume"]},
-    {id:"link", t:"Hands together", src:"@", paths:["linkbar","handSet.link","handSet.minuteScale","handSet.includeSeconds","act:matchFromHour","act:matchFromMinute"]}],
+    {id:"shape", tab:"shape", t:"Shape", src:"@", paths:["H.style"], cards:["H.style"]},
+    {id:"length", tab:"length", t:"Length", src:"@", paths:["H.reach","H.hourShare","H.reachTrim","H.length","say"]},
+    {id:"detail", tab:"detail", t:"Shape details", src:"@", paths:["H.stem","H.widthMM","H.tail","H.boss","H.pommeD","H.pommePos","H.ringW","H.tipW","H.taper","H.waist"]},
+    {id:"metal", tab:"shape", t:"Metal and finish", src:"@", paths:["H.finish"]},
+    {id:"link", tab:"shape", t:"Hands together", src:"@", paths:["linkbar","handSet.link","handSet.minuteScale","handSet.includeSeconds","act:matchFromHour","act:matchFromMinute"]}],
   text:[
-    {id:"made", t:"How the logo is made", src:"text", paths:["text.logoTech","text.color","text.printThick","text.printFinish","text.dblBase","text.dblOff",
+    {id:"made", tab:"made", t:"How the logo is made", src:"text", paths:["text.logoTech","text.color","text.printThick","text.printFinish","text.dblBase","text.dblOff",
       "text.dblThick","text.engDepth","text.engWidth","text.engFill","text.engColor","text.stampH","text.stampEdge","text.stampSurface","text.logoMetal",
       "text.stampFinish","text.debDepth","text.debEdge","text.debFill","text.debColor","text.logoHeight","text.logoLift","text.logoFinish","text.logoEdge",
       "text.plateMetal","text.nameMode","text.nameColor","text.embDepth","text.resDepth","text.resTech","text.nameHeight"]},
-    {id:"cart", t:"Cartouche", src:"text", paths:["text.resAutoFit","text.resShape","text.resW","text.resH","text.resCurve","text.resBorder","text.resPad",
+    {id:"cart", tab:"made", t:"Cartouche", src:"text", paths:["text.resAutoFit","text.resShape","text.resW","text.resH","text.resCurve","text.resBorder","text.resPad",
       "text.resTextScale","text.embAuto","text.embShape","text.embW","text.embH","text.embPad","text.embBorder","text.embInset","text.plateAuto",
       "text.plateShape","text.platePad","text.plateW","text.plateH","text.plateTaper","text.logoBevel","text.plateTintOn","text.plateTint"]},
-    {id:"mark", t:"Logo artwork", src:"text", paths:["text.logoMark"]},
-    {id:"spacing", t:"Spacing and lines", src:"text", paths:["text.logoTrack","text.logoCurve","text.lineColor","text.nameShiftX","text.nameShiftY"]},
-    {id:"linesmade", t:"How the lines are made", src:"text", paths:["text.line2Tech","text.footTech","text.splitTech","render.az","render.uv"]}],
+    {id:"spacing", tab:"logo", t:"Spacing and lines", src:"text", paths:["text.logoTrack","text.logoCurve","text.lineColor","text.nameShiftX","text.nameShiftY"]}],
   calendar:[
-    {id:"date", t:"Date window", src:"date", show:"date.on", paths:["date.cyclops","date.w","date.h","date.at","date.dist","date.shown","date.frame"]},
-    {id:"day", t:"Day window", src:"day", show:"day.on", need:"calendar", paths:["day.arc","day.bevel","day.frame","day.textH","day.shown","day.frameColor"]}],
+    {id:"date", tab:"date", t:"Date window", src:"date", show:"date.on", paths:["date.cyclops","date.w","date.h","date.at","date.dist","date.shown","date.frame"]},
+    {id:"day", tab:"daylook", t:"Day window", src:"day", show:"day.on", need:"calendar", paths:["day.arc","day.bevel","day.frame","day.textH","day.shown","day.frameColor"]}],
   finish:[
-    {id:"time", t:"Preview time", src:"time", paths:["meta.time.h","meta.time.m","meta.time.s"]},
-    {id:"view", t:"View", src:"render", paths:["render.view","render.mode","render.az","render.el","render.quality"]}]
+    {id:"time", tab:"main", t:"Preview time", src:"time", paths:["meta.time.h","meta.time.m","meta.time.s"]},
+    {id:"view", tab:"main", t:"View", src:"render", paths:["render.view","render.mode","render.az","render.el","render.quality"]}]
 };
 /* The words for each setting, by path. A path whose schema label differs
    with the technique takes the label too ("text.logoMetal|Name metal"). */
 const G_MORE_LABEL = {
-  "case.cab":"Crown stone colour", "case.locked":"Keep to the factory drawing",
-  "tpl.cx":"Dial across the photo", "tpl.cy":"Dial up and down the photo", "tpl.dia":"Dial size in the photo", "tpl.rot":"Turn", "tpl.recess":"Shadow round the dial",
   "dial.finish":"More finishes", "dial.rays":"Ray count", "dial.dome":"Doming", "dial.satin":"Satin overlay", "dial.lock":"Use the case's own dial",
   "dial.diameter":"Dial size",
   "dial.lay":"Grid angle", "dial.facet":"Facet contrast", "dial.cell":"Cell size", "dial.pitch":"Groove spacing", "dial.wall":"Groove angle",
@@ -18385,10 +18394,10 @@ const G_MORE_LABEL = {
   "power.at":"Pivot position", "power.dist":"Pivot from centre", "power.r":"Scale radius", "power.empty":"Empty end", "power.full":"Full end",
   "power.value":"Reserve shown", "power.numSize":"Figure height", "power.color":"Sector colour", "power.ink":"Figures colour", "power.handColor":"Hand colour",
   "sub.at":"Position", "sub.dist":"Distance from centre", "sub.diameter":"Diameter", "sub.color":"Colour", "sub.ring":"Track colour", "sub.track":"Show the track",
-  "numerals.system":"Numerals", "numerals.set":"Which hours", "numerals.heightMM":"Figure height", "numerals.gap":"Spacing", "numerals.radius":"Numerals from centre",
-  "numerals.orient":"Direction", "numerals.align":"Line up by", "numerals.arc":"Follow the curve", "numerals.flipLower":"Lower figures read upright", "numerals.slant":"Slant",
-  "numerals.tech":"Made by", "numerals.material":"Material", "numerals.metal":"Metal", "numerals.metalTex":"Use the loaded metal texture",
-  "numerals.edgeLight":"Edge light", "numerals.height":"Thickness of the piece", "numerals.bevel":"Bevel",
+  "numerals.set":"Which hours", "numerals.gap":"Spacing", 
+  "numerals.align":"Line up by", "numerals.slant":"Slant",
+  "numerals.tech":"Made by", "numerals.material":"Material", "numerals.metalTex":"Use the loaded metal texture",
+  "numerals.edgeLight":"Edge light", "numerals.bevel":"Bevel",
   "numerals.engDepth":"Depth", "numerals.engBevel":"Bevel width", "numerals.engShadow":"Shadow", "numerals.engHilite":"Highlight",
   "numerals.engRecess":"Darkness inside", "render.az":"Light from", "numerals.engSharp":"Edge sharpness",
   "indices.style":"Shape", "indices.count":"How many", "indices.radius":"Indices from centre", "indices.skipNumerals":"Leave room for the numerals",
@@ -18396,8 +18405,8 @@ const G_MORE_LABEL = {
   "handSet.includeSeconds":"Include the seconds hand", "act:matchFromHour":"Match them to the hour hand", "act:matchFromMinute":"Match them to the minute hand",
   "H.style":"Shape", "H.reach":"Length", "H.hourShare":"Share of the minute hand", "H.reachTrim":"Stop short", "H.length":"Length from centre",
   "H.stem":"Stem", "H.widthMM":"Width", "H.tail":"Tail", "H.boss":"Centre boss", "H.pommeD":"Ring size", "H.pommePos":"Ring position",
-  "H.ringW":"Ring wall", "H.tipW":"Tip width", "H.taper":"Taper", "H.waist":"Waist", "H.material":"Metal", "H.finish":"Finish", "H.lume":"Lume",
-  "text.logoMark":"Artwork", "text.logoTech":"Made by", "text.color":"Colour", "text.color|Ink colour":"Ink colour",
+  "H.ringW":"Ring wall", "H.tipW":"Tip width", "H.taper":"Taper", "H.waist":"Waist", "H.finish":"Finish", 
+  "text.logoTech":"Made by", "text.color":"Colour", "text.color|Ink colour":"Ink colour",
   "text.color|Top print colour":"Top colour", "text.printThick":"Ink thickness", "text.printFinish":"Finish", "text.dblBase":"Base colour",
   "text.dblOff":"Offset", "text.dblThick":"Thickness", "text.engDepth":"Depth", "text.engWidth":"Line width", "text.engFill":"Fill",
   "text.engColor":"Fill colour", "text.stampH":"Height", "text.stampEdge":"Edge sharpness", "text.stampSurface":"Surface", "text.logoMetal":"Metal",
@@ -18414,8 +18423,8 @@ const G_MORE_LABEL = {
   "text.plateW":"Width", "text.plateH":"Height", "text.plateTaper":"Tip taper", "text.logoBevel":"Bevel",
   "text.plateTintOn":"Choose the plate colour", "text.plateTint":"Plate colour",
   "text.logoTrack":"Letter spacing", "text.logoCurve":"Curve the logo", "text.lineColor":"Line colour",
-  "text.line2Tech":"Under the logo, made by", "text.footTech":"Above 6, made by", "text.splitTech":"Either side of 6, made by",
-  "render.uv":"Show under UV", "render.az|Light angle":"Light angle", "indices.tech":"Made by",
+  
+  "render.az|Light angle":"Light angle", "indices.tech":"Made by",
   "text.nameShiftX":"Logo across", "text.nameShiftY":"Logo up or down",
   "date.cyclops":"Magnifier", "date.w":"Width", "date.h":"Height", "date.at":"Position", "date.dist":"Distance from centre",
   "date.shown":"Date shown", "date.frame":"Frame colour",
@@ -18546,7 +18555,7 @@ Object.assign(GWORD.ar, {
   "Fish scales":"قشور السمك", "Chevron":"شيفرون", "Linen":"نسيج الكتان", "Hammered":"مطروق",
   "Rhodium":"روديوم", "Brass":"نحاس", "Set by hand":"يدوي", "Persian":"فارسية",
   "All hours":"كل الساعات", "Even hours":"الساعات الزوجية", "12, 3, 6 and 9":"12 و3 و6 و9", "12 and 6":"12 و6",
-  "Upright":"قائمة", "Along the radius":"باتجاه المركز", "Outer edge":"الحافة الخارجية", "Engraved and filled":"محفورة ومحشوّة",
+  "Upright":"قائمة", "Along the radius":"باتجاه المركز", "Lower figures upright":"السفلية معتدلة", "Outer edge":"الحافة الخارجية", "Engraved and filled":"محفورة ومحشوّة",
   "Applied":"مركّبة", "Ink":"حبر", "Lacquer or enamel":"لاكيه أو إينامل", "Sapphire or glass":"ياقوت أو زجاج",
   "Cone":"مخروط", "Diamond shape":"معيّن", "Shape and size":"الشكل والمقاس", "Shape only":"الشكل فقط",
   "Breguet, filled":"بريغيه مملوء", "Breguet, faceted":"بريغيه مضلّع", "English style":"الطراز الإنجليزي", "À tact":"آ تاكت",
@@ -18688,9 +18697,9 @@ Object.assign(GWORD.ar, {
   const textIn = (path, label, v, ph, clear) => (label = gW(label), `<div class="gRow"><label>${label}</label><span class="gField"><input type="text" dir="auto" data-gtext="${path}" value="${esc2(v||"")}" placeholder="${esc2(ph||"")}">${v && clear ? `<button type="button" class="gClear" data-gclear="${path}" aria-label="${gT("text.clear")} ${esc2(label)}">✕</button>` : ""}</span></div>`);
   /* The way on from a step's tab: its More options sheet, named and
      summed up, which also carries the link to the full editor. */
-  const more = (layer, label) => hasSheet(STEPS[step].k)
+  const more = (layer, label) => inlineMore(STEPS[step].k, curTab()) + (hasSheet(STEPS[step].k)
     ? `<button type="button" class="gMoreRow" data-gsheet="1"><b>${gT("more.open." + STEPS[step].k)}</b><small>${gT("more.sum." + STEPS[step].k)}</small></button>`
-    : `<button type="button" class="gMore" data-gfull="${layer}">${gT("more", gW(label))}</button>`;
+    : `<button type="button" class="gMore" data-gfull="${layer}">${gT("more", gW(label))}</button>`);
 
   /* thumbnails are cached by what they show, so a change elsewhere does not
      draw them again; a key leaves out long strings (an uploaded logo) */
@@ -19125,7 +19134,9 @@ Object.assign(GWORD.ar, {
     /* a complication is offered only where the case's movement drives it;
        one already on can still be turned off */
     powerReserve:() => !!caseOf(S).powerReserve || !!(S.power && S.power.on)};
-  const hasSheet = k => !!(G_MORE[k] && G_MORE[k].length);
+  /* a section with a tab of its own is drawn on that tab (inlineMore); the
+     More sheet holds only what has none, and is not offered when that is nothing */
+  const hasSheet = k => !!(G_MORE[k] && G_MORE[k].some(sec => !sec.tab));
   /* Two settings the full editor always shows that only some designs use:
      the slant of the drawn numeral sets, and the spacing of a typed logo.
      Elsewhere they would be controls that move nothing. */
@@ -19223,6 +19234,26 @@ Object.assign(GWORD.ar, {
     const state = sec.on ? gT(on ? "more.on" : "more.off") : gT("more.count", n);
     return `<details class="gMsec" data-gmsec="${id}"${open ? " open" : ""}><summary><span>${esc2(gW(sec.t))}</span><small>${esc2(state)}</small></summary><div class="gMsecB">${inner}</div></details>`;
   }
+  /* The More sections that live on a tab, drawn there, folded, with the same
+     controls the sheet had. On the hands' tabs, which hand is being changed
+     and whether the others follow are said first. */
+  let inlineDone = false;
+  function inlineMore(k, tab){
+    inlineDone = true;
+    const secs = (G_MORE[k] || []).filter(sec => sec.tab === (tab || "main"));
+    if(!secs.length) return "";
+    const used = new Set();
+    let h = "";
+    /* open unless folded by hand: these are the tab's own settings now, not extras */
+    for(const sec of secs){ const s1 = moreSection(k, sec, used, true); if(s1) h += s1; }
+    if(!h) return "";
+    if(k === "hands" && secs.some(sec => sec.src === "@") && tab !== "shape"){
+      const L = S.handSet.link !== "off";
+      h = chips44("ui.mhand", [["hHand","Hour hand"],["mHand","Minute hand"]], sheetHand === "sHand" ? "hHand" : sheetHand)
+        + `<p class="gNote">${L ? gT(S.handSet.link === "full set" ? "hands.linkFull" : "hands.linkStyle", !!S.handSet.includeSeconds) : gT("hands.linkOff")}</p>` + h;
+    }
+    return `<div class="gInline">${h}</div>`;
+  }
   function sheetHTML(){
     const k = STEPS[step].k, used = new Set();
     let h = "", shown = 0;
@@ -19234,7 +19265,7 @@ Object.assign(GWORD.ar, {
         h += toggle("ui.link", "Hands move together", L) + `<p class="gNote">${L ? gT(S.handSet.link === "full set" ? "hands.linkFull" : "hands.linkStyle", !!S.handSet.includeSeconds) : gT("hands.linkOff")}</p>`; }
       if(sheetHand === "sHand" && !S.sHand.on) return h + `<p class="gNote">${gT("more.secOff")}</p>` + toggle("sHand.on", "Seconds hand", false);
     }
-    for(const sec of G_MORE[k]){ const s = moreSection(k, sec, used, shown === 0); if(s){ h += s; shown++; } }
+    for(const sec of G_MORE[k]){ if(sec.tab) continue; const s = moreSection(k, sec, used, shown === 0); if(s){ h += s; shown++; } }
     if(!shown) h += `<p class="gNote">${gT("more.empty")}</p>`;
     const fa = FULL_AT[k];
     h += fa ? `<button type="button" class="gMore" data-gfull="${fa[0]}">${gT("more", gW(fa[1]))}</button>`
@@ -19374,6 +19405,9 @@ Object.assign(GWORD.ar, {
       /* the F77 drawn with Nivada's drawing's bezel, or the prototype's eight-sided one */
       if(K.outline === "f77") h += `<h3>${gW("Drawn bezel")}</h3>` + chips("case.bezelShape", [["drawing","As Nivada's drawing"],["prototype","As the prototype"]], S.case.bezelShape === "prototype" ? "prototype" : "drawing")
         + `<p class="gNote">${gT("case.bezelNote")}</p>`;
+      /* the stone in the crown, on a case that has one; the photograph keeps its own */
+      if(K.cabochon && !(hasPhoto(K) && S.tpl.on))
+        h += `<h3>${gW("Crown stone colour")}</h3>` + swatches("case.cab", [["#8A1538","Ruby"],["#1F3C8F","Sapphire"],["#141416","Onyx"],["#C9CDD2","Steel"]], S.case.cab, {row:true});
       h += toggle("case.strap", K.bracelet ? "Show the bracelet" : "Show the strap", S.case.strap);
       if(!K.bracelet && S.case.strap && !(K.photoStrap && S.case.strapType === "bracelet")) h += `<h3>${gW("Strap colour")}</h3>` + swatches("case.strapColor", [["#4E3629","Brown"],["#1E1E20","Black"],["#1E2B45","Navy"],["#A0744A","Tan"],["#2F3B2E","Green"],["#7A2433","Burgundy"]], S.case.strapColor, {row:true});
       /* the strap's material on the photograph: its rubber, or a woven Velcro strap with a stitched seam */
@@ -19383,10 +19417,21 @@ Object.assign(GWORD.ar, {
         if(S.case.strapType === "fabric" || S.case.strapType === "alligator") h += `<h3>${gW("Stitching")}</h3>` + swatches("case.stitch", [["#00000000","None"],["#F2701E","Orange"],["#F2F2EF","White"],["#D7262E","Red"],["#E3C27A","Sand"]], /^#[0-9a-f]{6}$/i.test(S.case.stitch || "") ? S.case.stitch : "#00000000", {row:true});
       }
       if(hasPhoto(K)){ h += toggle("tpl.on", "Show as a photograph", S.tpl.on); if(S.tpl.on) h += `<p class="gNote">${gT(K.photoParts ? "case.photoGold" : K.builtinTint ? "case.photoTint" : "case.photoNote")}</p>`; }
+      /* the photograph's own settings, where they used to wait in More: the
+         shadow the bezel throws round the dial, and, for a photograph added
+         in the full editor, lining the dial up with it */
+      if(S.tpl.on && tplAvail(S)){
+        h += slider("tpl.recess", "Shadow round the dial", 0, 1.5, 0.05, +S.tpl.recess || 0, "num");
+        if(!K.photoFile) h += `<h3>${gW("Line up the photograph")}</h3>`
+          + slider("tpl.cx", "Dial across the photo", 20, 80, 0.05, +S.tpl.cx, "pcv") + slider("tpl.cy", "Dial up and down the photo", 20, 80, 0.05, +S.tpl.cy, "pcv")
+          + slider("tpl.dia", "Dial size in the photo", 20, 95, 0.05, +S.tpl.dia, "pcv") + slider("tpl.rot", "Turn", -8, 8, 0.1, +S.tpl.rot || 0, "deg");
+      }
       return h + more("case", "All case settings");
     },
     dial(tab){
       const d = S.dial;
+      /* the zones and borders, and the complications: what the More sheet held */
+      if(tab === "zones" || tab === "extras") return (tab === "extras" ? `<p class="gNote">${gT("dial.extrasNote")}</p>` : "") + more("dial", "All dial settings");
       if(tab === "colour"){
         let h = chips("ui.palette", [["studio","Studio"],["classics","Watch classics"],["pantone","Pantone"]], palette);
         if(palette === "classics") h += swatches("dial.color", DIAL_CLASSICS.map(c => [c[1], c[0]]), d.color, {row:true});
@@ -19556,6 +19601,18 @@ Object.assign(GWORD.ar, {
       if(tab === "size"){
         let h = "";
         if(showNum){
+          /* which way the figures stand, as pictures of the dial: upright;
+             along the radius; along the radius with the lower ones turned to
+             read upright; bent along the curve. Drawn sets (vernoy, breguet)
+             cannot bend, and diamond-set figures stay straight, so the curve
+             is not offered to them. */
+          const drawnSet = (n.system || "western 0–9") === "western 0–9" && (n.style === "vernoy" || n.style === "breguet");
+          const dirs = [["upright","Upright"],["radial","Along the radius"],["radialUp","Lower figures upright"]]
+            .concat(drawnSet || (typeof paveOn === "function" && paveOn(S)) ? [] : [["curve","Follow the curve"]]);
+          const R = (caseOf(S).opening || 30)/2 + 0.2;
+          h += `<h3>${gW("Direction")}</h3>` + optTiles("num.dir", dirs, numDirOf(n), {box:[-R, -R, 2*R, 2*R], apply:numDirSet,
+            prep:st => { for(const k of ["hHand","mHand","sHand"]) if(st[k]) st[k].on = false; if(st.text) st.text.on = false; if(st.date) st.date.on = false; if(st.day) st.day.on = false; }});
+          if(numDirOf(n) !== "curve" && !drawnSet) h += `<h3>${gW("Line up by")}</h3>` + chips44("numerals.align", [["outer","Outer edge"],["centre","Centre"]], n.align === "centre" ? "centre" : "outer");
           h += slider("numerals.heightMM", "Figure height", 1.0, 4.0, 0.05, get(S, "numerals.heightMM"))
             + slider("numerals.radius", "Numerals from centre", 8, 14.5, 0.05, n.radius);
           /* thickness thickens a printed figure's ink; an applied piece is cut
@@ -19577,6 +19634,8 @@ Object.assign(GWORD.ar, {
     },
     hands(tab){
       const hh = S.hHand;
+      /* each hand's length and its details, one hand at a time */
+      if(tab === "length" || tab === "detail") return more("hands", "All hand settings");
       const METALS6 = [["polished steel","Steel"],["white gold","White gold"],["blued steel","Blued steel"],["yellow gold","Gold"],["rose gold","Rose gold"],["blackened steel","Black"]];
       if(tab === "shape"){
         const styles = [["day-date","Day-date"],["royal-oak","Royal Oak"],["f77","Nivada F77"],["dauphine","Dauphine"],["baton","Baton"],["sword","Sword"],["leaf","Leaf"],["feuille","Feuille"],["lance","Lance"],["alpha","Alpha"],["pencil","Pencil"],["obelisque","Obelisk"],["syringe","Syringe"],["pomme-ouverte","Breguet"],["mercedes","Mercedes"]];
@@ -19602,6 +19661,8 @@ Object.assign(GWORD.ar, {
     },
     text(tab){
       const T = S.text;
+      /* how the logo is made, and its plate or cartouche */
+      if(tab === "made") return more("text", "All text settings");
       if(tab === "logo" && caseBrandLogo(S)){
         /* the case's brand's logo, set by the case: its own marks only, then how it is made */
         const L = caseBrandLogo(S);
@@ -19904,7 +19965,7 @@ Object.assign(GWORD.ar, {
      that was let go. Enter or leaving the field keeps it; Escape does not. */
   function typeValue(btn){
     const path = btn.dataset.gtype, kind = btn.dataset.kind, min = parseFloat(btn.dataset.min), max = parseFloat(btn.dataset.max);
-    const sheet = !!btn.closest(".gSheet"), now = Number(get(S, path));
+    const sheet = !!btn.closest(".gSheet, .gInline"), now = Number(get(S, path));
     const shown = kind === "pct" ? Math.round(now*1000)/10 : +now.toFixed(4);
     const inp = document.createElement("input");
     inp.type = "text"; inp.inputMode = kind === "pos" ? "text" : "decimal"; inp.className = "gSlIn"; inp.value = String(shown);
@@ -19953,6 +20014,7 @@ Object.assign(GWORD.ar, {
     else if(path === "text.logoY"){ const dy = +v - (+S.text.logoY || 0); S.text.logoY = +v;
       if(S.text.line2 && S.text.line2On !== false && S.text.line2Follow !== false) S.text.line2Y = +((+S.text.line2Y || 0) + dy).toFixed(3); }
     else if(path === "case.model"){ const from = S.case.model; S.case.model = v; applyCaseModel(from, v); }
+    else if(path === "num.dir") numDirSet(S, v);
     else if(path === "num.make"){ const [t, m, pv] = v.split("|"); S.numerals.tech = t; S.numerals.material = m; if(m === "metal" && !S.numerals.metal) S.numerals.metal = "polished steel";
       S.numerals.pave = pv === "pave"; }
     /* A black diamond is set in black by default and every other stone in
@@ -20179,7 +20241,7 @@ Object.assign(GWORD.ar, {
        keep each where it was, and on a new step bring the choice into view */
     const rowsX = [...body.querySelectorAll(".gCards, .gChips, .gSw.row")].map(r => r.scrollLeft);
     body.innerHTML = `<div class="gH2"><h2>${s.t}</h2>${hasSheet(s.k) ? `<button type="button" class="gMoreTop" data-gsheet="1"></button>` : ""}</div><p class="gLead">${s.lead}</p>` + stepWarnings(s.k)
-      + (s.k === "text" && S.sHand && S.sHand.on ? `<p class="gNote">${gT("text.secHidden")}</p>` : "") + VIEW[s.k](tab);
+      + (s.k === "text" && S.sHand && S.sHand.on ? `<p class="gNote">${gT("text.secHidden")}</p>` : "") + ((inlineDone = false), VIEW[s.k](tab)) + (inlineDone ? "" : inlineMore(s.k, tab));
     body.dataset.view = view; if(same) body.scrollTop = scroll;
     downEdge();
     body.querySelectorAll(".gCards, .gChips, .gSw.row").forEach((r, i) => {
@@ -20279,14 +20341,18 @@ Object.assign(GWORD.ar, {
     findQ = ""; findIdx = null; listOpen = false;
     if(r.i !== step) go(r.i);
     if(r.tab) subTab[STEPS[r.i].k] = r.tab;
+    /* a section that lives on a tab is opened there; the rest in the sheet */
+    const [rk, rid] = r.sec ? r.sec.split(":") : [];
+    const home = r.sec ? ((G_MORE[rk] || []).find(x => x.id === rid) || {}).tab : null;
     if(r.sec){
       secOpen.add(r.sec); secShut.delete(r.sec);
       for(const [sk, depth] of (r.subs || [])){ if(depth === 0) subShut.delete(sk); else { subOpen.add(sk); subShut.delete(sk); } }
-      saveFolds(); sheetOn = true;
+      saveFolds();
+      if(home){ subTab[rk] = home; sheetOn = false; } else sheetOn = true;
     }
     paint();
     setTimeout(() => {
-      const root = guide.querySelector(r.sec ? ".gSheet" : ".gBody"); if(!root) return;
+      const root = guide.querySelector(r.sec && !home ? ".gSheet" : ".gBody"); if(!root) return;
       const q = r.sel ? root.querySelector(r.sel) : r.p ? root.querySelector(`[id="gms-${r.p}"], [data-gtoggle="${r.p}"], [data-gset="${r.p}"], [data-gcolor="${r.p}"], [data-gtype="${r.p}"]`) : null;
       const el = q ? (q.closest(".gSl, .gRow") || q) : r.sec ? root.querySelector(`[data-gmsec="${r.sec}"]`) : null;
       if(!el) return;
@@ -20409,7 +20475,7 @@ Object.assign(GWORD.ar, {
         if(GEM_CUTS[c].settings[n].indexOf(g.setting) < 0) g.setting = GEM_CUTS[c].settings[n][0];
         commit(); paintAll(); });
       return; }
-    if(d.gset){ const p = d.gset, v = JSON.parse(d.gv), sh = !!t.closest(".gSheet"); soon(t, () => apply(p, v, sh)); return; }
+    if(d.gset){ const p = d.gset, v = JSON.parse(d.gv), sh = !!t.closest(".gSheet, .gInline"); soon(t, () => apply(p, v, sh)); return; }
     if(d.gcase){ const m = d.gcase; soon(t, () => apply("case.model", m)); return; }
     if(d.gsec){
       const tip = d.gsec;
@@ -20554,7 +20620,7 @@ Object.assign(GWORD.ar, {
     const box = b.closest(".gSl"), r = box && box.querySelector("input[type=range]"); if(!r) return;
     const st = parseFloat(r.step), min = parseFloat(r.min), max = parseFloat(r.max);
     const v = Math.min(max, Math.max(min, +(parseFloat(r.value) + (+b.dataset.dir)*st).toFixed(gDecimals(st) + 1)));
-    r.value = v; if(b.closest(".gSheet")) fieldInput(b.dataset.gnudge, v); else set(S, b.dataset.gnudge, v); readSl(box, v); requestPaint(true);
+    r.value = v; if(b.closest(".gSheet, .gInline")) fieldInput(b.dataset.gnudge, v); else set(S, b.dataset.gnudge, v); readSl(box, v); requestPaint(true);
   }
   function endNudge(){
     if(rep){ clearTimeout(rep.t); }
@@ -20566,7 +20632,7 @@ Object.assign(GWORD.ar, {
     const b = e.target.closest && e.target.closest(".gStep"); if(!b || b.disabled) return;
     e.preventDefault();
     if(rep) clearTimeout(rep.t);
-    rep = {path:b.dataset.gnudge, was:get(S, b.dataset.gnudge), t:0, sheet:!!b.closest(".gSheet")};
+    rep = {path:b.dataset.gnudge, was:get(S, b.dataset.gnudge), t:0, sheet:!!b.closest(".gSheet, .gInline")};
     nudge(b);
     const again = () => { nudge(b); rep.t = setTimeout(again, 80); };
     rep.t = setTimeout(again, 420);
@@ -20575,7 +20641,7 @@ Object.assign(GWORD.ar, {
   guide.addEventListener("pointerleave", e => { if(rep && e.target === guide) endNudge(); });
   guide.addEventListener("change", e => {
     const t = e.target, d = t.dataset;
-    if(d.gtoggle){ apply(d.gtoggle, t.checked, !!t.closest(".gSheet")); }
+    if(d.gtoggle){ apply(d.gtoggle, t.checked, !!t.closest(".gSheet, .gInline")); }
     if(d.gcolor){
       /* The phone's colour picker stays open over the page and keeps sending
          changes. Rebuilding the panel here removed the input the picker
@@ -20588,11 +20654,11 @@ Object.assign(GWORD.ar, {
       return;
     }
     if(d.gtext){ textHold = true; clearTimeout(textTimer); textTimer = setTimeout(releaseText, 450); apply(d.gtext, t.value); }
-    if(d.grange){ apply(d.grange, parseFloat(t.value), !!t.closest(".gSheet")); }
+    if(d.grange){ apply(d.grange, parseFloat(t.value), !!t.closest(".gSheet, .gInline")); }
   });
   guide.addEventListener("input", e => {
     const t = e.target, d = t.dataset;
-    if(d.grange){ const v = parseFloat(t.value); if(t.closest(".gSheet")) fieldInput(d.grange, v); else set(S, d.grange, v); const box = t.closest(".gSl"); if(box) readSl(box, v); requestPaint(true); }
+    if(d.grange){ const v = parseFloat(t.value); if(t.closest(".gSheet, .gInline")) fieldInput(d.grange, v); else set(S, d.grange, v); const box = t.closest(".gSl"); if(box) readSl(box, v); requestPaint(true); }
     if(d.gcolor){ holdGuide = true; colorDirty = true; put(d.gcolor, t.value.toUpperCase()); requestPaint(true, 600); }
     if(d.gpfind){ pfind = t.value; const g = guide.querySelector(`.gPfound[data-path="${d.gpfind}"]`) || guide.querySelector(".gPfound"); if(g) g.innerHTML = pantoneGrid(d.gpfind, curOf(d.gpfind)); }
   });

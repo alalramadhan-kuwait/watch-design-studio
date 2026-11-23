@@ -110,7 +110,7 @@ test('findability (v4.19.0): find a setting, folds kept, long rows wrapped, "+ A
   assert.match(sw, /const own = isHex\(cur\) && !list\.some/);
   // labels that name what they move
   for (const [k, l] of [['minute.diameter', 'Minute track diameter'], ['hour.diameter', 'Hour track diameter'], ['numerals.radius', 'Numerals from centre'], ['indices.radius', 'Indices from centre']])
-    assert.match(source, new RegExp(`"${k.replace('.', '\\.')}":"${l}"`));
+    assert.match(source, new RegExp(`"${k.replace('.', '\\.')}":"${l}"|slider\\("${k.replace('.', '\\.')}", "${l}"`), k + ': on the More table, or on its tab since 4.47.0');
   assert.match(source, /slider\("indices\.radius", "Indices from centre", 6, 14\.5, 0\.05, ix\.radius\)/, 'the index distance beside the index size');
   // the hands say whether they move together, where they are changed
   assert.match(source, /h \+= toggle\("ui\.link", "Hands move together", L\)/);
@@ -329,7 +329,7 @@ test('designs tab and the movement rule (v4.34.0)', () => {
   assert.match(source, /data-gdo="keep">\$\{gT\("start\.saveNow"\)\}/, 'Save beside what was saved');
   assert.match(source, /powerReserve:\(\) => !!caseOf\(S\)\.powerReserve \|\| !!\(S\.power && S\.power\.on\)\}/);
   assert.match(source, /"sub\.hand":\(\) => !!caseOf\(S\)\.smallSeconds \|\| !!\(S\.sub && S\.sub\.hand\),/);
-  assert.match(source, /\{id:"power", t:"Power reserve", src:"power", need:"powerReserve", needSay:"more\.noPower",/);
+  assert.match(source, /\{id:"power", (tab:"extras", )?t:"Power reserve", src:"power", need:"powerReserve", needSay:"more\.noPower",/);
   assert.ok(!/powerReserve:\s*true|smallSeconds:\s*true/.test(source), 'no case has such a movement yet; a test to change when one does');
   // every concept keeps to what its movement drives
   const list = JSON.parse(fs.readFileSync(path.join(__dirname, '../concepts/index.json'), 'utf8'));
@@ -626,8 +626,29 @@ test('figures turned round the dial, reading upright (v4.46.0)', () => {
   assert.match(P, /if\(flip\)\{ const inf = Math\.max\(\.\.\.P\.map\(q => q\[1\]\)\); return \{p: pt\(Ro - inf, a\), ix: ixC, iy: 0, a: a \+ 180, s:sc\}; \}/, 'turned, and placed by its outer edge');
   assert.match(P, /a: flip \? a \+ 180 : a, s:sc\}; \};/, 'centred figures turn too');
   assert.match(source, /CK\("numerals\.flipLower","Lower figures read upright"\)/);
-  assert.match(source, /"numerals\.arc","numerals\.flipLower","numerals\.slant"\]/, 'in simple mode\'s Numeral layout');
+  // since 4.47.0 the Direction cards on the Size tab carry it (numDirTiles)
   assert.match(source, /"Lower figures read upright":"الأرقام السفلية تُقرأ معتدلة"/);
   const d = JSON.parse(fs.readFileSync(path.join(__dirname, '../concepts/noir-77.json'), 'utf8'));
   assert.equal(d.numerals.orient, 'radial'); assert.equal(d.numerals.arc, false); assert.equal(d.numerals.flipLower, true);
+});
+
+test('More options on the tabs, and choices as pictures (v4.47.0)', () => {
+  const vm = require('node:vm'), G = vm.createContext({});
+  vm.runInContext(chunk('/* GUIDE-PURE-BEGIN', '/* GUIDE-PURE-END */') + '\nthis.g={G_MORE};', G);
+  for (const [k, secs] of Object.entries(G.g.G_MORE)) for (const sec of secs) assert.ok(sec.tab, k + ':' + sec.id + ' has a tab');
+  assert.match(source, /const hasSheet = k => !!\(G_MORE\[k\] && G_MORE\[k\]\.some\(sec => !sec\.tab\)\);/);
+  assert.match(source, /function inlineMore\(k, tab\)\{/);
+  assert.match(source, /for\(const sec of G_MORE\[k\]\)\{ if\(sec\.tab\) continue;/, 'the sheet keeps only what has no tab');
+  assert.equal((source.match(/closest\("\.gSheet"\)/g) || []).length, 0, 'a change on a tab carries as one in the sheet did');
+  assert.match(source, /\{id:"power", tab:"extras", t:"Power reserve", src:"power", need:"powerReserve", needSay:"more\.noPower",/, 'the movement gate kept');
+  // Direction as pictures
+  const ctx = vm.createContext({});
+  vm.runInContext(chunk('const numDirOf = ', '\n/* The tabs a step') + '\nthis.r={numDirOf, numDirSet};', ctx);
+  const { numDirOf, numDirSet } = ctx.r, n = { orient: 'upright', arc: true };
+  for (const v of ['radialUp', 'radial', 'curve', 'upright', 'radialUp']) { numDirSet({ numerals: n }, v); assert.equal(numDirOf(n), v, v); }
+  assert.equal(n.flipLower, true); assert.equal(n.arc, false);
+  assert.match(source, /optTiles\("num\.dir", dirs, numDirOf\(n\),/);
+  assert.match(source, /else if\(path === "num\.dir"\) numDirSet\(S, v\);/);
+  assert.match(source, /"Lower figures upright":"السفلية معتدلة"/);
+  assert.match(source, /function optPic\(path, v, o\)\{/);
 });

@@ -93,9 +93,8 @@ test('Text -> Lines: a Made by row under each line, the light angle and the UV l
     for (const k of ['text.lightNote', 'text.brushNote', 'text.faintNote', 'text.uvNote']) assert.match(W.gT(k), AR, k);
   } finally { lang('en'); }
   for (const k of ['text.lightNote', 'text.brushNote', 'text.faintNote', 'text.uvNote']) assert.doesNotMatch(W.gT(k), AR, k);
-  // and on the More options sheet
-  const sec = W.G_MORE.text.find(s => s.id === 'linesmade');
-  assert.deepEqual([...sec.paths], ['text.line2Tech', 'text.footTech', 'text.splitTech', 'render.az', 'render.uv']);
+  // not repeated in a More section since 4.47.0: the Lines tab is where they are
+  assert.equal(W.G_MORE.text.find(s => s.id === 'linesmade'), undefined);
   assert.equal(W.gOptLabel('text.footTech', 'engraved'), 'Engraved, tone on tone');
   assert.equal(W.gOptLabel('text.footTech', 'engraved + filled'), 'Engraved and filled');
   assert.equal(W.gOptLabel('text.footTech', 'uv ink'), 'UV ink');

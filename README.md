@@ -200,6 +200,41 @@ stored in a design file do not change. In the full editor at laptop widths
 the toolbar sits tighter, and on a narrower window it takes a second row
 rather than pushing Share and Export off the screen.
 
+## More options on the tabs, and choices as pictures (v4.47.0)
+
+What the More options sheet held is now on each step's own tabs, open, where
+the rest of that step is: a team studied each step and placed every section.
+Each section of `G_MORE` names its tab (`tab:`) and is drawn there by
+`inlineMore` with the same controls, gates and folds the sheet had; a change
+made there carries as one made in the sheet did (linked hands follow). The
+More pill is offered only for a section without a tab, which is now none.
+
+- **Case › Metal and strap**: the crown stone colour (where the case has one and
+  the photograph is off), the photograph's shadow round the dial, and lining
+  up a photograph added in the full editor. "Keep to the factory drawing" is
+  the full editor's.
+- **Dial**: surface, guilloché and stone on Surface; the minute track, chapter
+  ring and hour track on Track; two new tabs, **Zones** (dial zones, engraved
+  borders) and **Extras** (crosshair, sub-dial, power reserve, each offered
+  only where the case's movement drives it, as before).
+- **Markers**: **Direction** is a row of pictures on Size: Upright, Along the
+  radius, Lower figures upright (v4.46.0's switch, no longer behind two other
+  choices), Follow the curve (not offered for drawn sets or diamond-set
+  figures, which stay straight); Line up by under it; which hours, spacing and
+  slant below. How the numerals are made and engraving on Made by; index
+  markers on Style.
+- **Hands**: two new tabs, **Length** and **Details**, each with the hour /
+  minute choice and whether the hands move together; every shape, the finish
+  and "hands together" on Shape.
+- **Text**: a new **Made by** tab for how the logo is made and its plate or
+  cartouche; spacing on Logo. The logo artwork and the lines' making were on
+  their tabs already.
+- **Calendar** and **Finish**: their sections on their own pages.
+
+Choices shown as pictures use `optTiles`: each card is the design with that
+one choice made, the part it changes drawn small (without the material
+raster) and kept until something it shows changes.
+
 ## Figures turned round the dial, reading upright (v4.46.0)
 
 Radial figures (Numeral layout › Direction › Radial, with "Follow the curve"

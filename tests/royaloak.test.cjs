@@ -42,7 +42,7 @@ test('the style exists, with its matching seconds hand, wherever hands are chose
   // the full editor's list, which the More options sheet draws as cards
   const styles = chunk('const HAND_STYLES = [', '];');
   assert.match(styles, /"day-date","dd-seconds","royal-oak","ro-seconds",/);
-  assert.match(chunk('hands:[', 'text:['), /\{id:"shape", t:"Shape", src:"@", paths:\["H\.style"\], cards:\["H\.style"\]\}/);
+  assert.match(chunk('hands:[', 'text:['), /\{id:"shape", (tab:"shape", )?t:"Shape", src:"@", paths:\["H\.style"\], cards:\["H\.style"\]\}/);
   // simple mode's Hands step: a card with a picture, and a seconds card
   assert.match(source, /const styles = \[\["day-date","Day-date"\],\["royal-oak","Royal Oak"\],/);
   assert.match(source, /data-ghand="\$\{v\}"><div class="gPic">\$\{handPic\(v\)\}/);
