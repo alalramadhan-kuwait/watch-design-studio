@@ -17247,6 +17247,9 @@ body.guided .stage.gPhoto{ background:#fff }
 .gWelcome{ font:600 21px/1.2 var(--sans); margin:4px 0 2px; letter-spacing:-.015em; color:var(--ds-text) }
 .gCards.all{ display:grid !important; grid-template-columns:repeat(auto-fill,minmax(96px,1fr)); overflow:visible !important; margin:0 !important; padding:2px 0 6px !important }
 .gCards.all .gCard{ flex:none }
+/* choices as pictures: the part the choice changes, drawn small, three across */
+.gCards.gOpts .gPic{ background:#E9E7E1 }
+.gCards.gOpts .gName{ white-space:normal; line-height:1.2; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; margin-top:3px; font-size:12px }
 /* the fonts: every face in view at once, a grid rather than one row to scroll;
    a long name takes two lines rather than being cut */
 .gCards.all.gFaces .gName{ white-space:normal; line-height:1.2; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; margin-top:3px }
@@ -18888,6 +18891,26 @@ Object.assign(GWORD.ar, {
     }catch(e){ return ""; }
     return ph ? svg : memo(k, () => svg);
   }
+  /* Choices shown as pictures (optTiles): each card is the design as it
+     would be with that one choice made, the part the choice changes drawn
+     small. o.box is that part, [x, y, w, h] in mm about the dial centre;
+     o.apply(st, v) makes the choice on the copy when it is more than one
+     field (else the path is set); o.prep(st) tidies the copy (the hands
+     off, say, so the figures can be seen). Each picture is drawn once and
+     kept until something it shows changes; drawn without the material
+     raster, so a grid costs a few milliseconds a card. */
+  function optPic(path, v, o){
+    const st = JSON.parse(JSON.stringify(S));
+    if(o.apply) o.apply(st, v); else set(st, path, v);
+    if(o.prep) o.prep(st, v);
+    const b = o.box || [-15, -15, 30, 30];
+    const k = "o|" + path + "|" + JSON.stringify(v) + "|" + keyOf(st) + "|" + b.join(",");
+    return memo(k, () => { try{
+      return buildSVG(st, {scope:"dial", tag:"o" + (++thumbSeq), material:false}).replace(/viewBox="[^"]*"/, `viewBox="${b.join(" ")}"`);
+    }catch(e){ return ""; } });
+  }
+  const optTiles = (path, opts, cur, o) => `<div class="gCards gOpts all">${opts.map(([v, l]) =>
+    `<button type="button" class="gCard ${JSON.stringify(v) === JSON.stringify(cur) ? "on" : ""}" data-gset="${path}" data-gv='${gv(v)}'><div class="gPic">${optPic(path, v, o || {})}</div><div class="gName">${esc2(gW(l))}</div></button>`).join("")}</div>`;
   let noreRef = null, tkRef = null, conceptRefs = [];
   /* the concepts kept in the repository (concepts/index.json): each a design
      file made in the studio, shown as a card on the start screen */
