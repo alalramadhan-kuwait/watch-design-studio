@@ -275,10 +275,10 @@ test('square plots and a woven Velcro strap (v4.30.0)', () => {
   assert.match(source, /function fabricTex\(x, y\)\{/);
   assert.match(source, /const cw = 0\.90, bl = 0\.45, col = Math\.floor\(x\/cw\)/);
   assert.match(source, /const tw = 0\.62 \+ 0\.38\*Math\.cos\(2\*Math\.PI\*\(ay\/0\.42 \+ off\*1\.6\)\)/);
-  assert.match(source, /if\(\(c\.strapType !== "fabric" && c\.strapType !== "alligator"( && c\.strapType !== "bracelet")?\) \|\| !K\.photoStrap \|\| K\.bracelet \|\| c\.strap === false\) return null;/);
+  assert.match(source, /if\(\(c\.strapType !== "fabric" && c\.strapType !== "alligator"( && c\.strapType !== "bracelet")?( && c\.strapType !== "crackle")?\) \|\| !K\.photoStrap \|\| K\.bracelet \|\| c\.strap === false\) return null;/);
   assert.match(source, /\+ "\|" \+ \(fab \? \(fab\.type \|\| "fabric"\) \+ \(fab\.stitch \|\| ""\) : ""\);/, 'cached apart from rubber');
-  assert.match(source, /\["rubber","Rubber"\],\["fabric","Fabric \(Velcro\)"\],\["alligator","Alligator leather"\](,\["bracelet","Steel bracelet"\])?\]/);
-  assert.match(source, /S\.sheet\.strap\.type = v === "fabric" \? "fabric Velcro" : v === "alligator" \? "leather" : (v === "bracelet" \? "bracelet" : )?"rubber";/, 'the maker\'s sheet says so');
+  assert.match(source, /\["rubber","Rubber"\],\["fabric","Fabric \(Velcro\)"\],\["alligator","Alligator leather"\](,\["crackle","Vintage crackle leather"\])?(,\["bracelet","Steel bracelet"\])?\]/);
+  assert.match(source, /S\.sheet\.strap\.type = v === "fabric" \? "fabric Velcro" : v === "alligator"( \|\| v === "crackle" \|\| v === "leather")? \? "leather" : (v === "bracelet" \? "bracelet" : )?"rubber";/, 'the maker\'s sheet says so');
 });
 
 test('printed rehaut ring (v4.31.0): a ring outside the dial on the photograph, with a minute track of its own', () => {
@@ -554,7 +554,7 @@ test('Or Damier, the Vernoy photograph in gold, fine pomme rings (v4.42.0)', () 
 });
 
 test('a solid gold dial (v4.43.0)', () => {
-  assert.match(source, /const DIAL_BLANKS = \[("stainless steel", )?"18k yellow gold", "18k rose gold", "18k white gold"\];/);
+  assert.match(source, /const DIAL_BLANKS = \[("German silver", )?("stainless steel", )?"18k yellow gold", "18k rose gold", "18k white gold"\];/);
   assert.match(source, /const dialBlank = st => \{ const b = st && st\.dial && st\.dial\.blank; return DIAL_BLANKS\.indexOf\(b\) >= 0 \? b : \(caseOf\(st\)\.dialMat \|\| "brass"\); \};/);
   assert.match(source, /let h = `<h3>\$\{gW\("Dial made of"\)\}<\/h3>` \+ chips\("dial\.blank"/, 'the choice in Dial › Surface');
   assert.match(source, /SEL\("dial\.blank","Dial made of",/, 'and in the full editor');
@@ -608,8 +608,8 @@ test('Noir 77, a steel bracelet for the F77, a rounded line face (v4.45.0)', () 
   assert.equal(d.sHand.secTip, 'arrow');
   // the bracelet on the photograph
   assert.match(source, /function braceletTex\(x, ay, hw, y0\)\{/);
-  assert.match(source, /c\.strapType !== "alligator" && c\.strapType !== "bracelet"\) \|\| !K\.photoStrap/);
-  assert.match(source, /\["alligator","Alligator leather"\],\["bracelet","Steel bracelet"\]/);
+  assert.match(source, /c\.strapType !== "alligator" && c\.strapType !== "bracelet"( && c\.strapType !== "crackle")?\) \|\| !K\.photoStrap/);
+  assert.match(source, /\["alligator","Alligator leather"\],(\["crackle","Vintage crackle leather"\],)?\["bracelet","Steel bracelet"\]/);
   assert.match(source, /v === "bracelet" \? "bracelet" : "rubber"/);
   const vm = require('node:vm'), ctx = vm.createContext({});
   vm.runInContext(chunk('function mHash(x, y){', '\n') + '\n' + chunk('function vNoise(x, y){', '\n}\n') + '\n}\n' + chunk('function braceletTex(x, ay, hw, y0){', '\n}\n') + '\n}\nthis.r = braceletTex;', ctx);
@@ -701,7 +701,31 @@ test('a stainless steel dial (v4.49.0)', () => {
   ctx.r(st, 'stainless steel'); assert.equal(st.dial.color, '#C8C9C7', 'the dial shows the steel');
   ctx.r(st, '18k yellow gold'); assert.equal(st.dial.color, '#D7B56D');
   ctx.r(st, ''); assert.equal(st.dial.color, '#0A0B0C', 'brass puts the colour before back');
-  assert.match(source, /const DIAL_BLANKS = \["stainless steel", "18k yellow gold", "18k rose gold", "18k white gold"\];/);
+  assert.match(source, /const DIAL_BLANKS = \[("German silver", )?"stainless steel", "18k yellow gold", "18k rose gold", "18k white gold"\];/);
   assert.match(source, /else if\(d\.blank === "stainless steel" && d\.finish !== "stone"\) dialText = `Stainless steel dial, /, "the maker's sheet");
   assert.match(source, /"stainless steel":"ستيل"/);
+});
+
+test('German silver, a dial engraved throughout, crackled leather (v4.50.0)', () => {
+  const vm = require('node:vm');
+  assert.match(source, /const DIAL_BLANKS = \["German silver", "stainless steel", /);
+  assert.match(source, /else if\(d\.blank === "German silver" && d\.finish !== "stone"\) dialText = `Solid German silver dial, /);
+  // engrave everything
+  const ctx = vm.createContext({});
+  vm.runInContext(chunk('function engraveAll(st){', '\n}\n') + '\n}\nthis.r = engraveAll;', ctx);
+  const st = { numerals: { on: true, color: '#16181B', tech: 'engraved + filled' }, minute: { on: true, style: 'dots', tech: 'printed' }, indices: { on: false }, text: { on: true, logoTech: 'printed', engDepth: 0.12 } };
+  ctx.r(st);
+  assert.equal(st.minute.tech, 'engraved + filled'); assert.equal(st.minute.color, '#16181B');
+  assert.equal(st.text.logoTech, 'engraved'); assert.equal(st.text.engFill, 'lacquer'); assert.equal(st.text.engColor, '#16181B');
+  for (const k of ['line2Tech', 'footTech', 'splitTech']) assert.equal(st.text[k], 'engraved + filled');
+  assert.equal(st.text.engDepth, 0.035, 'cut shallow, so a fine wordmark survives');
+  assert.match(source, /data-gset="ui\.engraveAll" data-gv="true"/); assert.match(source, /else if\(path === "ui\.engraveAll"\) engraveAll\(S\);/);
+  // the crackle
+  const c2 = vm.createContext({});
+  vm.runInContext(chunk('function mHash(x, y){', '\n') + '\n' + chunk('function vNoise(x, y){', '\n}\n') + '\n}\n' + chunk('function crackleTex(x, y){', '\n}\n') + '\n}\nthis.r = crackleTex;', c2);
+  let cracked = 0, n = 0;
+  for (let x = -9; x < 9; x += 0.07) for (let y = 30; y < 40; y += 0.07) { const [sh, cr] = c2.r(x, y); n++; if (cr > 0.5) cracked++; assert.ok(sh > 0.6 && sh < 1.2); }
+  const share = cracked / n; assert.ok(share > 0.03 && share < 0.25, 'cracks and flecks cover a part of the strap, not all of it: ' + share.toFixed(3));
+  assert.match(source, /\["alligator","Alligator leather"\],\["crackle","Vintage crackle leather"\],\["bracelet","Steel bracelet"\]/);
+  assert.match(source, /if\(K\.builtinTint && c\.strap !== false && c\.strapType === "crackle"\)/, "on the Vernoy's photograph too");
 });

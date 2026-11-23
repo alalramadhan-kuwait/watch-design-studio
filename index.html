@@ -2292,7 +2292,7 @@ const APP_BUILD = "__BUILD__";
 /* The version people see, raised with every change that reaches them:
    major for a new way of working, minor for something new to do, patch for
    a fix. Shown on the watch screen, so any screenshot says which it was. */
-const APP_VERSION = "4.49.0";
+const APP_VERSION = "4.50.0";
 const APP_DATE = "__DATE__";
 
 /* Every route that replaces S passes through one of these three, which is
@@ -10314,7 +10314,7 @@ const visR = st => (st.case.locked ? caseOf(st).opening : st.case.opening)/2;
 /* What the dial blank is made of: the case's own (its drawing set says, brass
    on every case here) unless the design names a solid gold one. It is a
    material, not a colour: the colour is still the dial's. */
-const DIAL_BLANKS = ["stainless steel", "18k yellow gold", "18k rose gold", "18k white gold"];
+const DIAL_BLANKS = ["German silver", "stainless steel", "18k yellow gold", "18k rose gold", "18k white gold"];
 const dialBlank = st => { const b = st && st.dial && st.dial.blank; return DIAL_BLANKS.indexOf(b) >= 0 ? b : (caseOf(st).dialMat || "brass"); };
 
 /* ---------------------------------------------------------------------
@@ -10760,6 +10760,35 @@ function braceletTex(x, ay, hw, y0){
   const g = Math.max(20, Math.min(250, base*roll));
   return [g*0.985, g, g*1.02];
 }
+/* Vintage crackle leather: a dark aniline leather whose finish has crazed
+   into small irregular plates, 0.6 to 2 mm across, the pale grain showing
+   in the cracks between them, a few longer cracks running across, the
+   plates a shade apart. x across, y along, in mm. Returns [shade, crack 0..1]. */
+function crackleTex(x, y){
+  /* the finish crazed into plates longer across the strap than along it; the
+     cracks between them broken into short runs, wandering, of varying
+     width, the pale grain showing in them, and loose flecks where the
+     finish has flaked */
+  const cell = (cx, cy, sc) => {
+    const gx = Math.floor(cx/sc), gy = Math.floor(cy/sc); let d1 = 9, d2 = 9, id = 0;
+    for(let j = -1; j <= 1; j++) for(let i = -1; i <= 1; i++){
+      const px = (gx + i + 0.1 + 0.8*mHash(gx + i, gy + j))*sc, py = (gy + j + 0.1 + 0.8*mHash(gy + j + 31.7, gx + i + 7.3))*sc;
+      const d = Math.hypot(cx - px, cy - py);
+      if(d < d1){ d2 = d1; d1 = d; id = mHash(gx + i + 3.1, gy + j + 5.9); } else if(d < d2) d2 = d;
+    }
+    return [d2 - d1, id];
+  };
+  const wx = x + 0.55*(vNoise(y*1.6, 2.1) - 0.5) + 0.25*(vNoise(y*4.1 + 5, x*3.3) - 0.5);
+  const wy = y + 0.55*(vNoise(x*1.6, 8.4) - 0.5) + 0.25*(vNoise(x*4.3, y*3.9 + 9) - 0.5);
+  const [e1, id1] = cell(wx*0.62, wy*1.25, 1.0);
+  const width = 0.030 + 0.045*vNoise(x*2.2 + 4, y*2.2);
+  const run = vNoise(x*1.9 + 11, y*2.6 - 3) > 0.40 ? 1 : 0;          // the crack broken into runs
+  const crack0 = Math.max(0, 1 - e1/width)*run;
+  const fleck = vNoise(x*7.5 + 2, y*7.5 - 6) > 0.86 && vNoise(x*1.1, y*1.1 + 30) > 0.35 ? 0.85 : 0;
+  const crack = Math.min(1, Math.pow(crack0, 0.8) + fleck);
+  const shade = 0.92 + 0.10*(id1 - 0.5) + 0.12*(vNoise(x*0.35, y*0.35 + 50) - 0.5) + 0.05*(mHash(Math.floor(x*18), Math.floor(y*18)) - 0.5);
+  return [shade, crack];
+}
 function strapTintPixels(d, W, H, cal, P, hex, fab){
   const rgb = hex2rgb(hex), sti = fab && fab.stitch ? hex2rgb(fab.stitch) : null;
   for(let j = 0; j < H; j++){
@@ -10779,6 +10808,16 @@ function strapTintPixels(d, W, H, cal, P, hex, fab){
           const hw = fab.half ? fab.half(ay) : 10, lk = braceletTex(x, ay, hw, P.ends ? Math.min(-P.ends[0], P.ends[1]) : 22.5);
           const shadeB = Math.max(0.70, Math.min(1.12, 1 + 0.45*(L - 22)/120));
           for(let c = 0; c < 3; c++) d[o + c] = d[o + c] + (Math.min(255, lk[c]*shadeB) - d[o + c])*a;
+          continue;
+        }
+        if(fab.type === "crackle"){
+          /* the dark leather plate, the pale grain in its cracks, padded at the edges, stitched in a light thread */
+          const [sh, cr] = crackleTex(x, y + 60), hwC = fab.half ? fab.half(ay) : 10, padC = 1 - 0.30*Math.pow(Math.min(1, Math.abs(x)/hwC), 5);
+          const shadeC = Math.max(0.6, Math.min(1.15, 1 + 0.6*(L - 22)/120)), pale = [226, 220, 206];
+          let col = [0, 1, 2].map(c => Math.min(255, (rgb[c]*sh*(1 - cr) + pale[c]*0.78*cr)*padC*shadeC));
+          if(sti && beyond && fab.half){ const off = Math.abs(Math.abs(x) - (hwC - 1.3)), seg = (((ay % 2.6) + 2.6) % 2.6)/2.6;
+            if(off < 0.2 && seg > 0.12){ const rnd = Math.cos(off/0.2*Math.PI/2); col = [0, 1, 2].map(c => Math.min(255, sti[c]*(0.55 + 0.5*rnd)*shadeC)); } }
+          for(let c = 0; c < 3; c++) d[o + c] = d[o + c] + (col[c] - d[o + c])*a;
           continue;
         }
         const gator = fab.type === "alligator", tex = gator ? alligatorTex(x, y + 60) : fabricTex(x + 40, y + 60);
@@ -10824,23 +10863,24 @@ function strapTintPixels(d, W, H, cal, P, hex, fab){
    in, and the drawn case stands in meanwhile. */
 const vernoyGold = st => { const K = caseOf(st), c = st.case || {}; return K.builtinTint && !twoToneOf(st) ? goldOf(c.material) : null; };
 const vernoyStrapHex = st => { const K = caseOf(st), c = st.case || {}, own = (K.photoOwn || {}).strapColor;
+  if(K.builtinTint && c.strap !== false && c.strapType === "crackle") return /^#[0-9a-f]{6}$/i.test(c.strapColor || "") ? c.strapColor : "#2A2624";
   return K.builtinTint && own && c.strap !== false && /^#[0-9a-f]{6}$/i.test(c.strapColor || "") && c.strapColor.toUpperCase() !== own.toUpperCase() ? c.strapColor : null; };
-function builtinTinted(K, gold, strapHex){
-  const key = "builtin|" + (gold || "") + "|" + (strapHex || "");
+function builtinTinted(K, gold, strapHex, crackle){
+  const key = "builtin|" + (gold || "") + "|" + (strapHex || "") + "|" + (crackle == null ? "" : "crackle" + crackle);
   if(PHOTO_TINT.has(key)) return PHOTO_TINT.get(key);
   const px = photoPixels({photoFile:"builtin:vernoy", photoData:BUILTIN_CASE}); if(!px) return null;
   const w = px.width, h = px.height, C = BUILTIN_CASE_CAL;
   const cal = {cx:w*C.cx/100, cy:h*C.cy/100, s:w*C.dia/100/K.opening};
   const cv = document.createElement("canvas"); cv.width = w; cv.height = h;
   const g = cv.getContext("2d"), out = g.createImageData(w, h);
-  out.data.set(builtinTintPixels(px.data, w, h, cal, K.builtinTint, gold, strapHex));
+  out.data.set(builtinTintPixels(px.data, w, h, cal, K.builtinTint, gold, strapHex, crackle));
   g.putImageData(out, 0, 0);
   const url = cv.toDataURL("image/jpeg", 0.92);
   if(PHOTO_TINT.size > 5) PHOTO_TINT.clear();
   PHOTO_TINT.set(key, url);
   return url;
 }
-function builtinTintPixels(src, w, h, cal, T, gold, strapHex){
+function builtinTintPixels(src, w, h, cal, T, gold, strapHex, crackle){
   const out = new Uint8ClampedArray(src), lut = gold ? luxRampLUT(gold) : null, rgb = strapHex ? hex2rgb(strapHex) : null;
   const rsq = (x, y, half, rc) => Math.hypot(Math.max(0, Math.abs(x) - (half - rc)), Math.max(0, Math.abs(y) - (half - rc))) <= rc;
   for(let j = 0; j < h; j++){
@@ -10861,6 +10901,14 @@ function builtinTintPixels(src, w, h, cal, T, gold, strapHex){
       if(rgb && ax < T.strap[0] && ay > T.strap[1] && dw > 40){
         /* the leather's own light carried over: its grain and its scales stay */
         const L = 0.299*r + 0.587*gg + 0.114*b, k = Math.max(0.35, Math.min(2.6, L/T.strapL)), a = Math.min(1, (dw - 40)/60);
+        if(crackle != null && typeof crackleTex === "function"){
+          const [sh, cr] = crackleTex(x, y + 60), pale = [226, 220, 206], kk = Math.max(0.80, Math.min(1.12, 0.6 + 0.4*k));
+          let col = [0, 1, 2].map(c => Math.min(255, (rgb[c]*sh*(1 - cr) + pale[c]*0.8*cr)*kk));
+          const sti = /^#[0-9a-f]{6}$/i.test(crackle || "") ? hex2rgb(crackle) : null, off = Math.abs(ax - (T.strap[0] - 1.5)), seg = (((ay % 2.6) + 2.6) % 2.6)/2.6;
+          if(sti && off < 0.2 && seg > 0.12){ const rnd = Math.cos(off/0.2*Math.PI/2); col = [0, 1, 2].map(c => Math.min(255, sti[c]*(0.55 + 0.5*rnd)*kk)); }
+          for(let c = 0; c < 3; c++) out[o + c] = src[o + c] + (col[c] - src[o + c])*a;
+          continue;
+        }
         for(let c = 0; c < 3; c++) out[o + c] = src[o + c] + (Math.min(255, rgb[c]*k) - src[o + c])*a;
       }
     }
@@ -10870,7 +10918,7 @@ function builtinTintPixels(src, w, h, cal, T, gold, strapHex){
 /* a fabric strap on the photograph: its stitching and its half-width along
    its length (the F77's strap figures), or null for rubber */
 const photoFabric = (st, K) => {
-  const c = st.case || {}; if((c.strapType !== "fabric" && c.strapType !== "alligator" && c.strapType !== "bracelet") || !K.photoStrap || K.bracelet || c.strap === false) return null;
+  const c = st.case || {}; if((c.strapType !== "fabric" && c.strapType !== "alligator" && c.strapType !== "bracelet" && c.strapType !== "crackle") || !K.photoStrap || K.bracelet || c.strap === false) return null;
   const F = K.f77 && K.f77.strap, E = K.f77 && K.f77.body ? K.f77.body.lugEnd : 23.1;
   const half = F ? (ay => ay <= E ? F.w0 : F.w0 + (F.w1 - F.w0)*(ay - E)/(F.y1 - E)) : null;
   return {type:c.strapType, stitch:/^#[0-9a-f]{6}$/i.test(c.stitch || "") ? c.stitch : null, half};
@@ -10894,7 +10942,7 @@ function buildTemplate(st, o){
   /* the Vernoy's built-in photograph in gold, or on another strap */
   let builtinOwn = null;
   if(!own && K.builtinTint && tplImage === BUILTIN_CASE && (vernoyGold(st) || vernoyStrapHex(st))){
-    builtinOwn = builtinTinted(K, vernoyGold(st), vernoyStrapHex(st));
+    builtinOwn = builtinTinted(K, vernoyGold(st), vernoyStrapHex(st), st.case && st.case.strapType === "crackle" ? (/^#[0-9a-f]{6}$/i.test(st.case.stitch || "") ? st.case.stitch : "") : null);
     if(!builtinOwn) return buildSVG(st, {scope:"full"});
   }
   const IMG = own || builtinOwn || tplImage, IW = own ? K.photoCal.w : tplW, IH = own ? K.photoCal.h : tplH;
@@ -15024,6 +15072,7 @@ function sheetRows(st){
   /* a solid gold blank leads: it is what the dial is, the colour and finish what is done to it */
   if(/^18k (yellow|rose|white) gold$/.test(d.blank || "") && d.finish !== "stone") dialText = `Solid ${d.blank} dial, ${sheetDialFinish(d)}, ${sheetColourName(d.color)}`;
   else if(d.blank === "stainless steel" && d.finish !== "stone") dialText = `Stainless steel dial, ${sheetDialFinish(d)}, ${sheetColourName(d.color)}`;
+  else if(d.blank === "German silver" && d.finish !== "stone") dialText = `Solid German silver dial, ${sheetDialFinish(d)}, ${sheetColourName(d.color)}`;
   if(d.ombre > 0) dialText += ", ombré";
   if(d.pave && d.pave !== "none") dialText += `, pavé ${d.pave}`;
   row("dial", "Dial:", dialText, [d.finish, d.brushDir, d.pattern, d.stone, d.pave, d.ombre > 0, d.dome, st.sector && st.sector.on, st.chapter && st.chapter.on],
@@ -17696,11 +17745,12 @@ const GSTR = {en:{
   "case.gemRound":"Round brilliants are drawn on the round NOREL case only.",
   "dial.paveNote": (n, ct) => `${n} stones · ≈ ${ct} ct. A pavé dial is 18k gold about 0.8–1.0 mm thick, not the 0.40 mm brass blank: Blue Creations to confirm.`,
   "case.braceletNote":"Steel links in place of the strap, drawn on the photograph: a polished centre link between brushed outer links. Nivada makes the F77 on an integrated steel bracelet; this edition's sheet names the rubber strap, so confirm the bracelet with Nivada.",
+  "num.engraveAllNote":"Cuts the minute track, the name and the lines under it as the figures are, filled with the same lacquer, so nothing on the dial is printed.",
   "strap.own":"This case comes on its own bracelet, as the photograph shows it.",
   "mk.strapAt":"The band and the buckle are on the Strap step.",
   "dial.extrasNote":"A complication is offered only where the case's movement drives it.",
   "num.thinNote":"Taken in this far, a figure's thinnest parts (a hairline, a serif, the hook of a 1) can thin to nothing: check each figure in the preview before you send the design.",
-  "dial.blankNote": b => `The dial blank is cut from ${b === "stainless steel" ? "stainless steel" : "solid " + b}, not the case's brass, and the maker's sheet says so. The dial shows the metal under any finish that leaves it bare (brushed, sunburst, sandblasted, guilloché…); enamel, lacquer, stone and mother of pearl cover it. Colour can still tint it.`,
+  "dial.blankNote": b => `The dial blank is cut from ${b === "stainless steel" ? "stainless steel" : "solid " + b}${b === "German silver" ? " (nickel silver, as hand-engraved dials are)" : ""}, not the case's brass, and the maker's sheet says so. The dial shows the metal under any finish that leaves it bare (brushed, sunburst, sandblasted, guilloché…); enamel, lacquer, stone and mother of pearl cover it. Colour can still tint it.`,
   "dial.ombreNote":"Darkens the colour toward the edge, as a sprayed gradient does over a sunburst.",
   /* More options: each step's other settings, on a sheet of their own */
   "more.btn":"More", "more.aria": name => `More options: ${name}`, "more.title":"More options", "more.done":"Done",
@@ -17901,11 +17951,12 @@ GSTR.ar = {
   "case.gemRound":"الإطار المرصّع يُرسم على قالب NOREL الدائري فقط.",
   "dial.paveNote": (n, ct) => `${arCount(n, "حجر واحد", "حجران", "أحجار", "حجراً")} · ≈ ${ct} قيراط. الميناء المرصّع بالكامل من ذهب عيار 18 بسماكة 0.8–1.0 ملم تقريباً، لا من النحاس بسماكة 0.40 ملم: على Blue Creations أن تؤكد ذلك.`,
   "case.braceletNote":"حلقات ستيل مكان الحزام، مرسومة على الصورة: حلقة وسطى لامعة بين حلقات جانبية مُمشّطة. نيفادا تصنع F77 بسوار ستيل مدمج، لكن ورقة هالإصدار تذكر الحزام الربر، فتأكد من السوار مع نيفادا.",
+  "num.engraveAllNote":"يحفر مسار الدقائق والاسم والأسطر اللي تحته مثل الأرقام، ويعبّيها بنفس اللاكيه، فما يبقى شي مطبوع على الميناء.",
   "strap.own":"هالقالب يجي بسواره الخاص، مثل ما يبيّن في الصورة.",
   "mk.strapAt":"نوع الحزام والإبزيم في خطوة الحزام.",
   "dial.extrasNote":"التعقيدة ما تنعرض إلا إذا محرك القالب يشغّلها.",
   "num.thinNote":"لما ترقّق الأرقام لهالدرجة، أنحف أجزاءها (الخطوط الرفيعة، والزوائد، ورأس الرقم ١) ممكن تختفي: تأكد من كل رقم في المعاينة قبل ما ترسل التصميم.",
-  "dial.blankNote": b => `قاعدة الميناء من ${({"18k yellow gold":"الذهب الأصفر عيار ١٨","18k rose gold":"الذهب الوردي عيار ١٨","18k white gold":"الذهب الأبيض عيار ١٨","stainless steel":"الستيل المقاوم للصدأ"})[b] || b} الخالص، لا من نحاس القالب، ومكتوب في ورقة المصنع. الميناء يبيّن لون المعدن مع أي تشطيب يخلّيه ظاهر؛ الإينامل واللاكيه والحجر والصدف تغطيه. وتقدر تغيّر اللون من «اللون».`,
+  "dial.blankNote": b => `قاعدة الميناء من ${({"18k yellow gold":"الذهب الأصفر عيار ١٨","18k rose gold":"الذهب الوردي عيار ١٨","18k white gold":"الذهب الأبيض عيار ١٨","stainless steel":"الستيل المقاوم للصدأ","German silver":"الفضة الألمانية"})[b] || b} الخالص، لا من نحاس القالب، ومكتوب في ورقة المصنع. الميناء يبيّن لون المعدن مع أي تشطيب يخلّيه ظاهر؛ الإينامل واللاكيه والحجر والصدف تغطيه. وتقدر تغيّر اللون من «اللون».`,
   "dial.ombreNote":"يُغمِّق اللون نحو الحافة، كما يفعل الطلاء المتدرّج فوق النقش الشمسي.",
   "more.btn":"المزيد", "more.aria": name => `خيارات أخرى: ${name}`, "more.title":"خيارات أخرى", "more.done":"تم",
   "more.open.case":"خيارات أخرى للقالب", "more.open.dial":"خيارات أخرى للميناء", "more.open.markers":"خيارات أخرى للمؤشرات",
@@ -18150,6 +18201,21 @@ function numDirSet(st, v){
   if(v === "curve"){ n.arc = true; n.flipLower = false; }
   else { n.arc = false; n.flipLower = v === "radialUp"; }
 }
+/* Everything on the dial cut the one way: the figures engraved and filled
+   with lacquer, and the minute track, the name and the lines under it
+   engraved and filled in the same colour, as a hand-engraved dial is made.
+   Nothing is printed. */
+function engraveAll(st){
+  const n = st.numerals || {}, T = st.text || {}, ink = /^#[0-9a-f]{6}$/i.test(n.color || "") ? n.color : "#15171C";
+  if(n.on){ n.tech = "engraved + filled"; n.material = "lacquer / enamel"; n.color = ink; }
+  if(st.minute && st.minute.on && st.minute.style !== "beads"){ st.minute.tech = "engraved + filled"; st.minute.color = ink; }
+  if(st.indices && st.indices.on && !st.indices.applied){ st.indices.tech = "engraved + filled"; st.indices.color = ink; }
+  if(T.on !== false){
+    T.logoTech = "engraved"; T.engFill = "lacquer"; T.engColor = ink; T.color = ink; T.lineColor = ink;
+    if(!(T.engDepth > 0) || T.engDepth > 0.05) T.engDepth = 0.035;
+    for(const k of ["line2Tech", "footTech", "splitTech"]) T[k] = "engraved + filled";
+  }
+}
 /* Choosing what the dial is made of shows it: a gold blank left in its own
    metal turns the dial (and any zone in the dial's colour) that gold. A
    finish that covers the metal (enamel, lacquer, stone, mother of pearl)
@@ -18159,7 +18225,10 @@ function numDirSet(st, v){
 const DIAL_COVERS = ["enamel", "lacquer", "stone", "mop"];
 const dialBlankHex = b => ({"18k yellow gold":"yellow gold", "18k rose gold":"rose gold", "18k white gold":"white gold"})[b];
 /* the colour a bare blank shows: its gold, or steel's own grey */
-const blankColour = b => b === "stainless steel" ? (typeof LUX_STEEL !== "undefined" ? LUX_STEEL : "#C8C9C7")
+/* German silver (nickel silver, maillechort): a cool, slightly warm-grey
+   white metal, frosted it reads as a soft even grey */
+const GERMAN_SILVER = "#C9C9C5";
+const blankColour = b => b === "German silver" ? GERMAN_SILVER : b === "stainless steel" ? (typeof LUX_STEEL !== "undefined" ? LUX_STEEL : "#C8C9C7")
   : dialBlankHex(b) && typeof LUX_GOLD !== "undefined" ? LUX_GOLD[dialBlankHex(b)] : null;
 function dialBlankSet(st, v){
   const d = st.dial; if(!d) return;
@@ -18566,7 +18635,7 @@ Object.assign(GWORD.ar, {
   "Show this band":"إظهار هذا الشريط", "Diameter":"القطر", "Band width":"عرض الشريط", "Edge line width":"عرض خط الحافة",
   "Engraving depth":"عمق الحفر", "Cut spacing":"تباعد الحزوز", "Cut angle":"زاوية الحزوز", "Remove this band":"حذف هذا الشريط", "Add a band":"إضافة شريط",
   "Arm length":"طول الذراع", "Track colour":"لون المسار", "Show the track":"إظهار المسار",
-  "Dial made of":"الميناء مصنوع من", "stainless steel":"ستيل", "Stainless steel":"ستيل", "18k yellow gold":"ذهب أصفر عيار ١٨", "18k rose gold":"ذهب وردي عيار ١٨", "18k white gold":"ذهب أبيض عيار ١٨", "Brass":"نحاس",
+  "Dial made of":"الميناء مصنوع من", "stainless steel":"ستيل", "Stainless steel":"ستيل", "German silver":"فضة ألمانية", "Engrave the track and the name the same way":"احفر المسار والاسم بنفس الطريقة", "Vintage crackle leather":"جلد قديم متشقّق", "18k yellow gold":"ذهب أصفر عيار ١٨", "18k rose gold":"ذهب وردي عيار ١٨", "18k white gold":"ذهب أبيض عيار ١٨", "Brass":"نحاس",
   "Which hours":"أي الساعات", "Spacing":"التباعد", "Direction":"الاتجاه", "Line up by":"المحاذاة حسب", "Slant":"الميل",
   "Material":"المادة", "Use the loaded metal texture":"استخدام نقشة المعدن المحمّلة", "Thickness of the piece":"سماكة القطعة", "Bevel":"الشطف",
   "Depth":"العمق", "Bevel width":"عرض الشطف", "Shadow":"الظل", "Highlight":"اللمعة", "Darkness inside":"العتمة في الداخل", "Light from":"اتجاه الضوء",
@@ -19599,6 +19668,8 @@ Object.assign(GWORD.ar, {
           /* diamond-set needs a figure with an outline to fill: a font, not
              one of the drawn sets */
           const drawn = sys === "western 0–9" && (n.style === "vernoy" || n.style === "breguet");
+          if(n.tech === "engraved + filled" || n.tech === "engraved")
+            h += `<button type="button" class="gMact" data-gset="ui.engraveAll" data-gv="true">${esc2(gW("Engrave the track and the name the same way"))}</button><p class="gNote">${gT("num.engraveAllNote")}</p>`;
           h += `<h3>${gW("Numerals")}</h3>` + chips44("num.make", [["printed|ink","Printed"],["double printed|ink","Raised print"],["applied|metal","Applied metal"],["engraved + filled|lacquer / enamel","Enamel-filled"],["printed|lume","Lume"]].concat(drawn ? [] : [["applied|metal|pave","Diamond-set"]]), make);
           if(drawn) h += `<p class="gNote">${gT("mk.drawnPave")}</p>`;
           if(n.tech === "applied" && n.material === "metal") h += `<h3>${gW("Metal")}</h3>` + chips44("numerals.metal", [["polished steel","Steel"],["white gold","White gold"],["yellow gold","Gold"],["rose gold","Rose gold"],["blackened steel","Black"]], n.metal || "polished steel");
@@ -19771,15 +19842,20 @@ Object.assign(GWORD.ar, {
       if(K.bracelet) h += `<p class="gNote">${gT("strap.own")}</p>`;
       else {
         if(K.photoStrap){
-          const types = [["rubber","Rubber"],["fabric","Fabric (Velcro)"],["alligator","Alligator leather"],["bracelet","Steel bracelet"]];
+          const types = [["rubber","Rubber"],["fabric","Fabric (Velcro)"],["alligator","Alligator leather"],["crackle","Vintage crackle leather"],["bracelet","Steel bracelet"]];
           const cur = types.some(t => t[0] === c.strapType) ? c.strapType : "rubber";
           h += `<h3>${gW("Strap")}</h3><div class="gCards gOpts all">` + types.map(([v, l]) =>
             `<button type="button" class="gCard ${v === cur ? "on" : ""}" data-gset="case.strapType" data-gv='${gv(v)}'><div class="gPic">${thumb(Object.assign(clone(S), {case:Object.assign({}, c, {strapType:v})}), "strap|" + v, {cy:K.flat*0.7, side:K.flat*0.56})}</div><div class="gName">${esc2(gW(l))}</div></button>`).join("") + `</div>`;
           if(c.strapType === "bracelet") h += `<p class="gNote">${gT("case.braceletNote")}</p>`;
+        } else if(K.builtinTint){
+          /* the Vernoy's photograph: its own leather, or a crackled vintage one */
+          const types = [["leather","Leather"],["crackle","Vintage crackle leather"]], cur = c.strapType === "crackle" ? "crackle" : "leather";
+          h += `<h3>${gW("Strap")}</h3><div class="gCards gOpts all">` + types.map(([v, l]) =>
+            `<button type="button" class="gCard ${v === cur ? "on" : ""}" data-gset="case.strapType" data-gv='${gv(v)}'><div class="gPic">${thumb(Object.assign(clone(S), {case:Object.assign({}, c, {strapType:v})}), "strap|" + v, {cy:K.flat*0.85, side:K.flat*0.6})}</div><div class="gName">${esc2(gW(l))}</div></button>`).join("") + `</div>`;
         } else h += `<h3>${gW("Band")}</h3>` + chips("sheet.strap.type", [["leather","Leather"],["rubber","Rubber"],["fabric Velcro","Fabric Velcro"],["bracelet","Bracelet"]], sp.type);
         if(!(K.photoStrap && c.strapType === "bracelet"))
           h += `<h3>${gW("Strap colour")}</h3>` + swatches("case.strapColor", [["#4E3629","Brown"],["#1E1E20","Black"],["#1E2B45","Navy"],["#A0744A","Tan"],["#2F3B2E","Green"],["#7A2433","Burgundy"]], c.strapColor, {row:true});
-        if(K.photoStrap && (c.strapType === "fabric" || c.strapType === "alligator"))
+        if((K.photoStrap || K.builtinTint) && (c.strapType === "fabric" || c.strapType === "alligator" || c.strapType === "crackle"))
           h += `<h3>${gW("Stitching")}</h3>` + swatches("case.stitch", [["#00000000","None"],["#F2701E","Orange"],["#F2F2EF","White"],["#D7262E","Red"],["#E3C27A","Sand"]], /^#[0-9a-f]{6}$/i.test(c.stitch || "") ? c.stitch : "#00000000", {row:true});
       }
       /* how it closes, as the maker's sheet says */
@@ -20065,7 +20141,7 @@ Object.assign(GWORD.ar, {
     else if(path === "ui.metal"){ if(/^two:/.test(v)){ S.case.material = LUX_STEEL; S.case.twoTone = v.slice(4); } else { S.case.material = v; S.case.twoTone = "none"; } }
     /* the classic colours named ombré are ombré */
     /* the strap's material, and the maker's sheet says the same */
-    else if(path === "case.strapType"){ S.case.strapType = v; ensureSheet(S); S.sheet.strap.type = v === "fabric" ? "fabric Velcro" : v === "alligator" ? "leather" : v === "bracelet" ? "bracelet" : "rubber";
+    else if(path === "case.strapType"){ S.case.strapType = v; ensureSheet(S); S.sheet.strap.type = v === "fabric" ? "fabric Velcro" : v === "alligator" || v === "crackle" || v === "leather" ? "leather" : v === "bracelet" ? "bracelet" : "rubber";
       if(v === "alligator" && !/^#[0-9a-f]{6}$/i.test(S.case.stitch || "")) S.case.stitch = "#8A5A3C"; }
     else if(path === "dial.color"){ S.dial.color = v; const cl = classicOf(v); if(cl && /ombré/.test(cl[0]) && !(S.dial.ombre > 0)) S.dial.ombre = 0.7; }
     else if(path === "minute.style"){ if(v === "none") S.minute.on = false; else { S.minute.on = true; S.minute.style = v; } }
@@ -20075,6 +20151,7 @@ Object.assign(GWORD.ar, {
     else if(path === "case.model"){ const from = S.case.model; S.case.model = v; applyCaseModel(from, v); }
     else if(path === "num.dir") numDirSet(S, v);
     else if(path === "dial.blank") dialBlankSet(S, v);
+    else if(path === "ui.engraveAll") engraveAll(S);
     else if(path === "num.make"){ const [t, m, pv] = v.split("|"); S.numerals.tech = t; S.numerals.material = m; if(m === "metal" && !S.numerals.metal) S.numerals.metal = "polished steel";
       S.numerals.pave = pv === "pave"; }
     /* A black diamond is set in black by default and every other stone in

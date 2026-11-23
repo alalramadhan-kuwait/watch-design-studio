@@ -200,6 +200,27 @@ stored in a design file do not change. In the full editor at laptop widths
 the toolbar sits tighter, and on a narrower window it takes a second row
 rather than pushing Share and Export off the screen.
 
+## German silver, a dial engraved throughout, crackled leather (v4.50.0)
+
+Three things a hand-engraved dial (as Naoya Hida & Co. make them in Tokyo)
+is built from, and the studio did not have:
+
+- **German silver** under "Dial made of": nickel silver, the metal such dials
+  are cut from; frosted (sandblasted) it is a soft, even grey (`GERMAN_SILVER`).
+  The maker's sheet reads "Solid German silver dial, …".
+- **Engrave the track and the name the same way** (Markers › Made by, once the
+  figures are engraved): the minute track, the indices, the name and the lines
+  under it cut as the figures are and filled with the same lacquer, so
+  nothing on the dial is printed (`engraveAll`). The name is cut shallow
+  (0.035 mm), as fine dial lettering is, so the cut's walls do not swallow a
+  thin wordmark.
+- **Vintage crackle leather** on the Strap step, on the F77's photograph and
+  the Vernoy's: dark leather whose finish has crazed into plates longer across
+  the strap than along it, the cracks broken into short wandering runs of
+  varying width with the pale grain showing in them, and loose flecks where
+  the finish has flaked (`crackleTex`); light stitching. The Vernoy's strap
+  step offers its own leather or this one, as pictures.
+
 ## A stainless steel dial (v4.49.0)
 
 "Dial made of" offers stainless steel beside brass and the three golds. Like
