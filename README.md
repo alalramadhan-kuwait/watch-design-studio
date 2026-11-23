@@ -200,6 +200,17 @@ stored in a design file do not change. In the full editor at laptop widths
 the toolbar sits tighter, and on a narrower window it takes a second row
 rather than pushing Share and Export off the screen.
 
+## The dial shows what it is made of (v4.48.2)
+
+Choosing a solid gold blank under "Dial made of" only told the maker's
+sheet; the dial kept its colour. Now a gold blank under a finish that leaves
+the metal bare (brushed, sunburst, sandblasted, guilloché and the rest)
+turns the dial that gold, and any zone in the dial's colour with it;
+enamel, lacquer, stone and mother of pearl cover the metal and keep their
+colour. Going back to brass, or to another gold, while the dial is still
+the gold that was set puts the colour before back (`dialBlankSet`, in simple
+mode and the full editor). The colour can still be changed under Colour.
+
 ## Larger step icons (v4.48.1)
 
 On a phone the eight step icons sat in a row beside the step's name, each

@@ -672,3 +672,17 @@ test('larger step icons (v4.48.1)', () => {
   assert.match(source, /\.gProgBar\{ flex:1 1 100%;/);
   assert.match(source, /\.gProgBar button b\{ display:grid; place-items:center; width:100%; height:42px;/);
 });
+
+test('the dial shows what it is made of (v4.48.2)', () => {
+  const vm = require('node:vm'), ctx = vm.createContext({});
+  vm.runInContext('const LUX_GOLD = {"yellow gold":"#D7B56D", "rose gold":"#D9A48C", "red gold":"#D39B78", "white gold":"#E3E4E6"};\n'
+    + chunk('const DIAL_COVERS = ', '\n/* The tabs a step') + '\nthis.r = dialBlankSet;', ctx);
+  const set = ctx.r, st = { dial: { color: '#DDDFE1', finish: 'brushedsteel', blank: '' }, sector: { zones: [{ color: '#DDDFE1' }, { color: '#222222' }] } };
+  set(st, '18k yellow gold'); assert.equal(st.dial.color, '#D7B56D'); assert.equal(st.sector.zones[0].color, '#D7B56D', 'a zone in the dial colour follows'); assert.equal(st.sector.zones[1].color, '#222222');
+  set(st, '18k rose gold'); assert.equal(st.dial.color, '#D9A48C');
+  set(st, ''); assert.equal(st.dial.color, '#DDDFE1', 'brass puts the colour before back'); assert.equal(st.dial.blank, '');
+  const en = { dial: { color: '#FFFFFF', finish: 'enamel', blank: '' } };
+  set(en, '18k yellow gold'); assert.equal(en.dial.color, '#FFFFFF', 'enamel covers the metal'); assert.equal(en.dial.blank, '18k yellow gold');
+  assert.match(source, /else if\(path === "dial\.blank"\) dialBlankSet\(S, v\);/, 'simple mode');
+  assert.match(source, /if\(p === "dial\.blank" && typeof dialBlankSet === "function"\)\{ dialBlankSet\(S, v\); return; \}/, 'the full editor');
+});
