@@ -200,6 +200,24 @@ stored in a design file do not change. In the full editor at laptop widths
 the toolbar sits tighter, and on a narrower window it takes a second row
 rather than pushing Share and Export off the screen.
 
+## Three haute-horlogerie dials for the F77 41 (v4.56.0)
+
+The four silver dials of 4.55.0 are set aside: they made the 41 look
+fuller by making everything bigger, which crowded it. Three new ones
+start again from how the great dials are made, under Designs, "F77 41 ·
+Haute horlogerie", beside the current design as the reference:
+- *Calatrava* (restraint): plain silver; applied rose-gold figures in the
+  AlTarikh face hung from a fine railway track; rose-gold leaf hands, the
+  hour hand ending at the figures; the Nivada script alone, small, with
+  TIME KEEPER under it.
+- *Sector* (architecture): three zones told apart by their finish and two
+  hairline rose-gold circles; graphite serif figures (Markazi) on the outer
+  zone; lance hands, the hour hand ending on the inner circle.
+- *Guilloché* (heritage): a clous-de-Paris centre inside a plain chapter;
+  calligraphic figures (Aref Ruqaa) printed in graphite; a dotted minute
+  track; rose-gold Breguet pomme hands.
+All three show 10:07:37, so the hands lie between the figures.
+
 ## The real F77 41, four silver dials for it, and sets side by side (v4.55.0)
 
 **The F77 41 is Nivada's own photograph.** The 41 mm case is now Nivada's

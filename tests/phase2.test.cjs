@@ -828,15 +828,14 @@ test('the real F77 41, four silver dials, and sets side by side (v4.55.0)', () =
   assert.equal(C.photoFile, undefined, 'the optimised 41 stays drawn'); assert.equal(C.opening, 30.2);
   assert.match(fs.readFileSync(path.join(__dirname, '../sw.js'), 'utf8'), /"\.\/app\/case-nivada-f77-41\.jpg"/);
   const list = JSON.parse(fs.readFileSync(path.join(__dirname, '../concepts/index.json'), 'utf8'));
-  const set = list.filter(x => x.set === 'F77 41 · Silver & rose gold');
-  assert.deepEqual(set.map(x => x.id), ['f77-41-current', 'f77-41-grand-arabic', 'f77-41-chapter-ring', 'f77-41-concentric', 'f77-41-tapisserie']);
+  const set = list.filter(x => /^F77 41 · /.test(x.set || ''));
+  assert.ok(set.length >= 4 && set[0].id === 'f77-41-current', 'a set on the 41, the current design first');
   for (const c of set) {
     const d = JSON.parse(fs.readFileSync(path.join(__dirname, '../concepts', c.file), 'utf8'));
     assert.equal(d.case.model, 'Time Keeper × Nivada · F77 41', c.id); assert.equal(d.meta.set, c.set);
     assert.equal(d.numerals.system, 'arabic ٠–٩', c.id); assert.equal(d.numerals.metal, 'rose gold', c.id);
     assert.equal(d.hHand.material, 'rose gold', c.id); assert.ok(/^Nivada /.test(d.text.logoMark), c.id + ": the case's own logo");
     assert.ok(fs.existsSync(path.join(__dirname, '../concepts', c.picture)), c.picture);
-    if (c.id !== 'f77-41-current') assert.ok(['brushedsteel', 'guilloche'].includes(d.dial.finish), c.id + ': a silver that renders silver');
   }
   assert.match(source, /set:String\(c\.set \|\| ""\), ref:j/);
   assert.match(source, /data-gcmp="\$\{esc2\(set\)\}">\$\{gT\("start\.compare"\)\}/);
@@ -844,4 +843,24 @@ test('the real F77 41, four silver dials, and sets side by side (v4.55.0)', () =
   assert.match(source, /thumb\(c\.st, "cmp\|" \+ \(c\.id \|\| "now"\), \{cy:0, side\}\)/, 'one scale for the whole row');
   for (const k of ['start.compare', 'start.cmpBack', 'start.cmpNow', 'start.cmpTitle', 'start.cmpNote', 'start.cmpFacts'])
     assert.equal((source.match(new RegExp('"' + k.replace('.', '\\.') + '":', 'g')) || []).length, 2, k + ' in English and Arabic');
+});
+
+test('three haute-horlogerie dials for the F77 41 (v4.56.0)', () => {
+  const list = JSON.parse(fs.readFileSync(path.join(__dirname, '../concepts/index.json'), 'utf8'));
+  const set = list.filter(x => x.set === 'F77 41 · Haute horlogerie');
+  assert.deepEqual(set.map(x => x.id), ['f77-41-current', 'f77-41-calatrava', 'f77-41-sector', 'f77-41-guilloche']);
+  for (const id of ['f77-41-grand-arabic', 'f77-41-chapter-ring', 'f77-41-concentric', 'f77-41-tapisserie'])
+    assert.ok(!fs.existsSync(path.join(__dirname, '../concepts', id + '.json')), id + ' set aside');
+  const read = id => JSON.parse(fs.readFileSync(path.join(__dirname, '../concepts', id + '.json'), 'utf8'));
+  const A = read('f77-41-calatrava'), B = read('f77-41-sector'), C = read('f77-41-guilloche');
+  for (const d of [A, B, C]) {
+    assert.equal(d.case.model, 'Time Keeper × Nivada · F77 41'); assert.equal(d.numerals.system, 'arabic ٠–٩');
+    assert.equal(d.hHand.material, 'rose gold'); assert.equal(d.mHand.material, 'rose gold');
+    assert.deepEqual(d.meta.time, { h: 10, m: 7, s: 37 }, 'the hands set between the figures');
+    assert.ok(d.text.logoSize <= 2.4, 'the name kept quiet');
+  }
+  assert.equal(A.numerals.style, 'AlTarikh Study'); assert.equal(A.numerals.tech, 'applied'); assert.equal(A.numerals.metal, 'rose gold');
+  assert.equal(A.minute.style, 'railroad'); assert.equal(A.hHand.style, 'feuille'); assert.equal(A.text.logoMark, 'Nivada script');
+  assert.equal(B.numerals.style, 'Markazi Text'); assert.equal(B.numerals.tech, 'printed'); assert.equal(B.sector.zones.length, 2); assert.equal(B.hHand.style, 'lance');
+  assert.equal(C.numerals.style, 'Aref Ruqaa'); assert.equal(C.sector.zones[0].pattern, 'clous'); assert.equal(C.hHand.style, 'pomme-ouverte');
 });

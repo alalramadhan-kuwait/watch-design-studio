@@ -51,10 +51,9 @@ const SHELL = [
   /* the concepts on the start screen, so they open offline too */
   "./concepts/index.json",
   "./concepts/f77-41-current.json",
-  "./concepts/f77-41-grand-arabic.json",
-  "./concepts/f77-41-chapter-ring.json",
-  "./concepts/f77-41-concentric.json",
-  "./concepts/f77-41-tapisserie.json",
+  "./concepts/f77-41-calatrava.json",
+  "./concepts/f77-41-sector.json",
+  "./concepts/f77-41-guilloche.json",
   "./concepts/chocolat-77.json",
   "./concepts/piste-77-noir-rose.json",
   "./concepts/piste-77-meteorite.json",

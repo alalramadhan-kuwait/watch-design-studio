@@ -4,40 +4,32 @@
   "file": "f77-41-current.json",
   "picture": "f77-41-current.jpg",
   "name": "Current",
-  "sub": "Your design moved to the 41: the reference to beat",
-  "set": "F77 41 · Silver & rose gold"
+  "sub": "Your design on the real 41: the reference",
+  "set": "F77 41 · Haute horlogerie"
  },
  {
-  "id": "f77-41-grand-arabic",
-  "file": "f77-41-grand-arabic.json",
-  "picture": "f77-41-grand-arabic.jpg",
-  "name": "Grand Arabic",
-  "sub": "Bold numerals out to the edge, dauphine hands",
-  "set": "F77 41 · Silver & rose gold"
+  "id": "f77-41-calatrava",
+  "file": "f77-41-calatrava.json",
+  "picture": "f77-41-calatrava.jpg",
+  "name": "Calatrava",
+  "sub": "Restraint: rose-gold figures and leaf hands on plain silver, a fine railway",
+  "set": "F77 41 · Haute horlogerie"
  },
  {
-  "id": "f77-41-chapter-ring",
-  "file": "f77-41-chapter-ring.json",
-  "picture": "f77-41-chapter-ring.jpg",
-  "name": "Chapter Ring",
-  "sub": "A satin outer ring takes the dial to the steel",
-  "set": "F77 41 · Silver & rose gold"
+  "id": "f77-41-sector",
+  "file": "f77-41-sector.json",
+  "picture": "f77-41-sector.jpg",
+  "name": "Sector",
+  "sub": "Architecture: three zones in hairline rose-gold circles, graphite figures",
+  "set": "F77 41 · Haute horlogerie"
  },
  {
-  "id": "f77-41-concentric",
-  "file": "f77-41-concentric.json",
-  "picture": "f77-41-concentric.jpg",
-  "name": "Concentric",
-  "sub": "Circular-brushed silver, leaf hands, rose dots",
-  "set": "F77 41 · Silver & rose gold"
- },
- {
-  "id": "f77-41-tapisserie",
-  "file": "f77-41-tapisserie.json",
-  "picture": "f77-41-tapisserie.jpg",
-  "name": "Tapisserie",
-  "sub": "Quarter numerals, rose F77 batons, woven silver",
-  "set": "F77 41 · Silver & rose gold"
+  "id": "f77-41-guilloche",
+  "file": "f77-41-guilloche.json",
+  "picture": "f77-41-guilloche.jpg",
+  "name": "Guilloché",
+  "sub": "Heritage: clous de Paris in a plain chapter, calligraphic figures, Breguet hands",
+  "set": "F77 41 · Haute horlogerie"
  },
  {
   "id": "gin",
