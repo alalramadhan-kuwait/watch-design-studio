@@ -2292,7 +2292,7 @@ const APP_BUILD = "__BUILD__";
 /* The version people see, raised with every change that reaches them:
    major for a new way of working, minor for something new to do, patch for
    a fix. Shown on the watch screen, so any screenshot says which it was. */
-const APP_VERSION = "4.45.0";
+const APP_VERSION = "4.46.0";
 const APP_DATE = "__DATE__";
 
 /* Every route that replaces S passes through one of these three, which is
@@ -6338,16 +6338,25 @@ function buildSVG(st, o={}){
         /* a seated font's figures share one baseline, the round ones dipping
            past it as drawn: centred across on their own ink, and up and down
            on the whole set's, so the feet and bars stay on one line */
+        /* Radial figures in the lower half (below 3 and 9) turned the other
+           way, their tops towards the centre, so every figure reads upright
+           round the dial, as lettering on an arc does: "Lower figures read
+           upright". The turn is the figure's own; it is placed by its outer
+           edge as the others are. */
+        const flip = nm.orient === "radial" && !arcSet && !!nm.flipLower && a > 90.001 && a < 269.999;
         const centred = () => { let [ix, iy] = drawnOutline ? [0, 0] : inkShift(famUsed, label, fz);
           const SF = BUILTIN_FONTS[styleUsed];
           if(SF && SF.seated && !drawnOutline){ const mS = inkMetrics(famUsed, NUM_SYSTEM[sys] || "0123456789"); if(mS) iy = -mS.cy*fz; }
-          return {p: pt(nm.radius, a), ix, iy, a, s:sc}; };
+          return {p: pt(nm.radius, a), ix, iy, a: flip ? a + 180 : a, s:sc}; };
         if(nm.align === "centre" || drawnOutline || arcSet) return centred();
         const hull = inkHull(famUsed, label); if(!hull) return centred();
         const Ro = nm.radius + nm.size*0.5, P = hull.map(([x, y]) => [x*fz, y*fz]);
         if(nm.orient === "radial"){
-          const sup = Math.max(...P.map(q => -q[1])), xs = P.map(q => q[0]);
-          return {p: pt(Ro - sup, a), ix: -(Math.min(...xs) + Math.max(...xs))/2, iy: 0, a, s:sc};
+          const xs = P.map(q => q[0]), ixC = -(Math.min(...xs) + Math.max(...xs))/2;
+          /* turned, the part below the baseline points out: it meets the outer edge */
+          if(flip){ const inf = Math.max(...P.map(q => q[1])); return {p: pt(Ro - inf, a), ix: ixC, iy: 0, a: a + 180, s:sc}; }
+          const sup = Math.max(...P.map(q => -q[1]));
+          return {p: pt(Ro - sup, a), ix: ixC, iy: 0, a, s:sc};
         }
         const ar2 = a*Math.PI/180, u = [Math.sin(ar2), -Math.cos(ar2)], t = [Math.cos(ar2), Math.sin(ar2)];
         const sup = Math.max(...P.map(q => q[0]*u[0] + q[1]*u[1]));
@@ -11674,6 +11683,7 @@ const SCHEMA = {
     /* A stamped applied numeral is one flat piece, so a real dial does carry it
        straight; printed lettering follows the ring. Default is the arc. */
     ...(S.numerals.orient === "radial" ? [CK("numerals.arc","Follow the arc")] : []),
+    ...(S.numerals.orient === "radial" && S.numerals.arc === false ? [CK("numerals.flipLower","Lower figures read upright")] : []),
     N("numerals.slant","Slant",0,18,1,"°"),
     {t:"head", l:"Technique"},
     SEL("numerals.tech","Made by",NUM_MAKE),
@@ -17969,7 +17979,7 @@ const GWORD = {ar:{
   /* text */
   "Type it":"اكتبه", "NOREL logo":"شعار NOREL", "NOREL shield":"درع NOREL", "NOREL wordmark":"كلمة NOREL", "Nivada shield + script":"درع نيفادا مع الكتابة", "Nivada script":"كتابة نيفادا", "Nivada shield":"درع نيفادا", "Vernoy wordmark (traced)":"شعار فيرنوي", "Your logo":"شعارك", "Logo text":"نص الشعار", "Logo font":"خط الشعار",
   "Serif":"كلاسيكي", "Sans":"حديث", "Logo made by":"طريقة صنع الشعار", "Logo metal":"معدن الشعار", "Logo size":"مقاس الشعار",
-  "Logo position":"موضع الشعار", "All text settings":"كل إعدادات الكتابة", "Position":"الموضع", "Follow the curve":"على انحناء الميناء",
+  "Logo position":"موضع الشعار", "All text settings":"كل إعدادات الكتابة", "Position":"الموضع", "Follow the curve":"على انحناء الميناء", "Lower figures read upright":"الأرقام السفلية تُقرأ معتدلة",
   "Space either side of 6":"المسافة على جانبي ٦", "Lean with the curve":"مائل مع انحناء الميناء", "Split either side of 6":"مقسوم حول ٦",
   "Nivada shield + script":"درع وشعار Nivada", "Nivada shield":"درع Nivada", "Nivada script":"كتابة Nivada",
   "Font":"الخط", "Engraved":"محفور", "Embossed":"نافر", "Debossed":"غائر",
@@ -18301,7 +18311,7 @@ const G_MORE = {
     {id:"power", t:"Power reserve", src:"power", need:"powerReserve", needSay:"more.noPower", on:"power.on", onLabel:"Show a power reserve", paths:["power.at","power.dist","power.r","power.empty","power.full","power.value","power.numSize","power.color","power.ink","power.handColor"]}],
   markers:[
     {id:"layout", t:"Numeral layout", src:"numerals", show:"numerals.on", paths:["numerals.system","numerals.set","numerals.heightMM","numerals.gap",
-      "numerals.radius","numerals.orient","numerals.align","numerals.arc","numerals.slant"]},
+      "numerals.radius","numerals.orient","numerals.align","numerals.arc","numerals.flipLower","numerals.slant"]},
     {id:"made", t:"How the numerals are made", src:"numerals", show:"numerals.on", paths:["numerals.tech","numerals.material","numerals.metal",
       "numerals.metalTex","numerals.edgeLight","numerals.height","numerals.bevel"]},
     {id:"engrave", t:"Engraving", src:"numerals", show:"numerals.on", paths:["numerals.engDepth","numerals.engBevel","numerals.engShadow",
@@ -18373,7 +18383,7 @@ const G_MORE_LABEL = {
   "power.value":"Reserve shown", "power.numSize":"Figure height", "power.color":"Sector colour", "power.ink":"Figures colour", "power.handColor":"Hand colour",
   "sub.at":"Position", "sub.dist":"Distance from centre", "sub.diameter":"Diameter", "sub.color":"Colour", "sub.ring":"Track colour", "sub.track":"Show the track",
   "numerals.system":"Numerals", "numerals.set":"Which hours", "numerals.heightMM":"Figure height", "numerals.gap":"Spacing", "numerals.radius":"Numerals from centre",
-  "numerals.orient":"Direction", "numerals.align":"Line up by", "numerals.arc":"Follow the curve", "numerals.slant":"Slant",
+  "numerals.orient":"Direction", "numerals.align":"Line up by", "numerals.arc":"Follow the curve", "numerals.flipLower":"Lower figures read upright", "numerals.slant":"Slant",
   "numerals.tech":"Made by", "numerals.material":"Material", "numerals.metal":"Metal", "numerals.metalTex":"Use the loaded metal texture",
   "numerals.edgeLight":"Edge light", "numerals.height":"Thickness of the piece", "numerals.bevel":"Bevel",
   "numerals.engDepth":"Depth", "numerals.engBevel":"Bevel width", "numerals.engShadow":"Shadow", "numerals.engHilite":"Highlight",

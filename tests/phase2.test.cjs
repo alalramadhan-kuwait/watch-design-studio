@@ -619,3 +619,15 @@ test('Noir 77, a steel bracelet for the F77, a rounded line face (v4.45.0)', () 
   assert.match(source, /"Comfortaa":\{family:"wdstxcomfortaa", latin:"sans", latinOnly:true, src:"data:font\/woff2;base64,/);
   assert.match(source, /A && !A\.latinOnly && !hasArabic\(txt\)/);
 });
+
+test('figures turned round the dial, reading upright (v4.46.0)', () => {
+  const P = chunk('      const place = (n, a, sc0) => {', '\n      };\n');
+  assert.match(P, /const flip = nm\.orient === "radial" && !arcSet && !!nm\.flipLower && a > 90\.001 && a < 269\.999;/, 'below 3 and 9 only');
+  assert.match(P, /if\(flip\)\{ const inf = Math\.max\(\.\.\.P\.map\(q => q\[1\]\)\); return \{p: pt\(Ro - inf, a\), ix: ixC, iy: 0, a: a \+ 180, s:sc\}; \}/, 'turned, and placed by its outer edge');
+  assert.match(P, /a: flip \? a \+ 180 : a, s:sc\}; \};/, 'centred figures turn too');
+  assert.match(source, /CK\("numerals\.flipLower","Lower figures read upright"\)/);
+  assert.match(source, /"numerals\.arc","numerals\.flipLower","numerals\.slant"\]/, 'in simple mode\'s Numeral layout');
+  assert.match(source, /"Lower figures read upright":"الأرقام السفلية تُقرأ معتدلة"/);
+  const d = JSON.parse(fs.readFileSync(path.join(__dirname, '../concepts/noir-77.json'), 'utf8'));
+  assert.equal(d.numerals.orient, 'radial'); assert.equal(d.numerals.arc, false); assert.equal(d.numerals.flipLower, true);
+});

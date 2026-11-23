@@ -209,19 +209,19 @@
   "numerals": {
     "on": true,
     "style": "Reverso Study",
-    "size": 4.3056,
-    "radius": 10.15,
+    "size": 4.5833,
+    "radius": 9.35,
     "color": "#F4F4EE",
     "set": "all",
     "edgeLight": 0.5,
-    "orient": "upright",
-    "align": "centre",
+    "orient": "radial",
+    "align": "outer",
     "dayClear": "move",
     "arc": false,
     "slant": 0,
     "tech": "double printed",
     "material": "ink",
-    "weight": 0.1,
+    "weight": 0.14,
     "gap": 0,
     "system": "western 0–9",
     "metal": "rose gold",
@@ -237,7 +237,8 @@
     "pave": false,
     "paveStone": "diamond",
     "paveD": 0.8,
-    "weightLive": true
+    "weightLive": true,
+    "flipLower": true
   },
   "gem": {
     "cut": "round",
@@ -318,15 +319,15 @@
   "text": {
     "on": true,
     "logo": "Nivada",
-    "logoY": -6,
+    "logoY": -5,
     "logoSize": 1.6,
     "logoFont": "serif",
     "line2": "Time Keeper",
-    "line2Y": 4.2,
-    "line2Size": 1.45,
+    "line2Y": 4.6,
+    "line2Size": 1.5,
     "foot": "AUTOMATIC",
-    "footY": 5.75,
-    "footSize": 0.62,
+    "footY": 6.55,
+    "footSize": 0.68,
     "color": "#F4F4EE",
     "logoCurve": false,
     "line2Curve": false,
@@ -503,7 +504,7 @@
         {
           "id": "R1",
           "title": "Royal Oak, steel, black dial with Arabic numerals (the picture sent)",
-          "note": "Taken: the steel octagon on its steel bracelet, the black glossy dial, the bold rounded figures in white lume, the white minute ticks with a square lume plot every five minutes, the lumed baton hands and the arrow-tipped seconds, the name under 12, a rounded model line with AUTOMATIC beneath it above 6, and SWISS MADE either side of 6. Left out: the date at 3, which the Soprod P024 in this case does not drive, so the 3 is a figure like the others. The maker's name and model are kept off; the case's own Nivada logo stands under 12."
+          "note": "Taken: the steel octagon on its steel bracelet, the black glossy dial, the bold rounded figures in white raised print, turned round the dial so each reads upright, the white minute ticks with a square lume plot every five minutes, the lumed baton hands and the arrow-tipped seconds, the name under 12, a rounded model line with AUTOMATIC beneath it above 6, and SWISS MADE either side of 6. Left out: the date at 3, which the Soprod P024 in this case does not drive, so the 3 is a figure like the others. The maker's name and model are kept off; the case's own Nivada logo stands under 12."
         }
       ],
       "avoid": "Audemars Piguet, Royal Oak, AP"

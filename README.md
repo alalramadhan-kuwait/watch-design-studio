@@ -200,6 +200,20 @@ stored in a design file do not change. In the full editor at laptop widths
 the toolbar sits tighter, and on a narrower window it takes a second row
 rather than pushing Share and Export off the screen.
 
+## Figures turned round the dial, reading upright (v4.46.0)
+
+Radial figures (Numeral layout › Direction › Radial, with "Follow the curve"
+off) can now have **"Lower figures read upright"**: the figures below 3 and 9
+turn the other way, their tops towards the centre, so every figure reads
+upright as it goes round the dial, as on the black Arabic-numeral Royal Oak:
+the 12 and the 6 upright, the 9 and the 3 on their sides, the rest tilted along
+the circle. Each is still placed by its own outer edge. Off, radial figures
+draw as before (`numerals.flipLower`, in `place`).
+
+Noir 77 uses it, with its figures larger (3.3 mm) and heavier, their outer
+edges just inside the square plots, and the lines measured off the picture
+turned upright (the photograph was taken with the watch turned about 37°).
+
 ## Noir 77, a steel bracelet for the F77, a rounded line face (v4.45.0)
 
 A new design under Designs, **Noir 77**: the Time Keeper × Nivada F77 after
