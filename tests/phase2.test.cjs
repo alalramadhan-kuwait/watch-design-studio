@@ -277,7 +277,7 @@ test('square plots and a woven Velcro strap (v4.30.0)', () => {
   assert.match(source, /const tw = 0\.62 \+ 0\.38\*Math\.cos\(2\*Math\.PI\*\(ay\/0\.42 \+ off\*1\.6\)\)/);
   assert.match(source, /if\(\(c\.strapType !== "fabric" && c\.strapType !== "alligator"( && c\.strapType !== "bracelet")?\) \|\| !K\.photoStrap \|\| K\.bracelet \|\| c\.strap === false\) return null;/);
   assert.match(source, /\+ "\|" \+ \(fab \? \(fab\.type \|\| "fabric"\) \+ \(fab\.stitch \|\| ""\) : ""\);/, 'cached apart from rubber');
-  assert.match(source, /chips\("case\.strapType", \[\["rubber","Rubber"\],\["fabric","Fabric \(Velcro\)"\],\["alligator","Alligator leather"\](,\["bracelet","Steel bracelet"\])?\]/);
+  assert.match(source, /\["rubber","Rubber"\],\["fabric","Fabric \(Velcro\)"\],\["alligator","Alligator leather"\](,\["bracelet","Steel bracelet"\])?\]/);
   assert.match(source, /S\.sheet\.strap\.type = v === "fabric" \? "fabric Velcro" : v === "alligator" \? "leather" : (v === "bracelet" \? "bracelet" : )?"rubber";/, 'the maker\'s sheet says so');
 });
 
@@ -651,4 +651,18 @@ test('More options on the tabs, and choices as pictures (v4.47.0)', () => {
   assert.match(source, /else if\(path === "num\.dir"\) numDirSet\(S, v\);/);
   assert.match(source, /"Lower figures upright":"السفلية معتدلة"/);
   assert.match(source, /function optPic\(path, v, o\)\{/);
+});
+
+test('a Strap step (v4.48.0)', () => {
+  assert.match(source, /const STEPS = \["case","dial","markers","hands","text","calendar","strap","finish"\]/, 'before Finish, so the earlier steps keep their places');
+  const V = chunk('    strap(){', '\n    calendar(tab){');
+  assert.match(V, /data-gset="case\.strapType"/, 'the strap types as pictures');
+  assert.match(V, /\{cy:K\.flat\*0\.7, side:K\.flat\*0\.56\}/, 'each picture the strap itself');
+  for (const p of ['case.strapColor', 'case.stitch', 'sheet.strap.buckle', 'sheet.strap.buckleColor', 'sheet.strap.buckleLogo', 'sheet.strap.style']) assert.ok(V.includes('"' + p + '"'), p);
+  const C = chunk('    case(tab){', '\n    dial(tab){');
+  assert.ok(!C.includes('"case.strapType"') && !C.includes('"case.strapColor"'), 'no longer on the Case tab');
+  assert.match(source, /if\(k === "strap"\) return "watch";/, 'framed whole');
+  assert.match(source, /if\(Math\.abs\(y\) > visR\(st\)\*1\.5 && Math\.abs\(x\) < visR\(st\)\*0\.9\) return \{step:"strap", tab:null\};/, 'a tap on the strap opens it');
+  assert.match(source, /"step\.strap":"Strap"/); assert.match(source, /"step\.strap":"الحزام"/);
+  assert.match(source, /<g>|stepIcon/); assert.match(chunk('const STEP_ICON = {', '\n  };'), /\n    strap:'</);
 });

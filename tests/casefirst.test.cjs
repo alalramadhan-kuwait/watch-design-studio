@@ -15,11 +15,11 @@ const chunk = (a, b) => { const i = source.indexOf(a); assert.ok(i >= 0, a); con
 const guide = chunk('/* GUIDED MODE — see the stylesheet note above.', '</script>');
 const strings = chunk('const GSTR = {en:{', 'const GWORD = {ar:{');
 
-test('seven steps, the Case first, and no Start step left behind', () => {
-  assert.match(guide, /const STEPS = \["case","dial","markers","hands","text","calendar","finish"\]/);
+test('eight steps (the Strap since 4.48.0), the Case first, and no Start step left behind', () => {
+  assert.match(guide, /const STEPS = \["case","dial","markers","hands","text","calendar","strap","finish"\]/);
   assert.doesNotMatch(guide, /\bstart\(\)\{/, 'no Start view');
   assert.doesNotMatch(strings, /"step\.start"|"lead\.start"/);
-  assert.match(guide, /gResumeStep\(rec, Date\.now\(\), 7\)/);
+  assert.match(guide, /gResumeStep\(rec, Date\.now\(\), 8\)/);
   // a record kept by 3.x counted Start as step 0: it moves down one
   assert.match(guide, /if\(rec\.v !== 4\)\{ rec\.step = Math\.max\(0, \(\+rec\.step \|\| 0\) - 1\); rec\.seen = rec\.seen\.map\(i => i - 1\)\.filter\(i => i >= 0\); rec\.v = 4; \}/);
   // opening a design stays on the Case step; Continue goes back to the step left

@@ -200,6 +200,18 @@ stored in a design file do not change. In the full editor at laptop widths
 the toolbar sits tighter, and on a narrower window it takes a second row
 rather than pushing Share and Export off the screen.
 
+## A Strap step (v4.48.0)
+
+The strap or bracelet has a step of its own, the seventh of eight, between the
+calendar and Finish (so the steps before it keep their places): whether it is
+shown; what it is, as pictures of the strap itself on the case's photograph
+(rubber, Velcro fabric, alligator, the steel bracelet) where the photograph can
+show it, else the band as the maker's sheet names it; its colour and
+stitching; and how it closes (band style and maker, buckle, its colour and its
+logo), which had been in Finish's "For the maker". A case that comes on its
+own bracelet says so. The watch is framed whole on this step so the strap
+can be seen, and a tap on the strap opens it. Case's tab is "Metal" now.
+
 ## More options on the tabs, and choices as pictures (v4.47.0)
 
 What the More options sheet held is now on each step's own tabs, open, where

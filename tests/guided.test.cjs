@@ -135,8 +135,8 @@ test('the design check is put in plain words, on the step that fixes it', () => 
   assert.deepEqual(unworded, []);
 });
 
-test('simple mode is version 4.47.0 and the drawing code is not touched by its preview', () => {
-  assert.match(source, /const APP_VERSION = "4\.47\.0";/);
+test('simple mode is version 4.48.0 and the drawing code is not touched by its preview', () => {
+  assert.match(source, /const APP_VERSION = "4\.48\.0";/);
   // the preview's seconds-hand change is undone whatever happens while drawing
   const v = chunk('function viewSVG(){', 'function viewSVGOf(){');
   assert.match(v, /finally\{ S\.meta\.time = t; S\.sHand\.on = on; \}/);
@@ -147,7 +147,7 @@ test('each step has its own icon in the step bar, the step tabs and the list, no
   const keys = chunk('const STEPS = [', ']').match(/"(\w+)"/g).map(s => s.slice(1, -1));
   const icons = chunk('const STEP_ICON = {', '\n  };');
   for (const k of keys) assert.match(icons, new RegExp(`\\n    ${k}:'<`), k);
-  assert.equal(keys.length, 7);
+  assert.equal(keys.length, 8, 'the Strap is a step since 4.48.0');
   assert.match(source, /<b>\$\{stepIcon\(x\.k, 19\)\}<\/b><\/button>/, 'the phone\'s step bar');
   assert.match(source, /<b>\$\{stepIcon\(s\.k, 13\)\}<\/b>\$\{s\.t\}/, 'the step tabs');
   assert.match(source, /<b>\$\{stepIcon\(x\.k, 17\)\}<\/b><span>/, 'the list of steps');

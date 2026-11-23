@@ -2292,7 +2292,7 @@ const APP_BUILD = "__BUILD__";
 /* The version people see, raised with every change that reaches them:
    major for a new way of working, minor for something new to do, patch for
    a fix. Shown on the watch screen, so any screenshot says which it was. */
-const APP_VERSION = "4.47.0";
+const APP_VERSION = "4.48.0";
 const APP_DATE = "__DATE__";
 
 /* Every route that replaces S passes through one of these three, which is
@@ -17533,13 +17533,14 @@ body:not(.guided) #gLangBtn{ display:none }
    ("Gold", "None") turns up in many lists. */
 const GSTR = {en:{
   "step.case":"Case", "step.dial":"Dial", "step.markers":"Markers", "step.hands":"Hands",
-  "step.text":"Text", "step.calendar":"Date", "step.finish":"Finish",
+  "step.text":"Text", "step.calendar":"Date", "step.strap":"Strap", "step.finish":"Finish",
   "lead.case":"Your watch, its case, and what it is worn on.",
   "lead.dial":"The colour, surface and minute track.",
   "lead.markers":"How the hours are shown.",
   "lead.hands":"The shape and metal of the hands.",
   "lead.text":"The logo and the lines of lettering.",
   "lead.calendar":"The day and date windows.",
+  "lead.strap":"The strap or bracelet: what it is, its colour, and how it closes.",
   "lead.finish":"Name it, check it, keep it.",
   "prog": (name, n, total) => `<b>${name}</b><span> · <i>step </i>${n} of ${total}</span>`,
   "prog.aria": (name, n, total) => `${name}, step ${n} of ${total}. Show all steps`,
@@ -17558,7 +17559,7 @@ const GSTR = {en:{
   "rs.note":"Kept in the design file and listed in the specification. The design check looks for the names to keep off in the dial's writing and in the names of the styles chosen.",
   "steps.all":"All steps", "steps.close":"Close", "steps.done":"Done", "steps.todo":"Not visited yet", "steps.here":"You are here",
   "next": name => `Next: ${name}`, "back":"Back", "done":"Done ✓",
-  "tab.case.designs":"Designs", "tab.case.shape":"Case", "tab.case.metal":"Metal and strap",
+  "tab.case.designs":"Designs", "tab.case.shape":"Case", "tab.case.metal":"Metal",
   "tab.dial.colour":"Colour", "tab.dial.surface":"Surface", "tab.dial.track":"Track", "tab.dial.zones":"Zones", "tab.dial.extras":"Extras",
   "tab.markers.style":"Style", "tab.markers.font":"Font", "tab.markers.shape":"Shape", "tab.markers.made":"Made by", "tab.markers.size":"Size", "tab.markers.gems":"Gems",
   "tab.hands.shape":"Shape", "tab.hands.length":"Length", "tab.hands.detail":"Details", "tab.hands.seconds":"Seconds",
@@ -17691,6 +17692,8 @@ const GSTR = {en:{
   "case.gemRound":"Round brilliants are drawn on the round NOREL case only.",
   "dial.paveNote": (n, ct) => `${n} stones · ≈ ${ct} ct. A pavé dial is 18k gold about 0.8–1.0 mm thick, not the 0.40 mm brass blank: Blue Creations to confirm.`,
   "case.braceletNote":"Steel links in place of the strap, drawn on the photograph: a polished centre link between brushed outer links. Nivada makes the F77 on an integrated steel bracelet; this edition's sheet names the rubber strap, so confirm the bracelet with Nivada.",
+  "strap.own":"This case comes on its own bracelet, as the photograph shows it.",
+  "mk.strapAt":"The band and the buckle are on the Strap step.",
   "dial.extrasNote":"A complication is offered only where the case's movement drives it.",
   "num.thinNote":"Taken in this far, a figure's thinnest parts (a hairline, a serif, the hook of a 1) can thin to nothing: check each figure in the preview before you send the design.",
   "dial.blankNote": b => `The dial blank is cut from solid ${b}, not the case's brass: the maker's sheet and the dial artwork say so. Its colour is still the one under Colour; left in its own metal, set that to the gold.`,
@@ -17737,13 +17740,14 @@ function ownMaker(t){
 const arCount = (n, one, two, few, many) => n === 1 ? one : n === 2 ? two : `${n} ${n >= 3 && n <= 10 ? few : many}`;
 GSTR.ar = {
   "step.case":"القالب", "step.dial":"الميناء", "step.markers":"المؤشرات", "step.hands":"العقارب",
-  "step.text":"الكتابة", "step.calendar":"التاريخ", "step.finish":"المراجعة",
+  "step.text":"الكتابة", "step.calendar":"التاريخ", "step.strap":"الحزام", "step.finish":"المراجعة",
   "lead.case":"ساعتك، وقالبها، والسوار أو الحزام.",
   "lead.dial":"اللون والسطح ومسار الدقائق.",
   "lead.markers":"كيف تظهر الساعات على الميناء.",
   "lead.hands":"شكل العقارب ومعدنها.",
   "lead.text":"الشعار وأسطر الكتابة.",
   "lead.calendar":"نافذة اليوم ونافذة التاريخ.",
+  "lead.strap":"الحزام أو السوار: نوعه، ولونه، وطريقة قفله.",
   "lead.finish":"سمِّها، وافحصها، واحفظها.",
   "prog": (name, n, total) => `<b>${name}</b><span> · <i>الخطوة </i>${n} من ${total}</span>`,
   "prog.aria": (name, n, total) => `${name}، الخطوة ${n} من ${total}. عرض كل الخطوات`,
@@ -17762,7 +17766,7 @@ GSTR.ar = {
   "rs.note":"ينحفظ في ملف التصميم وينكتب في المواصفات. فحص التصميم يدوّر على الأسماء الممنوعة في كتابة الميناء وفي أسماء الأنماط المختارة.",
   "steps.all":"كل الخطوات", "steps.close":"إغلاق", "steps.done":"تمّت", "steps.todo":"لم تُفتح بعد", "steps.here":"أنت هنا",
   "next": name => `التالي: ${name}`, "back":"رجوع", "done":"تم ✓",
-  "tab.case.designs":"التصاميم", "tab.case.shape":"القالب", "tab.case.metal":"المعدن والحزام",
+  "tab.case.designs":"التصاميم", "tab.case.shape":"القالب", "tab.case.metal":"المعدن",
   "tab.dial.colour":"اللون", "tab.dial.surface":"السطح", "tab.dial.track":"المسار", "tab.dial.zones":"المناطق", "tab.dial.extras":"إضافات",
   "tab.markers.style":"النوع", "tab.markers.font":"الخط", "tab.markers.shape":"الشكل", "tab.markers.made":"الصنع", "tab.markers.size":"المقاس", "tab.markers.gems":"الأحجار",
   "tab.hands.shape":"الشكل", "tab.hands.length":"الطول", "tab.hands.detail":"التفاصيل", "tab.hands.seconds":"الثواني",
@@ -17893,6 +17897,8 @@ GSTR.ar = {
   "case.gemRound":"الإطار المرصّع يُرسم على قالب NOREL الدائري فقط.",
   "dial.paveNote": (n, ct) => `${arCount(n, "حجر واحد", "حجران", "أحجار", "حجراً")} · ≈ ${ct} قيراط. الميناء المرصّع بالكامل من ذهب عيار 18 بسماكة 0.8–1.0 ملم تقريباً، لا من النحاس بسماكة 0.40 ملم: على Blue Creations أن تؤكد ذلك.`,
   "case.braceletNote":"حلقات ستيل مكان الحزام، مرسومة على الصورة: حلقة وسطى لامعة بين حلقات جانبية مُمشّطة. نيفادا تصنع F77 بسوار ستيل مدمج، لكن ورقة هالإصدار تذكر الحزام الربر، فتأكد من السوار مع نيفادا.",
+  "strap.own":"هالقالب يجي بسواره الخاص، مثل ما يبيّن في الصورة.",
+  "mk.strapAt":"نوع الحزام والإبزيم في خطوة الحزام.",
   "dial.extrasNote":"التعقيدة ما تنعرض إلا إذا محرك القالب يشغّلها.",
   "num.thinNote":"لما ترقّق الأرقام لهالدرجة، أنحف أجزاءها (الخطوط الرفيعة، والزوائد، ورأس الرقم ١) ممكن تختفي: تأكد من كل رقم في المعاينة قبل ما ترسل التصميم.",
   "dial.blankNote": b => `قاعدة الميناء من ${({"18k yellow gold":"الذهب الأصفر عيار ١٨","18k rose gold":"الذهب الوردي عيار ١٨","18k white gold":"الذهب الأبيض عيار ١٨"})[b] || b} الخالص، لا من نحاس القالب، وهذا مكتوب في ورقة المصنع وملف الطباعة. اللون يبقى من «اللون»؛ إذا تُرك الميناء بلون معدنه، اختر لون الذهب هناك.`,
@@ -17924,7 +17930,7 @@ const GWORD = {ar:{
   "Maker's sheet (PDF)":"ورقة المصنع (PDF)", "Numerals (PDF)":"الأرقام (PDF)", "Artwork for the maker":"رسم الأرقام للمصنع", "A3 for the maker":"صفحة A3 للمصنع", "Preview the maker's sheet":"معاينة ورقة المصنع",
   "Design number":"رقم التصميم", "Date":"التاريخ", "Designer":"المصمم", "Brand":"العلامة التجارية", "Movement":"المحرك",
   "Rubber":"مطاط", "Fabric Velcro":"قماش بلاصق", "Leather":"جلد", "Bracelet":"سوار معدني", "Curved":"منحني", "Strap maker":"صانع السير",
-  "Buckle":"الإبزيم", "Pin buckle":"إبزيم بدبوس", "Velcro loop":"حلقة لاصقة", "Folding clasp":"قفل قابل للطي",
+  "Buckle":"الإبزيم", "Band style":"شكل الحزام", "Pin buckle":"إبزيم بدبوس", "Velcro loop":"حلقة لاصقة", "Folding clasp":"قفل قابل للطي",
   "Engraved logo":"شعار محفور", "No logo":"بلا شعار", "Hands":"العقارب",
   "Hour and minute reference":"مرجع عقربي الساعات والدقائق", "Seconds reference":"مرجع عقرب الثواني",
   "Finishes":"التشطيبات", "Lug tops":"أعلى العروات", "Case shoulders":"أكتاف القالب", "Bezel top":"سطح الإطار", "Bezel edge":"حافة الإطار",
@@ -18120,7 +18126,8 @@ function gPickTarget(st, layer, x, y, pv){
       if(ch.on && ring(ch.innerD/2, ch.outerD/2, 0.2)) return {step:"dial", tab:"keep", sec:"chapter"};
       if(ht.on && ring(ht.diameter/2 - (+ht.thickness || 0), ht.diameter/2, 0.4)) return {step:"dial", tab:"keep", sec:"hour"};
       if(layer === "dial") return {step:"dial", tab:"keep"};
-      /* the case round the opening; a tap on the background is nothing */
+      /* beyond the lugs, the strap; the case round the opening; a tap on the background is nothing */
+      if(Math.abs(y) > visR(st)*1.5 && Math.abs(x) < visR(st)*0.9) return {step:"strap", tab:null};
       return r <= visR(st)*1.45 ? {step:"case", tab:"shape"} : null;
     }
   }
@@ -18164,6 +18171,7 @@ function gTabsFor(k, o){
    or one of the two whole framings. g is the case geometry: the opening,
    the day window's centre and size, and the date window's centre. */
 function gFrameBox(k, tab, g){
+  if(k === "strap") return "watch";
   if(k === "case" || k === "finish" || !g || !(g.opening > 0)) return "case";
   const O = g.opening, sq = (x, y, w) => ({x:+x.toFixed(3), y:+y.toFixed(3), w:+w.toFixed(3), h:+w.toFixed(3)});
   if(k === "calendar"){
@@ -18176,7 +18184,7 @@ function gFrameBox(k, tab, g){
 }
 /* the part a framing shows, for the "Back to the …" pill */
 const gFramePart = (k, tab) => k === "calendar" ? (tab === "date" ? "date" : tab ? "day" : "dial")
-  : k === "hands" && tab === "seconds" ? "centre" : (k === "case" || k === "finish") ? "case" : "dial";
+  : k === "hands" && tab === "seconds" ? "centre" : (k === "case" || k === "finish" || k === "strap") ? "case" : "dial";
 
 /* A slider's readout. kind is "mm", "deg", "pct", or "pos" for a position
    on the vertical line through the centre, where minus is towards 12. */
@@ -18612,7 +18620,7 @@ Object.assign(GWORD.ar, {
   /* Before 4.0 the steps began with Start, so every step kept here was one
      further on than it is now. */
   if(rec.v !== 4){ rec.step = Math.max(0, (+rec.step || 0) - 1); rec.seen = rec.seen.map(i => i - 1).filter(i => i >= 0); rec.v = 4; }
-  let step = gResumeStep(rec, Date.now(), 7);
+  let step = gResumeStep(rec, Date.now(), 8);
   let holdGuide = false, guideDirty = false, colorDirty = false, textHold = false, textTimer = 0, palette = "studio", pgroup = "Blues", pfind = "", mpal = "ink";
   /* which tab each step is on; whether the list of steps, the "Start from…" cards or the wider ink choice is open */
   const subTab = {}; let listOpen = false, startAll = false, inkMore = false, savedAs = "", frameWhole = false;
@@ -18641,7 +18649,7 @@ Object.assign(GWORD.ar, {
   /* Seven steps, the case first: it is where the watch is chosen, so what
      the Start step used to offer (your watches, continuing, starting from
      something else) is at the top of it. */
-  const STEPS = ["case","dial","markers","hands","text","calendar","finish"].map(k => ({k, get t(){ return gT("step." + k); }, get lead(){ return gT("lead." + k); }}));
+  const STEPS = ["case","dial","markers","hands","text","calendar","strap","finish"].map(k => ({k, get t(){ return gT("step." + k); }, get lead(){ return gT("lead." + k); }}));
   /* One picture per step, so the steps can be told apart at a glance rather
      than by their numbers: the case with its lugs, the dial's brushed face,
      the hour markers, the hands, lettering, the calendar and a finishing
@@ -18653,6 +18661,7 @@ Object.assign(GWORD.ar, {
     hands:'<path d="M12 12L7.4 6.6" stroke-width="3"/><path d="M12 12l7.8 4.2" stroke-width="1.7"/><circle cx="12" cy="12" r="2.1" fill="currentColor" stroke="none"/>',
     text:'<path d="M4.5 18.5L9.2 6h1.6l4.7 12.5M6.4 14h7.2"/><path d="M15.8 18.5V12m0 0c0-1.4 1-2.2 2.2-2.2s2.2.8 2.2 2.2v6.5M15.8 15.2h4.4"/>',
     calendar:'<rect x="4" y="5.5" width="16" height="14.5" rx="2.2"/><path d="M4 10h16M8.5 3.5v3.6M15.5 3.5v3.6"/><path d="M11 13.2l1.4-.9v5"/>',
+    strap:'<path d="M8.5 2.5h7v5.2h-7zM8.5 16.3h7v5.2h-7z"/><rect x="5.6" y="7.2" width="12.8" height="9.6" rx="3.2"/><circle cx="12" cy="19" r=".8" fill="currentColor" stroke="none"/>',
     finish:'<path d="M6 21V4"/><path d="M6 4.6c3.2-1.6 5.4 1.4 8.6 0 1.4-.6 2.6-.6 3.4-.3v8.6c-.8-.3-2-.3-3.4.3-3.2 1.4-5.4-1.6-8.6 0"/>'
   };
   const stepIcon = (k, px) => `<svg viewBox="0 0 24 24" width="${px || 18}" height="${px || 18}" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${STEP_ICON[k] || ""}</svg>`;
@@ -18876,27 +18885,29 @@ Object.assign(GWORD.ar, {
      while the photograph, or its gold look, is still being made. The
      Vernoy's photograph is the built-in picture, placed where the design
      lines it up (st.tpl), as the main view places it. */
-  function photoThumb(st){
+  /* bx: what to show instead of the case, {cy, side} in mm from the dial centre
+     (the strap's cards show the strap below the case) */
+  function photoThumb(st, bx){
     const K = caseOf(st);
     if(!hasPhoto(K) || !st.tpl || !st.tpl.on || !tplAvail(st) || photoPlan(st, K) === false) return null;
     const n = ++thumbSeq, C = K.photoFile ? K.photoCal : {w:tplW, h:tplH, cx:st.tpl.cx, cy:st.tpl.cy, dia:st.tpl.dia};
     const svg = buildTemplate(st, {tag:"pt" + n, insTag:"pi" + n, material:false});
     if(svg.indexOf(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${C.w} ${C.h}"`) !== 0) return null;
-    const px = C.w*C.dia/100/K.opening, side = K.flat*1.12*px, x = C.w*C.cx/100 - side/2, y = C.h*C.cy/100 - side/2;
+    const px = C.w*C.dia/100/K.opening, side = (bx ? bx.side : K.flat*1.12)*px, x = C.w*C.cx/100 - side/2, y = C.h*C.cy/100 + (bx ? bx.cy*px : 0) - side/2;
     return svg.replace(/^<svg[^>]*>/, `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${f(x,1)} ${f(y,1)} ${f(side,1)} ${f(side,1)}" preserveAspectRatio="xMidYMid slice">`)
       .replace(/href="(data:image\/[a-z+]+;base64,[^"]{4000,})"/g, (m, u) => `href="${blobOf(u)}"`);
   }
-  function thumb(st, key){
-    const ph = !!(hasPhoto(caseOf(st)) && st.tpl && st.tpl.on), k = "t|" + key + "|" + keyOf(st) + (ph ? "|photo" : "");
+  function thumb(st, key, bx){
+    const ph = !!(hasPhoto(caseOf(st)) && st.tpl && st.tpl.on), k = "t|" + key + "|" + keyOf(st) + (ph ? "|photo" : "") + (bx ? "|" + bx.cy + "," + bx.side : "");
     if(pics.has(k)) return pics.get(k);
-    if(ph){ try{ const p = photoThumb(st); if(p) return memo(k, () => p); }catch(e){} }
+    if(ph){ try{ const p = photoThumb(st, bx); if(p) return memo(k, () => p); }catch(e){} }
     /* the drawing; while the photograph is on its way it stands in, and is
        not kept, so the next paint tries the photograph again */
     let svg = "";
     try{
-      const side = caseOf(st).flat*1.12;
+      const side = bx ? bx.side : caseOf(st).flat*1.12, cy = bx ? bx.cy : 0;
       svg = buildSVG(st, {tag:"g"+(++thumbSeq), material:false})
-        .replace(/viewBox="[^"]*"/, `viewBox="${-side/2} ${-side/2} ${side} ${side}"`);
+        .replace(/viewBox="[^"]*"/, `viewBox="${-side/2} ${cy - side/2} ${side} ${side}"`);
     }catch(e){ return ""; }
     return ph ? svg : memo(k, () => svg);
   }
@@ -19408,14 +19419,7 @@ Object.assign(GWORD.ar, {
       /* the stone in the crown, on a case that has one; the photograph keeps its own */
       if(K.cabochon && !(hasPhoto(K) && S.tpl.on))
         h += `<h3>${gW("Crown stone colour")}</h3>` + swatches("case.cab", [["#8A1538","Ruby"],["#1F3C8F","Sapphire"],["#141416","Onyx"],["#C9CDD2","Steel"]], S.case.cab, {row:true});
-      h += toggle("case.strap", K.bracelet ? "Show the bracelet" : "Show the strap", S.case.strap);
-      if(!K.bracelet && S.case.strap && !(K.photoStrap && S.case.strapType === "bracelet")) h += `<h3>${gW("Strap colour")}</h3>` + swatches("case.strapColor", [["#4E3629","Brown"],["#1E1E20","Black"],["#1E2B45","Navy"],["#A0744A","Tan"],["#2F3B2E","Green"],["#7A2433","Burgundy"]], S.case.strapColor, {row:true});
-      /* the strap's material on the photograph: its rubber, or a woven Velcro strap with a stitched seam */
-      if(!K.bracelet && S.case.strap && K.photoStrap){
-        h += `<h3>${gW("Strap")}</h3>` + chips("case.strapType", [["rubber","Rubber"],["fabric","Fabric (Velcro)"],["alligator","Alligator leather"],["bracelet","Steel bracelet"]], ["fabric", "alligator", "bracelet"].indexOf(S.case.strapType) >= 0 ? S.case.strapType : "rubber");
-        if(S.case.strapType === "bracelet") h += `<p class="gNote">${gT("case.braceletNote")}</p>`;
-        if(S.case.strapType === "fabric" || S.case.strapType === "alligator") h += `<h3>${gW("Stitching")}</h3>` + swatches("case.stitch", [["#00000000","None"],["#F2701E","Orange"],["#F2F2EF","White"],["#D7262E","Red"],["#E3C27A","Sand"]], /^#[0-9a-f]{6}$/i.test(S.case.stitch || "") ? S.case.stitch : "#00000000", {row:true});
-      }
+      /* the strap or bracelet has a step of its own since 4.48.0 */
       if(hasPhoto(K)){ h += toggle("tpl.on", "Show as a photograph", S.tpl.on); if(S.tpl.on) h += `<p class="gNote">${gT(K.photoParts ? "case.photoGold" : K.builtinTint ? "case.photoTint" : "case.photoNote")}</p>`; }
       /* the photograph's own settings, where they used to wait in More: the
          shadow the bezel throws round the dial, and, for a photograph added
@@ -19726,6 +19730,36 @@ Object.assign(GWORD.ar, {
       const blk = printingBlock("text");
       return (blk || `<p class="gNote">${gT("ink.metalText")}</p>`) + more("text", "All text settings");
     },
+    /* The strap or bracelet, a step of its own: what it is (pictures of the
+       watch on each where the photograph can show it), its colour and
+       stitching, and how it closes, as the maker's sheet will say. */
+    strap(){
+      const K = caseOf(S), c = S.case;
+      ensureSheet(S);
+      const sh = S.sheet, sp = sheetStrap(S);
+      let h = toggle("case.strap", K.bracelet ? "Show the bracelet" : "Show the strap", c.strap !== false);
+      if(c.strap === false) return h;
+      if(K.bracelet) h += `<p class="gNote">${gT("strap.own")}</p>`;
+      else {
+        if(K.photoStrap){
+          const types = [["rubber","Rubber"],["fabric","Fabric (Velcro)"],["alligator","Alligator leather"],["bracelet","Steel bracelet"]];
+          const cur = types.some(t => t[0] === c.strapType) ? c.strapType : "rubber";
+          h += `<h3>${gW("Strap")}</h3><div class="gCards gOpts all">` + types.map(([v, l]) =>
+            `<button type="button" class="gCard ${v === cur ? "on" : ""}" data-gset="case.strapType" data-gv='${gv(v)}'><div class="gPic">${thumb(Object.assign(clone(S), {case:Object.assign({}, c, {strapType:v})}), "strap|" + v, {cy:K.flat*0.7, side:K.flat*0.56})}</div><div class="gName">${esc2(gW(l))}</div></button>`).join("") + `</div>`;
+          if(c.strapType === "bracelet") h += `<p class="gNote">${gT("case.braceletNote")}</p>`;
+        } else h += `<h3>${gW("Band")}</h3>` + chips("sheet.strap.type", [["leather","Leather"],["rubber","Rubber"],["fabric Velcro","Fabric Velcro"],["bracelet","Bracelet"]], sp.type);
+        if(!(K.photoStrap && c.strapType === "bracelet"))
+          h += `<h3>${gW("Strap colour")}</h3>` + swatches("case.strapColor", [["#4E3629","Brown"],["#1E1E20","Black"],["#1E2B45","Navy"],["#A0744A","Tan"],["#2F3B2E","Green"],["#7A2433","Burgundy"]], c.strapColor, {row:true});
+        if(K.photoStrap && (c.strapType === "fabric" || c.strapType === "alligator"))
+          h += `<h3>${gW("Stitching")}</h3>` + swatches("case.stitch", [["#00000000","None"],["#F2701E","Orange"],["#F2F2EF","White"],["#D7262E","Red"],["#E3C27A","Sand"]], /^#[0-9a-f]{6}$/i.test(c.stitch || "") ? c.stitch : "#00000000", {row:true});
+      }
+      /* how it closes, as the maker's sheet says */
+      if(sp.type !== "bracelet") h += `<h3>${gW("Band style")}</h3>` + chips("sheet.strap.style", [["flat","Flat"],["curved","Curved"]], sp.style) + textIn("sheet.strap.maker", "Strap maker", sh.strap.maker, "Delugs");
+      h += `<h3>${gW("Buckle")}</h3>` + chips("sheet.strap.buckle", [["pin buckle","Pin buckle"],["Velcro loop","Velcro loop"],["folding clasp","Folding clasp"]], sp.buckle)
+        + chips("sheet.strap.buckleColor", [["steel","Steel"],["silver","Silver"],["black","Black"],["gold","Gold"],["rose gold","Rose gold"]], sp.buckleColor)
+        + chips("sheet.strap.buckleLogo", [["engraved","Engraved logo"],["none","No logo"]], sp.buckleLogo);
+      return h + more("case", "All case settings");
+    },
     calendar(tab){
       const K = caseOf(S), cal = K.calendar;
       if(tab === "day" || tab === "daylook"){
@@ -19841,11 +19875,7 @@ Object.assign(GWORD.ar, {
     x += textIn("sheet.designer", "Designer", sh.designer, gT("mk.designerPh"));
     x += textIn("sheet.brand", "Brand", sh.brand, d.brandDefault);
     x += textIn("sheet.movement", "Movement", sh.movement, sheetMovement(bare));
-    x += `<h3>${gW("Band")}</h3>` + chips("sheet.strap.type", [["rubber","Rubber"],["fabric Velcro","Fabric Velcro"],["leather","Leather"],["bracelet","Bracelet"]], sp.type);
-    if(sp.type !== "bracelet") x += chips("sheet.strap.style", [["flat","Flat"],["curved","Curved"]], sp.style) + textIn("sheet.strap.maker", "Strap maker", sh.strap.maker, "Delugs");
-    x += `<h3>${gW("Buckle")}</h3>` + chips("sheet.strap.buckle", [["pin buckle","Pin buckle"],["Velcro loop","Velcro loop"],["folding clasp","Folding clasp"]], sp.buckle)
-      + chips("sheet.strap.buckleColor", [["steel","Steel"],["silver","Silver"],["black","Black"],["gold","Gold"],["rose gold","Rose gold"]], sp.buckleColor)
-      + chips("sheet.strap.buckleLogo", [["engraved","Engraved logo"],["none","No logo"]], sp.buckleLogo);
+    x += `<p class="gNote">${gT("mk.strapAt")}</p>`;     // the band and buckle: the Strap step
     const r5 = v => f(Math.round((+v || 0)*2)/2, 1).replace(/\.0$/, "");
     x += `<h3>${gW("Hands")}</h3>` + textIn("sheet.handRef", "Hour and minute reference", sh.handRef, "W36017")
       + textIn("sheet.secRef", "Seconds reference", sh.secRef, gT("mk.find"))
