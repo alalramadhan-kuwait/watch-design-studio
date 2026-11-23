@@ -828,7 +828,7 @@ test('the real F77 41, four silver dials, and sets side by side (v4.55.0)', () =
   assert.equal(C.photoFile, undefined, 'the optimised 41 stays drawn'); assert.equal(C.opening, 30.2);
   assert.match(fs.readFileSync(path.join(__dirname, '../sw.js'), 'utf8'), /"\.\/app\/case-nivada-f77-41\.jpg"/);
   const list = JSON.parse(fs.readFileSync(path.join(__dirname, '../concepts/index.json'), 'utf8'));
-  const set = list.filter(x => /^F77 41 · /.test(x.set || ''));
+  const set = list.filter(x => /^F77 41 · /.test(x.set || '') && x.set !== 'F77 41 · Hands');
   assert.ok(set.length >= 4 && set[0].id === 'f77-41-current', 'a set on the 41, the current design first');
   for (const c of set) {
     const d = JSON.parse(fs.readFileSync(path.join(__dirname, '../concepts', c.file), 'utf8'));
@@ -913,4 +913,20 @@ test('precise Arabic numeral typography and five new faces (v4.57.0)', () => {
     assert.equal((source.match(new RegExp('"' + k + '":', 'g')) || []).length, 2, k + ' in both tables');
   assert.ok(fs.existsSync(path.join(__dirname, '../tools/font-outlines.py')));
   assert.match(fs.readFileSync(path.join(__dirname, '../tools/font-outlines.py'), 'utf8'), /yield m\.group\(1\) \+ "@" \+ wm\.group\(1\), wm\.group\(2\)/);
+});
+
+test('four realistic hand sets for the F77 41 (v4.57.1)', () => {
+  const list = JSON.parse(fs.readFileSync(path.join(__dirname, '../concepts/index.json'), 'utf8'));
+  const set = list.filter(x => x.set === 'F77 41 · Hands');
+  assert.deepEqual(set.map(x => x.id), ['f77-41-hands-f77', 'f77-41-hands-baton', 'f77-41-hands-dauphine', 'f77-41-hands-leaf']);
+  const styles = [];
+  for (const c of set) {
+    const d = JSON.parse(fs.readFileSync(path.join(__dirname, '../concepts', c.file), 'utf8'));
+    assert.equal(d.case.model, 'Time Keeper × Nivada · F77 41'); assert.equal(d.numerals.layout, 'precise');
+    assert.equal(d.hHand.reach, 'to the numerals'); assert.equal(d.mHand.reach, 'to the minute track');
+    for (const k of ['hHand', 'mHand', 'sHand']) assert.equal(d[k].material, 'rose gold', c.id + ' ' + k);
+    assert.equal(d.sHand.secTail === 'none' || d.sHand.style === 'f77-seconds', true);
+    styles.push(d.hHand.style);
+  }
+  assert.deepEqual(styles, ['f77', 'baton', 'dauphine', 'feuille']);
 });

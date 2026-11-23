@@ -200,6 +200,17 @@ stored in a design file do not change. In the full editor at laptop widths
 the toolbar sits tighter, and on a narrower window it takes a second row
 rather than pushing Share and Export off the screen.
 
+## Four realistic hand sets for the F77 41 (v4.57.1)
+
+One dial (Calatrava, in the precise numeral layout) with four hand sets,
+under Designs, "F77 41 · Hands": Nivada's own F77 hands, a faceted baton,
+a slim dauphine and a restrained leaf, all in polished rose gold. In every
+set the minute hand ends on the minute track's centre line (13.95 mm), the
+hour hand at the figures' measured inner edge (9.71 mm, figures from
+9.81), and a 0.11–0.14 mm seconds hand reaches the track's outer edge
+with a 3.2–3.6 mm plain tail; the hour hand is drawn 1.00–1.15 mm wide
+and the minute 0.85–0.95 mm. Shown at 10:07:33.
+
 ## Precise Arabic numeral typography, and five new faces (v4.57.0)
 
 **A precise numeral layout** (Markers › Size › Layout: Precise), for every

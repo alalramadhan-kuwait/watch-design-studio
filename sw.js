@@ -50,6 +50,10 @@ const SHELL = [
   "./designs/timekeeper-nivada.json",
   /* the concepts on the start screen, so they open offline too */
   "./concepts/index.json",
+  "./concepts/f77-41-hands-f77.json",
+  "./concepts/f77-41-hands-baton.json",
+  "./concepts/f77-41-hands-dauphine.json",
+  "./concepts/f77-41-hands-leaf.json",
   "./concepts/f77-41-current.json",
   "./concepts/f77-41-calatrava.json",
   "./concepts/f77-41-sector.json",
