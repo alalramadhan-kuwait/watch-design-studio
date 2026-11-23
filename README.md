@@ -200,6 +200,19 @@ stored in a design file do not change. In the full editor at laptop widths
 the toolbar sits tighter, and on a narrower window it takes a second row
 rather than pushing Share and Export off the screen.
 
+## Hida Breguet Study (v4.52.0)
+
+A new numeral face, **Hida Breguet Study**: Naoya Hida & Co.'s own Breguet
+figures, lifted from the maker's photographs of its Type 1 and Type 8A
+dials (`tools/dial-font/hida`). The 1 to 4 come from the Type 1B macro, the
+5 from the Type 1C close-up (where the hairline from its flag to its bowl
+shows), the 6 and 7 from a front-on Type 1, the 8 from the straightened 1B
+header photograph, and the 0 from the Type 8A, since every Type 1 hides the
+foot of its 10 under the small seconds. The 9 is the 6 turned, as the 8A
+shows Hida cuts it. **Gin** now wears it, a little larger and further out,
+as on the dial it follows; its list of names kept off the watch is "Naoya
+Hida, Tokyo", so the maker's name still never reaches the dial.
+
 ## The Breguet figures take their thickness (v4.51.1)
 
 The drawn Breguet set ignored "Thickness" altogether: it is drawn at 100

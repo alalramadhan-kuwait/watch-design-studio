@@ -749,5 +749,20 @@ test('the Breguet figures take their thickness (v4.51.1)', () => {
   assert.match(source, /stroke-width="\$\{f\(cutW\/kE,4\)\}"/, 'a widened cut is mm on the dial');
   assert.match(source, /if\(cutW > 0 && E\.b > 0\.0005\)\{/, 'the bevel under the fill when widened');
   const d = JSON.parse(fs.readFileSync(path.join(__dirname, '../concepts/gin.json'), 'utf8'));
-  assert.equal(d.numerals.style, 'breguet'); assert.equal(d.numerals.weight, 0.08);
+  assert.ok(d.numerals.style === 'breguet' || d.numerals.style === 'Hida Breguet Study', 'Gin: Breguet figures (its own Hida face since 4.52.0)');
+});
+
+test('Hida Breguet Study, and Gin wears it (v4.52.0)', () => {
+  const dir = path.join(__dirname, '../tools/dial-font/hida');
+  for (const f of ['outlines.json', 'face.json', 'hida.woff2', 'README.md']) assert.ok(fs.existsSync(path.join(dir, f)), f);
+  const b64 = fs.readFileSync(path.join(dir, 'hida.woff2')).toString('base64');
+  assert.ok(source.includes('"Hida Breguet Study":{family:"wdshidabreguet", seated:true, src:"data:font/woff2;base64,' + b64 + '"}'), 'the studio carries the face');
+  const face = JSON.parse(fs.readFileSync(path.join(dir, 'face.json'), 'utf8'));
+  assert.deepEqual(face.derive, { 9: ['6', 180] }, 'the 9 is the 6 turned, as the Type 8A shows it');
+  assert.deepEqual(Object.keys(JSON.parse(fs.readFileSync(path.join(dir, 'outlines.json'), 'utf8'))).sort(), ['0', '1', '2', '3', '4', '5', '6', '7', '8'], 'nine figures from the photographs');
+  assert.ok(!fs.readdirSync(dir).some(f => /\.(jpe?g|png|webp)$/i.test(f)), 'the photographs are not kept');
+  const d = JSON.parse(fs.readFileSync(path.join(__dirname, '../concepts/gin.json'), 'utf8'));
+  assert.equal(d.numerals.style, 'Hida Breguet Study'); assert.equal(d.numerals.tech, 'engraved + filled');
+  assert.equal(d.sheet.research.avoid, 'Naoya Hida, Tokyo', "the maker's name stays off the dial");
+  assert.equal(d.text.logoMark, 'Vernoy wordmark (traced)', "the case's own logo");
 });

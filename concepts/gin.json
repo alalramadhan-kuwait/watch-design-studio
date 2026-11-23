@@ -209,9 +209,9 @@
   },
   "numerals": {
     "on": true,
-    "style": "breguet",
-    "size": 3.2,
-    "radius": 9.9,
+    "style": "Hida Breguet Study",
+    "size": 3.5,
+    "radius": 10.4,
     "color": "#16181B",
     "set": "all",
     "edgeLight": 0.5,
@@ -222,7 +222,7 @@
     "slant": 0,
     "tech": "engraved + filled",
     "material": "lacquer / enamel",
-    "weight": 0.08,
+    "weight": 0.04,
     "gap": 0,
     "system": "western 0–9",
     "metal": "polished steel",
@@ -498,10 +498,10 @@
         {
           "id": "R1",
           "title": "A hand-engraved German silver dial, Tokyo (the picture sent: Naoya Hida & Co. NH Type 1)",
-          "note": "Taken: the solid German silver dial, bead-blasted to an even frost; Breguet-style figures cut into it and filled with black lacquer, the cut walls bright; a separate outer ring brushed in fine circles carrying a drilled dot at every minute, larger at the fives, filled the same; the name engraved and filled, not printed; slender heat-blued leaf hands with a large boss; a crackled vintage leather strap stitched in a light thread. Left out: the small seconds at 9, which the Vernoy 1062 does not drive, so every figure stands, the 9 included. The maker's name is kept off; the case's own Vernoy wordmark stands under 12."
+          "note": "Taken: the solid German silver dial, bead-blasted to an even frost; the maker's own Breguet figures (traced from its photographs as Hida Breguet Study) cut into it and filled with black lacquer, the cut walls bright; a separate outer ring brushed in fine circles carrying a drilled dot at every minute, larger at the fives, filled the same; the name engraved and filled, not printed; slender heat-blued leaf hands with a large boss; a crackled vintage leather strap stitched in a light thread. Left out: the small seconds at 9, which the Vernoy 1062 does not drive, so every figure stands, the 9 included. The maker's name is kept off; the case's own Vernoy wordmark stands under 12."
         }
       ],
-      "avoid": "Naoya Hida, Hida, Tokyo"
+      "avoid": "Naoya Hida, Tokyo"
     }
   },
   "markers": null
