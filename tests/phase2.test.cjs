@@ -231,7 +231,7 @@ test('painted hands (v4.27.0): a lacquered colour of the hand\'s own, kept when 
   assert.match(source, /chips\("sHand\.material", METALS6\.concat\(\[\["flame blue","Flame blue"\],\["gilt","Gilt"\],\["painted","Painted"\]\]\)/);
   assert.match(source, /swatches\("sHand\.color", HAND_PAINT, sh\.color, \{row:true\}\)/);
   assert.match(source, /if\(S\[k\] && !\(k === "sHand" && handPainted\(S\[k\]\)\)\)\{ S\[k\]\.material = v; delete S\[k\]\.paint; \}/);
-  assert.match(source, /const HAND_SHARE = \[[^\]]*"paint"\];/);
+  assert.match(source, /const HAND_SHARE = \[[^\]]*"paint"(,"bevel")?\];/);
   // the sheet says painted, and keeps a PANTONE name as written
   assert.match(source, /return h\.paint \? `\$\{nm\} painted/);
 });
@@ -828,7 +828,7 @@ test('the real F77 41, four silver dials, and sets side by side (v4.55.0)', () =
   assert.equal(C.photoFile, undefined, 'the optimised 41 stays drawn'); assert.equal(C.opening, 30.2);
   assert.match(fs.readFileSync(path.join(__dirname, '../sw.js'), 'utf8'), /"\.\/app\/case-nivada-f77-41\.jpg"/);
   const list = JSON.parse(fs.readFileSync(path.join(__dirname, '../concepts/index.json'), 'utf8'));
-  const set = list.filter(x => /^F77 41 · /.test(x.set || '') && x.set !== 'F77 41 · Hands');
+  const set = list.filter(x => /^F77 41 · /.test(x.set || '') && !/^F77 41 · (Hands|Refined batons)$/.test(x.set));
   assert.ok(set.length >= 4 && set[0].id === 'f77-41-current', 'a set on the 41, the current design first');
   for (const c of set) {
     const d = JSON.parse(fs.readFileSync(path.join(__dirname, '../concepts', c.file), 'utf8'));
@@ -915,18 +915,43 @@ test('precise Arabic numeral typography and five new faces (v4.57.0)', () => {
   assert.match(fs.readFileSync(path.join(__dirname, '../tools/font-outlines.py'), 'utf8'), /yield m\.group\(1\) \+ "@" \+ wm\.group\(1\), wm\.group\(2\)/);
 });
 
-test('four realistic hand sets for the F77 41 (v4.57.1)', () => {
+
+test('fine metal hands, and refined batons for the F77 41 (v4.58.0)', () => {
+  const vm = require('node:vm');
+  // designs saved before keep the classic drawing; new ones are fine
+  const ctx = vm.createContext({});
+  const i = source.indexOf('const deep = (a,b)=>'), j = source.indexOf('\n', i);
+  vm.runInContext('const clone = o => JSON.parse(JSON.stringify(o)); const BASE = {render:{az:135, hands:"fine"}, numerals:{layout:"precise"}};' + source.slice(i, j) + '\nthis.r={deep,BASE};', ctx);
+  assert.equal(ctx.r.deep(ctx.r.BASE, {hHand:{}}).render.hands, 'classic');
+  assert.equal(ctx.r.deep(ctx.r.BASE, {}).render.hands, 'classic', 'a preset that keeps the base hands too');
+  assert.equal(ctx.r.deep(ctx.r.BASE, {render:{hands:'fine'}}).render.hands, 'fine');
+  assert.match(source, /render:\{mode:"studio", az:135, el:40, quality:340, view:"front", hands:"fine"\}/);
+  assert.match(source, /S\.render\.hands = "fine";\s+\/\/ a new design's hands/);
+  // the model: no facet darker than 46% toward the metal's dark; shadows by height
+  const c2 = vm.createContext({mix:(a, b, t) => t});
+  const a2 = source.indexOf('function fineTone('), b2 = source.indexOf('function fineFacets(', a2);
+  vm.runInContext(source.slice(a2, b2) + '\nthis.r={fineTone};', c2);
+  assert.equal(c2.r.fineTone('', {dark:'', lite:''}, -5), 0.46); assert.equal(c2.r.fineTone('', {dark:'', lite:''}, 5), 0.9);
+  assert.match(source, /const HAND_LIFT = \{hHand:0\.24, mHand:0\.46, sHand:0\.66\};/);
+  assert.match(source, /return withShadow\(a, handPath\(h, Object\.assign\(\{angle:a, key:k\}, hctx\)\), k\) \+ \(FINE \? fineCollet\(h, k\) : collet\(h, k\)\);/);
+  assert.match(source, /const fine = ctx && ctx\.fine && FINE_HANDS\.has\(h\.style\) && !h\.lume;/);
+  // the two new batons and the controls
+  assert.match(source, /"baton-ridge":\(L,T\) => \[\[T,\.50\],\[-L,\.50\]\],/); assert.match(source, /"baton-taper":\(L,T,W\) => \[\[T,\.50\],\[0,\.50\],\[-\(L - W\*0\.70\),\.36\],\[-L,0\]\],/);
+  assert.ok(!/"baton-ridge"/.test(source.slice(source.indexOf('const FACET_FLAT'), source.indexOf('\n', source.indexOf('const FACET_FLAT')))), 'the ridged baton has a ridge, not a table');
+  assert.match(source, /chips\("render\.hands", \[\["fine","Fine metal"\],\["classic","Classic"\]\]/);
+  assert.match(source, /slider\("hands\.bevel", "Bevel width", 0\.15, 0\.60, 0\.01/);
+  for (const w of ['Ridged baton', 'Tapered baton', 'Hand finish', 'Fine metal', 'Bevel width']) assert.match(source, new RegExp('"' + w + '":"[^"]*[\\u0600-\\u06FF]'));
+  // the set: the original dial on the real 41, B and three refinements
   const list = JSON.parse(fs.readFileSync(path.join(__dirname, '../concepts/index.json'), 'utf8'));
-  const set = list.filter(x => x.set === 'F77 41 · Hands');
-  assert.deepEqual(set.map(x => x.id), ['f77-41-hands-f77', 'f77-41-hands-baton', 'f77-41-hands-dauphine', 'f77-41-hands-leaf']);
-  const styles = [];
-  for (const c of set) {
-    const d = JSON.parse(fs.readFileSync(path.join(__dirname, '../concepts', c.file), 'utf8'));
-    assert.equal(d.case.model, 'Time Keeper × Nivada · F77 41'); assert.equal(d.numerals.layout, 'precise');
-    assert.equal(d.hHand.reach, 'to the numerals'); assert.equal(d.mHand.reach, 'to the minute track');
-    for (const k of ['hHand', 'mHand', 'sHand']) assert.equal(d[k].material, 'rose gold', c.id + ' ' + k);
-    assert.equal(d.sHand.secTail === 'none' || d.sHand.style === 'f77-seconds', true);
-    styles.push(d.hHand.style);
-  }
-  assert.deepEqual(styles, ['f77', 'baton', 'dauphine', 'feuille']);
+  const set = list.filter(x => x.set === 'F77 41 · Refined batons');
+  assert.deepEqual(set.map(x => x.id), ['f77-41-batons-ref', 'f77-41-batons-polished', 'f77-41-batons-ridged', 'f77-41-batons-tapered']);
+  assert.ok(!list.some(x => x.set === 'F77 41 · Hands'), 'the earlier hand set replaced');
+  const read = id => JSON.parse(fs.readFileSync(path.join(__dirname, '../concepts', id + '.json'), 'utf8'));
+  const orig = JSON.parse(fs.readFileSync(path.join(__dirname, '../designs/timekeeper-nivada.json'), 'utf8'));
+  const want = [['classic', 'baton'], ['fine', 'baton'], ['fine', 'baton-ridge'], ['fine', 'baton-taper']];
+  set.forEach((c, n) => { const d = read(c.id);
+    assert.equal(d.case.model, 'Time Keeper × Nivada · F77 41');
+    assert.deepEqual([d.render.hands, d.hHand.style], want[n], c.id);
+    assert.equal(d.numerals.style, orig.numerals.style, "the original dial's numerals"); assert.equal(d.dial.color, orig.dial.color);
+    for (const k of ['hHand', 'mHand', 'sHand']) assert.equal(d[k].material, 'rose gold'); });
 });

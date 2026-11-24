@@ -1733,7 +1733,7 @@ const caseOutlinePath = (K, half, scale) => K.shape === "round" ? disc(half)
 
 const BASE = {
   meta:{name:"Vernoy — RD26-0172", time:{h:10,m:9,s:32}},
-  render:{mode:"studio", az:135, el:40, quality:340, view:"front"},
+  render:{mode:"studio", az:135, el:40, quality:340, view:"front", hands:"fine"},
   exportPx:0,
   /* fitHeight: the SW240-1 hand fitting height (Sellita p.20), 4 standard */
   /* linked by shape only, the seconds hand left out: a width or a length
@@ -2318,7 +2318,7 @@ function migrateHands(st){
   return st;
 }
 /* deep(BASE, design): a design saved before the precise numeral layout (4.57.0) keeps the layout it was drawn in */
-const deep = (a,b)=>{const o=clone(a);for(const k in b){o[k]=(b[k]&&typeof b[k]==="object"&&!Array.isArray(b[k]))?deep(o[k]||{},b[k]):b[k];}if(typeof BASE!=="undefined"&&a===BASE&&b&&b.numerals&&typeof b.numerals==="object"&&b.numerals.layout===undefined)o.numerals.layout="legacy";return o;};
+const deep = (a,b)=>{const o=clone(a);for(const k in b){o[k]=(b[k]&&typeof b[k]==="object"&&!Array.isArray(b[k]))?deep(o[k]||{},b[k]):b[k];}if(typeof BASE!=="undefined"&&a===BASE&&b&&b.numerals&&typeof b.numerals==="object"&&b.numerals.layout===undefined)o.numerals.layout="legacy";if(typeof BASE!=="undefined"&&a===BASE&&o.render&&b&&typeof b==="object"&&!(b.render&&b.render.hands))o.render.hands="classic";return o;};
 /* Virtual fields: a value the controls show and set that the design keeps
    another way. A hand's "widthMM" is the width the hand is drawn at, in mm.
    The design keeps its base width, which each shape multiplies by its own
@@ -2390,7 +2390,7 @@ const APP_BUILD = "__BUILD__";
 /* The version people see, raised with every change that reaches them:
    major for a new way of working, minor for something new to do, patch for
    a fix. Shown on the watch screen, so any screenshot says which it was. */
-const APP_VERSION = "4.57.1";
+const APP_VERSION = "4.58.0";
 const APP_DATE = "__DATE__";
 
 /* Every route that replaces S passes through one of these three, which is
@@ -7951,10 +7951,19 @@ function buildSVG(st, o={}){
        the shadow goes, never the hand (Safari dropped whole minute hands). */
     const hshF = id("hsh");
     defs.push(`<filter id="${hshF}" x="-60%" y="-15%" width="220%" height="130%"><feColorMatrix type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.34 0"/><feGaussianBlur stdDeviation="0.13"/></filter>`);
-    const withShadow = (a, markup) =>
-      `<g transform="translate(${f(-lxH*0.30,3)},${f(-lyH*0.30,3)})"><g transform="rotate(${f(a,3)})" filter="url(#${hshF})">${markup}</g></g>`
+    /* fine metal hands (render.hands "fine"): each hand's shadow falls as far,
+       and as soft, as the hand stands above the dial: the hour hand lowest,
+       the seconds highest */
+    const FINE = !!(st.render && st.render.hands === "fine");
+    const fineF = {};
+    if(FINE) for(const [k, z] of Object.entries(HAND_LIFT)){ fineF[k] = id("hsf");
+      defs.push(`<filter id="${fineF[k]}" x="-60%" y="-15%" width="220%" height="130%"><feColorMatrix type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 ${f(0.40 - z*0.20,3)} 0"/><feGaussianBlur stdDeviation="${f(0.04 + z*0.17,3)}"/></filter>`); }
+    const withShadow = (a, markup, k) => FINE && fineF[k]
+      ? `<g transform="translate(${f(-lxH*HAND_LIFT[k]*0.85,3)},${f(-lyH*HAND_LIFT[k]*0.85,3)})"><g transform="rotate(${f(a,3)})" filter="url(#${fineF[k]})">${markup}</g></g>`
+        + `<g transform="rotate(${f(a,3)})">${markup}</g>`
+      : `<g transform="translate(${f(-lxH*0.30,3)},${f(-lyH*0.30,3)})"><g transform="rotate(${f(a,3)})" filter="url(#${hshF})">${markup}</g></g>`
       + `<g transform="rotate(${f(a,3)})">${markup}</g>`;
-    const hctx = {defs, id, lx:lxH, ly:lyH};
+    const hctx = {defs, id, lx:lxH, ly:lyH, fine:FINE};
     const draw = (h0,a,k)=>{
       if(!h0.on) return "";
       /* Resolved here, once, so the artwork branch and the drawn branch cannot
@@ -7981,7 +7990,7 @@ function buildSVG(st, o={}){
         }
         return withShadow(a, `<path d="${dOut}" fill="${fill}" fill-rule="evenodd"/>`);
       }
-      return withShadow(a, handPath(h, Object.assign({angle:a, key:k}, hctx))) + collet(h, k);
+      return withShadow(a, handPath(h, Object.assign({angle:a, key:k}, hctx)), k) + (FINE ? fineCollet(h, k) : collet(h, k));
     };
     /* Each hand is pressed onto its own pipe with a round collet: the hour
        hand's is the widest and lowest, the minute's sits on it, and the
@@ -8028,6 +8037,40 @@ function buildSVG(st, o={}){
         <stop offset="0" stop-color="${mix(core, MM.dark, .45)}"/><stop offset="1" stop-color="${mix(core, MM.lite, .6)}"/></linearGradient>`);
       return `<circle r="${f(r,3)}" fill="url(#${g})" stroke="${mix(core, MM.dark, .8)}" stroke-opacity=".55" stroke-width="0.03"/>`
            + `<circle r="${f(r*0.66,3)}" fill="url(#${g2})" stroke="${mix(core, MM.dark, .7)}" stroke-opacity=".4" stroke-width="0.025"/>`;
+    };
+    /* Fine: each collet a turned part. The hour hand's is a short polished
+       tube, its top edge chamfered, so a bright arc on the side toward the
+       light and a soft fall to the far side; the minute hand's the same,
+       smaller, on top of it; the seconds hand closed by a small domed cap,
+       a single soft highlight on it. No drawn rings: the steps show by
+       their light, and a hairline at each cut edge. Sizes as the drawn
+       collets', so a design keeps its proportions. */
+    const fineCollet = (h, k) => {
+      const hw = (h.width || 0.5)*(STYLE_W[h.style] || 1)/2;
+      const root = (h.tail || 0) > 1 ? hw + 0.08 : Math.hypot(hw, Math.min(h.tail || 0, 1.2)) + 0.06;
+      const r = k === "sHand" ? Math.max(0.26, (h.boss || 0.8)/2*0.55)
+              : (h.tail || 0) > 1 ? Math.max(root, k === "hHand" ? 0.55 : 0.45)
+              : Math.max(root, (h.boss || (k === "hHand" ? 2.2 : 1.6))/2*0.62, k === "hHand" ? 0.78 : 0.6);
+      const core = handCore(h), MM = HAND_MATERIAL[handMat(h)] || HAND_MATERIAL["polished steel"];
+      const tone = t => fineTone(core, MM, t);
+      if(k === "sHand"){
+        const g = id("hcf");
+        defs.push(`<radialGradient id="${g}" cx="${f(50 + lxH*30,1)}%" cy="${f(50 + lyH*30,1)}%" r="80%">
+          <stop offset="0" stop-color="${tone(0.55)}"/><stop offset=".55" stop-color="${tone(0.25)}"/><stop offset=".9" stop-color="${tone(-0.05)}"/><stop offset="1" stop-color="${tone(-0.25)}"/></radialGradient>`);
+        return `<circle r="${f(r,3)}" fill="url(#${g})"/><circle r="${f(r,3)}" fill="none" stroke="${mix(core, MM.dark, .5)}" stroke-opacity=".45" stroke-width="0.012"/>`;
+      }
+      const g = id("hcf"), g2 = id("hcf");
+      defs.push(`<linearGradient id="${g}" gradientUnits="userSpaceOnUse" x1="${f(-lxH*r,3)}" y1="${f(-lyH*r,3)}" x2="${f(lxH*r,3)}" y2="${f(lyH*r,3)}">
+        <stop offset="0" stop-color="${tone(-0.30)}"/><stop offset=".55" stop-color="${tone(0.15)}"/><stop offset="1" stop-color="${tone(0.70)}"/></linearGradient>`);
+      defs.push(`<linearGradient id="${g2}" gradientUnits="userSpaceOnUse" x1="${f(-lxH*r,3)}" y1="${f(-lyH*r,3)}" x2="${f(lxH*r,3)}" y2="${f(lyH*r,3)}">
+        <stop offset="0" stop-color="${tone(0.05)}"/><stop offset=".6" stop-color="${tone(0.32)}"/><stop offset="1" stop-color="${tone(0.55)}"/></linearGradient>`);
+      const a0 = Math.atan2(lyH, lxH);
+      const arc = (rr, w, col, op) => { const p0 = [rr*Math.cos(a0 - 1.0), rr*Math.sin(a0 - 1.0)], p1 = [rr*Math.cos(a0 + 1.0), rr*Math.sin(a0 + 1.0)];
+        return `<path d="M${f(p0[0],3)} ${f(p0[1],3)} A${f(rr,3)} ${f(rr,3)} 0 0 1 ${f(p1[0],3)} ${f(p1[1],3)}" fill="none" stroke="${col}" stroke-opacity="${op}" stroke-width="${f(w,3)}" stroke-linecap="round"/>`; };
+      /* one turned disc per hand: its chamfered top edge a fine bright arc toward the light */
+      return `<circle r="${f(r,3)}" fill="url(#${g})"/>`
+        + arc(r*0.90, Math.max(0.02, r*0.07), mix(core, MM.lite, .9), .55)
+        + `<circle r="${f(r,3)}" fill="none" stroke="${mix(core, MM.dark, .5)}" stroke-opacity=".45" stroke-width="0.012"/>`;
     };
     /* Stable identifiers for direct selection. They change nothing about how
        the watch looks — they only give a tap something to resolve to. */
@@ -9798,7 +9841,7 @@ const STYLE_W = {
   "pomme-ouverte":1.0, "pomme-pleine":1.1, "pomme-facetee":1.1, "english":1.2, "a-tact":1.1,
   "retrograde":0.9,  "counter":1.6,
   "sword":2.5, "syringe":1.7, "dauphine":3.0, "feuille":2.2, "leaf":2.6,
-  "baton":1.9, "alpha":2.4, "pencil":2.0, "obelisque":2.2, "cathedral":2.8,
+  "baton":1.9, "baton-ridge":1.9, "baton-taper":1.9, "alpha":2.4, "pencil":2.0, "obelisque":2.2, "cathedral":2.8,
   "mercedes":2.2, "stick":1.6, "day-date":1.9, "dd-seconds":1.6,
   "royal-oak":2.25, "ro-seconds":1.6, "f77":2.0, "f77-seconds":1.6, "lance":2.2
 };
@@ -10161,6 +10204,11 @@ const FACET = {
                   const plot = p ? [[-(p.y0 - p.s), .50], [-p.y0, p.k], [-p.y1, p.k], [-(p.y1 + p.s), .50]] : [];
                   return back.concat(plot, [[-L, .50]]); },
   "baton":     (L,T) => [[T,.50],[-L,.50]],
+  /* v4.58.0: a baton cut with two facets on a centre ridge, square at the
+     end; and one that narrows evenly to 0.72 of its width and ends in a
+     short point, as the batons of fine dress watches do */
+  "baton-ridge":(L,T) => [[T,.50],[-L,.50]],
+  "baton-taper":(L,T,W) => [[T,.50],[0,.50],[-(L - W*0.70),.36],[-L,0]],
   "pencil":    (L,T,W) => [[T,.50],[-(L - W*0.95),.50],[-L,0]],
   "syringe":   (L,T) => [[T,.50],[-L*.60,.50],[-L*.655,.12],[-L*.96,.08],[-L,0]],
   "stick":     (L,T) => [[T,.50],[-L,.50]]
@@ -10290,7 +10338,9 @@ function facetHand(h, prof, W, ctx){
   const fR = sgn > 0 ? gLit : gDark, fL = sgn > 0 ? gDark : gLit;
   const outline = `M${side(1)} L${tipW > 0.001 ? q(-tipW, -L) + " L" : ""}${P.slice().reverse().map(([y, w]) => q(-w, y)).join(" L")}Z`;
   let out = "";
-  if(flat){
+  const fine = ctx && ctx.fine && FINE_HANDS.has(h.style) && !h.lume;
+  if(fine) out += fineFacets(h, P, L, W, flat, ctx, core, MM, q, side, outline);
+  else if(flat){
     /* bevel, table, bevel */
     const tr = P.map(([y, w]) => q(w*tk, y)).reverse().join(" L"), tl = P.map(([y, w]) => q(-w*tk, y)).reverse().join(" L");
     out += `<path d="M${side(1)} L${tr}Z" fill="${fR}"/>`;
@@ -10387,8 +10437,73 @@ function facetHand(h, prof, W, ctx){
   const slot = h.style === "ro-seconds" ? roHole(h, L, T, W, q) : "";
   if(slot)
     out += `<path d="${slot.slice(1)}" fill="none" stroke="${mix(core, dark, .8)}" stroke-opacity=".55" stroke-width="0.025"/>`;
-  /* one crisp edge round the whole hand */
-  out += `<path d="${outline}" fill="none" stroke="${mix(core, dark, .8)}" stroke-opacity=".55" stroke-width="0.03" stroke-linejoin="round"/>`;
+  /* one crisp edge round the whole hand (fine: a hairline, the cut edge of polished metal, not a drawn outline) */
+  out += fine ? `<path data-relief="skip" d="${outline}" fill="none" stroke="${mix(core, dark, .45)}" stroke-opacity=".5" stroke-width="0.012" stroke-linejoin="round"/>`
+    : `<path d="${outline}" fill="none" stroke="${mix(core, dark, .8)}" stroke-opacity=".55" stroke-width="0.03" stroke-linejoin="round"/>`;
+  return out;
+}
+/* ---------------------------------------------------------------------
+   FINE METAL HANDS (v4.58.0; render.hands "fine")
+
+   A polished hand is a small mirror. What the eye reads on a real one is
+   not a pale side and a dark side but the room reflected in each facet:
+   the facet turned to the light carries a bright band of it, soft at its
+   ends; the facet turned away still mirrors a lit room, only less of it,
+   so it is a deeper tone of the same metal, never a dark stripe. Each
+   facet here is one gradient along the hand, the reflection's centre set
+   by where the light stands along the hand, its strength by how squarely
+   the facet faces the light. Then the few things that make it read as a
+   machined part: a bright line where two facets meet, a hairline at the
+   cut edge, and the side wall, a thin band of darker metal on the side
+   away from the light, as deep as the hand is thick.
+   The flat baton's bevels take the share of the half-width set in
+   h.bevel (0.36 if unset). Hands with lume, and the hands copied from a
+   maker's measured part (F77, Royal Oak) that carry their own channels,
+   keep the drawing they had.
+   --------------------------------------------------------------------- */
+const FINE_HANDS = new Set(["baton","baton-ridge","baton-taper","stick","dauphine","sword","alpha","pencil","syringe","obelisque","leaf","feuille","lance","day-date","dd-seconds"]);
+const HAND_LIFT = {hHand:0.24, mHand:0.46, sHand:0.66};          // mm above the dial, for the shadow
+function fineTone(core, MM, t){
+  t = Math.max(-1, Math.min(1, t));
+  return t >= 0 ? mix(core, MM.lite, t*0.90) : mix(core, MM.dark, -t*0.46);
+}
+function fineFacets(h, P, L, W, flat, ctx, core, MM, q, side, outline){
+  const ar = (ctx.angle || 0)*Math.PI/180;
+  const ax = ctx.lx*Math.cos(ar) + ctx.ly*Math.sin(ar);       // the light across the hand (toward +x)
+  const ay = -ctx.lx*Math.sin(ar) + ctx.ly*Math.cos(ar);      // and along it (toward the tail)
+  const tk = flat ? Math.max(0.15, Math.min(0.85, 1 - (h.bevel > 0 ? +h.bevel : 0.36))) : 0;
+  /* where the light's image sits along the hand: offset 0 is the tail */
+  const c = Math.max(0.16, Math.min(0.84, 0.5 - 0.36*ay));
+  const grad = (t, amp, spread) => { const gid = ctx.id("hfn"), sp = spread || 0.34;
+    const stops = [[0, t - 0.14], [Math.max(0.02, c - sp), t], [c, t + amp], [Math.min(0.98, c + sp), t], [1, t - 0.06]];
+    ctx.defs.push(`<linearGradient id="${gid}" x1="0" y1="1" x2="0" y2="0">`
+      + stops.map(([o, v]) => `<stop offset="${f(o,3)}" stop-color="${fineTone(core, MM, v)}"/>`).join("") + `</linearGradient>`);
+    return `url(#${gid})`; };
+  /* a facet turned by `tilt` toward +x (s = 1) or -x (s = -1): its tone, and how much of the light's image it carries */
+  /* a polished facet is never grey: turned toward the light it mirrors the
+     bright room, turned away a darker part of it, so the two facets always
+     part, by more the more squarely the light falls across the hand */
+  const m = Math.max(0.55, Math.min(1, Math.abs(ax)*1.4)), lit0 = ax >= 0 ? 1 : -1;
+  const facet = (s, tilt) => s === lit0 ? {t:0.12 + 0.30*m*tilt/0.5, amp:0.62, sp:0.20} : {t:-0.34 - 0.30*m*tilt/0.5, amp:0.26, sp:0.22};
+  const wall = `<path data-relief="skip" d="${outline}" transform="translate(${f(-ax*0.035,3)} ${f(-ay*0.035,3)})" fill="${mix(core, MM.dark, .52)}"/>`;
+  let out = wall;
+  if(flat){
+    const R = facet(1, 0.62), Lf = facet(-1, 0.62);
+    const tr = P.map(([y, w]) => q(w*tk, y)).reverse().join(" L"), tl = P.map(([y, w]) => q(-w*tk, y)).reverse().join(" L");
+    out += `<path d="M${side(1)} L${tr}Z" fill="${grad(R.t, R.amp, R.sp)}"/>`;
+    out += `<path d="M${side(-1)} L${tl}Z" fill="${grad(Lf.t, Lf.amp, Lf.sp)}"/>`;
+    /* the table, flat and polished: it carries the broadest, softest image */
+    out += `<path d="M${P.map(([y, w]) => q(w*tk, y)).join(" L")} L${P.slice().reverse().map(([y, w]) => q(-w*tk, y)).join(" L")}Z" fill="${grad(0.10, 0.62, 0.30)}"/>`;
+    const lit = ax >= 0 ? 1 : -1;
+    out += `<path data-relief="skip" d="M${P.map(([y, w]) => q(lit*w*tk, y)).join(" L")}" fill="none" stroke="${mix(core, MM.lite, .92)}" stroke-opacity=".55" stroke-width="0.010"/>`
+         + `<path data-relief="skip" d="M${P.map(([y, w]) => q(-lit*w*tk, y)).join(" L")}" fill="none" stroke="${mix(core, MM.dark, .30)}" stroke-opacity=".30" stroke-width="0.010"/>`;
+  }else{
+    const R = facet(1, 0.42), Lf = facet(-1, 0.42), y0 = P[0][0];
+    out += `<path d="M${q(0, y0)} L${side(1)} L${q(0, -L)}Z" fill="${grad(R.t, R.amp, R.sp)}"/>`;
+    out += `<path d="M${q(0, y0)} L${side(-1)} L${q(0, -L)}Z" fill="${grad(Lf.t, Lf.amp, Lf.sp)}"/>`;
+    /* the ridge: where the two polished facets meet, one bright line */
+    out += `<path data-relief="skip" d="M0 ${f(y0,3)} L0 ${f(-L,3)}" stroke="${mix(core, MM.lite, .88)}" stroke-opacity=".70" stroke-width="0.011"/>`;
+  }
   return out;
 }
 function handPath(h, ctx){
@@ -10732,7 +10847,7 @@ function handLength(h, k, st){
   return Math.max(0.5, lm * (h.reachTrim != null ? h.reachTrim : 0.97));
 }
 
-const HAND_SHARE = ["style","finish","material","color","lume","taper","waist","pommePos","paint"];
+const HAND_SHARE = ["style","finish","material","color","lume","taper","waist","pommePos","paint","bevel"];
 /* a painted hand: a colour of its own and no metal */
 const handPainted = h => !!h && !!h.paint && !h.material && /^#[0-9a-f]{6}$/i.test(h.color || "");
 const HAND_PAINT = [["#F2701E","Orange"],["#D7262E","Red"],["#F2C230","Yellow"],["#2F6FD6","Blue"],["#2E8B57","Green"],["#F2F2EF","White"],["#16181B","Black"]];
@@ -12244,7 +12359,7 @@ function handSchema(k,title){
     ...HAND_VEC_NAMES.map(n=>"vector · "+n),
     "pomme-ouverte","pomme-pleine","pomme-facetee",
     "english","a-tact","retrograde","counter",
-    "day-date","dd-seconds","royal-oak","ro-seconds","f77","f77-seconds","sword","syringe","dauphine","feuille","leaf","lance","baton","alpha","pencil","obelisque","cathedral","mercedes","stick"
+    "day-date","dd-seconds","royal-oak","ro-seconds","f77","f77-seconds","sword","syringe","dauphine","feuille","leaf","lance","baton","baton-ridge","baton-taper","alpha","pencil","obelisque","cathedral","mercedes","stick"
   ];
   return {title, hint:"Length runs from the centre of the movement to the tip. The pomme settings drive the whole Breguet family.", fields:()=>[
     /* The linked state has to be obvious: you are either editing the whole
@@ -17980,6 +18095,7 @@ const GSTR = {en:{
   "prog.aria": (name, n, total) => `${name}, step ${n} of ${total}. Show all steps`,
   "find.ph":"Find a setting", "find.none":"Nothing by that name in this design.",
   "start.concepts":"Concepts",
+  "hands.fineOwn":"This hand keeps the finish it was measured with (and a hand with lume keeps its channel).",
   "num.preciseNote":"Every figure set by its own outline: one height in mm, the same space inside ١٠ ١١ ١٢ in every face, kept clear of the track and the edge.",
   "num.legacyNote":"As this design was first drawn. Precise sets each figure by its outline, at a true height in mm.",
   "num.bandMeasure": (h, i, o) => `Figures ${h} mm tall, their ink from ${i} to ${o} mm`,
@@ -18202,6 +18318,7 @@ GSTR.ar = {
   "prog.aria": (name, n, total) => `${name}، الخطوة ${n} من ${total}. عرض كل الخطوات`,
   "find.ph":"ابحث عن إعداد", "find.none":"ما في شي بهالاسم في هالتصميم.",
   "start.concepts":"التصاميم المقترحة",
+  "hands.fineOwn":"هالعقرب يبقى بنفس التشطيب اللي انقاس عليه (والعقرب اللي فيه إضاءة يبقى بقناته).",
   "num.preciseNote":"كل رقم ينحط حسب شكله الحقيقي: ارتفاع واحد بالمليمتر، ونفس المسافة داخل ١٠ ١١ ١٢ في كل خط، وبعيد عن المسار والإطار.",
   "num.legacyNote":"مثل ما انرسم هالتصميم أول مرة. «دقيق» يحط كل رقم حسب شكله وبارتفاع حقيقي بالمليمتر.",
   "num.bandMeasure": (h, i, o) => `الأرقام ارتفاعها ${h} ملم، من ${i} إلى ${o} ملم`,
@@ -18390,7 +18507,8 @@ GSTR.ar = {
    that means two things takes a context: "shape:Diamond" is the marker shape,
    "Diamond" the stone. */
 const GWORD = {ar:{
-  "This design":"هالتصميم", "F77 41 · silver and rose gold":"F77 41 · فضي وذهبي وردي", "Precise":"دقيق", "As before":"مثل قبل",
+  "This design":"هالتصميم", "Ridged baton":"عصا بحافة", "Tapered baton":"عصا مستدقة", "Hand finish":"تشطيب العقارب",
+  "Fine metal":"معدن مصقول دقيق", "Classic":"كلاسيكي", "Bevel width":"عرض الشطفة", "F77 41 · silver and rose gold":"F77 41 · فضي وذهبي وردي", "Precise":"دقيق", "As before":"مثل قبل",
   "Faces on the dial":"الخطوط على الميناء", "Compare the faces on the dial":"قارن الخطوط على الميناء", "Weight":"السماكة",
   "End the hour hand at the figures":"خل عقرب الساعات يوقف عند الأرقام", "Keep clear of the track and the edge":"بعّدها عن المسار والإطار",
   "Space inside 10, 11, 12":"المسافة داخل ١٠ ١١ ١٢", "Thin":"رفيع جداً", "Extra light":"خفيف جداً", "Light":"خفيف", "Regular":"عادي",
@@ -18538,7 +18656,7 @@ const G_CHECK_AR = {
 const GLOSS_OPT = {matte:"Matte", gloss:"Gloss", sunburst:"Sunburst", guilloche:"Guilloché", brushed:"Brushed", brushedsteel:"Brushed steel", grained:"Grained",
   sandblasted:"Sandblasted", granular:"Granular", enamel:"Enamel", lacquer:"Lacquer", stone:"Stone", metallic:"Metallic", circular:"Circular brushed",
   mop:"Pearl sheen", "mother of pearl":"Mother of pearl", none:"None", railroad:"Railroad", ticks:"Ticks", dots:"Dots", beads:"Beads", dashes:"Dashes",
-  "dd-seconds":"Long needle", "pomme-ouverte":"Breguet", obelisque:"Obelisk", "day-date":"Day-date", "printed":"Printed",
+  "dd-seconds":"Long needle", "pomme-ouverte":"Breguet", obelisque:"Obelisk", "baton-ridge":"Ridged baton", "baton-taper":"Tapered baton", "day-date":"Day-date", "printed":"Printed",
   "royal-oak":"Royal Oak", "ro-seconds":"Royal Oak seconds", "f77":"Nivada F77", "f77-seconds":"Nivada F77 seconds",
   "double printed":"Raised print", "applied metal":"Applied metal", "polished steel":"Steel", "blued steel":"Blued steel",
   "blackened steel":"Black", "yellow gold":"Gold",
@@ -20256,11 +20374,17 @@ Object.assign(GWORD.ar, {
       if(tab === "length" || tab === "detail") return more("hands", "All hand settings");
       const METALS6 = [["polished steel","Steel"],["white gold","White gold"],["blued steel","Blued steel"],["yellow gold","Gold"],["rose gold","Rose gold"],["blackened steel","Black"]];
       if(tab === "shape"){
-        const styles = [["day-date","Day-date"],["royal-oak","Royal Oak"],["f77","Nivada F77"],["dauphine","Dauphine"],["baton","Baton"],["sword","Sword"],["leaf","Leaf"],["feuille","Feuille"],["lance","Lance"],["alpha","Alpha"],["pencil","Pencil"],["obelisque","Obelisk"],["syringe","Syringe"],["pomme-ouverte","Breguet"],["mercedes","Mercedes"]];
+        const styles = [["day-date","Day-date"],["royal-oak","Royal Oak"],["f77","Nivada F77"],["dauphine","Dauphine"],["baton","Baton"],["baton-ridge","Ridged baton"],["baton-taper","Tapered baton"],["sword","Sword"],["leaf","Leaf"],["feuille","Feuille"],["lance","Lance"],["alpha","Alpha"],["pencil","Pencil"],["obelisque","Obelisk"],["syringe","Syringe"],["pomme-ouverte","Breguet"],["mercedes","Mercedes"]];
         let h = `<div class="gCards">${styles.map(([v,l]) => `<button type="button" class="gCard ${hh.style===v?"on":""}" data-ghand="${v}"><div class="gPic">${handPic(v)}</div><div class="gName">${gW(l)}</div></button>`).join("")}</div>`;
         const hp = handPainted(hh);
         h += `<h3>${gW("Metal")}</h3>` + chips("hands.material", METALS6.concat([["painted","Painted"]]), hp ? "painted" : hh.material || "polished steel");
         if(hp) h += `<h3>${gW("Paint colour")}</h3>` + swatches("hands.color", HAND_PAINT, hh.color, {row:true});
+        /* how the metal is drawn: fine (each facet a polished mirror, the shadow by the hand's height, turned collets) or as before */
+        const fineOn = !!(S.render && S.render.hands === "fine");
+        h += `<h3>${gW("Hand finish")}</h3>` + chips("render.hands", [["fine","Fine metal"],["classic","Classic"]], fineOn ? "fine" : "classic");
+        if(fineOn && FACET_FLAT.has(hh.style) && FINE_HANDS.has(hh.style))
+          h += slider("hands.bevel", "Bevel width", 0.15, 0.60, 0.01, hh.bevel > 0 ? +hh.bevel : 0.36, "pct");
+        if(fineOn && (hh.lume || !FINE_HANDS.has(hh.style))) h += `<p class="gNote">${gT("hands.fineOwn")}</p>`;
         h += toggle("hands.lume", "Lume strip", !!hh.lume);
         if(hh.lume || S.mHand.lume) h += `<h3>${gW("Lume colour")}</h3>` + swatches("lume.color", LUME_COLOURS.map(([c, n]) => [c || "#E9EFDF", n]), (S.lume && S.lume.color) || "#E9EFDF", {row:true, noAny:true});
         return h + more("hands", "All hand settings");
@@ -20516,6 +20640,7 @@ Object.assign(GWORD.ar, {
     const keep = S; let st;
     try{
       S = migrateHands(deep(BASE, PRESETS.Standard));
+      S.render.hands = "fine";                                  // a new design's hands are drawn as fine metal (4.58.0)
       const m = keep.case && keep.case.model;
       if(m && m !== S.case.model){ const from = S.case.model; S.case.model = m; applyCaseModel(from, m); }
       /* a new design's figures, when they are turned on, are the FPJ figures */
@@ -20656,6 +20781,7 @@ Object.assign(GWORD.ar, {
     if(path === "hands.material" && v === "painted"){ const c = handPainted(S.hHand) ? S.hHand.color : "#16181B";
       for(const k of ["hHand","mHand"]) if(S[k]){ S[k].material = ""; S[k].color = c; S[k].paint = true; } }
     else if(path === "sHand.material" && v === "painted"){ if(S.sHand){ const c = handPainted(S.sHand) ? S.sHand.color : "#F2701E"; S.sHand.material = ""; S.sHand.color = c; S.sHand.paint = true; } }
+    else if(path === "hands.bevel"){ for(const k of ["hHand","mHand"]) if(S[k]) S[k].bevel = +(+v).toFixed(3); }
     else if(path === "hands.color"){ for(const k of ["hHand","mHand"]) if(S[k]){ S[k].color = v; S[k].material = ""; S[k].paint = true; } }
     else if(path === "hands.material"){ for(const k of ["hHand","mHand","sHand"]) if(S[k] && !(k === "sHand" && handPainted(S[k]))){ S[k].material = v; delete S[k].paint; } }
     else if(path === "sHand.material"){ if(S.sHand){ S.sHand.material = v; delete S.sHand.paint; } }

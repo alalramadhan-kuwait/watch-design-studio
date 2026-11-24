@@ -1,35 +1,35 @@
 [
  {
-  "id": "f77-41-hands-f77",
-  "file": "f77-41-hands-f77.json",
-  "picture": "f77-41-hands-f77.jpg",
-  "name": "F77 baton",
-  "sub": "Nivada's own F77 hands in rose gold",
-  "set": "F77 41 · Hands"
+  "id": "f77-41-batons-ref",
+  "file": "f77-41-batons-ref.json",
+  "picture": "f77-41-batons-ref.jpg",
+  "name": "B · reference",
+  "sub": "Your dial with hand B as first drawn",
+  "set": "F77 41 · Refined batons"
  },
  {
-  "id": "f77-41-hands-baton",
-  "file": "f77-41-hands-baton.json",
-  "picture": "f77-41-hands-baton.jpg",
-  "name": "Faceted baton",
-  "sub": "A two-facet dress baton",
-  "set": "F77 41 · Hands"
+  "id": "f77-41-batons-polished",
+  "file": "f77-41-batons-polished.json",
+  "picture": "f77-41-batons-polished.jpg",
+  "name": "B1 · Polished baton",
+  "sub": "Flat polished table, narrow bevels",
+  "set": "F77 41 · Refined batons"
  },
  {
-  "id": "f77-41-hands-dauphine",
-  "file": "f77-41-hands-dauphine.json",
-  "picture": "f77-41-hands-dauphine.jpg",
-  "name": "Slim dauphine",
-  "sub": "A narrow faceted dauphine",
-  "set": "F77 41 · Hands"
+  "id": "f77-41-batons-ridged",
+  "file": "f77-41-batons-ridged.json",
+  "picture": "f77-41-batons-ridged.jpg",
+  "name": "B2 · Ridged baton",
+  "sub": "Two facets on a centre ridge",
+  "set": "F77 41 · Refined batons"
  },
  {
-  "id": "f77-41-hands-leaf",
-  "file": "f77-41-hands-leaf.json",
-  "picture": "f77-41-hands-leaf.jpg",
-  "name": "Restrained leaf",
-  "sub": "A slim leaf with a short taper",
-  "set": "F77 41 · Hands"
+  "id": "f77-41-batons-tapered",
+  "file": "f77-41-batons-tapered.json",
+  "picture": "f77-41-batons-tapered.jpg",
+  "name": "B3 · Tapered baton",
+  "sub": "Ridged, narrowing to a short point",
+  "set": "F77 41 · Refined batons"
  },
  {
   "id": "f77-41-current",

@@ -200,6 +200,34 @@ stored in a design file do not change. In the full editor at laptop widths
 the toolbar sits tighter, and on a narrower window it takes a second row
 rather than pushing Share and Export off the screen.
 
+## Fine metal hands, and refined batons for the F77 41 (v4.58.0)
+
+**Fine metal** (Hands › Shape › Hand finish), for every new design. The
+hands were drawn with each facet pushed almost to the metal's darkest
+tone, so a rose-gold hand had a chocolate stripe down one side and a flat
+pink one down the other. Now each facet is a polished mirror: the facet
+toward the light carries a soft bright reflection along its length, the
+one turned away a deeper tone of the same metal, never dark; a bright line
+where two facets meet, a hairline at the cut edge, and a thin side wall on
+the side away from the light. Each hand's shadow falls as far and as soft
+as the hand stands above the dial (hour 0.24 mm, minute 0.46, seconds
+0.66). The collets are turned discs, one per hand, with a fine bright arc
+on their chamfer, and the seconds hand is closed by a low domed cap. A
+flat baton's bevel width can be set (Bevel width). Hands with lume, and
+the F77 and Royal Oak hands drawn from the makers' measured parts, keep
+their drawing. Designs saved before keep the classic drawing; Hand finish
+switches either way.
+
+**Two new batons**: a ridged baton (two facets on a centre ridge, square
+end) and a tapered baton (ridged, narrowing to 0.72 of its width and a
+short point).
+
+**Refined batons** (Designs, "F77 41 · Refined batons"): the original
+silver dial with rose-gold Arabic numerals on the real F77 41, with hand B
+as first drawn and three refinements of it in fine metal: B1 polished
+baton (0.95 / 0.80 mm), B2 ridged baton (0.95 / 0.80 mm), B3 tapered baton
+(1.05 / 0.90 mm). The earlier "F77 41 · Hands" set is replaced.
+
 ## Four realistic hand sets for the F77 41 (v4.57.1)
 
 One dial (Calatrava, in the precise numeral layout) with four hand sets,
