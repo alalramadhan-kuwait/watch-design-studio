@@ -200,6 +200,30 @@ stored in a design file do not change. In the full editor at laptop widths
 the toolbar sits tighter, and on a narrower window it takes a second row
 rather than pushing Share and Export off the screen.
 
+## Four complete dials for the F77 41 (v4.59.0)
+
+The 41's visible dial is 71 % of the case's width, against 76 % on the 38,
+inside a wide bright bezel. Four complete dials answer that with the whole
+dial, not one part, each on the real case, silver, with Arabic figures and
+rose gold, under Designs, "F77 41 · Complete dials", beside the current
+design:
+- *Continuum*: the dial carried out to the steel. A concentric-turned
+  chapter ring of the field's own silver meets the polished flange, a
+  rose-gold hairline at its inner edge; applied AlTarikh figures; tapered
+  batons; the Nivada script alone.
+- *Architecture*: structure, not size. An engraved hour ring of fine circles
+  holds applied IBM Plex Sans Arabic figures, round a turned field, the
+  zones drawn by two rose-gold hairlines; ridged batons; the name in the
+  field, TIME KEEPER below.
+- *Heritage*: depth by texture. A fine clous-de-Paris centre in a brushed
+  silver chapter; applied calligraphic figures (Aref Ruqaa) and a rose-gold
+  dotted track; tapered batons.
+- *Measure*: rhythm to the edge. Four applied figures at the quarters and
+  applied rose-gold batons between, on concentric-turned silver, a railway
+  at the edge; polished batons.
+All four in fine metal hands, the minute hand to the track, the hour hand
+to the figures, every figure 0.3 mm or more inside the track.
+
 ## Fine metal hands, and refined batons for the F77 41 (v4.58.0)
 
 **Fine metal** (Hands › Shape › Hand finish), for every new design. The

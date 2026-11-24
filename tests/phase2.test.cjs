@@ -828,7 +828,7 @@ test('the real F77 41, four silver dials, and sets side by side (v4.55.0)', () =
   assert.equal(C.photoFile, undefined, 'the optimised 41 stays drawn'); assert.equal(C.opening, 30.2);
   assert.match(fs.readFileSync(path.join(__dirname, '../sw.js'), 'utf8'), /"\.\/app\/case-nivada-f77-41\.jpg"/);
   const list = JSON.parse(fs.readFileSync(path.join(__dirname, '../concepts/index.json'), 'utf8'));
-  const set = list.filter(x => /^F77 41 · /.test(x.set || '') && !/^F77 41 · (Hands|Refined batons)$/.test(x.set));
+  const set = list.filter(x => /^F77 41 · /.test(x.set || '') && !/^F77 41 · (Hands|Refined batons|Complete dials)$/.test(x.set) || x.id === 'f77-41-current');
   assert.ok(set.length >= 4 && set[0].id === 'f77-41-current', 'a set on the 41, the current design first');
   for (const c of set) {
     const d = JSON.parse(fs.readFileSync(path.join(__dirname, '../concepts', c.file), 'utf8'));
@@ -954,4 +954,23 @@ test('fine metal hands, and refined batons for the F77 41 (v4.58.0)', () => {
     assert.deepEqual([d.render.hands, d.hHand.style], want[n], c.id);
     assert.equal(d.numerals.style, orig.numerals.style, "the original dial's numerals"); assert.equal(d.dial.color, orig.dial.color);
     for (const k of ['hHand', 'mHand', 'sHand']) assert.equal(d[k].material, 'rose gold'); });
+});
+
+test('four complete dials for the F77 41 (v4.59.0)', () => {
+  const list = JSON.parse(fs.readFileSync(path.join(__dirname, '../concepts/index.json'), 'utf8'));
+  const set = list.filter(x => x.set === 'F77 41 · Complete dials');
+  assert.deepEqual(set.map(x => x.id), ['f77-41-dial-current', 'f77-41-dial-continuum', 'f77-41-dial-architecture', 'f77-41-dial-heritage', 'f77-41-dial-measure']);
+  const read = id => JSON.parse(fs.readFileSync(path.join(__dirname, '../concepts', id + '.json'), 'utf8'));
+  for (const c of set.slice(1)) {
+    const d = read(c.id);
+    assert.equal(d.case.model, 'Time Keeper × Nivada · F77 41'); assert.equal(d.numerals.system, 'arabic ٠–٩');
+    assert.equal(d.numerals.layout, 'precise'); assert.equal(d.numerals.tech, 'applied'); assert.equal(d.numerals.metal, 'rose gold');
+    assert.equal(d.render.hands, 'fine'); assert.ok(d.minute.on);
+    for (const k of ['hHand', 'mHand', 'sHand']) assert.equal(d[k].material, 'rose gold');
+    assert.ok(['brushedsteel'].includes(d.dial.finish), c.id + ': a silver that renders silver');
+  }
+  assert.equal(read('f77-41-dial-continuum').chapter.on, true);
+  assert.equal(read('f77-41-dial-architecture').sector.zones[0].pattern, 'cercles');
+  assert.equal(read('f77-41-dial-heritage').sector.zones[0].pattern, 'clous');
+  assert.equal(read('f77-41-dial-measure').indices.metal, 'rose gold'); assert.equal(read('f77-41-dial-measure').numerals.set, 'quarters');
 });

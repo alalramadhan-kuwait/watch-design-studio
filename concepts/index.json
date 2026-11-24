@@ -1,5 +1,45 @@
 [
  {
+  "id": "f77-41-dial-current",
+  "file": "f77-41-dial-current.json",
+  "picture": "f77-41-dial-current.jpg",
+  "name": "Current",
+  "sub": "Your design on the real 41: the reference",
+  "set": "F77 41 · Complete dials"
+ },
+ {
+  "id": "f77-41-dial-continuum",
+  "file": "f77-41-dial-continuum.json",
+  "picture": "f77-41-dial-continuum.jpg",
+  "name": "Continuum",
+  "sub": "The dial carried to the steel by a turned chapter ring",
+  "set": "F77 41 · Complete dials"
+ },
+ {
+  "id": "f77-41-dial-architecture",
+  "file": "f77-41-dial-architecture.json",
+  "picture": "f77-41-dial-architecture.jpg",
+  "name": "Architecture",
+  "sub": "An engraved hour ring and a turned field, rose-gold hairlines",
+  "set": "F77 41 · Complete dials"
+ },
+ {
+  "id": "f77-41-dial-heritage",
+  "file": "f77-41-dial-heritage.json",
+  "picture": "f77-41-dial-heritage.jpg",
+  "name": "Heritage",
+  "sub": "Clous de Paris in a brushed chapter, calligraphic figures",
+  "set": "F77 41 · Complete dials"
+ },
+ {
+  "id": "f77-41-dial-measure",
+  "file": "f77-41-dial-measure.json",
+  "picture": "f77-41-dial-measure.jpg",
+  "name": "Measure",
+  "sub": "Quarters and rose-gold batons to the edge, on turned silver",
+  "set": "F77 41 · Complete dials"
+ },
+ {
   "id": "f77-41-batons-ref",
   "file": "f77-41-batons-ref.json",
   "picture": "f77-41-batons-ref.jpg",
