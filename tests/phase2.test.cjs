@@ -585,7 +585,7 @@ test('a real sandblasted finish (v4.44.0)', () => {
   assert.match(F, /granK \*= /); assert.match(F, /granG \+= /); assert.match(F, /nx \+= \(f1 - 0\.5\)\*fa\*FROST_TILT/);
   assert.match(source, /\["grained","Grained"\],\["sandblasted","Sandblasted"\],\["granular","Granular"\]/, 'offered in simple mode');
   assert.match(source, /\} else if\(finish==="sandblasted"\)\{/, 'and drawn in the plain view');
-  for (const dir of ['designs', 'concepts']) for (const f of fs.readdirSync(path.join(__dirname, '..', dir)).filter(f => f.endsWith('.json') && f !== 'gin.json'))   // gin (4.51.0) was made after it
+  for (const dir of ['designs', 'concepts']) for (const f of fs.readdirSync(path.join(__dirname, '..', dir)).filter(f => f.endsWith('.json') && f !== 'gin.json' && !/^f77-41-blue-/.test(f)))   // gin (4.51.0) and the frosted F77 41s (4.60.0) were made after it
     assert.doesNotMatch(fs.readFileSync(path.join(__dirname, '..', dir, f), 'utf8'), /"finish": ?"sandblasted"/, f + ' did not use it, so it draws as before');
 });
 
