@@ -200,6 +200,16 @@ stored in a design file do not change. In the full editor at laptop widths
 the toolbar sits tighter, and on a narrower window it takes a second row
 rather than pushing Share and Export off the screen.
 
+## The four dials in frosted silver and blue (v4.60.0)
+
+The four complete dials in the colours of a reference the owner sent (a
+frosted grey dial, black figures, blued hands), under Designs, "F77 41 ·
+Frosted silver and blue": each layout as it was, on a solid German silver
+dial, frosted; the Arabic figures engraved and filled with black lacquer,
+their cut walls bright; the minute track, the batons and the print in
+black; the hour, minute and seconds hands in flame-blued steel, in fine
+metal. The rose-gold versions stay as they were.
+
 ## Four complete dials for the F77 41 (v4.59.0)
 
 The 41's visible dial is 71 % of the case's width, against 76 % on the 38,

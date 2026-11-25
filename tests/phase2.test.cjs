@@ -828,7 +828,7 @@ test('the real F77 41, four silver dials, and sets side by side (v4.55.0)', () =
   assert.equal(C.photoFile, undefined, 'the optimised 41 stays drawn'); assert.equal(C.opening, 30.2);
   assert.match(fs.readFileSync(path.join(__dirname, '../sw.js'), 'utf8'), /"\.\/app\/case-nivada-f77-41\.jpg"/);
   const list = JSON.parse(fs.readFileSync(path.join(__dirname, '../concepts/index.json'), 'utf8'));
-  const set = list.filter(x => /^F77 41 · /.test(x.set || '') && !/^F77 41 · (Hands|Refined batons|Complete dials)$/.test(x.set) || x.id === 'f77-41-current');
+  const set = list.filter(x => /^F77 41 · /.test(x.set || '') && !/^F77 41 · (Hands|Refined batons|Complete dials|Frosted silver and blue)$/.test(x.set) || x.id === 'f77-41-current');
   assert.ok(set.length >= 4 && set[0].id === 'f77-41-current', 'a set on the 41, the current design first');
   for (const c of set) {
     const d = JSON.parse(fs.readFileSync(path.join(__dirname, '../concepts', c.file), 'utf8'));
@@ -973,4 +973,19 @@ test('four complete dials for the F77 41 (v4.59.0)', () => {
   assert.equal(read('f77-41-dial-architecture').sector.zones[0].pattern, 'cercles');
   assert.equal(read('f77-41-dial-heritage').sector.zones[0].pattern, 'clous');
   assert.equal(read('f77-41-dial-measure').indices.metal, 'rose gold'); assert.equal(read('f77-41-dial-measure').numerals.set, 'quarters');
+});
+
+test('the four dials in frosted silver and blue (v4.60.0)', () => {
+  const list = JSON.parse(fs.readFileSync(path.join(__dirname, '../concepts/index.json'), 'utf8'));
+  const set = list.filter(x => x.set === 'F77 41 · Frosted silver and blue');
+  assert.deepEqual(set.map(x => x.id), ['f77-41-blue-continuum', 'f77-41-blue-architecture', 'f77-41-blue-heritage', 'f77-41-blue-measure']);
+  for (const c of set) {
+    const d = JSON.parse(fs.readFileSync(path.join(__dirname, '../concepts', c.file), 'utf8'));
+    assert.equal(d.case.model, 'Time Keeper × Nivada · F77 41'); assert.equal(d.numerals.system, 'arabic ٠–٩');
+    assert.equal(d.dial.blank, 'German silver'); assert.equal(d.dial.finish, 'sandblasted');
+    assert.equal(d.numerals.tech, 'engraved + filled'); assert.equal(d.numerals.color, '#16181B');
+    for (const k of ['hHand', 'mHand', 'sHand']) assert.equal(d[k].material, 'flame blue', c.id + ' ' + k);
+    assert.equal(d.render.hands, 'fine'); assert.ok(/^Nivada /.test(d.text.logoMark), "the case's own logo");
+  }
+  assert.ok(list.some(x => x.id === 'f77-41-dial-continuum'), 'the rose-gold versions kept');
 });

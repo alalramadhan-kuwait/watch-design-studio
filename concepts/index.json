@@ -1,5 +1,37 @@
 [
  {
+  "id": "f77-41-blue-continuum",
+  "file": "f77-41-blue-continuum.json",
+  "picture": "f77-41-blue-continuum.jpg",
+  "name": "Continuum · blue",
+  "sub": "Frosted German silver, black lacquered figures, blued hands",
+  "set": "F77 41 · Frosted silver and blue"
+ },
+ {
+  "id": "f77-41-blue-architecture",
+  "file": "f77-41-blue-architecture.json",
+  "picture": "f77-41-blue-architecture.jpg",
+  "name": "Architecture · blue",
+  "sub": "The engraved hour ring in frosted silver, black figures",
+  "set": "F77 41 · Frosted silver and blue"
+ },
+ {
+  "id": "f77-41-blue-heritage",
+  "file": "f77-41-blue-heritage.json",
+  "picture": "f77-41-blue-heritage.jpg",
+  "name": "Heritage · blue",
+  "sub": "Clous de Paris, black figures and dotted track, blued hands",
+  "set": "F77 41 · Frosted silver and blue"
+ },
+ {
+  "id": "f77-41-blue-measure",
+  "file": "f77-41-blue-measure.json",
+  "picture": "f77-41-blue-measure.jpg",
+  "name": "Measure · blue",
+  "sub": "Black quarters and batons on frosted silver, blued hands",
+  "set": "F77 41 · Frosted silver and blue"
+ },
+ {
   "id": "f77-41-dial-current",
   "file": "f77-41-dial-current.json",
   "picture": "f77-41-dial-current.jpg",
