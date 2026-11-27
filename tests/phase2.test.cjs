@@ -1143,11 +1143,41 @@ test('the NOREL R4 case against Blue Creations\' drawing of 3 Nov 2026 (v4.64.1)
   const ctx = {}; new Function('ctx', 'const VERNOY_CASE = {};' + chunk('const NOREL_R3 = {', '/* Time Keeper × Nivada: a Time Keeper (Kuwait) edition') + '; ctx.R3 = NOREL_R3; ctx.R4 = NOREL_R4;')(ctx);
   const { R3, R4 } = ctx;
   // the 3H section and the three views, dimension by dimension
-  const drawn = { bezelOD: 41.00, glassD: 33.50, opening: 31.40, dialD: 32.50, dialT: 0.40, dialHolder: 33.50, glassT: 1.50, height: 11.20, bezelH: 2.70, lugToLug: 48.00, lugWidth: 21.00, crownD: 6.50 };
+  const drawn = { bezelOD: 41.00, glassD: 33.50, opening: 31.40, dialD: 32.50, dialT: 0.40, dialHolder: 33.50, glassT: 1.50, height: 11.20, lugDrop: 0.20, lugToLug: 48.00, lugWidth: 21.00, crownD: 6.50 };
   for (const [k, v] of Object.entries(drawn)) assert.equal(R4[k], v, k);
   assert.equal(+(R4.bezelOD/2 - R4.bezelID/2).toFixed(2), 3.40, 'the bezel ring, (3.40) on the drawing');
   assert.equal(R4.cyclops.lift, 1.10); assert.equal(R4.movement, 'Sellita SW240-1'); assert.equal(R4.wr, '10 ATM');
   // what the 8 Oct drawing (R1) had, kept on the R3 record
   assert.equal(R3.bezelOD, 40.00); assert.equal(R3.opening, 32.50); assert.equal(R3.height, 11.50); assert.equal(R3.glassD, 34.50); assert.equal(R3.dialD, 33.50);
-  assert.equal(+(R3.height - R4.height).toFixed(2), 0.30); assert.ok(Math.abs((R3.bezelH - R4.bezelH) - 0.30) < 0.05, 'the 0.30 came out of the bezel');
+  assert.equal(+(R3.height - R4.height).toFixed(2), 0.30);
+  // 4.64.2: both drawings give 11.00 from the crystal to the back; the 0.30 is in how far the lugs drop below it (0.50, then 0.20)
+  assert.equal(R3.glassToBack, 11.00); assert.equal(R3.lugDrop, 0.50); assert.equal(R4.glassToBack, 11.00);
+  for (const K of [R3, R4]) assert.equal(+(K.glassToBack + K.lugDrop).toFixed(2), K.height);
+  assert.equal(R4.bezelH, R3.bezelH, 'the bezel is not dimensioned on the drawing, so it stays the STEP\'s');
+});
+
+test('the NOREL case back in 3D, from the drawings (v4.64.2): closed, engraved, and the lugs to the 3 Nov drop', async () => {
+  const r3d = fs.readFileSync(path.join(__dirname, '../src/relief3d.js'), 'utf8');
+  const bundle = fs.readFileSync(path.join(__dirname, '../vendor/relief3d.bundle.js'), 'utf8');
+  // the back's metal no longer goes black: no anisotropic brushing on the STEP's parts, which carry no texture coordinates
+  assert.match(r3d, /const backMetal=polished\(caseTone,\.26\);casePart\('caseback',backMetal\);casebackCentre\(backMetal,bridge\.casebackRing\?bridge\.casebackRing\(state\):null\);/);
+  assert.ok(!/casePart\('caseback',brushed/.test(r3d));
+  // the centre carries the maker's sheet's caseback words and the brand's shield, laid just proud of the STEP's own face
+  assert.match(r3d, /function casebackCentre\(material,ring\)\{/);
+  assert.match(r3d, /bridge\.logoPath\('NOREL shield'\)/);
+  assert.match(r3d, /disc\.translate\(0,0,NOREL_R1\.backBottom-\.02\)/);
+  assert.match(source, /casebackRing\(st\)\{return sheetCasebackRing\(st\);\},/);
+  // the lugs: the case middle squeezed below the back to the spec's drop, the STEP's own when they agree
+  assert.match(r3d, /caseMiddle\(steel,spec\.lugDrop\);/);
+  assert.match(r3d, /if\(!\(drop>0\)\|\|Math\.abs\(drop-NOREL_R1\.lugDrop\)<1e-3\)return casePart\('case',material\);/);
+  assert.match(source, /glassToBack:K\.glassToBack,lugDrop:K\.lugDrop,/);
+  // the stack: the crystal 11.00 over the back, so the bezel stands where the STEP's does
+  const M = await import(path.join(__dirname, '../src/relief-model.js'));
+  assert.equal(M.NOREL_R1.lugDrop, 0.50); assert.equal(M.NOREL_R1.backFlatR, 12.50);
+  const s = M.norelStack({ glassToBack: 11.00, glassT: 1.50 });
+  assert.equal(+s.glassTop.toFixed(2), 3.90); assert.equal(+(s.bezelTop - M.NOREL_R1.caseTop).toFixed(2), 3.00);
+  assert.equal(+M.norelStack({}).glassTop.toFixed(2), 3.90, 'the default is the drawings\' 11.00');
+  // and the bundle is built from this source
+  assert.ok(/backBottom-\.02/.test(bundle.replace(/\s/g, '')) || /-\.02\)/.test(bundle), 'the bundle carries the back\'s centre');
+  assert.ok(/NOREL shield/.test(bundle), 'the bundle draws the shield on the back');
 });

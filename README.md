@@ -200,13 +200,31 @@ stored in a design file do not change. In the full editor at laptop widths
 the toolbar sits tighter, and on a narrower window it takes a second row
 rather than pushing Share and Export off the screen.
 
-## The NOREL bezel height, from the drawing (v4.64.1)
+## The NOREL case back, from the drawings (v4.64.2)
 
-The NOREL R4 case was checked against Blue Creations' assembly drawing of
-3 Nov 2026 (and the 8 Oct one before it). Every dimension the app holds
-agrees with it but one: the bezel is 2.70 mm high at its rim, not the 2.97
-the R4 case had kept from the earlier case. The maker's specification and
-the side view now say 2.70. The front view and every dial are unchanged.
+The 3D view's NOREL now has its case back, as Blue Creations' drawings of
+8 Oct and 3 Nov 2026 section it: a solid plate, flat across the middle to
+Ø25.00, with the knurled grip ring and the slope out to Ø36.50 round it.
+The centre carries what the maker's sheet puts on the back (SELLITA SW240-1
+· ALL STAINLESS STEEL · 10 ATM WATER RESISTANT, or the sheet's own caseback
+words), set round the NOREL shield, engraved: a little lower, frosted and
+darker than the turned satin round it. It reads the right way round from
+behind.
+
+The back was always in the case model; it showed as a black hole because
+its metal was the anisotropic brushing, which renders black on parts with
+no texture coordinates, as the STEP's are. It is turned satin now.
+
+Also from the drawings:
+- **The lugs.** Both drawings give 11.00 from the crystal's top to the case
+  back. The overall height adds how far the lug tips drop below the back:
+  0.50 on the 8 Oct drawing (11.50), 0.20 on 3 Nov (11.20). The 3D case
+  middle came from the 8 Oct STEP, so for the R4 its lugs' underside is
+  brought up to the 0.20; the lug tops and the case wall are unchanged.
+- **A correction to 4.64.1.** That release read a 2.70 on the 3H section as
+  the bezel's height and changed the R4's bezel to it. The drawing does
+  not dimension the bezel; the 0.30 between the two heights is the lugs.
+  The bezel is the STEP's 2.97 again, on the maker's specification too.
 
 ## More ways to make the numerals (v4.64.0)
 

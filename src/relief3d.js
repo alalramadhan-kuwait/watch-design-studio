@@ -288,6 +288,65 @@ function casePart(name,material){
   const p=caseParts[name];if(!p)return null;
   const m=mesh(p.geometry,material);m.userData.keep=true;m.matrixAutoUpdate=false;m.matrix.copy(p.matrix);return m;
 }
+/* The case middle with its lug tips dropping `drop` below the back rather
+   than the STEP's 0.50: the 3 Nov drawing has 0.20. Only the lugs' underside
+   moves (below NOREL_R1.lugWarpFrom, outside the back), squeezed toward that
+   height, so the lug tops, the spring bars and the case wall stay as drawn.
+   Built in millimetres in float, so the STEP's quantised copy is untouched. */
+const warpedCases=new Map();
+function caseMiddle(material,drop){
+  const p=caseParts.case;if(!p)return null;
+  if(!(drop>0)||Math.abs(drop-NOREL_R1.lugDrop)<1e-3)return casePart('case',material);
+  if(!warpedCases.has(drop)){
+    const z0=NOREL_R1.lugWarpFrom,low=NOREL_R1.backBottom-NOREL_R1.lugDrop,k=(NOREL_R1.backBottom-drop-z0)/(low-z0);
+    const pos=p.geometry.attributes.position,nor=p.geometry.attributes.normal,n=pos.count,P=new Float32Array(n*3),N=new Float32Array(n*3);
+    const v=new THREE.Vector3(),w=new THREE.Vector3(),nm=new THREE.Matrix3().getNormalMatrix(p.matrix);
+    for(let i=0;i<n;i++){
+      v.fromBufferAttribute(pos,i).applyMatrix4(p.matrix);w.fromBufferAttribute(nor,i).applyMatrix3(nm).normalize();
+      if(Math.abs(v.y)>12&&v.z<z0){v.z=z0+(v.z-z0)*k;w.z/=k;w.normalize();}
+      P.set([v.x,v.y,v.z],i*3);N.set([w.x,w.y,w.z],i*3);
+    }
+    const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(P,3));g.setAttribute('normal',new THREE.BufferAttribute(N,3));g.setIndex(p.geometry.index);
+    warpedCases.set(drop,g);
+  }
+  const m=mesh(warpedCases.get(drop),material);m.userData.keep=true;return m;
+}
+/* The back's centre (4.64.2). The STEP's back is closed: one flat face
+   across the middle to Ø25.00, as the drawings section it (a solid plate
+   1.50 thick), with the knurled grip ring and the slope round it. It drew
+   black only because its material was the anisotropic brushing, which
+   needs texture coordinates the STEP's parts do not carry. Laid over that
+   face, this disc carries what the case back says (the maker's sheet's caseback
+   ring, set round it, and the brand's shield in the middle), engraved:
+   lower, frosted and a little darker. It is drawn as it reads from behind,
+   12 at the top. */
+function casebackCentre(material,ring){
+  const R=NOREL_R1.backFlatR,px=2048,ppm=px/(2*R),art=document.createElement('canvas');art.width=art.height=px;
+  const c=art.getContext('2d');c.translate(px/2,px/2);c.fillStyle='#000';
+  const shield=bridge.logoPath?bridge.logoPath('NOREL shield'):null;
+  if(shield&&typeof Path2D==='function'){const s=6.0*ppm/100;c.save();c.translate(0,-.2*ppm);c.scale(s,s);c.fill(new Path2D(shield.d),'evenodd');c.restore();}
+  const words=(ring||[]).filter(Boolean);
+  if(words.length){
+    const rText=10.55*ppm,cap=1.05*ppm,font=`500 ${Math.round(cap/.72)}px "Helvetica Neue", Arial, sans-serif`,track=.18*ppm,text=words.join(' \u00B7 ')+' \u00B7 ';
+    c.font=font;c.textAlign='center';c.textBaseline='alphabetic';
+    let widths=[...text].map(ch=>c.measureText(ch).width+track),total=widths.reduce((a,b)=>a+b,0),room=2*Math.PI*rText*.98,k=Math.min(1,room/total);
+    if(k<1){c.font=`500 ${Math.round(cap*k/.72)}px "Helvetica Neue", Arial, sans-serif`;widths=[...text].map(ch=>c.measureText(ch).width+track*k);total=widths.reduce((a,b)=>a+b,0);}
+    const first=widths.slice(0,[...words[0]].length).reduce((a,b)=>a+b,0);let s=-first/2;
+    [...text].forEach((ch,i)=>{const a=(s+widths[i]/2)/rText;s+=widths[i];if(ch===' ')return;c.save();c.rotate(a);c.fillText(ch,0,-rText+cap/2);c.restore();});
+  }
+  const paint=(bg,fg)=>{const cv=document.createElement('canvas');cv.width=cv.height=px;const x=cv.getContext('2d');x.fillStyle=bg;x.fillRect(0,0,px,px);
+    const t=document.createElement('canvas');t.width=t.height=px;const tx=t.getContext('2d');tx.drawImage(art,0,0);tx.globalCompositeOperation='source-in';tx.fillStyle=fg;tx.fillRect(0,0,px,px);x.drawImage(t,0,0);return cv;};
+  /* not the ring's anisotropic brushing: on a flat disc its grain runs
+     round the triangle fan and reads as dark rays. The centre is turned
+     (circular satin), so plain metal at the same roughness. */
+  const m=new THREE.MeshStandardMaterial({color:material.color.clone(),metalness:1,roughness:1,envMapIntensity:1});   // its roughness from the map
+  m.map=texture(paint('#ffffff','#9a9a9a'));m.bumpMap=texture(paint('#ffffff','#000000'),false);m.bumpScale=.06;
+  m.roughnessMap=texture(paint('#434343','#9c9c9c'),false);m.roughness=1;   // 0.26 brushed, 0.61 frosted in the cuts
+  /* laid 0.02 proud of the STEP's own centre face, which is there but
+     carries nothing, so the two never fight for the same depth */
+  const disc=new THREE.CircleGeometry(R,160);disc.rotateY(Math.PI);disc.translate(0,0,NOREL_R1.backBottom-.02);
+  return mesh(disc,m);
+}
 /* A round brilliant one unit across: table, crown, girdle and pavilion,
    with the crown's facets turned half a step from the table's so they
    alternate light and dark as a cut stone does. */
@@ -532,7 +591,10 @@ async function rebuild(){
     const steel=polished(caseTone,.09),darkMetal=polished('#5c6266',.34);
     let floorZ=-(state.case.thickness||7.9)-.7,shadowBlobs=[[0,0,24,24,.5]],shadowSize=90;
     if(norel){
-      casePart('case',steel);casePart('crown',polished(accent,.1));casePart('caseback',brushed(caseTone,.26));
+      caseMiddle(steel,spec.lugDrop);casePart('crown',polished(accent,.1));
+      /* turned satin, not the anisotropic brushing: the STEP's parts have no
+         texture coordinates, and without them that material renders black */
+      const backMetal=polished(caseTone,.26);casePart('caseback',backMetal);casebackCentre(backMetal,bridge.casebackRing?bridge.casebackRing(state):null);
       const bezelMetal=lux.gem?polished(PBR_METAL[lux.gem.metal]||accent,.08):polished(accent,.07);
       const stack=norelBezel(spec,lux,bezelMetal);
       if(state.case.strap){
@@ -540,7 +602,7 @@ async function rebuild(){
         const br=await bracelet(spec,{outer,centre:polished(accent,.07),cover:polished(accent,.08)});
         if(token!==requestId||!dialog.open)return;
         floorZ=br.lowest-.02;shadowBlobs=[[0,0,11,19,.55],[0,0,22,34,.28]];shadowSize=110;
-      }else{floorZ=NOREL_R1.backBottom-.02;shadowBlobs=[[0,0,19,19,.55],[0,0,28,30,.25]];}
+      }else{floorZ=NOREL_R1.backBottom-(spec.lugDrop>0?spec.lugDrop:NOREL_R1.lugDrop)-.02;shadowBlobs=[[0,0,19,19,.55],[0,0,28,30,.25]];}
       model.userData.stack=stack;
     }else if(state.case.on){
       const outline=bridge.caseOutline(state);

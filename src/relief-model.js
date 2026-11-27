@@ -120,16 +120,28 @@ export const NOREL_R1 = Object.freeze({
   caseWall:20.00,              // the case middle's wall between the lugs, at 12 and 6
   /* the top of a lug, [y, z], from the case top to its tip (STEP section at x 11.5) */
   lugTop:Object.freeze([[16.5,.77],[17,.61],[18.5,-.04],[19.5,-.57],[21,-1.82],[21.5,-2.38],[22,-2.96],[22.5,-3.61],[23,-4.62],[23.5,-5.74]]),
-  springBar:Object.freeze([21.5,-5.2])
+  springBar:Object.freeze([21.5,-5.2]),
+  /* how far the STEP's lug tips drop below the back (8 Oct drawing: 0.50),
+     and the height above which the case middle is left as it is when a later
+     drawing drops them less (the lugs' underside starts there) */
+  lugDrop:.50, lugWarpFrom:-6.10,
+  /* the back: its centre is flat out to Ø25.00, where the STEP's ring part
+     begins (knurled grip ring Ø28.6 to Ø30.8, then the slope to Ø36.50) */
+  backFlatR:12.50, backThick:1.50
 });
 const lerpTable = (t, x) => { if(x <= t[0][0]) return t[0][1]; for(let i = 1; i < t.length; i++) if(x <= t[i][0]){ const [x0, y0] = t[i-1], [x1, y1] = t[i]; return y0 + (y1 - y0)*(x - x0)/(x1 - x0); } return t[t.length-1][1]; };
 export const lugTopAt = y => lerpTable(NOREL_R1.lugTop, y);
 
 /* How the head stacks up, from the case spec (R4 unless the spec says
-   otherwise): the crystal's top is the height over the case back. */
+   otherwise). Both of Blue Creations' drawings (8 Oct and 3 Nov 2026) give
+   11.00 from the crystal's top to the case back; the case's overall height
+   (11.50, then 11.20) adds how far the lug tips drop below the back (0.50,
+   then 0.20). So the crystal stands glassToBack over the back, not the
+   overall height: on the STEP that puts the bezel 2.97 over the case
+   middle, as the STEP's own bezel is (4.64.2). */
 export function norelStack(K = {}){
-  const height = +K.height || 11.20, glassT = +K.glassT || 1.50;
-  const glassTop = NOREL_R1.backBottom + height, glassBottom = glassTop - glassT;
+  const toBack = +K.glassToBack || 11.00, glassT = +K.glassT || 1.50;
+  const glassTop = NOREL_R1.backBottom + toBack, glassBottom = glassTop - glassT;
   return {caseTop:NOREL_R1.caseTop, glassTop, glassBottom, bezelTop:glassTop - .10,
     bezelOD:+K.bezelOD || 41.00, bezelID:+K.bezelID || 34.20, glassD:+K.glassD || 33.50,
     opening:+K.opening || 31.40, land:Number.isFinite(+K.land) ? +K.land : .50,

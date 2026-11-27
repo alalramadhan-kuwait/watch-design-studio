@@ -91,9 +91,10 @@ test('hours set one by one raise a marker at each gem and applied index hour, no
 import {NOREL_R1,lugTopAt,norelStack,bezelProfile,gemBezelTop,braceletPath,braceletRows,linkProfile,cyclopsLens,traceMask,simplifyLoop,nestLoops,loopArea,PBR_METAL} from '../src/relief-model.js';
 import {readFileSync} from 'node:fs';
 
-test('the head stacks to the R4 drawing: 11.20 over the crystal, bezel just below the glass',()=>{
+test('the head stacks to the R4 drawing: 11.00 from the crystal to the back, bezel just below the glass',()=>{
   const s=norelStack({});
-  assert.ok(Math.abs(s.glassTop-NOREL_R1.backBottom-11.2)<1e-9);
+  // 4.64.2: the drawings' 11.00 is crystal to back; their 11.20 (11.50 on 8 Oct) adds the lugs' drop below the back
+  assert.ok(Math.abs(s.glassTop-NOREL_R1.backBottom-11.0)<1e-9);
   assert.ok(Math.abs(s.glassTop-s.glassBottom-1.5)<1e-9);
   assert.ok(s.bezelTop<s.glassTop&&s.glassBottom>1.5,'the glass clears the hands');
   assert.equal(s.flutes,72);
