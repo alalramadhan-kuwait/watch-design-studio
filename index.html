@@ -1447,6 +1447,10 @@ const NOREL_R4 = Object.assign({}, NOREL_D, {
   bezelOD:41.00, bezelID:34.20, opening:31.40, glassSeat:34.20, glassD:33.50, glassT:1.50,
   glassBevel:"flat sapphire with a Ø7.00 × 5.50 cyclops, 1.10 high, centred 10.00 mm at 3H",
   dialD:32.50, dialT:0.40, dialHolder:33.50, height:11.20,
+  /* 4.64.1, read off the drawing's 3H section: the bezel is 2.70 high at its
+     rim (3.00 on the 8 Oct drawing), which is where the 0.30 between 11.50
+     and 11.20 went. The case middle is unchanged. */
+  bezelH:2.70,
   /* 2.2×: the most this lens takes before the corners of the magnified
      2.40 × 2.00 window run past its edge (2.5× cuts them) */
   cyclops:{w:7.0, h:5.5, mag:2.2, c:10.0, shape:"cut circle", lift:1.10},
@@ -2390,7 +2394,7 @@ const APP_BUILD = "__BUILD__";
 /* The version people see, raised with every change that reaches them:
    major for a new way of working, minor for something new to do, patch for
    a fix. Shown on the watch screen, so any screenshot says which it was. */
-const APP_VERSION = "4.64.0";
+const APP_VERSION = "4.64.1";
 const APP_DATE = "__DATE__";
 
 /* Every route that replaces S passes through one of these three, which is

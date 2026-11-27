@@ -1138,3 +1138,16 @@ test('more ways to make the numerals (v4.64.0): a filled hand cut, embossed, sto
   assert.match(source, /return "Cut through the dial to a lume plate beneath \(sandwich\)";/);
   assert.match(source, /\$\{nm\.engStyle === "v" \? "Hand engraved \(V-cut\)" : "Engraved"\}, filled /);
 });
+
+test('the NOREL R4 case against Blue Creations\' drawing of 3 Nov 2026 (v4.64.1)', () => {
+  const ctx = {}; new Function('ctx', 'const VERNOY_CASE = {};' + chunk('const NOREL_R3 = {', '/* Time Keeper × Nivada: a Time Keeper (Kuwait) edition') + '; ctx.R3 = NOREL_R3; ctx.R4 = NOREL_R4;')(ctx);
+  const { R3, R4 } = ctx;
+  // the 3H section and the three views, dimension by dimension
+  const drawn = { bezelOD: 41.00, glassD: 33.50, opening: 31.40, dialD: 32.50, dialT: 0.40, dialHolder: 33.50, glassT: 1.50, height: 11.20, bezelH: 2.70, lugToLug: 48.00, lugWidth: 21.00, crownD: 6.50 };
+  for (const [k, v] of Object.entries(drawn)) assert.equal(R4[k], v, k);
+  assert.equal(+(R4.bezelOD/2 - R4.bezelID/2).toFixed(2), 3.40, 'the bezel ring, (3.40) on the drawing');
+  assert.equal(R4.cyclops.lift, 1.10); assert.equal(R4.movement, 'Sellita SW240-1'); assert.equal(R4.wr, '10 ATM');
+  // what the 8 Oct drawing (R1) had, kept on the R3 record
+  assert.equal(R3.bezelOD, 40.00); assert.equal(R3.opening, 32.50); assert.equal(R3.height, 11.50); assert.equal(R3.glassD, 34.50); assert.equal(R3.dialD, 33.50);
+  assert.equal(+(R3.height - R4.height).toFixed(2), 0.30); assert.ok(Math.abs((R3.bezelH - R4.bezelH) - 0.30) < 0.05, 'the 0.30 came out of the bezel');
+});

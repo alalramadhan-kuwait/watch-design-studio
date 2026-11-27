@@ -200,6 +200,14 @@ stored in a design file do not change. In the full editor at laptop widths
 the toolbar sits tighter, and on a narrower window it takes a second row
 rather than pushing Share and Export off the screen.
 
+## The NOREL bezel height, from the drawing (v4.64.1)
+
+The NOREL R4 case was checked against Blue Creations' assembly drawing of
+3 Nov 2026 (and the 8 Oct one before it). Every dimension the app holds
+agrees with it but one: the bezel is 2.70 mm high at its rim, not the 2.97
+the R4 case had kept from the earlier case. The maker's specification and
+the side view now say 2.70. The front view and every dial are unchanged.
+
 ## More ways to make the numerals (v4.64.0)
 
 Under Markers, Made by, the numerals gain four makes. Each was already
