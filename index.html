@@ -2390,7 +2390,7 @@ const APP_BUILD = "__BUILD__";
 /* The version people see, raised with every change that reaches them:
    major for a new way of working, minor for something new to do, patch for
    a fix. Shown on the watch screen, so any screenshot says which it was. */
-const APP_VERSION = "4.60.0";
+const APP_VERSION = "4.61.0";
 const APP_DATE = "__DATE__";
 
 /* Every route that replaces S passes through one of these three, which is
@@ -2414,8 +2414,8 @@ function rescaleDial(st, from, to, date){
   if(!(Math.abs(k - 1) > 1e-6)) return st;
   const sc = (o, keys) => { if(o) for(const key of keys) if(typeof o[key] === "number") o[key] = +(o[key]*k).toFixed(3); };
   if(!st.dial.lock) sc(st.dial, ["diameter"]);
-  sc(st.chapter, ["outerD","innerD"]); sc(st.minute, ["diameter"]); sc(st.hour, ["diameter"]);
-  sc(st.indices, ["radius","length"]); sc(st.numerals, ["radius","size"]);
+  sc(st.chapter, ["outerD","innerD"]); sc(st.minute, ["diameter","numR","numSize"]); sc(st.hour, ["diameter"]);   // the track's numbers go with it (4.61.0)
+  sc(st.indices, ["radius","length"]); sc(st.numerals, ["radius","size","pairGap"]);
   sc(st.sector, ["outerD","innerD"]); (st.sector.zones || []).forEach(z => sc(z, ["outerD","innerD"]));
   const walkBorders = o => { if(!o || typeof o !== "object") return; if(typeof o.dia === "number") sc(o, ["dia"]); for(const v of Object.values(o)) if(v && typeof v === "object") walkBorders(v); };
   walkBorders(st.borders);
@@ -3689,6 +3689,9 @@ const METALS = {
   "white gold":      {base:"#E5E3DC", hi:"#FFFFFF", lo:"#6F6C65"},
   "yellow gold":     {base:"#D7B04B", hi:"#FFF4C6", lo:"#6C5115"},
   "rose gold":       {base:"#D9A184", hi:"#FFE1CF", lo:"#71422C"},
+  /* v4.61.0: a pale warm gold between the yellow and the rose, the tone of
+     honey-coloured gold alloys and of champagne gilding */
+  "honey gold":      {base:"#D9BE92", hi:"#FFF3DE", lo:"#6C5531"},
   "brass":           {base:"#C2A24A", hi:"#F7E6A7", lo:"#5F4A15"},
   "blackened steel": {base:"#3A3E44", hi:"#949DA5", lo:"#101215"}
 };
@@ -6289,10 +6292,29 @@ function buildSVG(st, o={}){
          a sports watch's flange carries them. Off unless chosen. */
       if(mt.nums === "minutes" || mt.nums === "hours"){
         const nr = mt.numR > 0 ? +mt.numR : r + t + 0.55, nsz = mt.numSize > 0 ? +mt.numSize : 0.80;
-        const famN = letterFam(mt.numFont || "sans", "sans", defs), nc = mt.numColor || mt.color;
+        /* numSys "dial": the numbers in the hour numerals' own figures and
+           face (٥ ١٠ ١٥ on a dial of Arabic figures), each digit placed on
+           its own so the order cannot turn; else western digits, as before */
+        const nmN = st.numerals || {}, sysN = mt.numSys === "dial" && nmN.system && nmN.system !== "western 0–9" && nmN.system !== "roman I–XII" ? nmN.system : null;
+        const faceN = sysN ? numFaceOf(nmN) : null;
+        if(faceN && faceN.fam) defs.push(fontFaceCSS(faceN.style));
+        const famN = faceN && faceN.fam ? faceN.fam : letterFam(mt.numFont || "sans", "sans", defs), nc = mt.numColor || mt.color;
         for(let i = 0; i < 12; i++){
           const a = i*30; if(inGap(a)) continue;
-          const lab = mt.nums === "hours" ? String(i || 12) : String(i ? i*5 : 60);
+          const lab0 = mt.nums === "hours" ? String(i || 12) : String(i ? i*5 : 60);
+          if(sysN){
+            const map = NUM_SYSTEM[sysN], chars = [...lab0].map(d => map[+d]), rot = a > 90 && a < 270 ? a + 180 : a, p = pt(nr, a);
+            const ms = chars.map(c => inkMetrics(famN, c)), hs = [...map].slice(1).map(c => inkMetrics(famN, c)).filter(m => m && m.h > 0).map(m => m.h).sort((x, y) => x - y);
+            if(ms.every(Boolean) && hs.length){
+              const z = nsz/hs[hs.length >> 1], gap = nsz*0.14; let x = 0; const cx = [];
+              chars.forEach((c, j) => { const w = ms[j].w*z; if(j) x += gap; cx.push(x + w/2); x += w; });
+              const mid = ms.filter((m, j) => chars[j] !== map[0]).map(m => m.cy*z), cyM = mid.length ? mid.reduce((u, v) => u + v, 0)/mid.length : 0;
+              body.push(`<g transform="translate(${f(p[0],3)},${f(p[1],3)}) rotate(${f(rot,2)})">` + chars.map((c, j) =>
+                `<text x="${f(cx[j] - x/2 - ms[j].cx*z,3)}" y="${f((c === map[0] ? cyM : ms[j].cy*z) - cyM - ms[j].cy*z,3)}" font-family="${famN}" font-size="${f(z,3)}" fill="${nc}" text-anchor="middle">${c}</text>`).join("") + `</g>`);
+              continue;
+            }
+          }
+          const lab = lab0;
           const rot = a > 90 && a < 270 ? a + 180 : a, p = pt(nr, a);
           body.push(`<text x="0" y="0" transform="translate(${f(p[0],3)},${f(p[1],3)}) rotate(${f(rot,2)})" font-family="${famN}" font-size="${f(nsz,3)}" fill="${nc}" text-anchor="middle" dominant-baseline="central">${lab}</text>`);
         }
@@ -9982,6 +10004,7 @@ const HAND_MATERIAL = {
   "white gold":      {core:"#A9A69D", dark:"#282620", lite:"#FFFBF2", spec:0.92},
   "yellow gold":     {core:"#C9A24E", dark:"#3A2A07", lite:"#FFF6D0", spec:0.90},
   "rose gold":       {core:"#C69076", dark:"#3B2016", lite:"#FFE6D6", spec:0.90},
+  "honey gold":      {core:"#C8AA7C", dark:"#3A2B15", lite:"#FFF1DA", spec:0.90},
   "blackened steel": {core:"#31363C", dark:"#0B0D10", lite:"#8D959D", spec:0.70},
   /* Heat blue is not paint. The oxide is thin and slightly translucent, so the
      body is a deep indigo that goes almost black where it turns away and opens
@@ -15372,7 +15395,7 @@ function sheetSwatchName(hex){
   return p.exact ? p.code : "nearest " + p.code;
 }
 const SHEET_METAL = {"polished steel":"steel", "rhodium":"rhodium", "white gold":"white gold", "yellow gold":"yellow gold", "rose gold":"rose gold",
-  "brass":"brass", "blackened steel":"black"};
+  "honey gold":"honey gold (a pale warm gold, between yellow and rose)", "brass":"brass", "blackened steel":"black"};
 const sheetMetal = m => SHEET_METAL[m] || String(m || "steel");
 const SHEET_FINISH = {polished:"Shiny", satin:"Satin", brushed:"Brushed", sandblasted:"Sandblasted", matte:"Matte"};
 const sheetFinish = f => SHEET_FINISH[f] || "Shiny";
@@ -16275,7 +16298,7 @@ function sheetSpec(st){
   const mt = st.minute;
   if(mt && mt.on){
     const w = mt.style === "railroad" ? 2*mt.thickness : mt.thickness;
-    add("Minute track", `${mt.style}, ${mt.tech || "printed"}${mt.fives ? ", stronger five-minute marks" : ""}${mt.nums === "minutes" || mt.nums === "hours" ? `, numbered ${mt.nums === "hours" ? "1 to 12" : "5 to 60"}` : ""}`, mt.color, `centre Ø${mm(mt.diameter)}mm, ${mt.style === "dots" ? "dot" : "track"} ${mm(w)}mm${mt.nums === "minutes" || mt.nums === "hours" ? `; numbers ${mm(mt.numSize > 0 ? mt.numSize : 0.8)}mm high on r ${mm(mt.numR > 0 ? mt.numR : mt.diameter/2 + mt.thickness + 0.55)}mm` : ""}`);
+    add("Minute track", `${mt.style}, ${mt.tech || "printed"}${mt.fives ? ", stronger five-minute marks" : ""}${mt.nums === "minutes" || mt.nums === "hours" ? `, numbered ${mt.nums === "hours" ? "1 to 12" : "5 to 60"}${mt.numSys === "dial" && st.numerals && st.numerals.system && !/^(western|roman)/.test(st.numerals.system) ? " in the dial's own figures" : ""}` : ""}`, mt.color, `centre Ø${mm(mt.diameter)}mm, ${mt.style === "dots" ? "dot" : "track"} ${mm(w)}mm${mt.nums === "minutes" || mt.nums === "hours" ? `; numbers ${mm(mt.numSize > 0 ? mt.numSize : 0.8)}mm high on r ${mm(mt.numR > 0 ? mt.numR : mt.diameter/2 + mt.thickness + 0.55)}mm` : ""}`);
   }
   const ht = st.hour;
   if(ht && ht.on) add("Hour track", `${ht.style}`, ht.color, `Ø${mm(ht.diameter)}mm, ${mm(ht.thickness)}mm`);
@@ -18527,7 +18550,7 @@ const GWORD = {ar:{
   /* colours */
   "White":"أبيض", "Silver":"فضي", "Royal blue":"أزرق ملكي", "Navy":"كحلي", "Charcoal":"فحمي", "Black":"أسود", "Gold":"ذهبي", "Red":"أحمر",
   "Cream":"كريمي", "Vintage lume":"مضيء عتيق", "Lume green":"أخضر مضيء", "Light grey":"رمادي فاتح", "Grey":"رمادي", "Champagne":"شمبانيا",
-  "Rose gold":"ذهب وردي", "Red gold (5N)":"ذهب أحمر (5N)", "Bronze":"برونزي", "Brown":"بني", "Powder blue":"أزرق بودرة", "Sky blue":"أزرق سماوي", "Teal":"أزرق مخضر",
+  "Rose gold":"ذهب وردي", "Honey gold":"ذهب عسلي", "As the hour numerals":"مثل أرقام الساعات", "Western":"غربية", "Track figures":"أرقام المسار", "Red gold (5N)":"ذهب أحمر (5N)", "Bronze":"برونزي", "Brown":"بني", "Powder blue":"أزرق بودرة", "Sky blue":"أزرق سماوي", "Teal":"أزرق مخضر",
   "Mint":"نعناعي", "Green":"أخضر", "Yellow":"أصفر", "Orange":"برتقالي", "Signal red":"أحمر ساطع", "Burgundy":"عنابي", "Pink":"وردي", "Purple":"بنفسجي",
   "Ice blue":"أزرق ثلجي", "Silver white":"أبيض فضي", "Salmon":"سلموني", "Slate":"أردوازي", "Ivory":"عاجي", "Tan":"جملي",
   "Steel":"ستيل", "White gold":"ذهب أبيض", "Yellow gold":"ذهب أصفر", "Blued steel":"ستيل مزرّق", "Flame blue":"أزرق محمّى", "Gilt":"مذهّب",
@@ -20222,6 +20245,8 @@ Object.assign(GWORD.ar, {
       if(S.minute.on){
         const nmode = S.minute.nums === "minutes" || S.minute.nums === "hours" ? S.minute.nums : "none";
         h += `<h3>${gW("Track numbers")}</h3>` + chips("minute.nums", [["none","None"],["minutes","5 to 60"],["hours","1 to 12"]], nmode);
+        if(nmode !== "none" && S.numerals && S.numerals.system && S.numerals.system !== "western 0–9" && S.numerals.system !== "roman I–XII")
+          h += `<h3>${gW("Track figures")}</h3>` + chips("minute.numSys", [["western","Western"],["dial","As the hour numerals"]], S.minute.numSys === "dial" ? "dial" : "western");
         if(nmode !== "none") h += slider("minute.numSize", "Number height", 0.4, 1.6, 0.02, S.minute.numSize > 0 ? +S.minute.numSize : 0.80)
           + slider("minute.numR", "Numbers from centre", 9, 14.5, 0.05, S.minute.numR > 0 ? +S.minute.numR : +(S.minute.diameter/2 + S.minute.thickness + 0.55).toFixed(2));
       }
@@ -20284,7 +20309,7 @@ Object.assign(GWORD.ar, {
             h += `<button type="button" class="gMact" data-gset="ui.engraveAll" data-gv="true">${esc2(gW("Engrave the track and the name the same way"))}</button><p class="gNote">${gT("num.engraveAllNote")}</p>`;
           h += `<h3>${gW("Numerals")}</h3>` + chips44("num.make", [["printed|ink","Printed"],["double printed|ink","Raised print"],["applied|metal","Applied metal"],["engraved + filled|lacquer / enamel","Enamel-filled"],["printed|lume","Lume"]].concat(drawn ? [] : [["applied|metal|pave","Diamond-set"]]), make);
           if(drawn) h += `<p class="gNote">${gT("mk.drawnPave")}</p>`;
-          if(n.tech === "applied" && n.material === "metal") h += `<h3>${gW("Metal")}</h3>` + chips44("numerals.metal", [["polished steel","Steel"],["white gold","White gold"],["yellow gold","Gold"],["rose gold","Rose gold"],["blackened steel","Black"]], n.metal || "polished steel");
+          if(n.tech === "applied" && n.material === "metal") h += `<h3>${gW("Metal")}</h3>` + chips44("numerals.metal", [["polished steel","Steel"],["white gold","White gold"],["yellow gold","Gold"],["rose gold","Rose gold"],["honey gold","Honey gold"],["blackened steel","Black"]], n.metal || "polished steel");
           else h += printingBlock("numerals");
           /* How proud an applied figure stands. The usual piece is 0.20 mm;
              a deeper cut piece reads as a raised block with walls you can
@@ -20309,7 +20334,7 @@ Object.assign(GWORD.ar, {
           h += toggle("indices.applied", "Raised (applied)", ix.applied);
           if(ix.style !== "box" && ix.style !== "cone") h += toggle("indices.lume", ix.style === "f77" ? "Lume plots" : "Lume fill", !!ix.lume);
           if(ix.lume) h += `<h3>${gW("Lume colour")}</h3>` + swatches("lume.color", LUME_COLOURS.map(([c, n]) => [c || "#E9EFDF", n]), (S.lume && S.lume.color) || "#E9EFDF", {row:true, noAny:true});
-          h += `<h3>${gW("Index finish")}</h3>` + chips44("indices.metal", [[null,"Colour"],["polished steel","Steel"],["white gold","White gold"],["yellow gold","Gold"],["rose gold","Rose gold"],["blackened steel","Black"]], ix.metal || null);
+          h += `<h3>${gW("Index finish")}</h3>` + chips44("indices.metal", [[null,"Colour"],["polished steel","Steel"],["white gold","White gold"],["yellow gold","Gold"],["rose gold","Rose gold"],["honey gold","Honey gold"],["blackened steel","Black"]], ix.metal || null);
           if(!ix.metal) h += printingBlock("indices");
         }
         return h;
@@ -20372,7 +20397,7 @@ Object.assign(GWORD.ar, {
       const hh = S.hHand;
       /* each hand's length and its details, one hand at a time */
       if(tab === "length" || tab === "detail") return more("hands", "All hand settings");
-      const METALS6 = [["polished steel","Steel"],["white gold","White gold"],["blued steel","Blued steel"],["yellow gold","Gold"],["rose gold","Rose gold"],["blackened steel","Black"]];
+      const METALS6 = [["polished steel","Steel"],["white gold","White gold"],["blued steel","Blued steel"],["yellow gold","Gold"],["rose gold","Rose gold"],["honey gold","Honey gold"],["blackened steel","Black"]];
       if(tab === "shape"){
         const styles = [["day-date","Day-date"],["royal-oak","Royal Oak"],["f77","Nivada F77"],["dauphine","Dauphine"],["baton","Baton"],["baton-ridge","Ridged baton"],["baton-taper","Tapered baton"],["sword","Sword"],["leaf","Leaf"],["feuille","Feuille"],["lance","Lance"],["alpha","Alpha"],["pencil","Pencil"],["obelisque","Obelisk"],["syringe","Syringe"],["pomme-ouverte","Breguet"],["mercedes","Mercedes"]];
         let h = `<div class="gCards">${styles.map(([v,l]) => `<button type="button" class="gCard ${hh.style===v?"on":""}" data-ghand="${v}"><div class="gPic">${handPic(v)}</div><div class="gName">${gW(l)}</div></button>`).join("")}</div>`;
@@ -20413,7 +20438,7 @@ Object.assign(GWORD.ar, {
         const techs = [["printed","Printed"],["double printed","Raised print"],["applied metal","Applied metal"]];
         if(T.logoTech && !techs.some(x => x[0] === T.logoTech)) techs.push([T.logoTech, T.logoTech[0].toUpperCase() + T.logoTech.slice(1)]);
         h += `<h3>${gW("Logo made by")}</h3>` + chips("text.logoTech", techs, T.logoTech || "printed");
-        if(T.logoTech === "applied metal") h += `<h3>${gW("Logo metal")}</h3>` + chips("text.logoMetal", [["polished steel","Steel"],["white gold","White gold"],["yellow gold","Gold"],["rose gold","Rose gold"],["blackened steel","Black"]], T.logoMetal || "polished steel");
+        if(T.logoTech === "applied metal") h += `<h3>${gW("Logo metal")}</h3>` + chips("text.logoMetal", [["polished steel","Steel"],["white gold","White gold"],["yellow gold","Gold"],["rose gold","Rose gold"],["honey gold","Honey gold"],["blackened steel","Black"]], T.logoMetal || "polished steel");
         h += slider("text.logoSize", "Logo size", 0.8, 8, 0.05, T.logoSize) + slider("text.logoY", "Logo position", -12, 12, 0.1, T.logoY, "pos");
         if(T.line2 && T.line2On !== false) h += toggle("text.line2Follow", "The line under it moves with the logo", T.line2Follow !== false);
         return h + more("text", "All text settings");
@@ -20435,7 +20460,7 @@ Object.assign(GWORD.ar, {
         /* an engraved, embossed or nameplate logo from the full editor is shown as it is */
         if(T.logoTech && !techs.some(x => x[0] === T.logoTech)) techs.push([T.logoTech, T.logoTech[0].toUpperCase() + T.logoTech.slice(1)]);
         h += `<h3>${gW("Logo made by")}</h3>` + chips("text.logoTech", techs, T.logoTech || "printed");
-        if(T.logoTech === "applied metal") h += `<h3>${gW("Logo metal")}</h3>` + chips("text.logoMetal", [["polished steel","Steel"],["white gold","White gold"],["yellow gold","Gold"],["rose gold","Rose gold"],["blackened steel","Black"]], T.logoMetal || "polished steel");
+        if(T.logoTech === "applied metal") h += `<h3>${gW("Logo metal")}</h3>` + chips("text.logoMetal", [["polished steel","Steel"],["white gold","White gold"],["yellow gold","Gold"],["rose gold","Rose gold"],["honey gold","Honey gold"],["blackened steel","Black"]], T.logoMetal || "polished steel");
         h += slider("text.logoSize", "Logo size", 0.8, isMark ? 8 : 3.5, 0.05, T.logoSize) + slider("text.logoY", "Logo position", -12, 12, 0.1, T.logoY, "pos");
         if(T.line2 && T.line2On !== false) h += toggle("text.line2Follow", "The line under it moves with the logo", T.line2Follow !== false);
         return h + more("text", "All text settings");

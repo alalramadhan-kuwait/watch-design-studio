@@ -200,6 +200,31 @@ stored in a design file do not change. In the full editor at laptop widths
 the toolbar sits tighter, and on a narrower window it takes a second row
 rather than pushing Share and Export off the screen.
 
+## Grey and honey gold (v4.61.0)
+
+A dial in the colours of a reference the owner sent (a grey dial, pale gold
+figures and hands, one blued hand, a brown strap), under Designs, "F77 41 ·
+Grey and honey gold": a matte grey dial with a deeper ring at its edge,
+applied Arabic figures and the hour and minute hands in honey gold, the
+centre seconds hand heat-blued, a fine railway printed in pale gold with its
+numbers at the edge, and the Nivada script in the same gold. Two hand sets,
+lancet and tapered baton, on the real 41. A third design shows the lancet
+dial on the 38 with a brown alligator strap: Nivada pictures the 41 on its
+bracelet only, so the strap is shown on the size it is pictured on. The
+reference's complications are left out, since the Soprod P024 drives centre
+seconds only; each design's research note says so.
+
+What the app gained for it:
+
+- **Honey gold**, a pale warm gold between the yellow and the rose, for
+  numerals, indices, hands and the logo. It is a colour of gold, named on the
+  making sheet with its description, not a particular maker's alloy.
+- **Track figures**: the numbers round the minute track can be in the hour
+  numerals' own figures and face (٥ ١٠ ١٥ on a dial of Arabic figures), under
+  Dial, where the track's numbers are switched on. Western stays the default.
+- Moving a design to another case size now takes the track's numbers and the
+  space inside 10, 11, 12 with it; before, they kept their old millimetres.
+
 ## The four dials in frosted silver and blue (v4.60.0)
 
 The four complete dials in the colours of a reference the owner sent (a

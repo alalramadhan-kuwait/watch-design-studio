@@ -204,7 +204,7 @@ test('closing the review (v4.25.0): a date on the no-date P024, lines of writing
 
 test('track numbers (v4.26.0): 5 to 60 or 1 to 12 round the minute track, upright in the lower half, checked against the opening', () => {
   const m = chunk('      if(mt.nums === "minutes" || mt.nums === "hours"){', '\n    // hour track');
-  assert.match(m, /const lab = mt\.nums === "hours" \? String\(i \|\| 12\) : String\(i \? i\*5 : 60\);/);
+  assert.match(m, /const lab0? = mt\.nums === "hours" \? String\(i \|\| 12\) : String\(i \? i\*5 : 60\);/);   // lab0 since 4.61.0: the same numbers, also in the dial's figures
   assert.match(m, /const rot = a > 90 && a < 270 \? a \+ 180 : a, p = pt\(nr, a\);/);
   assert.match(m, /if\(inGap\(a\)\) continue;/, 'none in the gap at 6');
   assert.match(source, /chips\("minute\.nums", \[\["none","None"\],\["minutes","5 to 60"\],\["hours","1 to 12"\]\], nmode\)/);
@@ -828,7 +828,7 @@ test('the real F77 41, four silver dials, and sets side by side (v4.55.0)', () =
   assert.equal(C.photoFile, undefined, 'the optimised 41 stays drawn'); assert.equal(C.opening, 30.2);
   assert.match(fs.readFileSync(path.join(__dirname, '../sw.js'), 'utf8'), /"\.\/app\/case-nivada-f77-41\.jpg"/);
   const list = JSON.parse(fs.readFileSync(path.join(__dirname, '../concepts/index.json'), 'utf8'));
-  const set = list.filter(x => /^F77 41 · /.test(x.set || '') && !/^F77 41 · (Hands|Refined batons|Complete dials|Frosted silver and blue)$/.test(x.set) || x.id === 'f77-41-current');
+  const set = list.filter(x => /^F77 41 · /.test(x.set || '') && !/^F77 41 · (Hands|Refined batons|Complete dials|Frosted silver and blue|Grey and honey gold)$/.test(x.set) || x.id === 'f77-41-current');
   assert.ok(set.length >= 4 && set[0].id === 'f77-41-current', 'a set on the 41, the current design first');
   for (const c of set) {
     const d = JSON.parse(fs.readFileSync(path.join(__dirname, '../concepts', c.file), 'utf8'));
@@ -988,4 +988,41 @@ test('the four dials in frosted silver and blue (v4.60.0)', () => {
     assert.equal(d.render.hands, 'fine'); assert.ok(/^Nivada /.test(d.text.logoMark), "the case's own logo");
   }
   assert.ok(list.some(x => x.id === 'f77-41-dial-continuum'), 'the rose-gold versions kept');
+});
+
+test('grey and honey gold (v4.61.0): a honey gold metal, track numbers in the dial\'s figures, and the set on the F77 41', () => {
+  assert.match(source, /const APP_VERSION = "4\.61\.\d+";|const APP_VERSION = "(4\.(6[2-9]|[7-9]\d)|[5-9])\./);
+  // the metal: on dial parts and hands, on the chips, in Arabic, and by name on the making sheet
+  assert.match(source, /"honey gold":\s+\{base:"#D9BE92", hi:"#FFF3DE", lo:"#6C5531"\}/);
+  assert.match(source, /"honey gold":\s+\{core:"#C8AA7C", dark:"#3A2B15", lite:"#FFF1DA", spec:0\.90\}/);
+  assert.ok(source.split('["honey gold","Honey gold"]').length - 1 >= 5, 'offered for numerals, indices, hands and the logo');
+  assert.match(source, /"Honey gold":"ذهب عسلي"/); assert.match(source, /"honey gold":"honey gold \(a pale warm gold, between yellow and rose\)"/);
+  // track numbers in the hour numerals' own figures, only offered where those are not western
+  assert.match(source, /sysN = mt\.numSys === "dial" && nmN\.system && nmN\.system !== "western 0–9" && nmN\.system !== "roman I–XII" \? nmN\.system : null/);
+  assert.match(source, /chips\("minute\.numSys", \[\["western","Western"\],\["dial","As the hour numerals"\]\]/);
+  assert.match(source, /"As the hour numerals":"مثل أرقام الساعات"/); assert.match(source, /"Track figures":"أرقام المسار"/);
+  assert.match(source, /in the dial's own figures/);
+  // moving a design to another case size takes the track's numbers and the space inside 10, 11, 12 with it
+  assert.match(source, /sc\(st\.minute, \["diameter","numR","numSize"\]\)/); assert.match(source, /sc\(st\.numerals, \["radius","size","pairGap"\]\)/);
+  // the set
+  const list = JSON.parse(fs.readFileSync(path.join(__dirname, '../concepts/index.json'), 'utf8'));
+  const set = list.filter(x => x.set === 'F77 41 · Grey and honey gold');
+  assert.deepEqual(set.map(x => x.id), ['f77-41-honey-lancet', 'f77-41-honey-baton', 'f77-38-honey-strap']);
+  const sw = fs.readFileSync(path.join(__dirname, '../sw.js'), 'utf8');
+  for (const c of set) {
+    const d = JSON.parse(fs.readFileSync(path.join(__dirname, '../concepts', c.file), 'utf8'));
+    assert.ok(fs.existsSync(path.join(__dirname, '../concepts', c.picture)), c.picture); assert.ok(sw.includes('"./concepts/' + c.file + '"'), c.file + ' held offline');
+    assert.equal(d.meta.set, c.set); assert.equal(d.numerals.system, 'arabic ٠–٩'); assert.equal(d.numerals.layout, 'precise');
+    assert.equal(d.dial.finish, 'grained'); assert.equal(d.numerals.tech, 'applied'); assert.equal(d.numerals.metal, 'honey gold');
+    assert.equal(d.hHand.material, 'honey gold'); assert.equal(d.mHand.material, 'honey gold'); assert.equal(d.sHand.material, 'flame blue');
+    assert.equal(d.minute.numSys, 'dial'); assert.equal(d.render.hands, 'fine');
+    // the movement drives centre seconds only: nothing of the reference's complications
+    assert.equal(d.date.on, false); assert.ok(!(d.sub && d.sub.on), 'no sub-dial'); assert.ok(!(d.power && d.power.on), 'no power reserve');
+    assert.ok(/^Nivada /.test(d.text.logoMark), "the case's own logo"); assert.equal(d.text.line2, 'TIME KEEPER');
+    assert.match(d.sheet.research.refs[0].note, /Left out: the tourbillon/);
+  }
+  assert.deepEqual(set.map(c => JSON.parse(fs.readFileSync(path.join(__dirname, '../concepts', c.file), 'utf8')).case.model),
+    ['Time Keeper × Nivada · F77 41', 'Time Keeper × Nivada · F77 41', 'Time Keeper × Nivada · F77']);
+  const strap = JSON.parse(fs.readFileSync(path.join(__dirname, '../concepts/f77-38-honey-strap.json'), 'utf8'));
+  assert.equal(strap.case.strapType, 'alligator'); assert.equal(strap.case.strapColor, '#4B2F1E');
 });
