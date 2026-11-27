@@ -1015,7 +1015,7 @@ test('grey and honey gold (v4.61.0): a honey gold metal, track numbers in the di
     assert.equal(d.meta.set, c.set); assert.equal(d.numerals.system, 'arabic ٠–٩'); assert.equal(d.numerals.layout, 'precise');
     assert.equal(d.dial.finish, 'grained'); assert.equal(d.numerals.tech, 'applied'); assert.equal(d.numerals.metal, 'honey gold');
     assert.equal(d.hHand.material, 'honey gold'); assert.equal(d.mHand.material, 'honey gold'); assert.equal(d.sHand.material, 'flame blue');
-    assert.equal(d.minute.numSys, 'dial'); assert.equal(d.render.hands, 'fine');
+    assert.equal(d.render.hands, 'fine');
     // the movement drives centre seconds only: nothing of the reference's complications
     assert.equal(d.date.on, false); assert.ok(!(d.sub && d.sub.on), 'no sub-dial'); assert.ok(!(d.power && d.power.on), 'no power reserve');
     assert.ok(/^Nivada /.test(d.text.logoMark), "the case's own logo"); assert.equal(d.text.line2, 'TIME KEEPER');
@@ -1025,4 +1025,19 @@ test('grey and honey gold (v4.61.0): a honey gold metal, track numbers in the di
     ['Time Keeper × Nivada · F77 41', 'Time Keeper × Nivada · F77 41', 'Time Keeper × Nivada · F77']);
   const strap = JSON.parse(fs.readFileSync(path.join(__dirname, '../concepts/f77-38-honey-strap.json'), 'utf8'));
   assert.equal(strap.case.strapType, 'alligator'); assert.equal(strap.case.strapColor, '#4B2F1E');
+});
+
+test('grey and honey gold, filled out for the 41 (v4.61.1): figures and track to the edge of the opening', () => {
+  const read = id => JSON.parse(fs.readFileSync(path.join(__dirname, '../concepts', id + '.json'), 'utf8'));
+  for (const id of ['f77-41-honey-lancet', 'f77-41-honey-baton']) {
+    const d = read(id), open = 29.17/2;
+    assert.equal(d.case.model, 'Time Keeper × Nivada · F77 41');
+    assert.ok(d.numerals.size >= 3.2, id + ': figures with the weight the 41 needs'); assert.ok(d.numerals.weight > 0);
+    assert.ok(d.minute.diameter/2 >= open - 0.6, id + ': the railway at the edge of the opening, no empty margin outside it');
+    assert.equal(d.minute.nums, 'none'); assert.equal(d.chapter.on, false);
+    assert.equal(d.dial.color, '#75777B', 'the grey light enough for the blued hand to show');
+    assert.ok(d.numerals.radius + d.numerals.size/2 <= d.minute.diameter/2 - 0.3, id + ': figures clear of the track');
+  }
+  assert.equal(read('f77-41-honey-lancet').hHand.style, 'alpha'); assert.equal(read('f77-41-honey-baton').hHand.style, 'baton-taper');
+  const strap = read('f77-38-honey-strap'); assert.equal(strap.case.model, 'Time Keeper × Nivada · F77'); assert.equal(strap.minute.nums, 'none');
 });

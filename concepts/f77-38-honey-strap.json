@@ -4,7 +4,7 @@
     "time": {
       "h": 10,
       "m": 7,
-      "s": 33
+      "s": 37
     },
     "set": "F77 41 · Grey and honey gold"
   },
@@ -138,7 +138,7 @@
     ]
   },
   "chapter": {
-    "on": true,
+    "on": false,
     "outerD": 28.413,
     "innerD": 24.189,
     "color": "#6C6E72",
@@ -178,8 +178,8 @@
   },
   "minute": {
     "on": true,
-    "diameter": 25.053,
-    "thickness": 0.075,
+    "diameter": 27.165,
+    "thickness": 0.11,
     "style": "railroad",
     "color": "#DCCDAA",
     "fives": true,
@@ -189,10 +189,10 @@
     "tech": "printed",
     "edgeLight": 0.5,
     "fiveStyle": "plain",
-    "nums": "minutes",
+    "nums": "none",
     "numSys": "dial",
-    "numSize": 0.768,
-    "numR": 13.189,
+    "numSize": 0.864,
+    "numR": 13.17,
     "numColor": "#DCCDAA"
   },
   "hour": {
@@ -219,8 +219,8 @@
     "on": true,
     "layout": "precise",
     "style": "AlTarikh Study",
-    "size": 2.592,
-    "radius": 10.511,
+    "size": 3.168,
+    "radius": 11.279,
     "color": "#D9A184",
     "set": "all",
     "edgeLight": 0.5,
@@ -231,7 +231,7 @@
     "slant": 0,
     "tech": "applied",
     "material": "metal",
-    "weight": 0,
+    "weight": 0.1,
     "gap": 1,
     "system": "arabic ٠–٩",
     "metal": "honey gold",
@@ -249,7 +249,7 @@
     "paveD": 0.8,
     "weightLive": true,
     "keepClear": true,
-    "pairGap": 0.269
+    "pairGap": 0.307
   },
   "gem": {
     "cut": "round",
@@ -330,12 +330,12 @@
   "text": {
     "on": true,
     "logo": "Nivada",
-    "logoY": -5.087,
-    "logoSize": 1.44,
+    "logoY": -5.375,
+    "logoSize": 1.536,
     "logoFont": "serif",
     "line2": "TIME KEEPER",
-    "line2Y": -3.888,
-    "line2Size": 0.48,
+    "line2Y": -4.08,
+    "line2Size": 0.499,
     "foot": "TIME KEEPER",
     "footY": 6.374,
     "footSize": 0.764,
@@ -402,8 +402,8 @@
     "debColor": "#1B1B1B",
     "splitOn": true,
     "split": "SWISS MADE",
-    "splitSize": 0.403,
-    "splitR": 11.279,
+    "splitSize": 0.384,
+    "splitR": 12.479,
     "splitGap": 2.112,
     "splitCurve": true,
     "splitFont": "sans",
@@ -418,7 +418,7 @@
     "on": true,
     "style": "alpha",
     "length": 8.855,
-    "width": 0.52083,
+    "width": 0.6875,
     "tail": 0,
     "boss": 1.3,
     "color": "#D9A184",
@@ -441,7 +441,7 @@
     "on": true,
     "style": "alpha",
     "length": 12.501,
-    "width": 0.41667,
+    "width": 0.5625,
     "tail": 0,
     "boss": 1.3,
     "color": "#D9A184",
@@ -456,14 +456,14 @@
     "material": "honey gold",
     "waist": 0.8,
     "reach": "to the minute track",
-    "reachTrim": 0.9971,
+    "reachTrim": 0.9961,
     "bevel": 0
   },
   "sHand": {
     "on": true,
     "style": "stick",
     "length": 12.575,
-    "width": 0.17,
+    "width": 0.21,
     "tail": 3.4,
     "boss": 0.9,
     "color": "#D9A184",
@@ -517,7 +517,7 @@
           "id": "",
           "title": "A. Lange & Söhne Tourbograph Perpetual in honey-coloured gold",
           "url": "",
-          "note": "Taken from it: the palette and the feeling. A matte grey dial, applied figures and hands in a pale honey-coloured gold, one heat-blued hand, a fine railway printed in pale gold with its numbers at the edge, and a brown alligator strap. Left out: the tourbillon, the chronograph and its registers, the perpetual calendar and the moon phase. The Soprod P024 in this case drives hours, minutes and centre seconds only, so the blue is carried by the centre seconds hand. The case stays Nivada's steel F77, unchanged."
+          "note": "Taken from it: the palette and the feeling. A matte grey dial, applied figures and hands in a pale honey-coloured gold, one heat-blued hand, a fine railway printed in pale gold at the very edge of the dial, and a brown alligator strap. Left out: the tourbillon, the chronograph and its registers, the perpetual calendar and the moon phase. The Soprod P024 in this case drives hours, minutes and centre seconds only, so the blue is carried by the centre seconds hand. The case stays Nivada's steel F77, unchanged."
         }
       ],
       "avoid": "Lange, Honeygold, Tourbograph"

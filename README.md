@@ -214,6 +214,13 @@ bracelet only, so the strap is shown on the size it is pictured on. The
 reference's complications are left out, since the Soprod P024 drives centre
 seconds only; each design's research note says so.
 
+**Filled out for the 41 (v4.61.1).** The first version read wrong on the 41:
+delicate figures and an empty margin outside the track left the dial small
+inside the 41's wide polished ring. The three designs are redrawn: figures
+3.3 mm tall and a touch heavier, set out to the track; the railway at the
+very edge of the opening, without numbers; wider hands; no ring at the edge.
+The grey, the gold and the blue are as they were.
+
 What the app gained for it:
 
 - **Honey gold**, a pale warm gold between the yellow and the rose, for
