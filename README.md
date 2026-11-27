@@ -221,6 +221,15 @@ inside the 41's wide polished ring. The three designs are redrawn: figures
 very edge of the opening, without numbers; wider hands; no ring at the edge.
 The grey, the gold and the blue are as they were.
 
+**The silver ring (v4.61.2).** The 41's bezel is wide for its dial: a 1.6 mm
+polished ring stands between the two, and a grey dial inside it reads as a
+small disc in a bright frame. Three more designs give the dial a brushed
+silver chapter ring at its edge, 1.9 mm wide, carrying the railway and its
+minute numbers. Silver against silver, the case's polished ring reads as
+the dial's own edge, and the dial is seen out to the bezel; the grey centre
+keeps the gold figures and hands. The minutes are printed in blue, with the
+blued seconds hand, or in grey; lancet or tapered baton hands.
+
 What the app gained for it:
 
 - **Honey gold**, a pale warm gold between the yellow and the rose, for

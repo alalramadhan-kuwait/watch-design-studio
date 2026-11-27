@@ -1,5 +1,29 @@
 [
  {
+  "id": "f77-41-honey-ring-blue",
+  "file": "f77-41-honey-ring-blue.json",
+  "picture": "f77-41-honey-ring-blue.jpg",
+  "name": "Honey gold · silver ring, blue minutes",
+  "sub": "A brushed silver ring carries the minutes in blue and joins the case's polished ring to the dial",
+  "set": "F77 41 · Grey and honey gold"
+ },
+ {
+  "id": "f77-41-honey-ring",
+  "file": "f77-41-honey-ring.json",
+  "picture": "f77-41-honey-ring.jpg",
+  "name": "Honey gold · silver ring",
+  "sub": "The same ring with its minutes in grey",
+  "set": "F77 41 · Grey and honey gold"
+ },
+ {
+  "id": "f77-41-honey-ring-baton",
+  "file": "f77-41-honey-ring-baton.json",
+  "picture": "f77-41-honey-ring-baton.jpg",
+  "name": "Honey gold · silver ring, tapered baton",
+  "sub": "The grey-minute ring with the tapered faceted batons",
+  "set": "F77 41 · Grey and honey gold"
+ },
+ {
   "id": "f77-41-honey-lancet",
   "file": "f77-41-honey-lancet.json",
   "picture": "f77-41-honey-lancet.jpg",

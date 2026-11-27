@@ -135,8 +135,8 @@ test('the design check is put in plain words, on the step that fixes it', () => 
   assert.deepEqual(unworded, []);
 });
 
-test('simple mode is version 4.61.1 and the drawing code is not touched by its preview', () => {
-  assert.match(source, /const APP_VERSION = "4\.61\.1";/);
+test('simple mode is version 4.61.2 and the drawing code is not touched by its preview', () => {
+  assert.match(source, /const APP_VERSION = "4\.61\.2";/);
   // the preview's seconds-hand change is undone whatever happens while drawing
   const v = chunk('function viewSVG(){', 'function viewSVGOf(){');
   assert.match(v, /finally\{ S\.meta\.time = t; S\.sHand\.on = on; \}/);

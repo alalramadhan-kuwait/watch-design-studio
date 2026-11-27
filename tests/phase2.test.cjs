@@ -1007,7 +1007,7 @@ test('grey and honey gold (v4.61.0): a honey gold metal, track numbers in the di
   // the set
   const list = JSON.parse(fs.readFileSync(path.join(__dirname, '../concepts/index.json'), 'utf8'));
   const set = list.filter(x => x.set === 'F77 41 · Grey and honey gold');
-  assert.deepEqual(set.map(x => x.id), ['f77-41-honey-lancet', 'f77-41-honey-baton', 'f77-38-honey-strap']);
+  assert.deepEqual(set.map(x => x.id).filter(id => !/-ring/.test(id)), ['f77-41-honey-lancet', 'f77-41-honey-baton', 'f77-38-honey-strap']);   // the silver-ring versions joined them in 4.61.2
   const sw = fs.readFileSync(path.join(__dirname, '../sw.js'), 'utf8');
   for (const c of set) {
     const d = JSON.parse(fs.readFileSync(path.join(__dirname, '../concepts', c.file), 'utf8'));
@@ -1021,7 +1021,7 @@ test('grey and honey gold (v4.61.0): a honey gold metal, track numbers in the di
     assert.ok(/^Nivada /.test(d.text.logoMark), "the case's own logo"); assert.equal(d.text.line2, 'TIME KEEPER');
     assert.match(d.sheet.research.refs[0].note, /Left out: the tourbillon/);
   }
-  assert.deepEqual(set.map(c => JSON.parse(fs.readFileSync(path.join(__dirname, '../concepts', c.file), 'utf8')).case.model),
+  assert.deepEqual(set.filter(c => !/-ring/.test(c.id)).map(c => JSON.parse(fs.readFileSync(path.join(__dirname, '../concepts', c.file), 'utf8')).case.model),
     ['Time Keeper × Nivada · F77 41', 'Time Keeper × Nivada · F77 41', 'Time Keeper × Nivada · F77']);
   const strap = JSON.parse(fs.readFileSync(path.join(__dirname, '../concepts/f77-38-honey-strap.json'), 'utf8'));
   assert.equal(strap.case.strapType, 'alligator'); assert.equal(strap.case.strapColor, '#4B2F1E');
@@ -1040,4 +1040,26 @@ test('grey and honey gold, filled out for the 41 (v4.61.1): figures and track to
   }
   assert.equal(read('f77-41-honey-lancet').hHand.style, 'alpha'); assert.equal(read('f77-41-honey-baton').hHand.style, 'baton-taper');
   const strap = read('f77-38-honey-strap'); assert.equal(strap.case.model, 'Time Keeper × Nivada · F77'); assert.equal(strap.minute.nums, 'none');
+});
+
+test('the silver ring (v4.61.2): a brushed silver chapter ring joins the 41\'s polished ring to the dial', () => {
+  const list = JSON.parse(fs.readFileSync(path.join(__dirname, '../concepts/index.json'), 'utf8'));
+  const set = list.filter(x => x.set === 'F77 41 · Grey and honey gold').map(x => x.id);
+  assert.deepEqual(set.slice(0, 3), ['f77-41-honey-ring-blue', 'f77-41-honey-ring', 'f77-41-honey-ring-baton']);
+  const sw = fs.readFileSync(path.join(__dirname, '../sw.js'), 'utf8'), open = 29.17;
+  for (const id of set.slice(0, 3)) {
+    const d = JSON.parse(fs.readFileSync(path.join(__dirname, '../concepts', id + '.json'), 'utf8'));
+    assert.ok(sw.includes('"./concepts/' + id + '.json"')); assert.ok(fs.existsSync(path.join(__dirname, '../concepts', id + '.jpg')));
+    assert.equal(d.case.model, 'Time Keeper × Nivada · F77 41');
+    // the ring: silver, brushed, out to the opening, 1.5 to 2.2 mm of it in view, carrying the track and its numbers in the dial's figures
+    assert.equal(d.chapter.on, true); assert.equal(d.chapter.finish, 'brushedsteel'); assert.equal(d.dial.brushDir, 'circular');
+    assert.ok(d.chapter.outerD >= open); const band = (open - d.chapter.innerD)/2; assert.ok(band >= 1.5 && band <= 2.2, id + ': ' + band);
+    assert.ok(d.minute.diameter > d.chapter.innerD && d.minute.diameter < open, 'the track on the ring');
+    assert.equal(d.minute.nums, 'minutes'); assert.equal(d.minute.numSys, 'dial'); assert.ok(d.minute.numR*2 > d.chapter.innerD);
+    // the centre keeps the grey, the gold and the blue
+    assert.equal(d.dial.color, '#75777B'); assert.equal(d.numerals.metal, 'honey gold'); assert.equal(d.sHand.material, 'flame blue');
+    assert.ok(d.numerals.radius + d.numerals.size/2 <= d.chapter.innerD/2 - 0.3, 'figures inside the ring');
+  }
+  const blue = JSON.parse(fs.readFileSync(path.join(__dirname, '../concepts/f77-41-honey-ring-blue.json'), 'utf8'));
+  assert.equal(blue.minute.color, '#27457C'); assert.equal(blue.minute.numColor, '#27457C');
 });
