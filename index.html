@@ -2390,7 +2390,7 @@ const APP_BUILD = "__BUILD__";
 /* The version people see, raised with every change that reaches them:
    major for a new way of working, minor for something new to do, patch for
    a fix. Shown on the watch screen, so any screenshot says which it was. */
-const APP_VERSION = "4.63.0";
+const APP_VERSION = "4.64.0";
 const APP_DATE = "__DATE__";
 
 /* Every route that replaces S passes through one of these three, which is
@@ -3948,6 +3948,8 @@ const NUM_CUTS = {
   standard: {engDepth:0.050, engBevel:0.025, engShadow:0.60, engHilite:0.70, engRecess:0.16, engFloor:0.60},
   deep:     {engDepth:0.070, engBevel:0.030, engShadow:0.80, engHilite:0.85, engRecess:0.24, engFloor:0.75}
 };
+/* the stones a figure can be inlaid with (4.64.0): the built-in pictures that read at a numeral's size */
+const NUM_STONES = [["mother of pearl","Mother of pearl"],["onyx","Onyx"],["lapis lazuli","Lapis lazuli"],["malachite","Malachite"],["turquoise","Turquoise"],["aventurine","Aventurine"],["tiger's eye","Tiger's eye"],["carnelian","Carnelian"]];
 const NUM_CUT_FILLED = {engDepth:0.030, engBevel:0.020, engShadow:0.25, engHilite:0.42, engRecess:0.045, engFloor:0};
 const numCutOf = n => { const d = n && n.engDepth !== undefined ? +n.engDepth : 0.030; return d >= 0.060 ? "deep" : d >= 0.040 ? "standard" : "shallow"; };
 const numCutSet = (n, v) => { if(n && NUM_CUTS[v]) Object.assign(n, NUM_CUTS[v]); };
@@ -6418,6 +6420,7 @@ function buildSVG(st, o={}){
          embossed numeral is the dial pushed up, so it carries the dial's
          colour too. */
       let paint = MA.paint || nm.color, extraAttr = "";
+      if(MA.glow && nm.lumeFollow && typeof lumeC === "function") paint = lumeC(MA.paint);   // 4.64.0: the sandwich's lume in the lume colour chosen
       /* A second pass is not just thicker, it is denser: more of the dial is
          covered, so the ink reads further from the dial than one pass does.
          Which way "further" points depends on what it is printed on — deeper
@@ -6428,7 +6431,9 @@ function buildSVG(st, o={}){
       if(MK.dialFace) paint = face;
       if(MA.slab && !MK.bare && !MK.dialFace){
         const sl = slabById(st.dial.slab);
-        const src = sl ? sl.src : (BUILTIN_STONE[MA.slab === "stone" ? st.dial.stone : "mother of pearl"] || null);
+        /* 4.64.0: an inlaid figure may name its own stone, whatever the dial is */
+        const own = MA.slab === "stone" && nm.stone && BUILTIN_STONE[nm.stone] ? BUILTIN_STONE[nm.stone] : null;
+        const src = own || (sl ? sl.src : (BUILTIN_STONE[MA.slab === "stone" ? st.dial.stone : "mother of pearl"] || null));
         if(src){
           const pid = id("np");
           const sz = nm.size*2.6;
@@ -6625,7 +6630,7 @@ function buildSVG(st, o={}){
            away from it, and a strong gain turns the slope into two even
            facets with a crisp line between them. Offsets and blurs are
            millimetres on the dial, so it draws the same at every size. */
-        if(MK.bare && nm.engStyle === "v"){
+        if(nm.engStyle === "v"){
           const fv = id("nv"), sz = Math.max(0.5, +nm.size || 3), wide = Math.max(0, Math.min(1, nm.engVWide === undefined ? 0.5 : +nm.engVWide));
           const s1 = sz*(0.016 + 0.014*wide)/kE, s2 = sz*(0.040 + 0.040*wide)/kE, eps = sz*0.010/kE, gn = 5 + 13*E.sharp;
           /* toward the light, on the screen: the hands' shadows fall down
@@ -6639,8 +6644,13 @@ function buildSVG(st, o={}){
             + `<feOffset in="h" dx="${f(-vx*eps,4)}" dy="${f(-vy*eps,4)}" result="A"/><feOffset in="h" dx="${f(vx*eps,4)}" dy="${f(vy*eps,4)}" result="B"/>`
             + `<feComposite in="B" in2="A" operator="arithmetic" k1="0" k2="${f(gn,2)}" k3="${f(-gn,2)}" k4="0" result="dkA"/>`
             + `<feComposite in="A" in2="B" operator="arithmetic" k1="0" k2="${f(gn,2)}" k3="${f(-gn,2)}" k4="0" result="ltA"/>`
-            + flood(cutDark, Math.min(1, E.sh*1.15), "dkA", "dk") + flood(cutLite, Math.min(1, E.hi*1.05), "ltA", "lt")
+            + (MK.bare ? flood(cutDark, Math.min(1, E.sh*1.15), "dkA", "dk") + flood(cutLite, Math.min(1, E.hi*1.05), "ltA", "lt")
+                       : flood("#000", Math.min(1, E.sh*0.62), "dkA", "dk") + flood("#fff", Math.min(1, E.hi*0.50), "ltA", "lt"))
             + `<feMerge><feMergeNode in="dk"/><feMergeNode in="lt"/></feMerge></filter>`);
+          /* 4.64.0, filled: the colour lines the V rather than levelling it,
+             as lacquer wiped into a hand-cut figure does, so the two facets
+             still show, shaded in the colour itself */
+          if(!MK.bare) return `<g>${solid(/^url\(/.test(paint) ? paint : shade(paint, 0.04), 0, 0, "")}${solid("#000", 0, 0, ` filter="url(#${fv})"`)}</g>`;
           return `<g>${smooth}${solid("#000", 0, 0, ` opacity="${f(E.rc*0.9,3)}"`)}${solid("#000", 0, 0, ` filter="url(#${fv})"`)}</g>`;
         }
         /* Which wall is dark is settled by where this engine's own shadows
@@ -15502,7 +15512,9 @@ function sheetNumMade(nm){
   }
   if(nm.material === "lume" && t === "printed") return "Printed lume";
   if(t === "double printed") return `${col} double printed (raised ink)`;
-  if(t === "engraved + filled") return `Engraved, filled ${nm.material === "lacquer / enamel" ? "with " + col.toLowerCase() + " enamel" : col.toLowerCase()}`;
+  if(t === "engraved + filled" && nm.material === "stone") return `Inlaid ${nm.stone || "stone"}, set flush in a cut figure`;
+  if(t === "engraved + filled" && nm.material === "lume") return "Cut through the dial to a lume plate beneath (sandwich)";
+  if(t === "engraved + filled") return `${nm.engStyle === "v" ? "Hand engraved (V-cut)" : "Engraved"}, filled ${nm.material === "lacquer / enamel" ? "with " + col.toLowerCase() + " enamel" : col.toLowerCase()}`;
   if(t === "engraved") return nm.engStyle === "v" ? "Hand engraved, a V-cut deepest along the middle of each stroke, tone on tone, not filled" : "Engraved tone on tone, not filled";
   if(t === "embossed") return "Embossed (dial pressed up)";
   return `${col} printed`;
@@ -18328,6 +18340,10 @@ const GSTR = {en:{
   "dial.paveNote": (n, ct) => `${n} stones · ≈ ${ct} ct. A pavé dial is 18k gold about 0.8–1.0 mm thick, not the 0.40 mm brass blank: Blue Creations to confirm.`,
   "case.braceletNote":"Steel links in place of the strap, drawn on the photograph: a polished centre link between brushed outer links. Nivada makes the F77 on an integrated steel bracelet; this edition's sheet names the rubber strap, so confirm the bracelet with Nivada.",
   "num.engravedNote":"Cut into the dial and left open: no colour of its own, the dial showing in the figure, read by the shadow and the light on its walls. Quiet by nature; strongest on a light or frosted dial. For a colour in the cut, choose Enamel-filled.",
+  "num.cutVFilledNote":"Cut as a graver cuts by hand, then filled with colour. The colour lines the V and does not level it, so the two facets of each stroke still show, light and dark in the colour itself. For a flush, level fill choose Flat floor.",
+  "num.embossedNote":"Pressed up from the dial itself by a die: the figures stand in the dial's own metal and finish, one piece with it, with no part added and no colour of their own.",
+  "num.sandwichNote":"The figures are cut right through the dial to a plate of lume beneath it, so they are sunk and glow from below.",
+  "num.inlayNote":"The figures are cut into the dial and a thin piece of stone or mother of pearl is set flush in each.",
   "num.cutFlatNote":"Cut to one depth, as a machine mills it: upright walls and a flat floor.",
   "num.cutVNote":"Cut as a graver cuts by hand: a V, deepest along the middle of each stroke and rising to the surface at its edges. Each stroke shows two facets, one in shadow and one catching the light, with a line where they meet.",
   "num.engraveAllNote":"Cuts the minute track, the name and the lines under it as the figures are, filled with the same lacquer, so nothing on the dial is printed.",
@@ -18552,6 +18568,10 @@ GSTR.ar = {
   "dial.paveNote": (n, ct) => `${arCount(n, "حجر واحد", "حجران", "أحجار", "حجراً")} · ≈ ${ct} قيراط. الميناء المرصّع بالكامل من ذهب عيار 18 بسماكة 0.8–1.0 ملم تقريباً، لا من النحاس بسماكة 0.40 ملم: على Blue Creations أن تؤكد ذلك.`,
   "case.braceletNote":"حلقات ستيل مكان الحزام، مرسومة على الصورة: حلقة وسطى لامعة بين حلقات جانبية مُمشّطة. نيفادا تصنع F77 بسوار ستيل مدمج، لكن ورقة هالإصدار تذكر الحزام الربر، فتأكد من السوار مع نيفادا.",
   "num.engravedNote":"محفور في الميناء ومتروك مفتوح: ما له لون خاص، الميناء نفسه يبين داخل الرقم، وينقرا من الظل والضوء على حوافه. هادي بطبيعته، وأوضح شي على ميناء فاتح أو مصنفر. إذا تبي لون داخل الحفر اختر «مملوء بالمينا».",
+  "num.cutVFilledNote":"حفر مثل ما يحفره النقّاش بإيده، وبعدين يتعبّى لون. اللون يكسي شكل الـV وما يسوّيه، فيبقى وجهين كل خط باينين، فاتح وغامج بنفس اللون. إذا تبي تعبئة مستوية مع السطح اختر «قاع مسطّح».",
+  "num.embossedNote":"مضغوطة من الميناء نفسه بقالب كبس: الأرقام طالعة من معدن الميناء ونفس تشطيبه، قطعة وحدة وياه، بدون قطعة مضافة وبدون لون خاص.",
+  "num.sandwichNote":"الأرقام مقصوصة من الميناء كله لين لوح مادة مضيئة تحته، فتطلع غاطسة وتضوي من تحت.",
+  "num.inlayNote":"الأرقام محفورة في الميناء وينحط في كل رقم قطعة رقيقة من حجر أو صدف بمستوى السطح.",
   "num.cutFlatNote":"حفر بعمق واحد، مثل ما تفرزه آلة التفريز: جدران قايمة وقاع مسطّح.",
   "num.cutVNote":"حفر مثل ما يحفره النقّاش بإيده: على شكل V، أعمق شي بنص الخط ويطلع للسطح عند الأطراف. كل خط يبين فيه وجهين، واحد بالظل وواحد ياخذ الضوء، وبينهم خط يلتقون عنده.",
   "num.engraveAllNote":"يحفر مسار الدقائق والاسم والأسطر اللي تحته مثل الأرقام، ويعبّيها بنفس اللاكيه، فما يبقى شي مطبوع على الميناء.",
@@ -18657,7 +18677,8 @@ const GWORD = {ar:{
   "Logo position":"موضع الشعار", "All text settings":"كل إعدادات الكتابة", "Position":"الموضع", "Follow the curve":"على انحناء الميناء", "Lower figures read upright":"الأرقام السفلية تُقرأ معتدلة",
   "Space either side of 6":"المسافة على جانبي ٦", "Lean with the curve":"مائل مع انحناء الميناء", "Split either side of 6":"مقسوم حول ٦",
   "Nivada shield + script":"درع وشعار Nivada", "Nivada shield":"درع Nivada", "Nivada script":"كتابة Nivada",
-  "Font":"الخط", "Engraved":"محفور", "Shallow":"خفيف", "Deep":"عميق", "Cut":"الحفر", "Flat floor":"قاع مسطّح", "Hand engraved":"حفر يدوي", "Embossed":"نافر", "Debossed":"غائر",
+  "Font":"الخط", "Engraved":"محفور", "Shallow":"خفيف", "Deep":"عميق", "Cut":"الحفر", "Flat floor":"قاع مسطّح", "Hand engraved":"حفر يدوي", "Stone inlay":"تطعيم حجر", "Sandwich lume":"ساندويتش مضيء",
+ "Embossed":"نافر", "Debossed":"غائر",
   /* calendar */
   "Day window at 12":"نافذة اليوم عند 12", "Arabic":"عربي", "English":"إنجليزي", "Both together":"عربي وإنجليزي", "Alternating":"بالتناوب",
   "Extra high":"مرتفع جداً", "High":"مرتفع", "height:Standard":"عادي", "Window width":"عرض النافذة", "Narrow":"ضيقة", "Standard":"قياسية", "Wide":"عريضة",
@@ -18923,7 +18944,7 @@ function gReadout(v, kind, st){
 function gPrintParts(st){
   const out = [], T = st.text || {}, n = st.numerals || {}, ix = st.indices || {};
   if(st.minute && st.minute.on) out.push(["minute", st.minute.color]);
-  if(n.on && !(n.tech === "applied" && n.material === "metal") && n.material !== "lume" && n.tech !== "engraved") out.push(["numerals", n.color]);   // an open cut is the dial, not ink
+  if(n.on && !(n.tech === "applied" && n.material === "metal") && n.material !== "lume" && n.tech !== "engraved" && n.tech !== "embossed" && n.material !== "stone" && n.material !== "mother of pearl") out.push(["numerals", n.color]);   // an open cut is the dial, not ink
   if(ix.on && !ix.metal) out.push(["indices", ix.color]);
   if(T.on){
     const logoInk = !/applied|engraved|embossed|debossed|nameplate|cartouche/.test(T.logoTech || "");
@@ -20361,13 +20382,19 @@ Object.assign(GWORD.ar, {
           const drawn = sys === "western 0–9" && (n.style === "vernoy" || n.style === "breguet");
           if(n.tech === "engraved + filled")
             h += `<button type="button" class="gMact" data-gset="ui.engraveAll" data-gv="true">${esc2(gW("Engrave the track and the name the same way"))}</button><p class="gNote">${gT("num.engraveAllNote")}</p>`;
-          h += `<h3>${gW("Numerals")}</h3>` + chips44("num.make", [["printed|ink","Printed"],["double printed|ink","Raised print"],["applied|metal","Applied metal"],["engraved|","Engraved"],["engraved + filled|lacquer / enamel","Enamel-filled"],["printed|lume","Lume"]].concat(drawn ? [] : [["applied|metal|pave","Diamond-set"]]), make);
+          h += `<h3>${gW("Numerals")}</h3>` + chips44("num.make", [["printed|ink","Printed"],["double printed|ink","Raised print"],["applied|metal","Applied metal"],["embossed|","Embossed"],["engraved|","Engraved"],["engraved + filled|lacquer / enamel","Enamel-filled"],["engraved + filled|stone","Stone inlay"],["printed|lume","Lume"],["engraved + filled|lume","Sandwich lume"]].concat(drawn ? [] : [["applied|metal|pave","Diamond-set"]]), make);
+          if(n.tech === "embossed") h += `<p class="gNote">${gT("num.embossedNote")}</p>`;
+          if(n.tech === "engraved + filled" && n.material === "lume") h += `<p class="gNote">${gT("num.sandwichNote")}</p>`
+            + `<h3>${gW("Lume colour")}</h3>` + swatches("lume.color", LUME_COLOURS.map(([c, nn]) => [c || "#E9EFDF", nn]), (S.lume && S.lume.color) || "#E9EFDF", {row:true, noAny:true});
+          if(n.tech === "engraved + filled" && n.material === "stone") h += `<p class="gNote">${gT("num.inlayNote")}</p>`
+            + `<h3>${gW("Stone")}</h3>` + chips44("numerals.stone", NUM_STONES, NUM_STONES.some(x => x[0] === n.stone) ? n.stone : NUM_STONES[0][0]);
           /* a cut figure: left open it is the dial's own colour, seen by its
              walls; how deep it looks is a choice of three */
           if(n.tech === "engraved") h += `<p class="gNote">${gT("num.engravedNote")}</p>`;
-          if(n.tech === "engraved") h += `<h3>${gW("Cut")}</h3>` + chips44("num.cutStyle", [["flat","Flat floor"],["v","Hand engraved"]], n.engStyle === "v" ? "v" : "flat")
-            + `<p class="gNote">${gT(n.engStyle === "v" ? "num.cutVNote" : "num.cutFlatNote")}</p>`;
-          if(n.tech === "engraved") h += `<h3>${gW("Engraving depth")}</h3>` + chips44("num.cut", [["shallow","Shallow"],["standard","Standard"],["deep","Deep"]], numCutOf(n));
+          const filledCut = n.tech === "engraved + filled" && (n.material === "lacquer / enamel" || n.material === "ink");   // a colour in the cut
+          if(n.tech === "engraved" || filledCut) h += `<h3>${gW("Cut")}</h3>` + chips44("num.cutStyle", [["flat","Flat floor"],["v","Hand engraved"]], n.engStyle === "v" ? "v" : "flat")
+            + `<p class="gNote">${gT(n.engStyle !== "v" ? "num.cutFlatNote" : filledCut ? "num.cutVFilledNote" : "num.cutVNote")}</p>`;
+          if(n.tech === "engraved" || (filledCut && n.engStyle === "v")) h += `<h3>${gW("Engraving depth")}</h3>` + chips44("num.cut", [["shallow","Shallow"],["standard","Standard"],["deep","Deep"]], numCutOf(n));
           if(drawn) h += `<p class="gNote">${gT("mk.drawnPave")}</p>`;
           if(n.tech === "applied" && n.material === "metal") h += `<h3>${gW("Metal")}</h3>` + chips44("numerals.metal", [["polished steel","Steel"],["white gold","White gold"],["yellow gold","Gold"],["rose gold","Rose gold"],["honey gold","Honey gold"],["blackened steel","Black"]], n.metal || "polished steel");
           else h += printingBlock("numerals");
@@ -20890,10 +20917,15 @@ Object.assign(GWORD.ar, {
     else if(path === "dial.blank") dialBlankSet(S, v);
     else if(path === "ui.engraveAll") engraveAll(S);
     else if(path === "num.cut") numCutSet(S.numerals, v);
-    else if(path === "num.cutStyle"){ if(v === "v") S.numerals.engStyle = "v"; else delete S.numerals.engStyle; }
+    else if(path === "num.cutStyle"){ const n = S.numerals, filled = n.tech === "engraved + filled";
+      if(v === "v"){ n.engStyle = "v"; if(filled && !(+n.engFloor > 0)) numCutSet(n, "standard"); }   // a filled figure's old shallow cut would hide the facets
+      else { delete n.engStyle; if(filled) Object.assign(n, NUM_CUT_FILLED); } }
     else if(path === "num.make"){ const [t, m, pv] = v.split("|");
       if(t === "engraved" && S.numerals.tech !== "engraved") numCutSet(S.numerals, "standard");   // a first cut deep enough to read, tone on tone
-      if(t === "engraved + filled" && S.numerals.tech === "engraved") Object.assign(S.numerals, NUM_CUT_FILLED);
+      if(t === "engraved + filled" && S.numerals.tech === "engraved" && !(S.numerals.engStyle === "v" && m === "lacquer / enamel")) Object.assign(S.numerals, NUM_CUT_FILLED);
+      if(t === "engraved + filled" && m !== "lacquer / enamel" && m !== "ink") delete S.numerals.engStyle;   // lume under the dial and stone are flat
+      if(t === "engraved + filled" && m === "lume") S.numerals.lumeFollow = true; else delete S.numerals.lumeFollow;
+      if(m === "stone" && !S.numerals.stone) S.numerals.stone = NUM_STONES[0][0];
       S.numerals.tech = t; S.numerals.material = m; if(m === "metal" && !S.numerals.metal) S.numerals.metal = "polished steel";
       S.numerals.pave = pv === "pave"; }
     /* A black diamond is set in black by default and every other stone in

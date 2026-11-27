@@ -200,6 +200,33 @@ stored in a design file do not change. In the full editor at laptop widths
 the toolbar sits tighter, and on a narrower window it takes a second row
 rather than pushing Share and Export off the screen.
 
+## More ways to make the numerals (v4.64.0)
+
+Under Markers, Made by, the numerals gain four makes. Each was already
+something a dial maker does; the app now offers and draws it.
+
+- **A filled hand cut.** Enamel-filled figures have the same Cut choice as
+  engraved ones: Flat floor, or Hand engraved. Hand engraved and filled,
+  the colour lines the V and does not level it, as lacquer wiped into a
+  hand-cut figure does, so each stroke still shows its two facets, light
+  and dark in the colour itself. The three depths apply.
+- **Embossed.** Pressed up from the dial by a die: the figures stand in the
+  dial's own metal and finish, one piece with it.
+- **Stone inlay.** The figures are cut into the dial and a thin piece of
+  stone is set flush in each: mother of pearl, onyx, lapis lazuli,
+  malachite, turquoise, aventurine, tiger's eye or carnelian.
+- **Sandwich lume.** The figures are cut through the dial to a plate of
+  lume beneath it, in the lume colour chosen (green-white, old radium,
+  vintage cream and the rest).
+
+Embossed and inlaid figures take no printing colour. The making sheet
+names each make. Designs saved before draw exactly as they did.
+
+Looked at and left out for now: solid lume blocks and sapphire figures (the
+app's raised-piece drawing gives them black side walls, which is wrong for
+both), and figures reserved in polished metal against a treated ground
+(épargne), which needs a drawing of its own.
+
 ## Hand-engraved numerals (v4.63.0)
 
 Engraved numerals now come in two cuts, under Markers, Made by, once

@@ -1067,7 +1067,7 @@ test('the silver ring (v4.61.2): a brushed silver chapter ring joins the 41\'s p
 test('engraved numerals (v4.62.0): an open cut offered under Made by, in three depths, with a smooth floor', () => {
   assert.match(source, /const APP_VERSION = "4\.62\.\d+";|const APP_VERSION = "(4\.(6[3-9]|[7-9]\d)|[5-9])\./);
   // the choice, between applied metal and the filled cut
-  assert.match(source, /\["applied\|metal","Applied metal"\],\["engraved\|","Engraved"\],\["engraved \+ filled\|lacquer \/ enamel","Enamel-filled"\]/);
+  assert.match(source, /\["applied\|metal","Applied metal"\],(\["embossed\|","Embossed"\],)?\["engraved\|","Engraved"\],\["engraved \+ filled\|lacquer \/ enamel","Enamel-filled"\]/);   // Embossed joined them in 4.64.0
   assert.match(source, /n\.tech === "engraved" \? "engraved\|" :/, 'its chip shows as chosen whatever material the file carried');
   assert.match(source, /chips44\("num\.cut", \[\["shallow","Shallow"\],\["standard","Standard"\],\["deep","Deep"\]\], numCutOf\(n\)\)/);
   assert.match(source, /"num\.engravedNote":"Cut into the dial and left open/); assert.match(source, /"num\.engravedNote":"محفور في الميناء/);
@@ -1082,10 +1082,10 @@ test('engraved numerals (v4.62.0): an open cut offered under Made by, in three d
   assert.deepEqual(NUM_CUT_FILLED, { engDepth: 0.030, engBevel: 0.020, engShadow: 0.25, engHilite: 0.42, engRecess: 0.045, engFloor: 0 }, 'a filled cut as it always was');
   // choosing it: a first cut that reads; filling it afterwards puts the old cut back
   assert.match(source, /if\(t === "engraved" && S\.numerals\.tech !== "engraved"\) numCutSet\(S\.numerals, "standard"\);/);
-  assert.match(source, /if\(t === "engraved \+ filled" && S\.numerals\.tech === "engraved"\) Object\.assign\(S\.numerals, NUM_CUT_FILLED\);/);
+  assert.match(source, /if\(t === "engraved \+ filled" && S\.numerals\.tech === "engraved"( && !\(S\.numerals\.engStyle === "v" && m === "lacquer \/ enamel"\))?\) Object\.assign\(S\.numerals, NUM_CUT_FILLED\);/);   // a hand cut keeps its depth when filled (4.64.0)
   assert.match(source, /else if\(path === "num\.cut"\) numCutSet\(S\.numerals, v\);/);
   // an open cut has no ink: it leaves the printing colour, and the floor is smoothed only where a design asks
-  assert.match(source, /n\.material !== "lume" && n\.tech !== "engraved"\) out\.push\(\["numerals", n\.color\]\);/);
+  assert.match(source, /n\.material !== "lume" && n\.tech !== "engraved"( && n\.tech !== "embossed" && n\.material !== "stone" && n\.material !== "mother of pearl")?\) out\.push\(\["numerals", n\.color\]\);/);
   assert.match(source, /const smoothOp = MK\.bare && \+nm\.engFloor > 0 \? Math\.min\(1, \+nm\.engFloor\) : 0;/);
   assert.match(source, /if\(n\.tech === "engraved \+ filled"\)\s+h \+= `<button type="button" class="gMact" data-gset="ui\.engraveAll"/, 'engrave-all fills, so it is offered on the filled cut only');
 });
@@ -1094,16 +1094,47 @@ test('hand-engraved numerals (v4.63.0): a V-cut, deepest along the middle of eac
   assert.match(source, /const APP_VERSION = "4\.63\.\d+";|const APP_VERSION = "(4\.(6[4-9]|[7-9]\d)|[5-9])\./);
   // the choice, under Engraved, and what it stores
   assert.match(source, /chips44\("num\.cutStyle", \[\["flat","Flat floor"\],\["v","Hand engraved"\]\], n\.engStyle === "v" \? "v" : "flat"\)/);
-  assert.match(source, /else if\(path === "num\.cutStyle"\)\{ if\(v === "v"\) S\.numerals\.engStyle = "v"; else delete S\.numerals\.engStyle; \}/, 'a flat cut stores nothing, so it is the file it always was');
+  assert.match(source, /else if\(path === "num\.cutStyle"\)\{[^\n]*\n[^\n]*n\.engStyle = "v";[^\n]*\n\s+else \{ delete n\.engStyle;/, 'a flat cut stores nothing, so it is the file it always was');
   for (const k of ['num.cutFlatNote', 'num.cutVNote']) assert.equal(source.split('"' + k + '":"').length - 1, 2, k + ' in English and Arabic');
   assert.match(source, /"Cut":"الحفر", "Flat floor":"قاع مسطّح", "Hand engraved":"حفر يدوي"/);
   assert.match(source, /nm\.engStyle === "v" \? "Hand engraved, a V-cut deepest along the middle of each stroke, tone on tone, not filled" : "Engraved tone on tone, not filled"/);
   // the drawing: only an open cut that asks for it; depth from the figure's own blurred silhouette, its slope taken along the light, in dial millimetres
-  const v = chunk('if(MK.bare && nm.engStyle === "v"){', '\n        /* A widened cut');
+  const v = chunk('if(nm.engStyle === "v"){', '\n        /* A widened cut');
   assert.match(v, /<feGaussianBlur in="SourceAlpha" stdDeviation="\$\{f\(s1,4\)\}" result="b1"\/><feGaussianBlur in="SourceAlpha" stdDeviation="\$\{f\(s2,4\)\}" result="b2"\/>/);
   assert.match(v, /const vx = nlx, vy = -nly;/, 'toward the light the hands are lit by');
   assert.match(v, /<feComposite in="B" in2="A" operator="arithmetic" k1="0" k2="\$\{f\(gn,2\)\}" k3="\$\{f\(-gn,2\)\}" k4="0" result="dkA"\/>/);
-  assert.match(v, /flood\(cutDark, Math\.min\(1, E\.sh\*1\.15\), "dkA", "dk"\) \+ flood\(cutLite, Math\.min\(1, E\.hi\*1\.05\), "ltA", "lt"\)/);
+  assert.match(v, /flood\(cutDark, Math\.min\(1, E\.sh\*1\.15\), "dkA", "dk"\) \+ flood\(cutLite, Math\.min\(1, E\.hi\*1\.05\), "ltA", "lt"\)\n/);
   assert.ok(!/feDiffuseLighting|feSpecularLighting/.test(v), 'no lighting filter: those change with the picture\'s size');
   assert.ok(!/engVFlip/.test(source));
+});
+
+test('more ways to make the numerals (v4.64.0): a filled hand cut, embossed, stone inlay and sandwich lume', () => {
+  assert.match(source, /const APP_VERSION = "4\.64\.\d+";|const APP_VERSION = "(4\.(6[5-9]|[7-9]\d)|[5-9])\./);
+  // the makes offered, in the order of how they are made: printed, raised, cut
+  assert.match(source, /\["embossed\|","Embossed"\],\["engraved\|","Engraved"\],\["engraved \+ filled\|lacquer \/ enamel","Enamel-filled"\],\["engraved \+ filled\|stone","Stone inlay"\],\["printed\|lume","Lume"\],\["engraved \+ filled\|lume","Sandwich lume"\]/);
+  for (const k of ['num.cutVFilledNote', 'num.embossedNote', 'num.sandwichNote', 'num.inlayNote']) assert.equal(source.split('"' + k + '":"').length - 1, 2, k + ' in English and Arabic');
+  assert.match(source, /"Stone inlay":"تطعيم حجر", "Sandwich lume":"ساندويتش مضيء"/);
+  // a hand cut can be filled: the colour lines the V, its two facets shaded in the colour itself
+  assert.match(source, /const filledCut = n\.tech === "engraved \+ filled" && \(n\.material === "lacquer \/ enamel" \|\| n\.material === "ink"\);/);
+  assert.match(source, /if\(n\.tech === "engraved" \|\| filledCut\) h \+= `<h3>\$\{gW\("Cut"\)\}<\/h3>`/);
+  const v = chunk('if(nm.engStyle === "v"){', '\n        /* A widened cut');
+  assert.match(v, /: flood\("#000", Math\.min\(1, E\.sh\*0\.62\), "dkA", "dk"\) \+ flood\("#fff", Math\.min\(1, E\.hi\*0\.50\), "ltA", "lt"\)\)/);
+  assert.match(v, /if\(!MK\.bare\) return `<g>\$\{solid\(\/\^url\\\(\/\.test\(paint\) \? paint : shade\(paint, 0\.04\), 0, 0, ""\)\}/);
+  assert.match(source, /if\(v === "v"\)\{ n\.engStyle = "v"; if\(filled && !\(\+n\.engFloor > 0\)\) numCutSet\(n, "standard"\); \}/);
+  assert.match(source, /else \{ delete n\.engStyle; if\(filled\) Object\.assign\(n, NUM_CUT_FILLED\); \}/, 'back to a flat floor, a filled figure has its old shallow cut');
+  assert.match(source, /if\(t === "engraved \+ filled" && m !== "lacquer \/ enamel" && m !== "ink"\) delete S\.numerals\.engStyle;/);
+  // stone inlay: the figures' own stone, from the built-in pictures
+  const ctx = {}; new Function('ctx', chunk('const NUM_STONES = [', 'const NUM_CUT_FILLED = {') + '; ctx.NUM_STONES = NUM_STONES;')(ctx);
+  const stones = chunk('const BUILTIN_STONE = {', 'function seedBuiltins(){');
+  for (const [k, label] of ctx.NUM_STONES) { assert.ok(stones.includes('\n  "' + k + '":"data:image/'), k + ' has a picture'); assert.ok(label); }
+  assert.equal(ctx.NUM_STONES[0][0], 'mother of pearl');
+  assert.match(source, /const own = MA\.slab === "stone" && nm\.stone && BUILTIN_STONE\[nm\.stone\] \? BUILTIN_STONE\[nm\.stone\] : null;/);
+  assert.match(source, /chips44\("numerals\.stone", NUM_STONES,/); assert.match(source, /if\(m === "stone" && !S\.numerals\.stone\) S\.numerals\.stone = NUM_STONES\[0\]\[0\];/);
+  // sandwich lume follows the lume colour only where a design asks, so older lume figures keep their green
+  assert.match(source, /if\(MA\.glow && nm\.lumeFollow && typeof lumeC === "function"\) paint = lumeC\(MA\.paint\);/);
+  assert.match(source, /if\(t === "engraved \+ filled" && m === "lume"\) S\.numerals\.lumeFollow = true; else delete S\.numerals\.lumeFollow;/);
+  // the making sheet says which
+  assert.match(source, /return `Inlaid \$\{nm\.stone \|\| "stone"\}, set flush in a cut figure`;/);
+  assert.match(source, /return "Cut through the dial to a lume plate beneath \(sandwich\)";/);
+  assert.match(source, /\$\{nm\.engStyle === "v" \? "Hand engraved \(V-cut\)" : "Engraved"\}, filled /);
 });
