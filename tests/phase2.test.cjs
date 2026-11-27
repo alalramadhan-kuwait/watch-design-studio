@@ -1089,3 +1089,21 @@ test('engraved numerals (v4.62.0): an open cut offered under Made by, in three d
   assert.match(source, /const smoothOp = MK\.bare && \+nm\.engFloor > 0 \? Math\.min\(1, \+nm\.engFloor\) : 0;/);
   assert.match(source, /if\(n\.tech === "engraved \+ filled"\)\s+h \+= `<button type="button" class="gMact" data-gset="ui\.engraveAll"/, 'engrave-all fills, so it is offered on the filled cut only');
 });
+
+test('hand-engraved numerals (v4.63.0): a V-cut, deepest along the middle of each stroke, as a second kind of engraved', () => {
+  assert.match(source, /const APP_VERSION = "4\.63\.\d+";|const APP_VERSION = "(4\.(6[4-9]|[7-9]\d)|[5-9])\./);
+  // the choice, under Engraved, and what it stores
+  assert.match(source, /chips44\("num\.cutStyle", \[\["flat","Flat floor"\],\["v","Hand engraved"\]\], n\.engStyle === "v" \? "v" : "flat"\)/);
+  assert.match(source, /else if\(path === "num\.cutStyle"\)\{ if\(v === "v"\) S\.numerals\.engStyle = "v"; else delete S\.numerals\.engStyle; \}/, 'a flat cut stores nothing, so it is the file it always was');
+  for (const k of ['num.cutFlatNote', 'num.cutVNote']) assert.equal(source.split('"' + k + '":"').length - 1, 2, k + ' in English and Arabic');
+  assert.match(source, /"Cut":"الحفر", "Flat floor":"قاع مسطّح", "Hand engraved":"حفر يدوي"/);
+  assert.match(source, /nm\.engStyle === "v" \? "Hand engraved, a V-cut deepest along the middle of each stroke, tone on tone, not filled" : "Engraved tone on tone, not filled"/);
+  // the drawing: only an open cut that asks for it; depth from the figure's own blurred silhouette, its slope taken along the light, in dial millimetres
+  const v = chunk('if(MK.bare && nm.engStyle === "v"){', '\n        /* A widened cut');
+  assert.match(v, /<feGaussianBlur in="SourceAlpha" stdDeviation="\$\{f\(s1,4\)\}" result="b1"\/><feGaussianBlur in="SourceAlpha" stdDeviation="\$\{f\(s2,4\)\}" result="b2"\/>/);
+  assert.match(v, /const vx = nlx, vy = -nly;/, 'toward the light the hands are lit by');
+  assert.match(v, /<feComposite in="B" in2="A" operator="arithmetic" k1="0" k2="\$\{f\(gn,2\)\}" k3="\$\{f\(-gn,2\)\}" k4="0" result="dkA"\/>/);
+  assert.match(v, /flood\(cutDark, Math\.min\(1, E\.sh\*1\.15\), "dkA", "dk"\) \+ flood\(cutLite, Math\.min\(1, E\.hi\*1\.05\), "ltA", "lt"\)/);
+  assert.ok(!/feDiffuseLighting|feSpecularLighting/.test(v), 'no lighting filter: those change with the picture\'s size');
+  assert.ok(!/engVFlip/.test(source));
+});

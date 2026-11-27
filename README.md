@@ -200,6 +200,24 @@ stored in a design file do not change. In the full editor at laptop widths
 the toolbar sits tighter, and on a narrower window it takes a second row
 rather than pushing Share and Export off the screen.
 
+## Hand-engraved numerals (v4.63.0)
+
+Engraved numerals now come in two cuts, under Markers, Made by, once
+Engraved is chosen:
+
+- **Flat floor**: one depth, upright walls and a flat floor, as a machine
+  mills it. This is the engraved figure of 4.62.0.
+- **Hand engraved**: a V, as a graver cuts it. The cut is deepest along the
+  middle of each stroke and rises to the surface at its edges, so there is
+  no wall and no floor: each stroke is two facets, the one under the light
+  in shadow and the other catching it, with a line where they meet. Thick
+  strokes show wide facets and thin strokes narrow ones.
+
+Shallow, Standard and Deep apply to both. The light is the one the hands
+are lit by, so the dark facet is on the side the hands' shadows fall away
+from. The making sheet names the cut. A flat cut stores nothing new, so
+designs saved before draw exactly as they did.
+
 ## Engraved numerals (v4.62.0)
 
 Under Markers, Made by, the numerals can now be **Engraved**: cut into the
