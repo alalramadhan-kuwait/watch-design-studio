@@ -1063,3 +1063,29 @@ test('the silver ring (v4.61.2): a brushed silver chapter ring joins the 41\'s p
   const blue = JSON.parse(fs.readFileSync(path.join(__dirname, '../concepts/f77-41-honey-ring-blue.json'), 'utf8'));
   assert.equal(blue.minute.color, '#27457C'); assert.equal(blue.minute.numColor, '#27457C');
 });
+
+test('engraved numerals (v4.62.0): an open cut offered under Made by, in three depths, with a smooth floor', () => {
+  assert.match(source, /const APP_VERSION = "4\.62\.\d+";|const APP_VERSION = "(4\.(6[3-9]|[7-9]\d)|[5-9])\./);
+  // the choice, between applied metal and the filled cut
+  assert.match(source, /\["applied\|metal","Applied metal"\],\["engraved\|","Engraved"\],\["engraved \+ filled\|lacquer \/ enamel","Enamel-filled"\]/);
+  assert.match(source, /n\.tech === "engraved" \? "engraved\|" :/, 'its chip shows as chosen whatever material the file carried');
+  assert.match(source, /chips44\("num\.cut", \[\["shallow","Shallow"\],\["standard","Standard"\],\["deep","Deep"\]\], numCutOf\(n\)\)/);
+  assert.match(source, /"num\.engravedNote":"Cut into the dial and left open/); assert.match(source, /"num\.engravedNote":"محفور في الميناء/);
+  assert.match(source, /"Shallow":"خفيف", "Deep":"عميق"/);
+  // the three cuts, and the one a filled figure keeps
+  const ctx = {}; new Function('ctx', chunk('const NUM_CUTS = {', 'const NUM_MATERIAL = [') + '; Object.assign(ctx, { NUM_CUTS, NUM_CUT_FILLED, numCutOf, numCutSet });')(ctx);
+  const { NUM_CUTS, NUM_CUT_FILLED, numCutOf, numCutSet } = ctx;
+  for (const k of ['engDepth', 'engShadow', 'engHilite', 'engRecess', 'engFloor'])
+    assert.ok(NUM_CUTS.shallow[k] < NUM_CUTS.standard[k] && NUM_CUTS.standard[k] < NUM_CUTS.deep[k], k + ' grows with the cut');
+  for (const name of ['shallow', 'standard', 'deep']) { const n = {}; numCutSet(n, name); assert.equal(numCutOf(n), name); }
+  assert.equal(numCutOf({}), 'shallow'); assert.equal(numCutOf({ engDepth: 0.03 }), 'shallow');
+  assert.deepEqual(NUM_CUT_FILLED, { engDepth: 0.030, engBevel: 0.020, engShadow: 0.25, engHilite: 0.42, engRecess: 0.045, engFloor: 0 }, 'a filled cut as it always was');
+  // choosing it: a first cut that reads; filling it afterwards puts the old cut back
+  assert.match(source, /if\(t === "engraved" && S\.numerals\.tech !== "engraved"\) numCutSet\(S\.numerals, "standard"\);/);
+  assert.match(source, /if\(t === "engraved \+ filled" && S\.numerals\.tech === "engraved"\) Object\.assign\(S\.numerals, NUM_CUT_FILLED\);/);
+  assert.match(source, /else if\(path === "num\.cut"\) numCutSet\(S\.numerals, v\);/);
+  // an open cut has no ink: it leaves the printing colour, and the floor is smoothed only where a design asks
+  assert.match(source, /n\.material !== "lume" && n\.tech !== "engraved"\) out\.push\(\["numerals", n\.color\]\);/);
+  assert.match(source, /const smoothOp = MK\.bare && \+nm\.engFloor > 0 \? Math\.min\(1, \+nm\.engFloor\) : 0;/);
+  assert.match(source, /if\(n\.tech === "engraved \+ filled"\)\s+h \+= `<button type="button" class="gMact" data-gset="ui\.engraveAll"/, 'engrave-all fills, so it is offered on the filled cut only');
+});

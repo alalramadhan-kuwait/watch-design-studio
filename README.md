@@ -200,6 +200,25 @@ stored in a design file do not change. In the full editor at laptop widths
 the toolbar sits tighter, and on a narrower window it takes a second row
 rather than pushing Share and Export off the screen.
 
+## Engraved numerals (v4.62.0)
+
+Under Markers, Made by, the numerals can now be **Engraved**: cut into the
+dial and left open, with no colour of their own. The figure is the dial
+itself, read by the shadow on one wall and the light on the other, as on a
+hand-engraved or milled dial. It sits beside Enamel-filled, which is the
+same cut with a colour in it.
+
+- **Engraving depth**: Shallow, Standard or Deep. Each sets how far the
+  walls reach in, how strongly they show, and how much darker the floor is.
+- The floor of the cut is smooth: on a frosted or grained dial the grain
+  stops at the figure's edge, as it does where a cutter has been.
+- An engraved figure takes no printing colour, so the Printing colour row
+  leaves the numerals out while they are engraved.
+- Choosing Enamel-filled afterwards puts back the shallow cut a filled
+  figure has always had, so the lacquer is not darkened by a deep floor.
+
+Designs saved before draw exactly as they did.
+
 ## Grey and honey gold (v4.61.0)
 
 A dial in the colours of a reference the owner sent (a grey dial, pale gold
